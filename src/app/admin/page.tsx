@@ -1,4 +1,3 @@
-import UsersTable from "@/components/admin/users-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminDashboard() {
@@ -17,7 +16,6 @@ export default async function AdminDashboard() {
 						<CardTitle>Users</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<UsersTable />
 					</CardContent>
 				</Card>
 			</div>
