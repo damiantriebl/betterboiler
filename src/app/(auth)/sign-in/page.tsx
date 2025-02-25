@@ -1,6 +1,5 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Form,
@@ -18,15 +17,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import Link from "next/link";
-import { serverMessage } from "@/schemas/setverMessage";
-import { signInAction } from "@/actions/auth/sing-in";
+import { useState } from "react";
+import { authClient } from "@/auth-client";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+
+import { ErrorContext } from "@better-fetch/fetch";
 
 export default function SignIn() {
 	const router = useRouter();
-
-	const [state, formAction, isPending] = useActionState<serverMessage, FormData>(signInAction, { success: false, error: false });
-
+	const { toast } = useToast();
+	const [pendingCredentials, setPendingCredentials] = useState(false);
+	
 	const form = useForm<z.infer<typeof signInSchema>>({
 		resolver: zodResolver(signInSchema),
 		defaultValues: {
@@ -35,13 +37,36 @@ export default function SignIn() {
 		},
 	});
 
-	useEffect(() => {
-		console.log('state', state)
-		if (state.success) {
-		console.log('paso bien', state)
-			router.push("/");
-		}
-	}, [state]);
+	const handleCredentialsSignIn = async (
+		values: z.infer<typeof signInSchema>
+	) => {
+		await authClient.signIn.email(
+			{
+				email: values.email,
+				password: values.password,
+			},
+			{
+				onRequest: () => {
+					setPendingCredentials(true);
+				},
+				onSuccess: async () => {
+					router.push("/");
+					router.refresh();
+				},
+				onError: (ctx: ErrorContext) => {
+					console.log(ctx);
+					toast({
+						title: "Something went wrong",
+						description: ctx.error.message ?? "Something went wrong.",
+						variant: "destructive",
+					});
+				},
+			}
+		);
+		setPendingCredentials(false);
+	};
+
+	
 
 	return (
 		<div className="grow flex items-center justify-center p-4">
@@ -51,13 +76,10 @@ export default function SignIn() {
 						Sign In
 					</CardTitle>
 				</CardHeader>
-				<h1>{state.success}</h1>
-				<h1>{state.error}</h1>
-
 				<CardContent>
 					<Form {...form}>
 						<form
-							action={formAction}
+							onSubmit={form.handleSubmit(handleCredentialsSignIn)}
 							className="space-y-6"
 						>
 							{["email", "password"].map((field) => (
@@ -85,21 +107,18 @@ export default function SignIn() {
 									)}
 								/>
 							))}
-							{state.error && (
-								<p className="text-red-500 text-sm">{state.error}</p>
-							)}
-							<LoadingButton pending={isPending}>
+							<LoadingButton pending={pendingCredentials}>
 								Sign in
 							</LoadingButton>
 						</form>
 					</Form>
-
+					
 					<div className="mt-4 text-center text-sm">
 						<Link
 							href="/forgot-password"
 							className="text-primary hover:underline"
 						>
-							¿Olvidaste tu contraseña?
+							Olvidaste tu contraseña?
 						</Link>
 					</div>
 				</CardContent>
