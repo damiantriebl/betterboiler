@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Form,
@@ -15,9 +16,9 @@ import { signInSchema } from "@/lib/zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useSearchParams } from "next/navigation"
 
 import Link from "next/link";
-import { useState } from "react";
 import { authClient } from "@/auth-client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ErrorContext } from "@better-fetch/fetch";
 
 export default function SignIn() {
+	const searchParams = useSearchParams()
+
 	const router = useRouter();
 	const { toast } = useToast();
 	const [pendingCredentials, setPendingCredentials] = useState(false);
@@ -36,7 +39,15 @@ export default function SignIn() {
 			password: "",
 		},
 	});
-
+	useEffect(() => {
+		if (searchParams.get("error") === "not-logged") {
+		  toast({
+			title: "Error",
+			description: "No estás logueado para acceder.",
+			variant: "destructive",
+		  })
+		}
+	  }, [searchParams])
 	const handleCredentialsSignIn = async (
 		values: z.infer<typeof signInSchema>
 	) => {

@@ -21,7 +21,9 @@ export default function Navbar({session}: {session: Session | null}) {
                 </div>
 
             ): (
-                <LogoutButton />
+                <div className="flex gap-2 justify-center">
+                    <LogoutButton />
+                </div>
             )}
         </nav>
     )

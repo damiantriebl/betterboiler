@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import LoadingButton from "@/components/custom/loading-button";
 import { useToast } from "@/hooks/use-toast";
-import { forgotPasswordAction } from "@/actions/fotgot-password";
+import { forgotPasswordAction } from "@/actions/auth/fotgot-password";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { forgotPasswordSchema } from "@/lib/zod";

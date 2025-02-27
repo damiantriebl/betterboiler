@@ -19,8 +19,7 @@ import { resetPasswordSchema } from "@/lib/zod";
 import LoadingButton from "@/components/custom/loading-button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { forgotPasswordAction } from "@/actions/fotgot-password";
-import { resetPasswordAction } from "@/actions/reset-password";
+import { resetPasswordAction } from "@/actions/auth/reset-password";
 import { serverMessage } from "@/schemas/setverMessage";
 
 function ResetPasswordContent() {

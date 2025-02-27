@@ -1,7 +1,21 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prismaClientSingleton = () => {
-  return new PrismaClient();
+  const prisma = new PrismaClient({
+    log: ['query', 'info', 'warn', 'error']
+  });
+
+  prisma.$use(async (params: Prisma.MiddlewareParams, next) => {
+    const user = params.args?.context?.user || 'anon';
+    console.log(`[DB] User: ${user} | Model: ${params.model} | Action: ${params.action}`);
+    console.log(`[DB] Args: ${JSON.stringify(params.args)}`);
+    const start = Date.now();
+    const result = await next(params);
+    console.log(`[DB] Duration: ${Date.now() - start}ms`);
+    return result;
+  });
+
+  return prisma;
 };
 
 declare const globalThis: {
@@ -12,5 +26,4 @@ const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
 
 export default prisma;
 
-// Ensure the prisma instance is reused across hot reloads in development
 if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma;
