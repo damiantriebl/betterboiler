@@ -37,11 +37,11 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Navbar session={session} />
-        <ToastProvider >
           <div className="min-h-screen pt-20 flex flex-col">
             {children}
           </div>
-        </ToastProvider>
+          <Toaster />
+          
       </body>
     </html>
   );

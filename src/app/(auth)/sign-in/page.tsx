@@ -27,7 +27,6 @@ import { ErrorContext } from "@better-fetch/fetch";
 
 export default function SignIn() {
 	const searchParams = useSearchParams()
-
 	const router = useRouter();
 	const { toast } = useToast();
 	const [pendingCredentials, setPendingCredentials] = useState(false);
@@ -65,7 +64,7 @@ export default function SignIn() {
 					router.refresh();
 				},
 				onError: (ctx: ErrorContext) => {
-					console.log(ctx);
+					console.log('fallo por esto', ctx);
 					toast({
 						title: "Something went wrong",
 						description: ctx.error.message ?? "Something went wrong.",

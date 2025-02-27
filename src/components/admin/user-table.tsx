@@ -11,6 +11,8 @@ import {
 import { User } from "@prisma/client";
 import { useState, useEffect } from "react";
 import { authClient } from "@/auth-client";
+import { Button } from "../ui/button";
+import { toast } from "@/hooks/use-toast";
 
 export default function UsersTable() {
 	const [users, setUsers] = useState<User[]>([]);
@@ -21,7 +23,6 @@ export default function UsersTable() {
 		const fetchUsers = async () => {
 			try {
 				setIsLoading(true);
-
 				const response = await authClient.admin.listUsers({
 					query: { limit: 10 },
 				});
@@ -36,7 +37,6 @@ export default function UsersTable() {
 				setIsLoading(false);
 			}
 		};
-
 		fetchUsers();
 	}, []);
 
@@ -56,17 +56,68 @@ export default function UsersTable() {
 		);
 	}
 
+	const toggleAdmin = async ({ id, role, }: { id: string; role: string; }) => {
+		try {
+			const newRole = role === "user" ? "admin" : "user";
+			await authClient.admin.setRole({
+				userId: id,
+				role: newRole,
+			});
+			setUsers((prev) =>
+				prev.map((u) => (u.id === id ? { ...u, role: newRole } : u))
+			);
+		} catch (error) {
+			console.error("Error Al cambiar el rol:", error);
+		}
+	};
+	const toggleBan = async ({ id, isBanned }: { id: string; isBanned: boolean; }) => {
+		if (!isBanned) {
+			try {
+				await authClient.admin.banUser({
+					userId: id,
+					banReason: "Spamming",
+				});
+				toast({
+					title: "baneado",
+					description: "El usuario fue baneado correctamente.",
+					variant: "destructive",
+				})
+				setUsers((prev) =>
+					prev.map((u) => (u.id === id ? { ...u, banned: true, status: "Banned" } : u))
+				);
+			} catch (error) {
+				toast({
+					title: "fallo el baneo",
+					description: "Algo salio mal",
+					variant: "destructive",
+				})
+			}
+
+		} else {
+			await authClient.admin.unbanUser({
+				userId: id
+			});
+			setUsers((prev) =>
+				prev.map((u) => (u.id === id ? { ...u, banned: false, status: "Active" } : u))
+			);
+			toast({
+				title: "remover baneado",
+				description: "El usuario no esta mas baneado.",
+				variant: "destructive",
+			})
+		}
+	}
+
 	return (
 		<Table>
 			<TableHeader>
 				<TableRow>
-					<TableHead>Name</TableHead>
+					<TableHead>Nombre</TableHead>
 					<TableHead>Email</TableHead>
-					<TableHead>Role</TableHead>
-					<TableHead>Verified</TableHead>
-					<TableHead>Premium</TableHead>
+					<TableHead>Rol</TableHead>
+					<TableHead>Verificado</TableHead>
 					<TableHead>Status</TableHead>
-					<TableHead>Joined</TableHead>
+					<TableHead>Fecha Ingreso</TableHead>
 					<TableHead>Actions</TableHead>
 				</TableRow>
 			</TableHeader>
@@ -77,7 +128,6 @@ export default function UsersTable() {
 						<TableCell>{user.email}</TableCell>
 						<TableCell>{user.role}</TableCell>
 						<TableCell>{user.emailVerified ? "Yes" : "No"}</TableCell>
-						<TableCell>{user.premium ? "Yes" : "No"}</TableCell>
 						<TableCell>
 							{user.banned ? (
 								<span className="text-red-500">Banned</span>
@@ -87,7 +137,30 @@ export default function UsersTable() {
 						</TableCell>
 						<TableCell>
 							{new Date(user.createdAt).toLocaleDateString()}
-						</TableCell>						
+						</TableCell>
+						<TableCell>
+							<div className="flex flex-row gap-4">
+
+								<Button
+									onClick={() =>
+										toggleAdmin({ id: user.id, role: user.role })
+									}
+									variant="secondary"
+								>
+									{user.role === "user" ? "Habilitar Admin" : "Deshabilitar Admin"}
+								</Button>
+
+
+								<Button
+									onClick={() =>
+										toggleBan({ id: user.id, isBanned: user.banned })
+									}
+									variant="secondary"
+								>
+									{user.banned ? "Desbanear" : "Banear"}
+								</Button>
+							</div>
+						</TableCell>
 					</TableRow>
 				))}
 			</TableBody>

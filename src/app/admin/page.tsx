@@ -1,3 +1,4 @@
+import UsersTable from "@/components/admin/user-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminDashboard() {
@@ -7,15 +8,16 @@ export default async function AdminDashboard() {
 				<div className="flex flex-col gap-2 mb-8">
 					<h1 className="text-3xl font-bold">Admin Dashboard</h1>
 					<p className="text-muted-foreground">
-						Manage users and view system statistics
+						Controla los usuarios por organizacion
 					</p>
 				</div>
 
 				<Card>
 					<CardHeader>
-						<CardTitle>Users</CardTitle>
+						<CardTitle>Usuarios</CardTitle>
 					</CardHeader>
 					<CardContent>
+						<UsersTable />
 					</CardContent>
 				</Card>
 			</div>
