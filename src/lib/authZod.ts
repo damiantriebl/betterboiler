@@ -1,4 +1,5 @@
-import { object, string } from "zod";
+import { url } from "inspector";
+import { object, string, z } from "zod";
 
 const getPasswordSchema = (type: "password" | "confirmPassword") => string({ required_error: `${type} es requerido` })
     .min(8, `${type} tiene que ser 8 caracteres`)
@@ -34,4 +35,9 @@ export const resetPasswordSchema = object ({
 }).refine((data)=> data.password === data.confirmPassword, {
     message: "las contraseñas no coinciden",
     path: ["confirmPassword"]
+})
+
+export const createOrganizationSchema = object({
+    name: getNameSchema(),
+    logo: z.string().url().optional()   
 })

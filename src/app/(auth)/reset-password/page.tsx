@@ -15,8 +15,8 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { resetPasswordSchema } from "@/lib/zod";
-import LoadingButton from "@/components/custom/loading-button";
+import { resetPasswordSchema } from "@/lib/authZod";
+import LoadingButton from "@/components/custom/loadingButton";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { resetPasswordAction } from "@/actions/auth/reset-password";
@@ -28,7 +28,6 @@ function ResetPasswordContent() {
 	const searchParams = useSearchParams();
 	const error = searchParams.get("error");
 	const token = searchParams.get("token");
-	console.log('token', token)
 	const [state, formAction, isPending] = useActionState<serverMessage, FormData>(resetPasswordAction, { success: false, error: false });
 
 	useEffect(() => {

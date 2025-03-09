@@ -11,8 +11,8 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/loading-button";
-import { signInSchema } from "@/lib/zod";
+import LoadingButton from "@/components/custom/loadingButton";
+import { signInSchema } from "@/lib/authZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -64,7 +64,6 @@ export default function SignIn() {
 					router.refresh();
 				},
 				onError: (ctx: ErrorContext) => {
-					console.log('fallo por esto', ctx);
 					toast({
 						title: "Something went wrong",
 						description: ctx.error.message ?? "Something went wrong.",

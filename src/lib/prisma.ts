@@ -7,12 +7,12 @@ const prismaClientSingleton = () => {
 
   prisma.$use(async (params: Prisma.MiddlewareParams, next) => {
     const user = params.args?.context?.user || 'anon';
-    console.log(`[DB] User: ${user} | Model: ${params.model} | Action: ${params.action}`);
-    console.log(`[DB] Args: ${JSON.stringify(params.args)}`);
+   /*  console.log(`[DB] User: ${user} | Model: ${params.model} | Action: ${params.action}`);
+    console.log(`[DB] Args: ${JSON.stringify(params.args)}`); */
     const start = Date.now();
     const result = await next(params);
-    console.log(`[DB] Duration: ${Date.now() - start}ms`);
-    return result;
+/*     console.log(`[DB] Duration: ${Date.now() - start}ms`);
+ */    return result;
   });
 
   return prisma;

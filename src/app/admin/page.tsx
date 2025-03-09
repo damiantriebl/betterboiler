@@ -1,4 +1,4 @@
-import UsersTable from "@/components/admin/user-table";
+import UsersTable from "@/components/admin/userTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminDashboard() {

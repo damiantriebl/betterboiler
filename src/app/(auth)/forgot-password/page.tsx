@@ -11,12 +11,12 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/loading-button";
+import LoadingButton from "@/components/custom/loadingButton";
 import { useToast } from "@/hooks/use-toast";
 import { forgotPasswordAction } from "@/actions/auth/fotgot-password";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { forgotPasswordSchema } from "@/lib/zod";
+import { forgotPasswordSchema } from "@/lib/authZod";
 import { z } from "zod";
 
 export interface serverMessage {

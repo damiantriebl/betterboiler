@@ -8,7 +8,6 @@ export default function Home() {
   const searchParams = useSearchParams()
   useEffect(() => {
     if (searchParams.get("error") === "not-admin-privilegies") {
-      console.log('error', searchParams.get("error"))
       toast({
         title: "Error",
         description: "No estás logueado como administrador para acceder.",

@@ -6,6 +6,7 @@ const authRoutes = ["/sign-in", "/sign-up"];
 const passwordRoutes = ["/reset-password", "/forgot-password"];
 const adminRoutes = ["/admin"];
 const protectedRoutes = ["/", "/dashboard"];
+const rootRoutes = [, "/root"];
 
 export default async function authMiddleware(request: NextRequest) {
   const pathName = request.nextUrl.pathname;
@@ -13,6 +14,7 @@ export default async function authMiddleware(request: NextRequest) {
   const isPassword = passwordRoutes.includes(pathName);
   const isAdmin = adminRoutes.includes(pathName);
   const isProtected = protectedRoutes.includes(pathName);
+  const isRoot = rootRoutes.includes(pathName);
 
   const { data: session } = await betterFetch<Session>(
     "/api/auth/get-session",
@@ -30,13 +32,15 @@ export default async function authMiddleware(request: NextRequest) {
     return session ? NextResponse.redirect(new URL("/", request.url)) : NextResponse.next()
 
   // Sin sesión: protege rutas '/' y '/dashboard' y '/admin'
-  if (!session && (isProtected || isAdmin))
+  if (!session && (isProtected || isAdmin || isRoot))
     return NextResponse.redirect(new URL("/sign-in?error=not-logged", request.url))
 
   // Con sesión pero sin privilegios en admin
-  if (isAdmin && session?.user.role !== "admin")
+  if (isAdmin && session?.user.role !== "admin" && session?.user.role !== "root")
     return NextResponse.redirect(new URL("/?error=not-admin-privilegies", request.url))
 
+  if (isRoot && session?.user.role !== "admin")
+      return NextResponse.redirect(new URL("/?error=not-admin-privilegies", request.url))
   return NextResponse.next()
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link";
-import LogoutButton from "./logout-button";
+import LogoutButton from "./logoutButton";
 import { Session } from "@/auth";
 
 export default function Navbar({session}: {session: Session | null}) {  

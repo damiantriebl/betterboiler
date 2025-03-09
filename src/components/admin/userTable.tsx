@@ -14,62 +14,94 @@ import { authClient } from "@/auth-client";
 import { Button } from "../ui/button";
 import { toast } from "@/hooks/use-toast";
 
+interface ExtendedUser extends User {
+	organizationId?: string;
+}
+
 export default function UsersTable() {
-	const [users, setUsers] = useState<User[]>([]);
+	const [users, setUsers] = useState<ExtendedUser[]>([]);
+	const [organizations, setOrganizations] = useState<any[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<Error | null>(null);
 
 	useEffect(() => {
-		const fetchUsers = async () => {
+		const fetchData = async () => {
 			try {
-				setIsLoading(true);
-				const response = await authClient.admin.listUsers({
-					query: { limit: 10 },
-				});
-				if (response?.data) {
-					setUsers(response.data.users as User[]);
-				}
+				const [usersRes, orgRes] = await Promise.all([
+					authClient.admin.listUsers({ query: { limit: 10 } }),
+					authClient.organization.list(),
+				]);
+				if (usersRes?.data)
+					setUsers(usersRes.data.users as ExtendedUser[]);
+				if (orgRes?.data)
+					setOrganizations(orgRes.data);
 			} catch (err) {
 				setError(
-					err instanceof Error ? err : new Error("Failed to fetch users")
+					err instanceof Error
+						? err
+						: new Error("Error fetching data")
 				);
 			} finally {
 				setIsLoading(false);
 			}
 		};
-		fetchUsers();
+		fetchData();
 	}, []);
 
-	if (isLoading) {
+	const assignOrganization = async (userId: string, orgId: string) => {
+		try {
+			await authClient.organization.addMember({
+				organizationId: orgId,
+				userId,
+				role: "member",
+			});
+			setUsers((prev) =>
+				prev.map((u) =>
+					u.id === userId ? { ...u, organizationId: orgId } : u
+				)
+			);
+			toast({
+				title: "Organización asignada",
+				description: "Asignada correctamente",
+				variant: "success",
+			});
+		} catch (error) {
+			toast({
+				title: "Error",
+				description: "No se pudo asignar",
+				variant: "destructive",
+			});
+		}
+	};
+
+	if (isLoading)
 		return (
 			<div className="flex justify-center p-4">
 				<span>Loading users...</span>
 			</div>
 		);
-	}
 
-	if (error) {
+	if (error)
 		return (
 			<div className="flex justify-center p-4">
-				<span className="text-red-500">Error: {error.message}</span>
+				<span className="text-red-500">
+					Error: {error.message}
+				</span>
 			</div>
 		);
-	}
 
-	const toggleAdmin = async ({ id, role, }: { id: string; role: string; }) => {
+	const toggleAdmin = async ({ id, role }: { id: string; role: string; }) => {
 		try {
 			const newRole = role === "user" ? "admin" : "user";
-			await authClient.admin.setRole({
-				userId: id,
-				role: newRole,
-			});
+			await authClient.admin.setRole({ userId: id, role: newRole });
 			setUsers((prev) =>
 				prev.map((u) => (u.id === id ? { ...u, role: newRole } : u))
 			);
 		} catch (error) {
-			console.error("Error Al cambiar el rol:", error);
+			console.error("Error al cambiar el rol:", error);
 		}
 	};
+
 	const toggleBan = async ({ id, isBanned }: { id: string; isBanned: boolean; }) => {
 		if (!isBanned) {
 			try {
@@ -78,35 +110,36 @@ export default function UsersTable() {
 					banReason: "Spamming",
 				});
 				toast({
-					title: "baneado",
+					title: "Baneado",
 					description: "El usuario fue baneado correctamente.",
 					variant: "destructive",
-				})
+				});
 				setUsers((prev) =>
-					prev.map((u) => (u.id === id ? { ...u, banned: true, status: "Banned" } : u))
+					prev.map((u) =>
+						u.id === id ? { ...u, banned: true, status: "Banned" } : u
+					)
 				);
 			} catch (error) {
 				toast({
-					title: "fallo el baneo",
-					description: "Algo salio mal",
+					title: "Fallo el baneo",
+					description: "Algo salió mal",
 					variant: "destructive",
-				})
+				});
 			}
-
 		} else {
-			await authClient.admin.unbanUser({
-				userId: id
-			});
+			await authClient.admin.unbanUser({ userId: id });
 			setUsers((prev) =>
-				prev.map((u) => (u.id === id ? { ...u, banned: false, status: "Active" } : u))
+				prev.map((u) =>
+					u.id === id ? { ...u, banned: false, status: "Active" } : u
+				)
 			);
 			toast({
-				title: "remover baneado",
-				description: "El usuario no esta mas baneado.",
+				title: "Remover baneado",
+				description: "El usuario no está más baneado.",
 				variant: "destructive",
-			})
+			});
 		}
-	}
+	};
 
 	return (
 		<Table>
@@ -140,17 +173,16 @@ export default function UsersTable() {
 						</TableCell>
 						<TableCell>
 							<div className="flex flex-row gap-4">
-
 								<Button
 									onClick={() =>
 										toggleAdmin({ id: user.id, role: user.role })
 									}
 									variant="secondary"
 								>
-									{user.role === "user" ? "Habilitar Admin" : "Deshabilitar Admin"}
+									{user.role === "user"
+										? "Habilitar Admin"
+										: "Deshabilitar Admin"}
 								</Button>
-
-
 								<Button
 									onClick={() =>
 										toggleBan({ id: user.id, isBanned: user.banned })
@@ -159,6 +191,21 @@ export default function UsersTable() {
 								>
 									{user.banned ? "Desbanear" : "Banear"}
 								</Button>
+								<select
+									value={user.organizationId || ""}
+									onChange={(e) =>
+										assignOrganization(user.id, e.target.value)
+									}
+								>
+									<option value="" disabled>
+										Selecciona una organización
+									</option>
+									{organizations.map((org) => (
+										<option key={org.id} value={org.id}>
+											{org.name}
+										</option>
+									))}
+								</select>
 							</div>
 						</TableCell>
 					</TableRow>

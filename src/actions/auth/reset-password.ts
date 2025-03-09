@@ -2,14 +2,13 @@
 "use server";
 
 import { z } from "zod";
-import { forgotPasswordSchema } from "@/lib/zod";
+import { forgotPasswordSchema } from "@/lib/authZod";
 import { authClient } from "@/auth-client";
 import { serverMessage } from "@/app/(auth)/forgot-password/page";
 
 export async function resetPasswordAction(prevState: { success: string | false; error: string | false; }, formData: FormData): Promise<serverMessage> {
   const password = formData.get("password") as string | null;
   const token = formData.get("token") as string | null;
-  console.log('password', password, 'token', token, formData)
   if (!password || !token) {
     return { error: "Invalid form data", success: false };
   }
