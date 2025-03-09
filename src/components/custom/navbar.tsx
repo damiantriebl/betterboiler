@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link";
-import LogoutButton from "./logout-button";
+import LogoutButton from "./logoutButton";
 import { Session } from "@/auth";
 
 export default function Navbar({session}: {session: Session | null}) {  
@@ -12,16 +12,18 @@ export default function Navbar({session}: {session: Session | null}) {
             </Link>
             {!session ? (
                 <div className="flex gap-2 justify-center">
-                    <Link href={"/sign-in"}>
+                    <Link href={"/signin"}>
                         singin
                     </Link>
-                    <Link href={"/sign-up"}>
+                    <Link href={"/signup"}>
                         singup
                     </Link> 
                 </div>
 
             ): (
-                <LogoutButton />
+                <div className="flex gap-2 justify-center">
+                    <LogoutButton />
+                </div>
             )}
         </nav>
     )

@@ -10,11 +10,11 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/loading-button";
+import LoadingButton from "@/components/custom/loadingButton";
 
 import Link from "next/link";
 
-import { signUpSchema } from "@/lib/zod";
+import { signUpSchema } from "@/lib/authZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -49,16 +49,16 @@ export default function SignUp() {
 				},
 				onSuccess: () => {
 					toast({
-						title: "Account created",
+						title: "Cuenta Creada",
 						description:
-							"Your account has been created. Check your email for a verification link.",
+							"su cuenta fue creada, revise su email.",
 					});
 				},
 				onError: (ctx) => {
 					console.log("error", ctx);
 					toast({
-						title: "Something went wrong",
-						description: ctx.error.message ?? "Something went wrong.",
+						title: "Algo paso",
+						description: ctx.error.message ?? "Algo salio mal.",
 					});
 				},
 			}
@@ -111,7 +111,7 @@ export default function SignUp() {
 					</Form>
 					<div className="mt-4 text-center text-sm">
 						<Link href="/sign-in" className="text-primary hover:underline">
-							Already have an account? Sign in
+							Ya tenes una cuenta, inicia sesión
 						</Link>
 					</div>
 				</CardContent>

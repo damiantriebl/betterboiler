@@ -1,22 +1,25 @@
 import { betterAuth, BetterAuthOptions } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import prisma from './lib/prisma';
-import { sendEmail } from './actions/email';
-import { openAPI, admin } from 'better-auth/plugins'
+import { sendEmail } from './actions/auth/email';
+import { openAPI, admin, organization } from 'better-auth/plugins'
+import { nextCookies } from "better-auth/next-js";
+import { jwt } from "better-auth/plugins";
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
-        provider: "mongodb"
+        provider: "postgresql"
     }
     ),
     session: {
-        expiresIn: 60 * 60 * 24 * 7, // 7 days
-        updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)
+        expiresIn: 60 * 60 * 24 * 7, 
+        updateAge: 60 * 60 * 24,
         cookieCache: {
             enabled: true,
-            maxAge: 5 * 60 // Cache duration in seconds
+            maxAge: 5 * 60 
         }
     },
+   
     user: {
         additionalFields: {
             premium: {
@@ -25,12 +28,13 @@ export const auth = betterAuth({
             },
         },
     },
-    plugins: [openAPI(), admin()],
+    plugins: [openAPI(), admin({
+        adminRole: ["admin", "root"]
+    }), nextCookies(), jwt(), organization()],
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
         sendResetPassword: async ({ user, url }) => {
-           
             await sendEmail({
                 to: user.email,
                 subject: "Resetear el password",
@@ -53,3 +57,4 @@ export const auth = betterAuth({
 } satisfies BetterAuthOptions)
 
 export type Session = typeof auth.$Infer.Session;
+export type Organization = typeof auth.$Infer.Organization;

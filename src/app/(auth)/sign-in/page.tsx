@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Form,
@@ -10,14 +11,14 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/loading-button";
-import { signInSchema } from "@/lib/zod";
+import LoadingButton from "@/components/custom/loadingButton";
+import { signInSchema } from "@/lib/authZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useSearchParams } from "next/navigation"
 
 import Link from "next/link";
-import { useState } from "react";
 import { authClient } from "@/auth-client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -25,10 +26,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ErrorContext } from "@better-fetch/fetch";
 
 export default function SignIn() {
+	const searchParams = useSearchParams()
 	const router = useRouter();
 	const { toast } = useToast();
 	const [pendingCredentials, setPendingCredentials] = useState(false);
-
+	
 	const form = useForm<z.infer<typeof signInSchema>>({
 		resolver: zodResolver(signInSchema),
 		defaultValues: {
@@ -36,7 +38,15 @@ export default function SignIn() {
 			password: "",
 		},
 	});
-
+	useEffect(() => {
+		if (searchParams.get("error") === "not-logged") {
+		  toast({
+			title: "Error",
+			description: "No estás logueado para acceder.",
+			variant: "destructive",
+		  })
+		}
+	  }, [searchParams])
 	const handleCredentialsSignIn = async (
 		values: z.infer<typeof signInSchema>
 	) => {
@@ -54,7 +64,6 @@ export default function SignIn() {
 					router.refresh();
 				},
 				onError: (ctx: ErrorContext) => {
-					console.log(ctx);
 					toast({
 						title: "Something went wrong",
 						description: ctx.error.message ?? "Something went wrong.",
@@ -118,7 +127,7 @@ export default function SignIn() {
 							href="/forgot-password"
 							className="text-primary hover:underline"
 						>
-							Forgot password?
+							Olvidaste tu contraseña?
 						</Link>
 					</div>
 				</CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { Suspense, useEffect, useActionState, startTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,18 +15,38 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { resetPasswordSchema } from "@/lib/zod";
-import LoadingButton from "@/components/custom/loading-button";
-import { authClient } from "@/auth-client";
+import { resetPasswordSchema } from "@/lib/authZod";
+import LoadingButton from "@/components/custom/loadingButton";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { resetPasswordAction } from "@/actions/auth/reset-password";
+import { serverMessage } from "@/schemas/setverMessage";
 
 function ResetPasswordContent() {
 	const router = useRouter();
 	const { toast } = useToast();
 	const searchParams = useSearchParams();
 	const error = searchParams.get("error");
-	const [isPending, setIsPending] = useState(false);
+	const token = searchParams.get("token");
+	const [state, formAction, isPending] = useActionState<serverMessage, FormData>(resetPasswordAction, { success: false, error: false });
+
+	useEffect(() => {
+		if (state.error) {
+			toast({
+				title: "Error",
+				description: state.error,
+				variant: "destructive",
+			});
+		} else if (state.success) {
+			toast({
+				title: "Éxito",
+				description: state.success,
+			});
+			startTransition(() => {
+				router.push('/sign-in');
+			  });
+		}
+	}, [state])
 
 	const form = useForm<z.infer<typeof resetPasswordSchema>>({
 		resolver: zodResolver(resetPasswordSchema),
@@ -35,27 +55,6 @@ function ResetPasswordContent() {
 			confirmPassword: "",
 		},
 	});
-
-	const onSubmit = async (data: z.infer<typeof resetPasswordSchema>) => {
-		setIsPending(true);
-		const { error } = await authClient.resetPassword({
-			newPassword: data.password,
-		});
-		if (error) {
-			toast({
-				title: "Error",
-				description: error.message,
-				variant: "destructive",
-			});
-		} else {
-			toast({
-				title: "Success",
-				description: "Password reset successful. Login to continue.",
-			});
-			router.push("/sign-in");
-		}
-		setIsPending(false);
-	};
 
 	if (error === "invalid_token") {
 		return (
@@ -88,7 +87,13 @@ function ResetPasswordContent() {
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<form action={(formData: FormData) => {
+							if (token) {
+								formData.append("token", token);
+							}
+							formAction(formData);
+						}} className="space-y-6">
+
 							<FormField
 								control={form.control}
 								name="password"
