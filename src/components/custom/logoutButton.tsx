@@ -27,7 +27,7 @@ export default function LogoutButton() {
     }
     return (
         <LoadingButton pending={pending} onClick={handleSingOut}>
-            Sing Out
+            Desloguearse
         </LoadingButton>
     )
 }

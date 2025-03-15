@@ -20,7 +20,7 @@ import LoadingButton from "@/components/custom/loadingButton";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { resetPasswordAction } from "@/actions/auth/reset-password";
-import { serverMessage } from "@/schemas/setverMessage";
+import { serverMessage } from "@/schemas/serverMessage";
 
 function ResetPasswordContent() {
 	const router = useRouter();

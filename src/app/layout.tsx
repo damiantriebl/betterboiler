@@ -6,6 +6,7 @@ import "./globals.css";
 import Navbar from "@/components/custom/navbar";
 import { headers } from "next/headers";
 import { ToastProvider } from "@/components/ui/ToasterProvider";
+import prisma from "@/lib/prisma";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,18 +31,25 @@ export default async function RootLayout({
 
   const session = await auth.api.getSession({
     headers: await headers(),
-})
+  })
+  const organization = session?.user.organizationId
+    ? await prisma.organization.findUnique({
+      where: { id: session.user.organizationId },
+      select: { name: true },
+    })
+    : null;
+    
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar session={session} />
-          <div className="min-h-screen pt-20 flex flex-col">
-            {children}
-          </div>
-          <Toaster />
-          
+        <Navbar session={session} organization={organization} />
+        <div className="min-h-screen pt-20 flex flex-col">
+          {children}
+        </div>
+        <Toaster />
+
       </body>
     </html>
   );

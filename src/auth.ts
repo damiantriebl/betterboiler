@@ -12,25 +12,43 @@ export const auth = betterAuth({
     }
     ),
     session: {
-        expiresIn: 60 * 60 * 24 * 7, 
+        expiresIn: 60 * 60 * 24 * 7,
         updateAge: 60 * 60 * 24,
         cookieCache: {
             enabled: true,
-            maxAge: 5 * 60 
+            maxAge: 5 * 60
         }
     },
-   
+
     user: {
         additionalFields: {
-            premium: {
-                type: "boolean",
-                required: false,
-            },
+            organizationId: { type: 'string', required: false }
+
         },
     },
     plugins: [openAPI(), admin({
         adminRole: ["admin", "root"]
-    }), nextCookies(), jwt(), organization()],
+    }), nextCookies(), 
+        jwt({
+            jwt: {
+              definePayload: async (user) => {
+                const org = user?.organizationId
+                  ? await prisma.organization.findUnique({
+                      where: { id: user?.organizationId },
+                      select: { id: true, name: true, slug: true, logo: true }
+                    })
+                  : null;
+                  return { 
+                    id: user.id, 
+                    email: user.email, 
+                    role: user.role, 
+                    organizationId: user.organizationId,
+                    organizationName: user.organizationName,
+                    organization: org 
+                  };
+              }
+            }
+          })],
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
@@ -57,4 +75,3 @@ export const auth = betterAuth({
 } satisfies BetterAuthOptions)
 
 export type Session = typeof auth.$Infer.Session;
-export type Organization = typeof auth.$Infer.Organization;
