@@ -1,62 +1,79 @@
-'use client'
-import { useState, useActionState, useEffect } from "react";
+"use client";
+import { useState, useEffect, useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Label } from "@radix-ui/react-label";
-import { createOrganization } from "@/actions/auth/create-organizations";
-import { serverMessage } from "@/schemas/setverMessage";
 import { useForm } from "react-hook-form";
-import { createOrganizationSchema } from "@/lib/authZod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { authClient } from "@/auth-client";
+import { createOrUpdateOrganization } from "@/actions/auth/create-edit-organizations";
+import { serverMessage } from "@/schemas/serverMessage";
 
-const CreateOrganization = () => {
+// Esquema de validación con Zod
+const organizationSchema = z.object({
+    id: z.string().optional(), // Se envía solo en caso de edición
+    name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+    logo: z.string().url("Debe ser una URL válida").optional(),
+});
+
+interface Props {
+    organization?: {
+        id: string;
+        name: string;
+        logo?: string | null;
+    } | null;
+}
+
+const CreateOrEditOrganization = ({ organization }: Props) => {
     const [open, setOpen] = useState(false);
-    const [state, formAction, isPending] = useActionState<serverMessage, FormData>(createOrganization, { success: false, error: false });
-    const formActionSchema = useForm<z.infer<typeof createOrganizationSchema>>({
-        resolver: zodResolver(createOrganizationSchema),
+    const [state, formAction, isPending] = useActionState<serverMessage, FormData>(createOrUpdateOrganization, {
+        success: false,
+        error: false,
+    });
+
+    const form = useForm<z.infer<typeof organizationSchema>>({
+        resolver: zodResolver(organizationSchema),
         defaultValues: {
-            name: "",
-            logo: "",
+            id: organization?.id ?? "",
+            name: organization?.name ?? "",
+            logo: organization?.logo ?? "",
         },
     });
-    const { 
-        data: session, 
-        isPending: pending, //loading state 
-        error, //error object 
-    } = authClient.useSession() 
 
     useEffect(() => {
-        if(state.success){
+        if (state.success) {
             setOpen(false);
         }
-        
     }, [state]);
+
     return (
         <Dialog open={open} onOpenChange={() => setOpen(!open)}>
             <DialogTrigger asChild>
                 <Button className="w-36">
-                    Crear Organizacion
+                    {organization ? "Editar Organización" : "Crear Organización"}
                 </Button>
             </DialogTrigger>
 
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Crear Organizacion</DialogTitle>
-
+                    <DialogTitle>
+                        {organization ? "Editar Organización" : "Crear Organización"}
+                    </DialogTitle>
                 </DialogHeader>
-                <Form {...formActionSchema} >
+
+                <Form {...form}>
                     <form action={formAction} className={cn("grid items-start gap-4")}>
+                        {organization && <input type="hidden" {...form.register("id")} />}
+
                         <FormField
-                            control={formActionSchema.control}
+                            control={form.control}
                             name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <Label htmlFor="name">Organización</Label>
+                                    <Label htmlFor="name">Nombre</Label>
                                     <FormControl>
                                         <Input {...field} id="name" />
                                     </FormControl>
@@ -66,11 +83,11 @@ const CreateOrganization = () => {
                         />
 
                         <FormField
-                            control={formActionSchema.control}
+                            control={form.control}
                             name="logo"
                             render={({ field }) => (
                                 <FormItem>
-                                    <Label htmlFor="logo">Logo</Label>
+                                    <Label htmlFor="logo">Logo (URL)</Label>
                                     <FormControl>
                                         <Input {...field} id="logo" />
                                     </FormControl>
@@ -80,11 +97,14 @@ const CreateOrganization = () => {
                         />
 
                         <p className="text-red-400">{state.error}</p>
-                        <Button type="submit" disabled={isPending}>Guardar</Button>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending ? "Guardando..." : organization ? "Guardar Cambios" : "Crear"}
+                        </Button>
                     </form>
                 </Form>
             </DialogContent>
         </Dialog>
-    )
-}
-export default CreateOrganization;
+    );
+};
+
+export default CreateOrEditOrganization;

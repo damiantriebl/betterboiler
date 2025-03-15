@@ -25,7 +25,7 @@ export default async function authMiddleware(request: NextRequest) {
       },
     },
   );
-
+  console.log('session', session)
   
   // Rutas de auth/password: si hay sesión, redirige a "/"
   if (isAuth || isPassword)
@@ -39,8 +39,8 @@ export default async function authMiddleware(request: NextRequest) {
   if (isAdmin && session?.user.role !== "admin" && session?.user.role !== "root")
     return NextResponse.redirect(new URL("/?error=not-admin-privilegies", request.url))
 
-  if (isRoot && session?.user.role !== "admin")
-      return NextResponse.redirect(new URL("/?error=not-admin-privilegies", request.url))
+  if (isRoot && session?.user.role !== "root")
+      return NextResponse.redirect(new URL("/?error=not-root-privilegies", request.url))
   return NextResponse.next()
 }
 
