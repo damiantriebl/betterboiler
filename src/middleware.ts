@@ -5,7 +5,7 @@ import type { Session } from "@/auth";
 const authRoutes = ["/sign-in", "/sign-up"];
 const passwordRoutes = ["/reset-password", "/forgot-password"];
 const adminRoutes = ["/admin"];
-const protectedRoutes = ["/", "/dashboard"];
+const protectedRoutes = ["/", "/dashboard", "/profile"];
 const rootRoutes = [, "/root"];
 
 export default async function authMiddleware(request: NextRequest) {
@@ -15,7 +15,7 @@ export default async function authMiddleware(request: NextRequest) {
   const isAdmin = adminRoutes.includes(pathName);
   const isProtected = protectedRoutes.includes(pathName);
   const isRoot = rootRoutes.includes(pathName);
-
+  
   const { data: session } = await betterFetch<Session>(
     "/api/auth/get-session",
     {
@@ -25,7 +25,6 @@ export default async function authMiddleware(request: NextRequest) {
       },
     },
   );
-  console.log('session', session)
   
   // Rutas de auth/password: si hay sesión, redirige a "/"
   if (isAuth || isPassword)

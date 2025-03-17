@@ -1,8 +1,6 @@
 "use server";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { serverMessage } from "@/schemas/serverMessage";
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 export async function updateOrganization(
