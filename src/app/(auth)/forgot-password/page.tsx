@@ -18,11 +18,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { forgotPasswordSchema } from "@/lib/authZod";
 import { z } from "zod";
+import { serverMessage } from "@/schemas/serverMessage";
 
-export interface serverMessage {
-	success: false | string,
-	error: false | string
-}
+
 export default function ForgotPassword() {
 	const { toast } = useToast();
 	const [state, formAction, isPending] = useActionState<serverMessage, FormData>(forgotPasswordAction, { success: false, error: false });
