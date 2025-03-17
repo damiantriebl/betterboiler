@@ -26,6 +26,7 @@ export async function getSignedURL() {
         Bucket: process.env.AWS_BUCKET_NAME!,
         Key: "test-file",
     })
+    
 
     const getSignedURL = await getSignedUrl(s3, putObjectCommand, {
         expiresIn: 60

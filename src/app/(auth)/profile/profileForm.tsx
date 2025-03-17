@@ -31,6 +31,9 @@ type FormData = z.infer<typeof profileSchema>;
 interface ServerMessage {
   success: false | string;
   error: false | string;
+  userId?: string;
+  name?: string;
+  email?: string;
 }
 
 export default function ProfileForm({
