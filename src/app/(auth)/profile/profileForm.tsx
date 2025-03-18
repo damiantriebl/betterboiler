@@ -18,8 +18,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import LoadingButton from "@/components/custom/loadingButton";
+import UploadButton from "@/components/custom/uploadCropperButton";
 
-// Schema para validación
+
 const profileSchema = z.object({
   userId: z.string().nonempty(),
   name: z.string().min(1, { message: "El nombre es obligatorio" }),
@@ -120,12 +121,13 @@ export default function ProfileForm({
                 </FormItem>
               )}
             />
-            
+
             <LoadingButton pending={isPending}>
               Guardar Cambios
             </LoadingButton>
           </form>
         </Form>
+                  <UploadButton placeholder="subir perfil" />
       </CardContent>
     </Card>
   );
