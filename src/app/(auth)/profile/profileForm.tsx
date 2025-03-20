@@ -1,11 +1,11 @@
 "use client";
 
+import { startTransition, useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { updateUserAction } from "@/actions/auth/update-user";
-import { useState } from "react";
-import UploadButton from "@/components/custom/uploadCropperButton";
+import UploadButton, { UploadResult } from "@/components/custom/uploadCropperButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -14,17 +14,17 @@ import { useToast } from "@/hooks/use-toast";
 
 const profileSchema = z.object({
   userId: z.string().nonempty(),
-  name: z.string().min(1, "El nombre es obligatorio"),
-  email: z.string().email("Correo electrónico inválido"),
+  name: z.string().min(1, 'El nombre es obligatorio'),
+  email: z.string().email('Correo electrónico inválido'),
+  originalFile: z.instanceof(File).optional(),
+  croppedFile: z.instanceof(Blob).optional(),
 });
 
-// Tipos
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function ProfileForm({ user }: { user: { id: string; name: string; email: string } }) {
   const { toast } = useToast();
 
-  // RHF config
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -34,45 +34,36 @@ export default function ProfileForm({ user }: { user: { id: string; name: string
     },
   });
 
-  // Estados locales para archivos
-  const [originalFile, setOriginalFile] = useState<File | null>(null);
-  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, formAction, isPending] = useActionState(updateUserAction, { success: false, error: '' });
 
-  // Handler de envío manual
-  const onSubmit = form.handleSubmit(async (data) => {
-    try {
-      setIsLoading(true);
+  const handleUploadChange = ({ originalFile, croppedBlob }: UploadResult) => {
+    form.setValue('originalFile', originalFile);
+    form.setValue('croppedFile', croppedBlob);
+  };
 
-      // 1. Armar FormData con TODOS los datos
-      const formData = new FormData();
-      formData.append("userId", data.userId);
-      formData.append("name", data.name);
-      formData.append("email", data.email);
-
-      // 2. Adjuntar archivos si existen
-      if (originalFile) {
-        //  append(name, file/blob, filename)
-        formData.append("originalFile", originalFile, originalFile.name);
-      }
-      if (croppedBlob) {
-        formData.append("croppedFile", croppedBlob, "cropped.jpg");
-      }
-
-      // 3. Llamar la server action con el FormData
-      const result = await updateUserAction({}, formData);
-      // Manejar respuesta
-      if (result.error) {
-        toast({ title: "Error", description: result.error, variant: "destructive" });
-      } else if (result.success) {
-        toast({ title: "Éxito", description: result.success });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: String(error), variant: "destructive" });
-    } finally {
-      setIsLoading(false);
+  const onSubmit = form.handleSubmit((data) => {
+    const formData = new FormData();
+    formData.append('userId', data.userId);
+    formData.append('name', data.name);
+    formData.append('email', data.email);
+    if (data.originalFile) {
+      formData.append('originalFile', data.originalFile, data.originalFile.name);
     }
+    if (data.croppedFile) {
+      formData.append('croppedFile', data.croppedFile, 'cropped.jpg');
+    }
+
+    startTransition(() => {
+      formAction(formData);
+    });
   });
+  useEffect(() => {
+    if (state.error) {
+      toast({ title: 'Error', description: state.error, variant: 'destructive' });
+    } else if (state.success) {
+      toast({ title: 'Éxito', description: 'Perfil actualizado correctamente' });
+    }
+  }, [state, toast]);
 
   return (
     <Card className="w-1/2">
@@ -80,18 +71,14 @@ export default function ProfileForm({ user }: { user: { id: string; name: string
         <CardTitle className="text-2xl font-bold">Perfil</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Este Form de shadcn es solo estilístico, no hace el post */}
         <Form {...form}>
-          {/* Usamos onSubmit propio en vez de action=... */}
+          {/* Removemos el atributo action para manejar el submit manualmente */}
           <form onSubmit={onSubmit} className="space-y-6">
             <FormField
               control={form.control}
               name="userId"
-              render={({ field }) => (
-                <input type="hidden" {...field} />
-              )}
+              render={({ field }) => <input type="hidden" {...field} />}
             />
-
             <FormField
               control={form.control}
               name="name"
@@ -103,30 +90,19 @@ export default function ProfileForm({ user }: { user: { id: string; name: string
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Correo Electrónico</FormLabel>
-                  <Input {...field} />
+                  <Input type="email" {...field} />
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <UploadButton
-              placeholder="Subir imagen de perfil"
-              onChange={({ originalFile, croppedBlob }) => {
-                setOriginalFile(originalFile);
-                setCroppedBlob(croppedBlob);
-              }}
-            />
-
-            <LoadingButton pending={isLoading}>
-              Guardar Cambios
-            </LoadingButton>
+            <UploadButton placeholder="Subir imagen de perfil" onChange={handleUploadChange} />
+            <LoadingButton pending={isPending}>Guardar Cambios</LoadingButton>
           </form>
         </Form>
       </CardContent>
