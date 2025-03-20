@@ -22,7 +22,9 @@ export const auth = betterAuth({
 
     user: {
         additionalFields: {
-            organizationId: { type: 'string', required: false }
+            organizationId: { type: 'string', required: false },
+            profileOriginal: { type: 'string', required: false },
+            profileCrop: { type: 'string', required: false }
 
         },
     },
