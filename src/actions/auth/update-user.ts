@@ -1,103 +1,119 @@
 "use server";
-import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
-import { serverMessage } from "@/schemas/serverMessage";
-import { getSignedURL } from "../S3/get-signed-url";
+import prisma from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
+import { serverMessage } from '@/schemas/serverMessage';
+import { getSignedURL } from '../S3/get-signed-url';
+import sharp from 'sharp';
 
 export async function updateUserAction(
   prevState: serverMessage,
   formData: FormData
 ): Promise<serverMessage> {
   try {
-    const userId = formData.get("userId")?.toString();
-    const name = formData.get("name")?.toString();
-    const email = formData.get("email")?.toString();
-    const originalFile = formData.get("originalFile") as File;
-    const croppedFile = formData.get("croppedFile") as File;
-    console.log('formdata', formData);
+    const userId = formData.get('userId')?.toString();
+    const name = formData.get('name')?.toString();
+    const email = formData.get('email')?.toString();
+    const originalFile = formData.get('originalFile') as File;
+    const croppedFile = formData.get('croppedFile') as File;
+
     if (!userId || !name || !email) {
-      return { 
-        success: false, 
-        error: "Todos los campos son obligatorios" 
-      };
+      return { success: false, error: 'Todos los campos son obligatorios' };
     }
-    
-    // Verificar si el email ya está en uso por otro usuario
+
     const existingUser = await prisma.user.findFirst({
-      where: { email, NOT: { id: userId } }
+      where: { email, NOT: { id: userId } },
     });
     if (existingUser) {
       return {
         success: false,
-        error: "Este correo electrónico ya está en uso por otro usuario"
+        error: 'Este correo electrónico ya está en uso por otro usuario',
       };
     }
-    
-    // Obtener URL firmada para el archivo original con nombre "profileOriginal"
-    const signedOriginal = await getSignedURL({ name: "profileOriginal" });
-    if (signedOriginal.failure !== undefined) {
-      console.error("Error en firma original");
-      return { 
-        success: false, 
-        error: "No se pudo obtener la firma para el archivo original" 
+
+    const resizeAndConvert = async (file: File, width: number) => {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      return sharp(buffer)
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+    };
+
+    const sizesOriginal = [1200, 800, 400];
+    const sizesCrop = [500, 300, 150];
+
+    const originalOptimized = await Promise.all(
+      sizesOriginal.map(size => resizeAndConvert(originalFile, size))
+    );
+
+    const cropOptimized = await Promise.all(
+      sizesCrop.map(size => resizeAndConvert(croppedFile, size))
+    );
+
+    const signedOriginalUrls = await Promise.all(
+      sizesOriginal.map(size => getSignedURL({ name: `profile/${userId}/profileOriginal_${size}` }))
+    );
+
+    const signedCropUrls = await Promise.all(
+      sizesCrop.map(size => getSignedURL({ name: `profile/${userId}/profileCrop_${size}` }))
+    );
+
+    if (signedOriginalUrls.some(url => url.failure) || signedCropUrls.some(url => url.failure)) {
+      return {
+        success: false,
+        error: 'Error al generar URLs firmadas',
       };
     }
-    const urlOriginal = signedOriginal.success?.url;
-    
-    // Obtener URL firmada para el archivo recortado con nombre "profileCrop"
-    const signedCrop = await getSignedURL({ name: "profileCrop" });
-    if (signedCrop.failure !== undefined) {
-      console.error("Error en firma recortada");
-      return { 
-        success: false, 
-        error: "No se pudo obtener la firma para el archivo recortado" 
-      };
-    }
-    const urlCrop = signedCrop.success?.url;
-    
-    // Subir el archivo original a S3
-    await fetch(urlOriginal, {
-      method: "PUT",
-      body: originalFile,
-      headers: { "Content-Type": originalFile.type }
-    });
-    
-    // Subir el archivo recortado a S3
-    await fetch(urlCrop, {
-      method: "PUT",
-      body: croppedFile,
-      headers: { "Content-Type": croppedFile.type }
-    });
-    
-    // Construir las URLs públicas. 
-    // Suponiendo que la key en S3 se forma como: `${userId}/profileOriginal.jpg` y `${userId}/profileCrop.jpg`
+
+    await Promise.all([
+      ...signedOriginalUrls.map((signed, idx) =>
+        fetch(signed.success!.url, {
+          method: 'PUT',
+          body: originalOptimized[idx],
+          headers: { 'Content-Type': 'image/webp' },
+        })
+      ),
+      ...signedCropUrls.map((signed, idx) =>
+        fetch(signed.success!.url, {
+          method: 'PUT',
+          body: cropOptimized[idx],
+          headers: { 'Content-Type': 'image/webp' },
+        })
+      ),
+    ]);
+
     const bucket = process.env.AWS_BUCKET_NAME;
     const region = process.env.AWS_BUCKET_REGION;
-    const publicOriginalUrl = `https://${bucket}.s3.${region}.amazonaws.com/${userId}/profileOriginal.jpg`;
-    const publicCropUrl = `https://${bucket}.s3.${region}.amazonaws.com/${userId}/profileCrop.jpg`;
-    
-    // Actualizar usuario: removemos "image" y agregamos los nuevos campos con la URL pública
+
+    const urlsOriginal = sizesOriginal.map(size =>
+      `https://${bucket}.s3.${region}.amazonaws.com/profile/${userId}/profileOriginal_${size}`
+    );
+    const urlsCrop = sizesCrop.map(size =>
+      `https://${bucket}.s3.${region}.amazonaws.com/profile/${userId}/profileCrop_${size}`
+    );
+
     await prisma.user.update({
       where: { id: userId },
-      data: { 
-        name, 
+      data: {
+        name,
         email,
-        profileOriginal: publicOriginalUrl,
-        profileCrop: publicCropUrl,
+        profileOriginal: urlsOriginal[0],
+        profileCrop: urlsCrop[0],
+        profileOriginalVariants: urlsOriginal,
+        profileCropVariants: urlsCrop,
       },
     });
-    
-    revalidatePath("/profile");
-    
+
+    revalidatePath('/profile');
+
     return {
-      success: "Perfil actualizado correctamente",
-      error: false
+      success: 'Perfil actualizado correctamente',
+      error: false,
     };
   } catch (error) {
-    console.error("Error al actualizar el perfil:", error);
+    console.error('Error al actualizar el perfil:', error);
     return {
       success: false,
-      error: "Ha ocurrido un error al actualizar el perfil"
+      error: 'Ha ocurrido un error al actualizar el perfil',
     };
   }
 }

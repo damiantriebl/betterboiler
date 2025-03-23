@@ -62,13 +62,13 @@ function ResetPasswordContent() {
 				<Card className="w-full max-w-md">
 					<CardHeader>
 						<CardTitle className="text-3xl font-bold text-center text-gray-800">
-							Invalid Reset Link
+							Reset link invalido
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
 							<p className="text-center text-gray-600">
-								This password reset link is invalid or has expired.
+								El link de restablecimiento de contraseña es inválido o ha expirado.
 							</p>
 						</div>
 					</CardContent>
@@ -82,7 +82,7 @@ function ResetPasswordContent() {
 			<Card className="w-full max-w-md">
 				<CardHeader>
 					<CardTitle className="text-3xl font-bold text-center text-gray-800">
-						Reset Password
+						Resetear Password
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
@@ -99,11 +99,11 @@ function ResetPasswordContent() {
 								name="password"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>New Password</FormLabel>
+										<FormLabel>Nuevo Password</FormLabel>
 										<FormControl>
 											<Input
 												type="password"
-												placeholder="Enter your new password"
+												placeholder="Entrar el nuevo password"
 												{...field}
 											/>
 										</FormControl>
@@ -117,11 +117,11 @@ function ResetPasswordContent() {
 								name="confirmPassword"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Confirm Password</FormLabel>
+										<FormLabel>Confirmar Password</FormLabel>
 										<FormControl>
 											<Input
 												type="password"
-												placeholder="Confirm your new password"
+												placeholder="Confirmar nuevo password"
 												{...field}
 											/>
 										</FormControl>
@@ -130,7 +130,7 @@ function ResetPasswordContent() {
 								)}
 							/>
 
-							<LoadingButton pending={isPending}>Reset Password</LoadingButton>
+							<LoadingButton pending={isPending}>Resetear Password</LoadingButton>
 						</form>
 					</Form>
 				</CardContent>

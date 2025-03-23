@@ -82,7 +82,7 @@ export default function SignIn() {
 			<Card className="w-full max-w-md">
 				<CardHeader>
 					<CardTitle className="text-3xl font-bold text-center text-gray-800">
-						Sign In
+						Ingresar
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
@@ -117,7 +117,7 @@ export default function SignIn() {
 								/>
 							))}
 							<LoadingButton pending={pendingCredentials}>
-								Sign in
+								Ingresar
 							</LoadingButton>
 						</form>
 					</Form>

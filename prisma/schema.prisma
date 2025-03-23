@@ -20,6 +20,8 @@ model User {
   emailVerified     Boolean   @default(false)
   profileOriginal   String?  
   profileCrop       String?   
+  profileOriginalVariants String[]
+  profileCropVariants     String[]
   premium           Boolean   @default(false)
   role              String    @default("user")
   banned            Boolean   @default(false)

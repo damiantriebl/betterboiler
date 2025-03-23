@@ -72,7 +72,6 @@ export default function ProfileForm({ user }: { user: { id: string; name: string
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          {/* Removemos el atributo action para manejar el submit manualmente */}
           <form onSubmit={onSubmit} className="space-y-6">
             <FormField
               control={form.control}

@@ -1,7 +1,6 @@
-import { url } from "inspector";
 import { object, string, z } from "zod";
 
-const getPasswordSchema = (type: "password" | "confirmPassword") => string({ required_error: `${type} es requerido` })
+const getPasswordSchema = (type: "password" | "confirmar password") => string({ required_error: `${type} es requerido` })
     .min(8, `${type} tiene que ser 8 caracteres`)
     .max(32, `${type} no puede exceder los 32 caracteres`)
 
@@ -15,10 +14,10 @@ export const signUpSchema = object({
     name: getNameSchema(),
     email: getEmailSchema(),
     password: getPasswordSchema('password'),
-    confirmPassword: getPasswordSchema('confirmPassword')
+    confirmPassword: getPasswordSchema('confirmar password')
 }).refine((data)=> data.password === data.confirmPassword, {
     message: "las contraseñas no coinciden",
-    path: ["confirmPassword"]
+    path: ["confirm password"]
 })
 
 export const signInSchema = object({
@@ -31,7 +30,7 @@ export const forgotPasswordSchema = object({
 })
 export const resetPasswordSchema = object ({
     password: getPasswordSchema("password"),
-    confirmPassword: getPasswordSchema("confirmPassword")
+    confirmPassword: getPasswordSchema("confirmar password")
 }).refine((data)=> data.password === data.confirmPassword, {
     message: "las contraseñas no coinciden",
     path: ["confirmPassword"]

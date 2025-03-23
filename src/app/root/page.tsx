@@ -6,6 +6,7 @@ import CreateOrganization from "./CreateOrEditOrganization";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
 
+export const dynamic = "force-dynamic";
 
 export default async function RootDashboard() {
     const session = await auth.api.getSession({

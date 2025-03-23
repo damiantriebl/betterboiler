@@ -1,23 +1,34 @@
 "use client";
 import { useState, useRef } from "react";
-import { Input } from "../ui/input";
 import ReactCrop, { Crop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
+import { Button } from "../ui/button";
 
 export interface UploadResult {
   originalFile: File;
-  croppedBlob: Blob;
+  croppedBlob?: Blob;
 }
 
 interface UploadButtonProps {
   onChange: (result: UploadResult) => void;
   placeholder?: string;
+  crop?: boolean;
+  maxSize?: number; // en MB
+  accept?: string;
 }
 
-const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) => {
+const UploadButton: React.FC<UploadButtonProps> = ({
+  onChange,
+  placeholder,
+  crop = true,
+  maxSize,
+  accept = "image/jpeg, image/png, image/webp, image/gif",
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [file, setFile] = useState<File | undefined>();
   const [fileUrl, setFileUrl] = useState("");
-  const [crop, setCrop] = useState<Crop>({ aspect: 1 });
+  const [cropConfig, setCropConfig] = useState<Crop>({unit: '%', x: 25, y: 25, width: 50, height: 50 });
   const imageRef = useRef<HTMLImageElement>(null);
 
   const [loading, setLoading] = useState(false);
@@ -25,21 +36,34 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) =>
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
+    if (!f) return;
+
+    // Validar tamaño
+    if (maxSize && f.size / 1024 / 1024 > maxSize) {
+      setStatusMessage(`El archivo supera el tamaño máximo de ${maxSize} MB.`);
+      return;
+    }
+
     setFile(f);
     if (fileUrl) URL.revokeObjectURL(fileUrl);
-    setFileUrl(f ? URL.createObjectURL(f) : "");
+    const url = URL.createObjectURL(f);
+    setFileUrl(url);
+
+    if (!crop) {
+      onChange({ originalFile: f });
+    }
   };
 
   const handleCrop = async () => {
-    if (!imageRef.current || !crop.width || !crop.height || !file) return;
+    if (!imageRef.current || !cropConfig.width || !cropConfig.height || !file) return;
     setStatusMessage("Procesando...");
     setLoading(true);
 
     const canvas = document.createElement("canvas");
     const scaleX = imageRef.current.naturalWidth / imageRef.current.width;
     const scaleY = imageRef.current.naturalHeight / imageRef.current.height;
-    canvas.width = crop.width;
-    canvas.height = crop.height;
+    canvas.width = cropConfig.width;
+    canvas.height = cropConfig.height;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -49,14 +73,14 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) =>
 
     ctx.drawImage(
       imageRef.current,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
+      cropConfig.x * scaleX,
+      cropConfig.y * scaleY,
+      cropConfig.width * scaleX,
+      cropConfig.height * scaleY,
       0,
       0,
-      crop.width,
-      crop.height
+      cropConfig.width,
+      cropConfig.height
     );
 
     const croppedBlob = await new Promise<Blob | null>((resolve) =>
@@ -75,17 +99,25 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) =>
   return (
     <div className="flex flex-col gap-4">
       {statusMessage && <p>{statusMessage}</p>}
-      <Input
+
+        <input
+        ref={inputRef}
         type="file"
+        accept={accept}
         onChange={handleChange}
-        placeholder={placeholder}
-        accept="image/jpeg, image/png, image/webp, image/gif"
+        className="hidden"
       />
-      {fileUrl && file && (
+
+      <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+        {placeholder}
+      </Button>
+
+      {fileUrl && file && crop && (
         <div className="flex flex-col gap-4 items-center">
           <ReactCrop
-            crop={crop}
-            onChange={(newCrop) => setCrop(newCrop)}
+            
+            crop={cropConfig}
+            onChange={(newCrop) => setCropConfig(newCrop)}
             onComplete={(c) => {
               if (c.width && c.height) {
                 handleCrop();
@@ -94,6 +126,12 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) =>
           >
             <img ref={imageRef} src={fileUrl} alt="preview" className="max-h-72" />
           </ReactCrop>
+        </div>
+      )}
+
+      {fileUrl && file && !crop && (
+        <div className="flex flex-col items-center">
+          <img src={fileUrl} alt="preview" className="max-h-72" />
         </div>
       )}
     </div>
