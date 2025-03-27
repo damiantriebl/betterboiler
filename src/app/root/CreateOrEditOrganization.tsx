@@ -11,7 +11,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { createOrUpdateOrganization } from "@/actions/auth/create-edit-organizations";
 import { serverMessage } from "@/schemas/serverMessage";
-import UploadButton, { UploadResult } from "@/components/custom/uploadCropperButton";
+import UploadButton, { UploadResult } from "@/components/custom/UploadCropperButton";
 import { toast } from "@/hooks/use-toast";
 
 const organizationSchema = z.object({
