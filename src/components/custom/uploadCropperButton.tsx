@@ -1,23 +1,44 @@
+// src/components/custom/UploadCropperButton.tsx
 "use client";
-import { useState, useRef } from "react";
-import { Input } from "../ui/input";
+import React, { useState, useRef } from "react";
 import ReactCrop, { Crop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
+import { Button } from "../ui/button";
 
 export interface UploadResult {
   originalFile: File;
-  croppedBlob: Blob;
+  croppedBlob?: Blob;
 }
 
 interface UploadButtonProps {
   onChange: (result: UploadResult) => void;
   placeholder?: string;
+  crop?: boolean;
+  maxSize?: number; // en MB
+  accept?: string;
+  aspect?: number; // Opcional: Relación de aspecto
 }
 
-const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) => {
+const UploadButton: React.FC<UploadButtonProps> = ({
+  onChange,
+  placeholder,
+  crop = true,
+  maxSize,
+  accept = "image/jpeg, image/png, image/webp, image/gif",
+  aspect,
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [file, setFile] = useState<File | undefined>();
   const [fileUrl, setFileUrl] = useState("");
-  const [crop, setCrop] = useState<Crop>({ aspect: 1 });
+  const [cropConfig, setCropConfig] = useState<Crop>({
+    unit: '%', // Explícitamente establece la unidad
+    x: 25,
+    y: 25,
+    width: 50,
+    height: 50,
+    aspect: aspect, // Usa la relación de aspecto
+  });
   const imageRef = useRef<HTMLImageElement>(null);
 
   const [loading, setLoading] = useState(false);
@@ -25,75 +46,120 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) =>
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    setFile(f);
-    if (fileUrl) URL.revokeObjectURL(fileUrl);
-    setFileUrl(f ? URL.createObjectURL(f) : "");
-  };
+    if (!f) return;
 
-  const handleCrop = async () => {
-    if (!imageRef.current || !crop.width || !crop.height || !file) return;
-    setStatusMessage("Procesando...");
-    setLoading(true);
-
-    const canvas = document.createElement("canvas");
-    const scaleX = imageRef.current.naturalWidth / imageRef.current.width;
-    const scaleY = imageRef.current.naturalHeight / imageRef.current.height;
-    canvas.width = crop.width;
-    canvas.height = crop.height;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      setLoading(false);
+    // Validar tamaño
+    if (maxSize && f.size / 1024 / 1024 > maxSize) {
+      setStatusMessage(`El archivo supera el tamaño máximo de ${maxSize} MB.`);
       return;
     }
 
-    ctx.drawImage(
-      imageRef.current,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
-      0,
-      0,
-      crop.width,
-      crop.height
-    );
-
-    const croppedBlob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg")
-    );
-
-    if (croppedBlob) {
-      onChange({ originalFile: file, croppedBlob });
-      setStatusMessage("Procesado");
-    } else {
-      setStatusMessage("Error al procesar imagen");
+    // Limpia la URL anterior *antes* de crear la nueva
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
     }
-    setLoading(false);
+
+    setFile(f);
+    const url = URL.createObjectURL(f);
+    setFileUrl(url);
+
+    if (!crop) {
+      onChange({ originalFile: f });
+    }
+  };
+
+  const handleCrop = async () => {
+    if (!imageRef.current || !cropConfig.width || !cropConfig.height || !file) {
+        setStatusMessage("Error: Faltan datos para el recorte.");
+        return;
+      }
+      setStatusMessage("Procesando...");
+      setLoading(true);
+
+      const canvas = document.createElement("canvas");
+      const scaleX = imageRef.current.naturalWidth / imageRef.current.width;
+      const scaleY = imageRef.current.naturalHeight / imageRef.current.height;
+      canvas.width = cropConfig.width;
+      canvas.height = cropConfig.height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        setLoading(false);
+        setStatusMessage("Error al procesar imagen: No se pudo obtener el contexto 2D."); // Mejor mensaje
+        return;
+      }
+
+      ctx.drawImage(
+        imageRef.current,
+        cropConfig.x * scaleX,
+        cropConfig.y * scaleY,
+        cropConfig.width * scaleX,
+        cropConfig.height * scaleY,
+        0,
+        0,
+        cropConfig.width,
+        cropConfig.height
+      );
+
+    try {
+      const croppedBlob = await new Promise<Blob | null>((resolve, reject) => { // Añade reject
+        canvas.toBlob(blob => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Error al crear el blob.")); // Rechaza si toBlob falla
+          }
+        }, "image/jpeg");
+      });
+
+      if (croppedBlob) {
+        onChange({ originalFile: file, croppedBlob });
+        setStatusMessage("Procesado");
+      }
+    } catch (error) {
+      setStatusMessage("Error al procesar imagen: " + (error instanceof Error ? error.message : 'Desconocido')); // Captura el error
+      console.error("Error cropping image:", error); // Log del error
+    } finally {
+        setLoading(false); // Asegura que loading se establece a false
+    }
   };
 
   return (
     <div className="flex flex-col gap-4">
-      {statusMessage && <p>{statusMessage}</p>}
-      <Input
+      {statusMessage && <p className="text-red-500">{statusMessage}</p>} {/* Estilo para mensajes de error */}
+
+      <input
+        ref={inputRef}
         type="file"
+        accept={accept}
         onChange={handleChange}
-        placeholder={placeholder}
-        accept="image/jpeg, image/png, image/webp, image/gif"
+        className="hidden"
       />
-      {fileUrl && file && (
+
+      <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+        {placeholder}
+      </Button>
+
+      {fileUrl && file && crop && (
         <div className="flex flex-col gap-4 items-center">
           <ReactCrop
-            crop={crop}
-            onChange={(newCrop) => setCrop(newCrop)}
+            crop={cropConfig}
+            onChange={(newCrop) => setCropConfig(newCrop)}
             onComplete={(c) => {
               if (c.width && c.height) {
                 handleCrop();
               }
             }}
+            aspect={aspect} // Pasa la relación de aspecto
           >
             <img ref={imageRef} src={fileUrl} alt="preview" className="max-h-72" />
           </ReactCrop>
+        </div>
+      )}
+
+      {fileUrl && file && !crop && (
+        <div className="flex flex-col items-center">
+          <img src={fileUrl} alt="preview" className="max-h-72" />
         </div>
       )}
     </div>
@@ -101,3 +167,4 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onChange, placeholder }) =>
 };
 
 export default UploadButton;
+

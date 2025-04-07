@@ -35,7 +35,7 @@ const AvatarUser = ({ src, name }: AvatarUserProps) => {
     const { bg, text, border } = getColorScheme(name || "");
 
   return (
-    <Avatar className={`border-4 ${border} size-14`}>
+    <Avatar className={`border-2 ${border} size-14`}>
       <AvatarImage src={src ?? undefined} />
       <AvatarFallback className={`${bg} ${text} font-bold text-lg`}>
         {getInitials(name || "")}

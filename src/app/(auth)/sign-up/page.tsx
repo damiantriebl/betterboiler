@@ -66,37 +66,36 @@ export default function SignUp() {
 		setPending(false);
 	};
 
+	const fields = [
+		{ name: "name", label: "Nombre", type: "text" },
+		{ name: "email", label: "Email", type: "email" },
+		{ name: "password", label: "Contraseña", type: "password" },
+		{ name: "confirmPassword", label: "Confirmar contraseña", type: "password" },
+	] as const;
+
 	return (
 		<div className="grow flex items-center justify-center p-4">
 			<Card className="w-full max-w-md">
 				<CardHeader>
 					<CardTitle className="text-3xl font-bold text-center text-gray-800">
-						Create Account
+						Crear Cuenta
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
 						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-							{["name", "email", "password", "confirmPassword"].map((field) => (
+							{fields.map(({ name, label, type }) => (
 								<FormField
 									control={form.control}
-									key={field}
-									name={field as keyof z.infer<typeof signUpSchema>}
+									key={name}
+									name={name as keyof z.infer<typeof signUpSchema>}
 									render={({ field: fieldProps }) => (
 										<FormItem>
-											<FormLabel>
-												{field.charAt(0).toUpperCase() + field.slice(1)}
-											</FormLabel>
+											<FormLabel>{label}</FormLabel>
 											<FormControl>
 												<Input
-													type={
-														field.includes("password")
-															? "password"
-															: field === "email"
-															? "email"
-															: "text"
-													}
-													placeholder={`Enter your ${field}`}
+													type={type}
+													placeholder={`Ingrese ${label.toLowerCase()}`}
 													{...fieldProps}
 													autoComplete="off"
 												/>
@@ -106,7 +105,7 @@ export default function SignUp() {
 									)}
 								/>
 							))}
-							<LoadingButton pending={pending}>Sign up</LoadingButton>
+							<LoadingButton pending={pending}>Crear cuenta</LoadingButton>
 						</form>
 					</Form>
 					<div className="mt-4 text-center text-sm">

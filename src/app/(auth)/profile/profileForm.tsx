@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { updateUserAction } from "@/actions/auth/update-user";
-import UploadButton, { UploadResult } from "@/components/custom/uploadCropperButton";
+import UploadButton, { UploadResult } from "@/components/custom/UploadCropperButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -72,7 +72,6 @@ export default function ProfileForm({ user }: { user: { id: string; name: string
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          {/* Removemos el atributo action para manejar el submit manualmente */}
           <form onSubmit={onSubmit} className="space-y-6">
             <FormField
               control={form.control}

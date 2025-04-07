@@ -1,0 +1,32 @@
+* poder buscar por texto completo
+* ventas con datos ocmpletos
+* en ventas/:id confirmación de compra, aparecer el monto en 3) modificarlo y dejarlo mas estético 4) Enviar datos al arca opcional
+STOCK NUEVO
+
+* primero va el datos del producto GENERAL (sacar el color) 
+* en identificación agregar color. y un botón para ir sumando motos al sistema
+* agregar en indetificacion, la sucursal
+* poder agregar unica marca
+* inspeccionar si hay una api de motos
+* proveedor
+* precio de venta minorista / mayorista
+* stock total es automatico
+* formularios atachados
+
+AJUSTES
+
+* poder aumentar por grupo
+
+CONFIGURACION
+
+* agregar marcas
+* agregar modelos
+* sucursales
+* colores
+* proveedor => cuit, teléfono, dirección, transporte. 
+
+// accesorios
+
+ADMIN
+* ROLE ENCARGADO ve todo para agregar
+* role user solo entra en ventas y dashboard

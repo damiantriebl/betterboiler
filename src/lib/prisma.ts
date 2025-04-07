@@ -2,7 +2,8 @@ import { PrismaClient, Prisma } from '@prisma/client';
 
 const prismaClientSingleton = () => {
   const prisma = new PrismaClient({
-    log: ['query', 'info', 'warn', 'error']
+   // log: ['query', 'info', 'warn', 'error']
+   log: ['warn', 'error']
   });
 
   prisma.$use(async (params: Prisma.MiddlewareParams, next) => {

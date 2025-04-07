@@ -15,10 +15,11 @@ export default function LogoutButton() {
             await authClient.signOut({
                 fetchOptions: {
                     onSuccess: () => {
-                        router.push("sign-in");
+                        window.location.href = "/sign-in";
                     }
                 }
             })
+            
         } catch (error) {
             console.error("Error signin out:", error)
         } finally {

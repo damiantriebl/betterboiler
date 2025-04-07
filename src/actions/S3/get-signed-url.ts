@@ -17,10 +17,9 @@ export async function getSignedURL({ name }: { name: string }) {
     headers: await headers() 
   });
   if (!session) {
-    return { failure: "No está autenticado" };
+    return { failure: "No está autenticado" }; 
   }
-  // Construimos la key usando el id del usuario y el nombre
-  const key = session.user?.id + "/" + name + ".jpg";
+  const key =  name;
   const putObjectCommand = new PutObjectCommand({
     Bucket: process.env.AWS_BUCKET_NAME!,
     Key: key,
