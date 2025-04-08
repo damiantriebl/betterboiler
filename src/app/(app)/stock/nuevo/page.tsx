@@ -7,7 +7,6 @@ import NuevaMotoForm from "./NuevaMotoForm";
 
 // Definir el orden de las pestañas
 const TABS_ORDER: Array<| 'producto' | 'identificacion' | 'comercial' | 'multimedia' | 'legal'> = [
-
     'producto',
     'identificacion',
     'comercial',
