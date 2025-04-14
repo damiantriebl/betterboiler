@@ -9,7 +9,7 @@ import UploadButton, { UploadResult } from "@/components/custom/UploadCropperBut
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import LoadingButton from "@/components/custom/loadingButton";
+import LoadingButton from "@/components/custom/LoadingButton";
 import { useToast } from "@/hooks/use-toast";
 
 const profileSchema = z.object({

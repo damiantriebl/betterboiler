@@ -1,7 +1,7 @@
 "use server";
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { serverMessage } from '@/schemas/serverMessage';
+import { serverMessage } from '@/types/ServerMessageType';
 import { getSignedURL } from '../S3/get-signed-url';
 import sharp from 'sharp';
 

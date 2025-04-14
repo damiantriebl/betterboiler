@@ -15,12 +15,12 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { resetPasswordSchema } from "@/lib/authZod";
-import LoadingButton from "@/components/custom/loadingButton";
+import { resetPasswordSchema } from "@/zod/authZod";
+import LoadingButton from "@/components/custom/LoadingButton";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { resetPasswordAction } from "@/actions/auth/reset-password";
-import { serverMessage } from "@/schemas/serverMessage";
+import { serverMessage } from "@/types/ServerMessageType";
 
 function ResetPasswordContent() {
 	const router = useRouter();
@@ -44,7 +44,7 @@ function ResetPasswordContent() {
 			});
 			startTransition(() => {
 				router.push('/sign-in');
-			  });
+			});
 		}
 	}, [state])
 

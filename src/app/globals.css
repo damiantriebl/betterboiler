@@ -87,8 +87,6 @@ body {
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -115,3 +113,17 @@ body {
     --chart-5: 340 75% 55%;
   }
 }
+<<<<<<< HEAD
+=======
+
+.pattern-diagonal-lines {
+  background-color: var(--pattern-bg-color, #e0e0e0);
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--pattern-line-color, #000000) 0,
+    var(--pattern-line-color, #000000) 1px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+>>>>>>> 3fc6eaa (finish touches)

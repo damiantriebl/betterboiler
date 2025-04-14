@@ -19,6 +19,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+import { HelpCircle, Home, Package, Settings, ShoppingCart, Truck, Building } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { authClient } from "@/auth-client"
+import { UserButton } from "@/components/custom/UserButton"
+
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
@@ -396,18 +402,92 @@ SidebarSeparator.displayName = "SidebarSeparator"
 
 const SidebarContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div">
->(({ className, ...props }, ref) => {
+  React.ComponentProps<"div"> & { skeleton?: boolean }
+>(({ className, skeleton, ...props }, ref) => {
+  const { state } = useSidebar()
+  const pathname = usePathname()
+  const { useSession } = authClient;
+  const { data: session, isPending, error } = useSession();
+
+  const organizationName = session?.user?.organization?.name || "Organización";
+
+  const isActive = (path: string) => {
+    return pathname.startsWith(path)
+  }
+
+  const navItems = [
+    { href: "/dashboard", icon: Home, label: "Dashboard" },
+    { href: "/stock", icon: Package, label: "Stock" },
+    { href: "/sales", icon: ShoppingCart, label: "Ventas" },
+    { href: "/suppliers", icon: Truck, label: "Proveedores" },
+    { href: "/configuration", icon: Settings, label: "Configuración" },
+  ]
+
+  if (skeleton || isPending) {
+    return (
+      <> {/* Placeholder Skeleton */} </>
+    )
+  }
+
   return (
     <div
       ref={ref}
-      data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex size-full flex-col overflow-y-auto bg-sidebar text-sidebar-foreground",
         className
       )}
       {...props}
-    />
+    >
+      <div className="flex h-14 shrink-0 items-center justify-between px-2 py-2">
+        <div className="flex items-center gap-2 font-semibold text-sm pl-2">
+          <Building className="h-4 w-4" />
+          {(state === 'expanded') ? organizationName : <Building className="h-4 w-4" />}
+        </div>
+        <SidebarTrigger className="hidden md:flex" />
+      </div>
+      <Separator className="mb-2" />
+      <div className="flex grow flex-col space-y-1 px-2">
+        <div className="flex grow flex-col">
+          {navItems.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href} passHref legacyBehavior>
+                <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={state === 'collapsed' ? item.label : undefined}>
+                  <a>
+                    <item.icon className="size-4 shrink-0" />
+                    <span
+                      className={cn(
+                        "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
+                        state === "expanded" ? "delay-200" : "delay-0"
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+        </div>
+        <Separator className="my-2" />
+        <div className="flex flex-col space-y-1">
+          <SidebarMenuItem>
+            <Link href="/ayuda" passHref legacyBehavior>
+              <SidebarMenuButton asChild isActive={isActive("/ayuda")} tooltip={state === 'collapsed' ? "Ayuda" : undefined}>
+                <a>
+                  <HelpCircle className="size-4 shrink-0" />
+                  <span className={cn("duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0", state === "expanded" ? "delay-200" : "delay-0")}>
+                    Ayuda
+                  </span>
+                </a>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+          <div className={cn("mt-auto flex items-center", state === "collapsed" ? "justify-center" : "justify-start pl-2")}>
+            <UserButton />
+          </div>
+        </div>
+      </div>
+    </div>
   )
 })
 SidebarContent.displayName = "SidebarContent"
@@ -615,7 +695,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className
       )}
       {...props}

@@ -3,14 +3,13 @@
 * en ventas/:id confirmación de compra, aparecer el monto en 3) modificarlo y dejarlo mas estético 4) Enviar datos al arca opcional
 STOCK NUEVO
 
-* primero va el datos del producto GENERAL (sacar el color) 
-* en identificación agregar color. y un botón para ir sumando motos al sistema
-* agregar en indetificacion, la sucursal
-* poder agregar unica marca
-* inspeccionar si hay una api de motos
-* proveedor
-* precio de venta minorista / mayorista
-* stock total es automatico
+* primero va el datos del producto GENERAL (sacar el color) // done
+* en identificación agregar color. y un botón para ir sumando motos al sistema // done
+* poder agregar unica marca // done
+* inspeccionar si hay una api de motos // done, no tiene sentidos, proque hay muchas
+* proveedor // a medio
+* precio de venta minorista / mayorista // donde
+* stock total es automatico 
 * formularios atachados
 
 AJUSTES
@@ -19,11 +18,11 @@ AJUSTES
 
 CONFIGURACION
 
-* agregar marcas
-* agregar modelos
-* sucursales
-* colores
-* proveedor => cuit, teléfono, dirección, transporte. 
+* agregar marcas     //done
+* agregar modelos   // done
+* sucursales        // done
+* colores           // done
+* proveedor => cuit, teléfono, dirección, transporte. //done
 
 // accesorios
 

@@ -11,34 +11,34 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/loadingButton";
+import LoadingButton from "@/components/custom/LoadingButton";
 import { useToast } from "@/hooks/use-toast";
 import { forgotPasswordAction } from "@/actions/auth/fotgot-password";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { forgotPasswordSchema } from "@/lib/authZod";
+import { forgotPasswordSchema } from "@/zod/authZod";
 import { z } from "zod";
-import { serverMessage } from "@/schemas/serverMessage";
+import { serverMessage } from "@/types/ServerMessageType";
 
 
 export default function ForgotPassword() {
 	const { toast } = useToast();
 	const [state, formAction, isPending] = useActionState<serverMessage, FormData>(forgotPasswordAction, { success: false, error: false });
 
-	useEffect(()=>{
+	useEffect(() => {
 		if (state.error) {
 			toast({
 				title: "Error",
 				description: state.error,
 				variant: "destructive",
 			});
-		} else if(state.success){
+		} else if (state.success) {
 			toast({
 				title: "Éxito",
 				description: state.success,
 			});
 		}
-	},[state])
+	}, [state])
 
 	const formResetPasswordSchema = useForm<z.infer<typeof forgotPasswordSchema>>({
 		resolver: zodResolver(forgotPasswordSchema),
@@ -47,7 +47,7 @@ export default function ForgotPassword() {
 		},
 	});
 
-	
+
 
 	return (
 		<div className="grow flex items-center justify-center p-4">

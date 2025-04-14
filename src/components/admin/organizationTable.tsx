@@ -10,10 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import prisma from "@/lib/prisma";
-import ImageZoom from "../custom/imageZoom";
+import ImageZoom from "../custom/ImageZoom";
 
 export default async function OrganizationTable() {
-  const organizations =  await prisma.organization.findMany();
+  const organizations = await prisma.organization.findMany();
   return (
     <Table>
       <TableHeader>

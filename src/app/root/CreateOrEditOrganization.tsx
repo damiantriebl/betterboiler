@@ -7,18 +7,12 @@ import { cn } from "@/lib/utils";
 import { Label } from "@radix-ui/react-label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { createOrUpdateOrganization } from "@/actions/auth/create-edit-organizations";
-import { serverMessage } from "@/schemas/serverMessage";
+import { serverMessage } from "@/types/ServerMessageType";
 import UploadButton, { UploadResult } from "@/components/custom/UploadCropperButton";
 import { toast } from "@/hooks/use-toast";
-
-const organizationSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
-  logoFile: z.instanceof(File).optional(),
-});
+import { organizationSchema, OrganizationFormData } from "@/zod/OrganizationZod";
 
 interface Props {
   organization?: {
@@ -33,7 +27,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<serverMessage>({ success: false, error: false });
 
-  const form = useForm<z.infer<typeof organizationSchema>>({
+  const form = useForm<OrganizationFormData>({
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       id: organization?.id ?? "",
@@ -50,7 +44,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
         description: "Se actualizo la imagen correctamente",
       });
     }
-  
+
     if (state.error) {
       toast({
         title: "Error",
@@ -71,7 +65,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
     if (data.logoFile) {
       formData.append("logoFile", data.logoFile, data.logoFile.name);
     }
-  
+
     startTransition(async () => {
       try {
         const result = await createOrUpdateOrganization(formData);
@@ -82,7 +76,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
       }
     });
   });
-  
+
 
   return (
     <Dialog open={open} onOpenChange={() => setOpen(!open)}>

@@ -1,0 +1,14 @@
+import { z } from "zod";
+
+// Schema for the Create/Edit Organization form
+export const organizationSchema = z.object({
+  id: z.string().optional(), // Optional ID for editing
+  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  // logoFile is handled separately in the form, not part of this base schema usually
+  // If the action expects the URL directly, add it here:
+  // logo: z.string().url().optional().nullable(), 
+  // For client-side validation including the file:
+  logoFile: z.instanceof(File).optional(), 
+});
+
+export type OrganizationFormData = z.infer<typeof organizationSchema>;

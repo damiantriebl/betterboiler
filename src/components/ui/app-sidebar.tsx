@@ -1,4 +1,4 @@
-import { Bike, Calendar, Home, Inbox, Search, Settings, SquarePercent } from "lucide-react"
+import { Bike, Calendar, Home, Inbox, Link, Search, Settings, SquarePercent } from "lucide-react"
 
 import {
   Sidebar,
@@ -11,7 +11,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import LogoutButton from "../custom/logoutButton"
+import LogoutButton from "../custom/LogoutButton"
+import { Button } from "./button"
 
 // Menu items.
 const items = [
@@ -51,12 +52,12 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton variant={"black"} asChild >
-                    <a href={item.url}>
-                      <item.icon className="size-12 shrink-0" />
+                  <Button variant="secondary">
+                    <Link href={item.url}>
+                      <item.icon className="size-12 shrink-0 p-10" />
                       <span className="text-lg">{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
+                    </Link>
+                  </Button>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { authClient } from "@/auth-client";
-import LoadingButton from "./loadingButton";
+import LoadingButton from "./LoadingButton";
 import { useRouter } from "next/navigation";
 
 export default function LogoutButton() {
@@ -19,7 +19,7 @@ export default function LogoutButton() {
                     }
                 }
             })
-            
+
         } catch (error) {
             console.error("Error signin out:", error)
         } finally {
