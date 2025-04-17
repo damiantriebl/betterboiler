@@ -1,6 +1,5 @@
-
 import { headers } from "next/headers";
-import ProfileForm from "./ProfileForm";
+import ProfileForm from "./profileForm";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 

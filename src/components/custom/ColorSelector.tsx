@@ -54,16 +54,16 @@ export function ColorSelector({
                         {selectedColor ? (
                             <>
                                 <ColorItem colorConfig={selectedColor} size="sm" displayMode={true} showName={false} />
-                                <span className="truncate">{selectedColor.nombre}</span>
+                                <span className="truncate">{selectedColor.name}</span>
                             </>
                         ) : (
                             placeholder
                         )}
                     </span>
                     <span className="flex items-center ml-auto pl-2">
-                        {selectedColor && (selectedColor.tipo === 'BITONO' || selectedColor.tipo === 'PATRON') && (
+                        {selectedColor && (selectedColor.type === 'BITONO' || selectedColor.type === 'PATRON') && (
                             <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                                {selectedColor.tipo === 'BITONO' ? 'Bitono' : 'Patrón'}
+                                {selectedColor.type === 'BITONO' ? 'Bitono' : 'Patrón'}
                             </Badge>
                         )}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -73,7 +73,7 @@ export function ColorSelector({
             <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
                 <Command filter={(value, search) => {
                     const color = colors.find(c => c.dbId?.toString() === value);
-                    if (color?.nombre.toLowerCase().includes(search.toLowerCase())) return 1;
+                    if (color?.name?.toLowerCase().includes(search.toLowerCase())) return 1;
                     return 0;
                 }}>
                     <CommandInput placeholder={searchPlaceholder} />
@@ -101,7 +101,7 @@ export function ColorSelector({
                                     />
                                     <span className="flex items-center gap-2">
                                         <ColorItem colorConfig={color} size="sm" displayMode={true} showName={false} />
-                                        {color.nombre}
+                                        {color.name}
                                     </span>
                                 </CommandItem>
                             ))}

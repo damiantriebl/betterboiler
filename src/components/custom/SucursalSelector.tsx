@@ -11,7 +11,7 @@ import {
     Popover, PopoverContent, PopoverTrigger
 } from "@/components/ui/popover";
 // Importar el tipo BranchData definido en la acción
-import { type BranchData } from "@/actions/stock/get-sucursales";
+import { type BranchData } from "@/actions/stock/get-branch";
 
 interface SucursalSelectorProps {
     sucursales: BranchData[];

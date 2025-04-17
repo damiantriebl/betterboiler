@@ -153,10 +153,10 @@ model Model {
 
 model MotoColor {
   id        Int      @id @default(autoincrement())
-  nombre    String // Nombre único POR ORGANIZACIÓN, ej: "Rojo Fuego"
-  tipo      String // 'unico', 'bitono', 'patron'
-  color1    String // Color principal (#RRGGBB)
-  color2    String? // Segundo color (#RRGGBB), opcional
+  name      String // nombre
+  type      String // tipo ('unico', 'bitono', 'patron')
+  colorOne  String // color1 (#RRGGBB)
+  colorTwo  String? // color2 (#RRGGBB), opcional
   order     Int      @default(0) // Orden para DND (por organización)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -166,10 +166,11 @@ model MotoColor {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Añadir relación inversa con Motorcycle
-  motorcycles Motorcycle[]
+  motorcycles Motorcycle[] // Inverse relation with Motorcycle
 
   // Asegurar que el nombre del color sea único para cada organización
-  @@unique([organizationId, nombre])
+  @@unique([organizationId, name])
+
   // Indexar para búsquedas rápidas por organización y orden
   @@index([organizationId, order])
 }
@@ -225,7 +226,7 @@ model OrganizationModelConfig {
 // Modelo para Sucursales (Branches)
 model Sucursal {
   id        Int      @id @default(autoincrement())
-  name      String // Nombre de la sucursal
+  name      String // Name of the branch
   order     Int // Orden dentro de la organización
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -235,7 +236,7 @@ model Sucursal {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Añadir relación inversa con Motorcycle
-  motorcycles Motorcycle[]
+  motorcycles Motorcycle[] // Inverse relation with Motorcycle
 
   // Restricción única por organización y nombre
   @@unique([organizationId, name])
@@ -315,21 +316,40 @@ model Supplier {
   @@index([organizationId, status]) // Índice para filtrar por estado
 }
 
+model Client {
+  id          String   @id @default(cuid())
+  type        String   // 'Individual' | 'LegalEntity'
+  firstName   String
+  lastName    String?
+  companyName String?
+  taxId       String
+  email       String
+  phone       String?
+  mobile      String?
+  address     String?
+  vatStatus   String?
+  status      String   @default("active")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 // --- MODELO Motorcycle (Modificar para incluir relación con Supplier) ---
 model Motorcycle {
   id             Int      @id @default(autoincrement())
-  chassisNumber  String   @unique // Chasis debería ser único
-  engineNumber   String?  @unique // Motor podría ser opcional y único
-  year           Int
-  displacement   Int? // Cilindrada (opcional)
-  mileage        Int      @default(0)
-  costPrice      Float? // Precio de compra
-  retailPrice    Float // Precio minorista (Obligatorio)
-  wholesalePrice Float? // Precio mayorista
-  licensePlate   String? // Patente
-  observations   String?
-  imageUrl       String? // URL imagen principal
-  state          String   @default("AVAILABLE") // Estado inicial (Ej: AVAILABLE, IN_PROGRESS, SOLD)
+  chassisNumber  String   @unique // nroChasis
+  engineNumber   String?  @unique // nroMotor
+  year           Int              // año
+  displacement   Int?             // cilindrada 
+  mileage        Int      @default(0) // kilometraje
+  costPrice      Float?           // precioCosto
+  retailPrice    Float            // precioVentaMinorista (Obligatorio)
+  wholesalePrice Float?           // precioVentaMayorista
+  licensePlate   String?          // patente
+  currency       String   @default("ARS") // Kept from previous change
+  observations   String?          // Kept for now
+  imageUrl       String?          // imagenPrincipalUrl
+  state          String   @default("AVAILABLE") // Kept for now (Estado físico/stock)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -342,11 +362,11 @@ model Motorcycle {
 
   // --- Relación con MotoColor (usa el ID de MotoColor) ---
   colorId Int // FK para MotoColor
-  color   MotoColor @relation(fields: [colorId], references: [id])
+  color   MotoColor @relation(fields: [colorId], references: [id]) // Relation uses ID
 
   // --- Relación con Sucursal (usa el ID de Sucursal) ---
-  branchId Int // FK para Sucursal (antes sucursalId)
-  branch   Sucursal @relation(fields: [branchId], references: [id])
+  branchId Int // Reverted to branchId
+  branch   Sucursal @relation(fields: [branchId], references: [id]) // Reverted relation name
 
   // --- Relación con Proveedor (Opcional) ---
   supplierId Int? // Hacer el ID opcional
@@ -360,7 +380,7 @@ model Motorcycle {
   @@index([brandId])
   @@index([modelId])
   @@index([colorId])
-  @@index([branchId])
+  @@index([branchId]) // Reverted index name
   @@index([supplierId]) // Añadir índice para supplierId
   @@index([organizationId])
   @@index([state]) // Indexar por estado si se busca frecuentemente

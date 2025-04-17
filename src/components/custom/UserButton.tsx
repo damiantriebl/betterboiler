@@ -15,12 +15,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button'; // Para el trigger si prefieres un botón
 import { Skeleton } from "@/components/ui/skeleton"; // Para el estado de carga
-import { signOutAction } from '@/actions/auth/sign-out'; // Importar la acción de cierre de sesión
 
 import { createAuthClient } from "better-auth/react"
+import { authClient } from '@/auth-client';
+import { useRouter } from 'next/navigation';
 const { useSession } = createAuthClient()
 
 export function UserButton() {
+    const router = useRouter();
     // Usar la desestructuración correcta según la documentación
     const { data: session, isPending, error } = useSession(); // Usar isPending, error
 
@@ -46,14 +48,20 @@ export function UserButton() {
     const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase() || "?";
 
     const handleSignOut = async () => {
-        await signOutAction();
+        await authClient.signOut({
+            fetchOptions: {
+                onSuccess: () => {
+                    router.push("/sign-in"); // redirect to login page
+                },
+            },
+        });
     };
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
+                <Button variant="ghost" className="size-16 rounded-full">
+                    <Avatar className="size-16">
                         <AvatarImage src={userImage} alt={userName} />
                         <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
@@ -61,7 +69,7 @@ export function UserButton() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
+                    <div className="flex flex-col">
                         <p className="text-sm font-medium leading-none">{userName}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                             {userEmail}

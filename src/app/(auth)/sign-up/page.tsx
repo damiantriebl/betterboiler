@@ -14,7 +14,7 @@ import LoadingButton from "@/components/custom/LoadingButton";
 
 import Link from "next/link";
 
-import { signUpSchema } from "@/zod/authZod";
+import { signUpSchema } from "@/zod/AuthZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";

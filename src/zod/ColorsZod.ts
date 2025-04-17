@@ -5,41 +5,48 @@ export const ColorTypeEnum = z.enum(['SOLIDO', 'BITONO', 'PATRON']);
 export type ColorType = z.infer<typeof ColorTypeEnum>;
 
 // Base Schema for Color Data (without ID, without refinement)
-export const motoColorBaseSchema = z.object({
-    nombre: z.string().min(1, "El nombre es requerido."),
-    tipo: ColorTypeEnum,
-    color1: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color 1 inválido (#RRGGBB)"),
-    color2: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color 2 inválido (#RRGGBB)").optional().nullable(),
-    // organizationId is typically added server-side from session
+const colorBaseSchema = z.object({
+    name: z.string().min(1, "El nombre es requerido.").max(50, "Nombre demasiado largo (máx 50)"),
+    type: z.enum(['SOLIDO', 'BITONO', 'PATRON'], { errorMap: () => ({ message: 'Tipo inválido' }) }),
+    colorOne: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Formato de color inválido (#RRGGBB)"),
+    colorTwo: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Formato de color inválido (#RRGGBB)").nullable().optional(),
 });
 
 // Refined Schema for Create/Update (enforces color2 logic)
-export const refinedMotoColorSchema = motoColorBaseSchema.refine(
-    (data) => !(data.tipo === "BITONO" || data.tipo === "PATRON") || !!data.color2,
-    { message: "Se requiere Color 2 para los tipos 'BITONO' y 'PATRON'.", path: ["color2"] }
+export const refinedMotoColorSchema = colorBaseSchema.refine(
+    (data) => !(data.type === "BITONO" || data.type === "PATRON") || !!data.colorTwo,
+    { message: "Se requiere Color 2 para los tipos 'BITONO' y 'PATRON'.", path: ["colorTwo"] }
 ).refine(
-    (data) => !(data.tipo === "SOLIDO" && data.color2),
-    { message: "No se debe proporcionar Color 2 para el tipo 'SOLIDO'.", path: ["color2"] }
+    (data) => !(data.type === "SOLIDO" && data.colorTwo),
+    { message: "No se debe proporcionar Color 2 para el tipo 'SOLIDO'.", path: ["colorTwo"] }
 );
 
 // Schema specifically for the Create action (can just be the refined one)
 // Note: organizationId is added in the action itself
-export const createColorSchema = refinedMotoColorSchema;
+export const createColorSchema = colorBaseSchema.extend({
+    organizationId: z.string()
+}).refine(data => data.type === 'SOLIDO' ? data.colorTwo === null || data.colorTwo === undefined : true, {
+    message: "Color 2 debe ser nulo para tipo SOLIDO",
+    path: ["colorTwo"],
+}).refine(data => data.type !== 'SOLIDO' ? data.colorTwo !== null && data.colorTwo !== undefined : true, {
+    message: "Color 2 es requerido para tipos diferentes de SOLIDO",
+    path: ["colorTwo"],
+});
 export type CreateColorFormData = z.infer<typeof createColorSchema>;
 
 // Schema specifically for the Update action (includes ID)
 // CORRECTION: Use .extend() on the BASE schema, then refine again if needed
 // or refine the extended schema directly.
-export const updateColorActionSchema = motoColorBaseSchema.extend({
-    id: z.coerce.number().int(),
-     // organizationId is added in the action itself
-}).refine(
-    (data) => !(data.tipo === "BITONO" || data.tipo === "PATRON") || !!data.color2,
-    { message: "Se requiere Color 2 para los tipos 'BITONO' y 'PATRON'.", path: ["color2"] }
-).refine(
-    (data) => !(data.tipo === "SOLIDO" && data.color2),
-    { message: "No se debe proporcionar Color 2 para el tipo 'SOLIDO'.", path: ["color2"] }
-);
+export const updateColorActionSchema = colorBaseSchema.extend({
+    id: z.coerce.number().int().positive("ID inválido"),
+    organizationId: z.string()
+}).refine(data => data.type === 'SOLIDO' ? data.colorTwo === null || data.colorTwo === undefined : true, {
+    message: "Color 2 debe ser nulo para tipo SOLIDO",
+    path: ["colorTwo"],
+}).refine(data => data.type !== 'SOLIDO' ? data.colorTwo !== null && data.colorTwo !== undefined : true, {
+    message: "Color 2 es requerido para tipos diferentes de SOLIDO",
+    path: ["colorTwo"],
+});
 export type UpdateColorFormData = z.infer<typeof updateColorActionSchema>;
 
 

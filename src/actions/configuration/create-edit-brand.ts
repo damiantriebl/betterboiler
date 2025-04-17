@@ -12,12 +12,10 @@ import {
     dissociateBrandSchema,
     updateOrgBrandOrderSchema
 } from "@/zod/BrandZod";
+import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
 
 // Helper para obtener organizationId de la sesión
-async function getOrganizationIdFromSession(): Promise<string | null> {
-    const session = await auth.api.getSession({ headers: await headers() });
-    return session?.user?.organizationId ?? null;
-}
+
 
 // ==============================================
 // Acciones para Marcas (Brands) - Modelo N:M
@@ -779,5 +777,70 @@ export async function updateOrganizationModelsOrder(prevState: UpdateModelOrderS
     } catch (error) {
         console.error("🔥 ERROR SERVER ACTION (updateModelOrder OrgConfig):", error); // LOG ERROR GENERAL
         return { success: false, error: "Error al actualizar el orden de los modelos." };
+    }
+}
+
+// --- (NUEVA ACCIÓN) Acción para desasociar (ocultar) un Modelo para una Organización ---
+export interface DissociateModelState { success: boolean; error?: string | null; message?: string | null; }
+
+const dissociateModelSchema = z.object({
+    modelId: z.coerce.number().int("ID de modelo inválido."),
+    // organizationId se obtiene de sesión
+});
+
+export async function dissociateOrganizationModel(prevState: DissociateModelState | null, formData: FormData): Promise<DissociateModelState> {
+    const organizationId = await getOrganizationIdFromSession();
+    if (!organizationId) return { success: false, error: "Usuario no autenticado o sin organización." };
+
+    const validatedFields = dissociateModelSchema.safeParse({
+        modelId: formData.get("modelId"),
+    });
+
+    if (!validatedFields.success) {
+        const errors = Object.entries(validatedFields.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m ?? []).join(',')}`).join('; ');
+        return { success: false, error: `Datos inválidos: ${errors}` };
+    }
+
+    const { modelId } = validatedFields.data;
+
+    console.log(`[dissociateModel] Org: ${organizationId}, Model: ${modelId}`); // LOG
+
+    try {
+        // 1. Verificar que el modelo existe y obtener brandId
+        const model = await prisma.model.findUnique({
+            where: { id: modelId }, select: { brandId: true, name: true }
+        });
+        if (!model) return { success: false, error: "Modelo no encontrado." };
+
+        // 2. Verificar permiso de la org sobre la marca del modelo
+        const hasPermission = await checkBrandPermission(organizationId, model.brandId);
+        if (!hasPermission) return { success: false, error: "No tienes permiso para modificar modelos de esta marca." };
+
+        // 3. Actualizar la config existente para marcar como no visible
+        const updateResult = await prisma.organizationModelConfig.updateMany({
+            where: {
+                organizationId: organizationId,
+                modelId: modelId,
+                // Opcional: asegurar que solo se oculte si estaba visible
+                // isVisible: true 
+            },
+            data: {
+                isVisible: false
+            }
+        });
+
+        if (updateResult.count === 0) {
+             console.warn(`[dissociateModel] No config found or already invisible for Org: ${organizationId}, Model: ${modelId}`);
+             // Considerar si esto es un error o un éxito silencioso
+             // Por ahora, lo trataremos como éxito ya que el estado deseado (invisible) se cumple
+             // return { success: false, error: "Configuración del modelo no encontrada o ya estaba oculta." };
+        }
+
+        revalidatePath("/configuracion");
+        return { success: true, message: `Modelo "${model.name}" ocultado para tu organización.` };
+
+    } catch (error) {
+        console.error("🔥 ERROR SERVER ACTION (dissociateModel):", error);
+        return { success: false, error: "Error al ocultar el modelo." };
     }
 } 

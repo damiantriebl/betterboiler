@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { Icon, PanelLeft } from "lucide-react"
+import { Icon, PanelLeft, User } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -410,6 +410,7 @@ const SidebarContent = React.forwardRef<
   const { data: session, isPending, error } = useSession();
 
   const organizationName = session?.user?.organization?.name || "Organización";
+  const userName = session?.user?.name || "Usuario";
 
   const isActive = (path: string) => {
     return pathname.startsWith(path)
@@ -417,9 +418,10 @@ const SidebarContent = React.forwardRef<
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/stock", icon: Package, label: "Stock" },
+    { href: "/stock/new", icon: Package, label: "Stock" },
     { href: "/sales", icon: ShoppingCart, label: "Ventas" },
     { href: "/suppliers", icon: Truck, label: "Proveedores" },
+    { href: "/clients", icon: User, label: "Clientes" },
     { href: "/configuration", icon: Settings, label: "Configuración" },
   ]
 
@@ -433,27 +435,39 @@ const SidebarContent = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "flex size-full flex-col overflow-y-auto bg-sidebar text-sidebar-foreground",
+        "flex flex-col h-screen size-full overflow-y-auto bg-sidebar text-sidebar-foreground",
         className
       )}
       {...props}
     >
-      <div className="flex h-14 shrink-0 items-center justify-between px-2 py-2">
-        <div className="flex items-center gap-2 font-semibold text-sm pl-2">
-          <Building className="h-4 w-4" />
-          {(state === 'expanded') ? organizationName : <Building className="h-4 w-4" />}
+      <div className="flex flex-col shrink-0 px-4 py-4 gap-3">
+        <div className="flex flex-row items-center gap-3">
+          <div>
+            <UserButton />
+          </div>
+          {state === 'expanded' && (
+            <span className="font-medium text-white text-2xl truncate whitespace-nowrap">
+              {userName ? userName.charAt(0).toUpperCase() + userName.slice(1) : ''}
+            </span>
+          )}
         </div>
-        <SidebarTrigger className="hidden md:flex" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Building className="h-4 w-4 shrink-0" />
+          {state === 'expanded' && (
+            <span className="font-semibold text-white truncate whitespace-nowrap">{organizationName}</span>
+          )}
+        </div>
       </div>
       <Separator className="mb-2" />
-      <div className="flex grow flex-col space-y-1 px-2">
-        <div className="flex grow flex-col">
+
+      <div className="flex flex-col flex-grow px-2">
+        <div className="flex-grow">
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} passHref legacyBehavior>
-                <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={state === 'collapsed' ? item.label : undefined}>
+                <SidebarMenuButton variant="black" asChild isActive={isActive(item.href)} tooltip={state === 'collapsed' ? item.label : undefined}>
                   <a>
-                    <item.icon className="size-4 shrink-0" />
+                    <item.icon className="size-12 shrink-0" />
                     <span
                       className={cn(
                         "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
@@ -468,11 +482,12 @@ const SidebarContent = React.forwardRef<
             </SidebarMenuItem>
           ))}
         </div>
-        <Separator className="my-2" />
-        <div className="flex flex-col space-y-1">
-          <SidebarMenuItem>
+
+        <div className="mt-auto pb-4">
+          <Separator className="my-2 bg-black" />
+          <SidebarMenuItem >
             <Link href="/ayuda" passHref legacyBehavior>
-              <SidebarMenuButton asChild isActive={isActive("/ayuda")} tooltip={state === 'collapsed' ? "Ayuda" : undefined}>
+              <SidebarMenuButton variant="black" asChild isActive={isActive("/ayuda")} tooltip={state === 'collapsed' ? "Ayuda" : undefined}>
                 <a>
                   <HelpCircle className="size-4 shrink-0" />
                   <span className={cn("duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0", state === "expanded" ? "delay-200" : "delay-0")}>
@@ -482,9 +497,6 @@ const SidebarContent = React.forwardRef<
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-          <div className={cn("mt-auto flex items-center", state === "collapsed" ? "justify-center" : "justify-start pl-2")}>
-            <UserButton />
-          </div>
         </div>
       </div>
     </div>
@@ -596,7 +608,7 @@ const sidebarMenuButtonVariants = cva(
     variants: {
       variant: {
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        black: "gap-4 p-7 bg-black text-white opacity-80 hover:bg-[#1a1a1a] active:bg-[#2a2a2a]",
+        black: "gap-4 p-7 bg-black text-white opacity-80 hover:bg-[#1a1a1a] hover:text-white active:bg-[#2a2a2a]",
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },

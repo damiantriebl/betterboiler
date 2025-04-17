@@ -9,7 +9,7 @@ import { headers } from "next/headers";
 export type MotorcycleWithDetails = Motorcycle & {
     brand: { name: string };
     model: { name: string };
-    color: { nombre: string; color1: string; color2: string | null };
+    color: { name: string; colorOne: string; colorTwo: string | null };
     branch: { name: string };
     supplier?: { legalName: string; commercialName: string | null } | null; // Proveedor opcional
 };
@@ -43,7 +43,7 @@ export async function getMotorcycles(options: GetMotorcyclesOptions = {}): Promi
             include: { // Incluir datos relacionados necesarios para la tabla
                 brand: { select: { name: true } },
                 model: { select: { name: true } },
-                color: { select: { nombre: true, color1: true, color2: true } },
+                color: { select: { name: true, colorOne: true, colorTwo: true } },
                 branch: { select: { name: true } },
                 supplier: { select: { legalName: true, commercialName: true } }, // Incluir proveedor
             },

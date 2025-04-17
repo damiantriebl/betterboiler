@@ -1,25 +1,19 @@
 "use server";
 
-import { auth } from "@/auth"; // Asegúrate que la ruta a tu config de auth es correcta
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-export async function signOutAction() {
+// El import de auth puede no ser necesario si solo borramos la cookie.
+// import { auth } from "@/auth"; 
+
+export default async function signOutAction() {
     try {
-        // Llama al método signOut de tu librería de autenticación
-        // El método exacto puede variar (ej: signOut(), auth.signOut(), etc.)
-        // Asumiendo que tu librería tiene un método signOut en el objeto auth exportado
-        await auth.signOut();
-
-        // Nota: auth.signOut() a menudo maneja la redirección internamente.
-        // Si no lo hace, puedes descomentar la siguiente línea:
-        // redirect('/sign-in');
-
+        const sessionCookieName = process.env.AUTH_SESSION_COOKIE_NAME || 'better-auth-session-token'; // ¡VERIFICAR ESTE NOMBRE!
+        const cookieStore = await cookies(); // Esperar la promesa
+        cookieStore.delete(sessionCookieName); // Llamar delete sobre el objeto resuelto
     } catch (error) {
-        // Manejar errores específicos si es necesario
-        console.error("Error al cerrar sesión:", error);
-        // Podrías lanzar un error o devolver un objeto de error
-        // throw new Error("No se pudo cerrar la sesión.");
-        // O simplemente redirigir por si acaso
-        redirect('/sign-in');
+        console.error("Error al intentar borrar la cookie de sesión:", error);
+    } finally {
+        redirect('/sign-in'); // Redirigir siempre
     }
-} 
+}

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useTransition, useCallback, useRef } from '
 import {
     DndContext as ModelDndContext,
     DragEndEvent as ModelDragEndEvent,
+    DragOverlay,
+    DragStartEvent,
     PointerSensor as ModelPointerSensor,
     KeyboardSensor as ModelKeyboardSensor,
     closestCorners as modelClosestCorners,
@@ -17,7 +19,7 @@ import {
     verticalListSortingStrategy as modelVerticalListSortingStrategy,
     useSortable
 } from '@dnd-kit/sortable';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
 import BrandContainer from './BrandContainer';
 import ModelItem from './ModelItem';
@@ -30,8 +32,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { HexColorPicker } from 'react-colorful';
-import { type BrandWithDisplayModelsData, type DisplayModelData } from './page';
 import { renameBrandByDuplication } from '@/actions/configuration/create-edit-brand';
+import { BrandWithDisplayModelsData, DisplayModelData } from './Interfaces';
+import {
+    dissociateOrganizationBrand,
+    dissociateOrganizationModel,
+} from '@/actions/configuration/create-edit-brand';
 
 interface SingleBrandColumnProps {
     id: number;
@@ -43,7 +49,6 @@ interface SingleBrandColumnProps {
     onAssociationDelete: (organizationBrandId: number) => void;
     onAddModel: (formData: FormData) => void;
     onUpdateModel: (formData: FormData) => void;
-    onSetModelVisibility: (modelId: number, isVisible: boolean) => void;
     onModelsOrderUpdate: (brandId: number, orderedModels: { modelId: number; order: number }[]) => void;
 }
 
@@ -57,11 +62,11 @@ export default function SingleBrandColumn({
     onAssociationDelete,
     onAddModel,
     onUpdateModel,
-    onSetModelVisibility,
     onModelsOrderUpdate,
 }: SingleBrandColumnProps) {
     const { id: brandId, name: brandName, models: initialDisplayModels } = brand;
     const [models, setModels] = useState<DisplayModelData[]>(initialDisplayModels);
+    const [activeModel, setActiveModel] = useState<DisplayModelData | null>(null);
     const [associationColor, setAssociationColor] = useState(initialColor ?? '#CCCCCC');
     const [tempAssociationColor, setTempAssociationColor] = useState(associationColor);
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -79,14 +84,14 @@ export default function SingleBrandColumn({
         setNodeRef,
         transform,
         transition,
-        isDragging,
+        isDragging: isColumnDragging,
     } = useSortable({ id: id.toString() });
 
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.8 : 1,
-        zIndex: isDragging ? 10 : undefined,
+        opacity: isColumnDragging ? 0.8 : 1,
+        zIndex: isColumnDragging ? 10 : undefined,
     };
 
     const modelSensors = useModelSensors(
@@ -138,7 +143,7 @@ export default function SingleBrandColumn({
         setNewNameDuplicate(event.target.value);
     };
 
-    const handleConfirmRenameDuplicate = () => {
+    const handleConfirmRenameDuplicate = async () => {
         const trimmedNewName = newNameDuplicate.trim();
         if (!trimmedNewName || trimmedNewName === brandName) {
             toast({ title: "Nombre inválido", description: "Introduce un nombre diferente al actual.", variant: "destructive" });
@@ -192,11 +197,37 @@ export default function SingleBrandColumn({
         setModels(prev => prev.map(m => m.id === modelId ? { ...m, name: trimmedName } : m));
     };
 
-    const handleSetVisibilityInternal = (modelIdToHide: number) => {
-        onSetModelVisibility(modelIdToHide, false);
+    const handleDissociateModelInternal = async (modelIdToDissociate: number) => {
+        if (!organizationId) return;
+        const modelName = models.find(m => m.id === modelIdToDissociate)?.name ?? 'Desconocido';
+        const previousModels = models;
+
+        setModels(prev => prev.filter(m => m.id !== modelIdToDissociate));
+
+        startModelActionTransition(async () => {
+            const formData = new FormData();
+            formData.append('organizationId', organizationId);
+            formData.append('modelId', modelIdToDissociate.toString());
+
+            const result = await dissociateOrganizationModel(null, formData);
+
+            if (!result.success) {
+                toast({ title: "Error al ocultar Modelo", description: result.error || result.message, variant: "destructive" });
+                setModels(previousModels);
+            } else {
+                toast({ title: "Modelo Ocultado", description: result.message });
+            }
+        });
+    };
+
+    const handleDragStartModels = (event: DragStartEvent) => {
+        const { active } = event;
+        const model = models.find(m => m.id.toString() === active.id);
+        setActiveModel(model || null);
     };
 
     const handleDragEndModels = (event: ModelDragEndEvent) => {
+        setActiveModel(null);
         const { active, over } = event;
         if (!active || !over || active.id === over.id) return;
 
@@ -224,7 +255,7 @@ export default function SingleBrandColumn({
     };
 
     return (
-        <div ref={setNodeRef} style={style} className={cn("relative", isDragging ? "shadow-lg" : "")}>
+        <div ref={setNodeRef} style={style} className={cn("relative", isColumnDragging ? "shadow-lg" : "")}>
             <BrandContainer
                 id={organizationBrandId}
                 brandName={brandName}
@@ -270,6 +301,7 @@ export default function SingleBrandColumn({
                 <ModelDndContext
                     sensors={modelSensors}
                     collisionDetection={modelClosestCorners}
+                    onDragStart={handleDragStartModels}
                     onDragEnd={handleDragEndModels}
                     modifiers={[restrictToVerticalAxis]}
                 >
@@ -279,10 +311,23 @@ export default function SingleBrandColumn({
                                 key={model.id}
                                 model={model}
                                 onUpdate={handleUpdateModelInternal}
-                                onSetInvisible={handleSetVisibilityInternal}
+                                onDissociate={handleDissociateModelInternal}
                             />
                         ))}
                     </ModelSortableContext>
+                    <DragOverlay
+                        modifiers={[restrictToWindowEdges]}
+                        dropAnimation={null}
+                    >
+                        {activeModel ? (
+                            <ModelItem
+                                model={activeModel}
+                                isOverlay
+                                onUpdate={() => { }}
+                                onDissociate={() => { }}
+                            />
+                        ) : null}
+                    </DragOverlay>
                     <AddModelItem onAdd={handleAddModel} disabled={isPendingModelAction || isRenamingDuplicate} />
                 </ModelDndContext>
             </BrandContainer>

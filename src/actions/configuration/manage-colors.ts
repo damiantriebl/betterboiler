@@ -13,63 +13,82 @@ import {
     deleteColorSchema,
     updateColorsOrderSchema
 } from "@/zod/ColorsZod";
+import { type ColorConfig, ColorType } from '@/types/ColorType'; // Necesitamos ColorType
 
-// Helper para obtener organizationId de la sesión (movido aquí)
-async function getOrganizationIdFromSession(): Promise<string | null> {
-    console.warn("getOrganizationIdFromSession usando placeholder CON ID REAL (para prueba)");
-    // ¡CAMBIA ESTE ID POR UNO VÁLIDO EN TU BD!
-    const testOrgId = 'clkog97zp0000e8v9h4z8a9b1'; 
-    const session = { user: { organizationId: testOrgId }}; 
-    return session?.user?.organizationId ?? null;
-}
-
-// Definición básica de FormState (reutilizada por varias acciones)
-type FormState = {
+// Definición básica de FormState
+type BaseFormState = {
   success: boolean;
   error?: string | null;
-  // Puedes añadir más campos específicos si los usas (e.g., id creado)
-  colorId?: number | null; 
 };
 
+// Estado específico para la creación exitosa
+interface CreateColorSuccessState extends BaseFormState {
+    success: true;
+    newColor: { // Devolver los datos clave del nuevo color
+        id: number; // dbId
+        name: string;
+        type: ColorType;
+        colorOne: string;
+        colorTwo?: string | null;
+        order: number;
+    };
+}
+// Estado específico para la creación fallida
+interface CreateColorErrorState extends BaseFormState {
+    success: false;
+    error: string;
+}
+// Tipo de estado combinado para createMotoColor
+export type CreateColorState = CreateColorSuccessState | CreateColorErrorState;
+
+// Interfaz base para otros estados que no devuelven datos específicos
+export interface GeneralFormState extends BaseFormState {}
 
 // ==============================================
-// Acciones para Colores (MotoColor) por Organización 
+// Acciones para Colores (MotoColor) por Organización
 // ==============================================
 
 // --- Acción: createMotoColor ---
-export interface CreateColorState extends FormState {} // Hereda de FormState
+// Usar el nuevo tipo de estado combinado
+export async function createMotoColor(
+    prevState: CreateColorState | undefined,
+    formData: FormData
+): Promise<CreateColorState> {
 
-export async function createMotoColor(prevState: CreateColorState | null, formData: FormData): Promise<CreateColorState> {
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) return { success: false, error: "Usuario no autenticado o sin organización." };
-
-    // Limpiar color2 si es null antes de validar
-    let color2Value = formData.get("color2");
-    if (color2Value === null) {
-        formData.delete("color2"); // Zod lo tratará como undefined
+    const organizationId = formData.get("organizationId") as string | null;
+    if (!organizationId) {
+        return { success: false, error: "ID de organización faltante en la solicitud." };
     }
 
+    // Limpiar color2 si es null antes de validar
+    let color2Value = formData.get("colorTwo");
+    if (color2Value === null) {
+        formData.delete("colorTwo");
+    }
+    console.log("createMotoColor (in action) formData:", Object.fromEntries(formData.entries())); // Log para verificar datos
+
+    // Validar campos, incluyendo organizationId del formData
     const validatedFields = createColorSchema.safeParse({
-        nombre: formData.get("nombre"),
-        tipo: formData.get("tipo"),
-        color1: formData.get("color1"),
-        color2: formData.get("color2"), // Pasa undefined si se eliminó
-        organizationId: organizationId, // Usar el de la sesión
+        name: formData.get("name"),
+        type: formData.get("type"),
+        colorOne: formData.get("colorOne"),
+        colorTwo: formData.get("colorTwo"),
+        organizationId: organizationId, // Usar el ID extraído
     });
 
     if (!validatedFields.success) {
         const errors = Object.entries(validatedFields.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m ?? []).join(',')}`).join('; ');
-        console.error("[createMotoColor] Validation Error:", errors, "Input:", Object.fromEntries(formData.entries()));
+        console.error("[createMotoColor] Validation Error:", errors);
         return { success: false, error: `Datos inválidos: ${errors}` };
     }
 
-    const { nombre, tipo, color1, color2 } = validatedFields.data;
+    const { name, type, colorOne, colorTwo } = validatedFields.data;
 
     try {
         const existing = await prisma.motoColor.findUnique({
-             where: { organizationId_nombre: { organizationId, nombre } }
+             where: { organizationId_name: { organizationId, name } }
         });
-        if (existing) return { success: false, error: `El nombre de color "${nombre}" ya existe en esta organización.` };
+        if (existing) return { success: false, error: `El nombre de color "${name}" ya existe en esta organización.` };
 
         const maxOrderResult = await prisma.motoColor.aggregate({ 
             _max: { order: true },
@@ -77,86 +96,110 @@ export async function createMotoColor(prevState: CreateColorState | null, formDa
         });
         const nextOrder = (maxOrderResult._max.order ?? -1) + 1;
 
-        const newColor = await prisma.motoColor.create({
+        const newColorDb = await prisma.motoColor.create({
             data: {
-                nombre,
-                tipo,
-                color1,
-                color2: tipo === 'SOLIDO' ? null : color2, // Asegurar null si es SOLIDO
+                name,
+                type,
+                colorOne,
+                colorTwo: type === 'SOLIDO' ? null : colorTwo,
                 order: nextOrder,
-                organizationId: organizationId,
+                organizationId: organizationId, // Usar el ID validado
             },
         });
 
-        revalidatePath("/configuracion");
-        return { success: true, colorId: newColor.id };
+        // ********** DEVOLVER DATOS DEL NUEVO COLOR **********
+        return {
+            success: true,
+            newColor: {
+                id: newColorDb.id,
+                name: newColorDb.name,
+                type: newColorDb.type as ColorType, // Castear tipo
+                colorOne: newColorDb.colorOne,
+                colorTwo: newColorDb.colorTwo,
+                order: newColorDb.order
+            }
+        };
     } catch (error) {
         console.error("🔥 ERROR SERVER ACTION (createMotoColor):", error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+            return { success: false, error: "Error de referencia: La organización especificada no existe." };
+        }
         return { success: false, error: "Error al crear el color." };
     }
 }
 
 // --- Acción: updateMotoColor ---
-export interface UpdateColorActionState extends FormState {} // Hereda de FormState
+// Usar GeneralFormState ya que no devuelve datos específicos en éxito
+export interface UpdateColorActionState extends GeneralFormState {}
 
-export async function updateMotoColor(prevState: UpdateColorActionState | null, formData: FormData): Promise<UpdateColorActionState> {
-     const organizationId = await getOrganizationIdFromSession(); 
-     if (!organizationId) return { success: false, error: "Usuario no autenticado o sin organización." };
+export async function updateMotoColor(
+    prevState: UpdateColorActionState | undefined,
+    formData: FormData
+): Promise<UpdateColorActionState> {
 
-     // Limpiar color2 si es null antes de validar
-     let color2Value = formData.get("color2");
-     if (color2Value === null) {
-         formData.delete("color2"); 
-     }
+    // ********** OBTENER organizationId de formData **********
+    const organizationId = formData.get("organizationId") as string | null;
+    if (!organizationId) {
+        return { success: false, error: "ID de organización faltante en la solicitud (update)." };
+    }
 
-     const validatedFields = updateColorActionSchema.safeParse({
+    // Limpiar color2 si es null
+    let color2Value = formData.get("colorTwo");
+    if (color2Value === null) {
+        formData.delete("colorTwo");
+    }
+
+    // Validar campos, incluyendo organizationId del formData
+    const validatedFields = updateColorActionSchema.safeParse({
         id: formData.get("id"),
-        nombre: formData.get("nombre"),
-        tipo: formData.get("tipo"),
-        color1: formData.get("color1"),
-        color2: formData.get("color2"),
-        organizationId: organizationId, 
+        name: formData.get("name"),
+        type: formData.get("type"),
+        colorOne: formData.get("colorOne"),
+        colorTwo: formData.get("colorTwo"),
+        organizationId: organizationId,
     });
 
-     if (!validatedFields.success) {
+    if (!validatedFields.success) {
          const errors = Object.entries(validatedFields.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m ?? []).join(',')}`).join('; ');
-         console.error("[updateMotoColor] Validation Error:", errors, "Input:", Object.fromEntries(formData.entries()));
+         console.error("[updateMotoColor] Validation Error:", errors);
          return { success: false, error: `Datos inválidos: ${errors}` };
     }
 
-    const { id, nombre, tipo, color1, color2 } = validatedFields.data;
+    const { id, name, type, colorOne, colorTwo } = validatedFields.data;
 
     try {
         const colorToUpdate = await prisma.motoColor.findUnique({
             where: { id },
         });
-        
+
         if (!colorToUpdate) {
             return { success: false, error: "El color a actualizar no se encontró." };
         }
-        
+
+        // Validar pertenencia a la organización
         if (colorToUpdate.organizationId !== organizationId) {
             return { success: false, error: "No tienes permiso para editar este color." };
         }
-        
+
+        // Validar nombre único
         const existingNameColor = await prisma.motoColor.findUnique({
-             where: { organizationId_nombre: { organizationId, nombre } }
+             where: { organizationId_name: { organizationId, name } }
         });
         if (existingNameColor && existingNameColor.id !== id) {
-             return { success: false, error: `El nombre de color "${nombre}" ya existe en esta organización.` };
+             return { success: false, error: `El nombre de color "${name}" ya existe en esta organización.` };
         }
 
         await prisma.motoColor.update({
-            where: { id }, 
+            where: { id },
             data: {
-                nombre,
-                tipo,
-                color1,
-                color2: tipo === 'SOLIDO' ? null : color2, // Asegurar null si es SOLIDO
+                name,
+                type,
+                colorOne,
+                colorTwo: type === 'SOLIDO' ? null : colorTwo,
             },
         });
 
-        revalidatePath("/configuracion");
+        revalidatePath("/configuration");
         return { success: true };
     } catch (error) {
         console.error("🔥 ERROR SERVER ACTION (updateMotoColor):", error);
@@ -168,13 +211,21 @@ export async function updateMotoColor(prevState: UpdateColorActionState | null, 
 }
 
 // --- Acción: deleteMotoColor ---
-export interface DeleteColorState extends FormState {} // Hereda de FormState
+// Usar GeneralFormState
+export interface DeleteColorState extends GeneralFormState {}
 
-export async function deleteMotoColor(prevState: DeleteColorState | null, formData: FormData): Promise<DeleteColorState> {
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) return { success: false, error: "Usuario no autenticado o sin organización." };
+export async function deleteMotoColor(
+    prevState: DeleteColorState | undefined,
+    formData: FormData
+): Promise<DeleteColorState> {
 
-    const validatedFields = deleteColorSchema.safeParse({ 
+    // ********** OBTENER organizationId de formData **********
+    const organizationId = formData.get("organizationId") as string | null;
+    if (!organizationId) {
+        return { success: false, error: "ID de organización faltante en la solicitud (delete)." };
+    }
+
+    const validatedFields = deleteColorSchema.safeParse({
         id: formData.get("id"),
     });
 
@@ -185,17 +236,18 @@ export async function deleteMotoColor(prevState: DeleteColorState | null, formDa
         const colorToDelete = await prisma.motoColor.findUnique({
             where: { id },
         });
-        
+
         if (!colorToDelete) {
             return { success: false, error: "El color a eliminar no se encontró." };
         }
-        
+
+        // Validar pertenencia a la organización
         if (colorToDelete.organizationId !== organizationId) {
             return { success: false, error: "No tienes permiso para eliminar este color." };
         }
-        
+
         await prisma.motoColor.delete({ where: { id } });
-        revalidatePath("/configuracion");
+        revalidatePath("/configuration");
         return { success: true };
     } catch (error) {
          console.error("🔥 ERROR SERVER ACTION (deleteMotoColor):", error);
@@ -207,57 +259,55 @@ export async function deleteMotoColor(prevState: DeleteColorState | null, formDa
 }
 
 // --- Acción: updateMotoColorsOrder ---
-export interface UpdateColorsOrderState extends FormState {} // Hereda de FormState
+// Usar GeneralFormState
+export interface UpdateColorsOrderState extends GeneralFormState {}
 
 export async function updateMotoColorsOrder(
-    prevState: UpdateColorsOrderState | null, 
-    payload: { colors: { id: number; order: number }[], organizationId: string } // Espera el payload completo
+    prevState: UpdateColorsOrderState | undefined,
+    payload: { colors: { id: number; order: number }[], organizationId: string }
 ): Promise<UpdateColorsOrderState> {
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId || payload.organizationId !== organizationId) { // Validar ID de sesión vs payload
-        return { success: false, error: "No autorizado o ID de organización no coincide." };
+    // Validar organizationId del payload
+    if (!payload.organizationId) {
+        return { success: false, error: "ID de organización faltante en el payload." };
     }
+    const organizationId = payload.organizationId;
 
-    // Usar schema importado (solo valida la estructura de 'colors')
     const validatedData = updateColorsOrderSchema.safeParse(payload);
     if (!validatedData.success) {
         const errors = Object.entries(validatedData.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m ?? []).join(',')}`).join('; ');
-        console.error("[updateMotoColorsOrder] Validation Error:", errors, "Input:", payload);
+        console.error("[updateMotoColorsOrder] Validation Error:", errors);
         return { success: false, error: `Datos de orden inválidos: ${errors}` };
     }
 
-    const { colors } = validatedData.data; // Obtener solo 'colors' ya que organizationId ya se validó
+    const { colors } = validatedData.data;
 
     try {
         const colorIds = colors.map(c => c.id);
         const existingColors = await prisma.motoColor.findMany({
             where: {
                 id: { in: colorIds },
-                organizationId: organizationId // Validar pertenencia a la organización
+                organizationId: organizationId
             },
             select: { id: true }
         });
-        
+
         if (existingColors.length !== colorIds.length) {
              console.error(`[updateMotoColorsOrder] Color mismatch: Found ${existingColors.length}/${colorIds.length} colors for Org ${organizationId}`);
              return { success: false, error: "Error: Uno o más colores no pertenecen a tu organización." };
         }
-                
+
         const updates = colors.map(item =>
-            prisma.motoColor.update({ 
-                where: { id: item.id, organizationId: organizationId }, // Asegurar doblemente la pertenencia
-                data: { order: item.order } 
+            prisma.motoColor.update({
+                where: { id: item.id, organizationId: organizationId },
+                data: { order: item.order }
             })
         );
-
         await prisma.$transaction(updates);
-        revalidatePath("/configuracion");
+
+        revalidatePath("/configuration");
         return { success: true };
     } catch (error) {
         console.error("🔥 ERROR SERVER ACTION (updateMotoColorsOrder):", error);
-         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-             return { success: false, error: "Error: Uno de los colores no se encontró." };
-         }
-        return { success: false, error: "Error al actualizar orden de colores." };
+        return { success: false, error: "Error al actualizar el orden de los colores." };
     }
 } 

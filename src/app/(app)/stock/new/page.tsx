@@ -1,10 +1,10 @@
 import * as React from "react";
-import NewStockClientContainer from "./NewStockClientContainer";
+import { NewStockClientContainer } from "./NewStockClientContainer";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { type ColorConfig, type ColorType } from "@/types/ColorType";
-import { getBranchesForOrg, type BranchData } from '@/actions/stock/get-sucursales';
+import { getBranchesForOrg, type BranchData } from '@/actions/stock/get-branch';
 import { getSuppliers } from '@/actions/suppliers/manage-suppliers';
 import { type Supplier } from '@prisma/client';
 
@@ -68,14 +68,14 @@ async function getAvailableColors(organizationId: string): Promise<ColorConfig[]
         });
         console.log("[getAvailableColors] Datos crudos de DB:", JSON.stringify(colorsFromDb, null, 2));
 
-        // Transformación a ColorConfig con aserción de tipo
+        // Transformación a ColorConfig usando nombres en INGLÉS
         const transformedColors: ColorConfig[] = colorsFromDb.map(c => ({
             id: c.id.toString(),
             dbId: c.id,
-            nombre: c.nombre,
-            tipo: c.tipo as ColorType, // Aserción de tipo
-            color1: c.color1,
-            color2: c.color2 ?? undefined, // Usar undefined si es null
+            name: c.name,
+            type: c.type as ColorType,
+            colorOne: c.colorOne,
+            colorTwo: c.colorTwo ?? undefined,
             order: c.order
         }));
         console.log("[getAvailableColors] Datos transformados:", JSON.stringify(transformedColors, null, 2));
@@ -123,8 +123,8 @@ export default async function NuevaMotoPage() {
                 <NewStockClientContainer
                     availableBrands={availableBrands}
                     availableColors={availableColors}
-                    sucursales={sucursales}
-                    availableSuppliers={availableSuppliers}
+                    availableBranches={sucursales}
+                    suppliers={availableSuppliers}
                 // initialData={{}} // Podemos pasar datos iniciales si es necesario
                 />
             </div>

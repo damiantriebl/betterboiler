@@ -22,10 +22,8 @@ import {
     addModelToOrganizationBrand,
     updateOrganizationModel,
     updateOrganizationModelsOrder,
-    setOrganizationModelVisibility
 } from '@/actions/configuration/create-edit-brand';
 import { type OrganizationBrandDisplayData } from './Interfaces';
-import { type Brand } from '@prisma/client';
 
 interface ManageBrandsProps {
     initialOrganizationBrands: OrganizationBrandDisplayData[];
@@ -143,23 +141,6 @@ export default function ManageBrands({ initialOrganizationBrands, organizationId
         });
     };
 
-    const handleSetModelVisibility = (modelId: number, isVisible: boolean) => {
-        if (!organizationId) return;
-        startModelActionTransition(async () => {
-            const formData = new FormData();
-            formData.append('modelId', modelId.toString());
-            formData.append('isVisible', isVisible.toString());
-
-            const result = await setOrganizationModelVisibility(null, formData);
-
-            if (!result.success) {
-                toast({ title: "Error al cambiar visibilidad", description: result.error, variant: "destructive" });
-            } else {
-                toast({ title: `Visibilidad Modelo ${isVisible ? 'Restaurada' : 'Ocultada'}` });
-            }
-        });
-    };
-
     const handleModelsOrderUpdate = (brandId: number, orderedModels: { modelId: number; order: number }[]) => {
         if (!organizationId) return;
         const previousAssociations = associations;
@@ -226,7 +207,6 @@ export default function ManageBrands({ initialOrganizationBrands, organizationId
                                         onAssociationDelete={handleAssociationDelete}
                                         onAddModel={handleAddModel}
                                         onUpdateModel={handleUpdateModel}
-                                        onSetModelVisibility={handleSetModelVisibility}
                                         onModelsOrderUpdate={handleModelsOrderUpdate}
                                     />
                                 ))}

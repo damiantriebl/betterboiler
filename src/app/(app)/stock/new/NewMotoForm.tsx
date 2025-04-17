@@ -1,32 +1,36 @@
 "use client";
 
-import * as React from "react";
-import { type Control, type UseFormSetValue, type UseFormClearErrors, type UseFormGetValues, type FormState, type FieldValues, type UseFieldArrayAppend, type UseFieldArrayRemove } from "react-hook-form";
+import React from "react";
+import { type Control, type UseFormSetValue, type UseFormClearErrors, type UseFormGetValues, type FormState, type FieldValues, type FieldErrors, type UseFormStateReturn, useFieldArray, type UseFormReturn } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import UploadButton from "@/components/custom/UploadCropperButton";
-import { Loader2, Plus, Trash2, Info } from "lucide-react";
+import { Loader2, Plus, Trash2, Info, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BrandModelCombobox } from "@/components/custom/BrandModelCombobox";
 import { ColorSelector } from "@/components/custom/ColorSelector";
-import { type BranchData } from "@/actions/stock/get-sucursales";
+import { type BranchData } from "@/actions/stock/get-branch";
 import { SucursalSelector } from "@/components/custom/SucursalSelector";
 import { type BrandForCombobox, type ModelInfo } from "./page";
 import { type ColorConfig } from "@/types/ColorType";
-import { type UnitIdentificationFormData as IdentificacionData } from "@/zod/NewBikeZod";
+import { type UnitIdentificationFormData as IdentificacionData, type MotorcycleBatchFormData } from "@/zod/NewBikeZod";
 import { z } from "zod";
 import { type Supplier } from '@prisma/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EstadoVenta } from "@/types/BikesType";
+import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useActionState } from 'react';
 
 // Tipos inferidos de react-hook-form para los field arrays
 type UnitField = IdentificacionData & { id: string }; // react-hook-form añade un 'id' propio
 
-// Constantes para pestañas
-const TABS_ORDER = ["producto", "identificacion", "comercial", "multimedia", "legal"] as const;
+// Constantes para pestañas - Renamed Comercial to Precios
+const TABS_ORDER = ["producto", "identificacion", "precios", "multimedia", "legal"] as const;
 type TabValue = typeof TABS_ORDER[number];
 
 // Copiar Helper DisplayData para mostrar info en modal
@@ -42,88 +46,198 @@ const DisplayData = ({ label, value }: { label: string, value: string | number |
     );
 };
 
-// Interfaz de Props - Recibe control, funciones, datos y estado
-interface NuevaMotoFormProps {
-    formControl: Control<any>; // Usar any o un tipo más específico si es necesario
-    formSetValue: UseFormSetValue<any>;
-    formClearErrors: UseFormClearErrors<any>;
-    formGetValues: UseFormGetValues<any>;
-    formState: FormState<any>;
-    unitFields: UnitField[]; // Array de unidades del useFieldArray
-    appendUnit: UseFieldArrayAppend<any, "units">;
-    removeUnit: UseFieldArrayRemove;
-    isPending: boolean;
-    onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
-    availableBrands: BrandForCombobox[];
+// Interfaz de Props - Recibe form completo
+interface NewMotoFormProps {
+    form: UseFormReturn<MotorcycleBatchFormData>; // Cambiar props individuales por form
+    // Eliminar props individuales ya contenidas en form
+    // control: Control<MotorcycleBatchFormData>;
+    // formState: UseFormStateReturn<MotorcycleBatchFormData>;
+    // errors: FieldErrors<MotorcycleBatchFormData>;
+    // getValues: UseFormGetValues<MotorcycleBatchFormData>;
+    // setValue: UseFormSetValue<MotorcycleBatchFormData>;
+    // clearErrors: UseFormClearErrors<MotorcycleBatchFormData>;
     availableColors: ColorConfig[];
-    sucursales: BranchData[];
-    availableSuppliers: Supplier[];
+    availableBrands: BrandForCombobox[]; // Mantener este tipo por ahora
+    availableBranches: BranchData[];
+    suppliers: Supplier[];
+    isSubmitting: boolean;
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; // Mantener onSubmit para el <form> tag
+    selectedBrand?: BrandForCombobox | null;
+    selectedModel?: ModelInfo | null;
+    availableSuppliers?: Supplier[];
+    isLoading?: boolean;
+    unitId?: number;
+    serverSuccess?: boolean | null; // Mantener props de estado del servidor si se usan
+    serverError?: string | null;
+    submitButtonLabel?: string;
 }
 
-export default function NuevaMotoForm({
-    formControl,
-    formSetValue,
-    formClearErrors,
-    formGetValues,
-    formState,
-    unitFields,
-    appendUnit,
-    removeUnit,
-    isPending,
-    onSubmit,
-    availableBrands,
+export function NewMotoForm({
+    form, // Usar form
+    // Eliminar props individuales
     availableColors,
-    sucursales,
+    availableBrands,
+    availableBranches,
+    suppliers,
+    isSubmitting,
+    onSubmit,
+    selectedBrand,
+    selectedModel,
     availableSuppliers,
-}: NuevaMotoFormProps) {
+    isLoading,
+    unitId,
+    serverSuccess, // Mantener si se usan
+    serverError,
+    submitButtonLabel
+}: NewMotoFormProps) {
+    // Extraer métodos necesarios de form si se usan directamente (aunque FormField los obtiene del contexto)
+    const { control, setValue, getValues, clearErrors, formState: { errors } } = form;
+
     const [activeTab, setActiveTab] = React.useState<TabValue>(TABS_ORDER[0]);
-    // --- Añadir estado para el modal de información del proveedor ---
     const [isSupplierModalOpen, setIsSupplierModalOpen] = React.useState(false);
     const [selectedSupplierInfo, setSelectedSupplierInfo] = React.useState<Supplier | null>(null);
+    const currentYear = new Date().getFullYear();
+    const maxYear = currentYear + 1;
 
-    // Usar appendUnit directamente donde sea necesario
-    const addIdentificacion = React.useCallback(() => {
-        appendUnit({ // Usar la función pasada por props
-            idTemporal: Date.now(),
-            nroChasis: "",
-            nroMotor: null,
-            colorId: 0,
-            kilometraje: 0,
-            sucursalId: 0,
-            estadoVenta: EstadoVenta.STOCK
+    // Usar useFieldArray para obtener fields, append y remove
+    const { fields: unitFields, append, remove } = useFieldArray({
+        control,
+        name: "units"
+    });
+
+    const addIdentificacion = () => {
+        append({
+            idTemporal: Date.now(), // Convertimos a number
+            chassisNumber: "",
+            engineNumber: "",
+            colorId: availableColors.length > 0 ? Number(availableColors[0].id) : 0, // Convertimos a number
+            mileage: 0,
+            branchId: availableBranches.length > 0 ? Number(availableBranches[0].id) : 0, // Convertimos a number
         });
-    }, [appendUnit]);
+    };
 
-    const handleNextTab = async () => {
+    // Agregar una unidad por defecto si no hay ninguna
+    React.useEffect(() => {
+        if (unitFields.length === 0) {
+            addIdentificacion();
+        }
+    }, [unitFields.length]);
+
+    const handleNextTab = () => {
         const currentIndex = TABS_ORDER.indexOf(activeTab);
         if (currentIndex < TABS_ORDER.length - 1) {
             setActiveTab(TABS_ORDER[currentIndex + 1]);
         }
     };
 
-    // Helper para inputs numéricos nullable (puede quedarse)
+    const handlePreviousTab = () => {
+        const currentIndex = TABS_ORDER.indexOf(activeTab);
+        if (currentIndex > 0) {
+            setActiveTab(TABS_ORDER[currentIndex - 1]);
+        }
+    };
+
     const handleNullableNumberChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
         field.onChange(e.target.value === '' ? null : e.target.valueAsNumber);
     };
 
-    // --- FUNCIONES DE RENDERIZADO --- 
-    // (Estas funciones ahora usan formControl en lugar de form.control)
+    const renderSupplierField = () => (
+        <FormField
+            control={control}
+            name="supplierId"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Proveedor (Opcional)</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <Select
+                            value={field.value?.toString() ?? "none"}
+                            onValueChange={(value) => {
+                                const numericValue = parseInt(value, 10);
+                                setValue('supplierId', isNaN(numericValue) ? null : numericValue, { shouldValidate: true });
+                            }}
+                            disabled={isSubmitting}
+                        >
+                            <FormControl>
+                                <SelectTrigger className="flex-grow">
+                                    <SelectValue placeholder="Seleccionar proveedor..." />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="none">-- Ninguno --</SelectItem>
+                                {suppliers.map((supplier) => (
+                                    <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                        {supplier.commercialName || supplier.legalName}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
+                            <DialogTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-10 w-10 flex-shrink-0"
+                                    disabled={!field.value || field.value.toString() === 'none'}
+                                    onClick={() => {
+                                        const supplierId = field.value;
+                                        if (supplierId && supplierId.toString() !== 'none') {
+                                            const supplier = suppliers.find(s => s.id.toString() === supplierId.toString());
+                                            if (supplier) {
+                                                setSelectedSupplierInfo(supplier);
+                                                setIsSupplierModalOpen(true);
+                                            } else {
+                                                console.error("Selected supplier not found.")
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <Info className="h-4 w-4" />
+                                    <span className="sr-only">Ver Info Proveedor</span>
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[600px]">
+                                <DialogHeader>
+                                    <DialogTitle>Información del Proveedor</DialogTitle>
+                                </DialogHeader>
+                                {selectedSupplierInfo ? (
+                                    <div className="max-h-[60vh] overflow-y-auto p-1 pr-3 space-y-1">
+                                        <DisplayData label="Razón Social" value={selectedSupplierInfo.legalName} />
+                                        <DisplayData label="Nombre Comercial" value={selectedSupplierInfo.commercialName} />
+                                        <DisplayData label="CUIT/CUIL" value={selectedSupplierInfo.taxIdentification} />
+                                        <DisplayData label="Condición IVA" value={selectedSupplierInfo.vatCondition} />
+                                        <DisplayData label="Teléfono Móvil" value={selectedSupplierInfo.mobileNumber} />
+                                        <DisplayData label="Email" value={selectedSupplierInfo.email} />
+                                        <DisplayData label="Dirección Comercial" value={selectedSupplierInfo.commercialAddress} />
+                                        <DisplayData label="Estado" value={selectedSupplierInfo.status} />
+                                    </div>
+                                ) : (
+                                    <p className="text-muted-foreground">Selecciona un proveedor para ver su información.</p>
+                                )}
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
+    );
 
-    const renderProductoFields = React.useCallback(() => (
+    const renderProductoFields = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-                control={formControl}
-                name="modeloId"
+                control={control}
+                name="modelId"
                 render={({ field }) => (
                     <FormItem className="flex flex-col md:col-span-2">
                         <FormLabel>Marca y Modelo</FormLabel>
                         <BrandModelCombobox
                             brands={availableBrands}
-                            selectedModelId={field.value}
+                            selectedModelId={Number(field.value)}
                             onSelect={(modelId, brandId) => {
-                                formSetValue("modeloId", modelId, { shouldValidate: true });
-                                formSetValue("marcaId", brandId, { shouldValidate: true });
-                                formClearErrors(["modeloId", "marcaId"]);
+                                setValue("modelId", modelId, { shouldValidate: true });
+                                setValue("brandId", brandId, { shouldValidate: true });
+                                clearErrors(["modelId", "brandId"]);
                             }}
                             placeholder="Selecciona Marca y Modelo"
                             searchPlaceholder="Buscar Marca o Modelo..."
@@ -134,21 +248,29 @@ export default function NuevaMotoForm({
                 )}
             />
             <FormField
-                control={formControl}
-                name="año"
+                control={control}
+                name="year"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Año</FormLabel>
                         <FormControl>
-                            <Input className="h-10" type="number" placeholder="Ej: 2023" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? 0} />
+                            <Input
+                                className="h-10"
+                                type="number"
+                                placeholder="Ej: 2024"
+                                max={maxYear}
+                                {...field}
+                                onChange={e => handleNullableNumberChange(e, field)}
+                                value={field.value ?? 0}
+                            />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
             />
             <FormField
-                control={formControl}
-                name="cilindrada"
+                control={control}
+                name="displacement"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Cilindrada (cc)</FormLabel>
@@ -159,10 +281,11 @@ export default function NuevaMotoForm({
                     </FormItem>
                 )}
             />
+            {renderSupplierField()}
         </div>
-    ), [formControl, availableBrands, formSetValue, formClearErrors, handleNullableNumberChange]);
+    );
 
-    const renderIdentificacionFields = React.useCallback(() => (
+    const renderIdentificacionFields = () => (
         <div className="space-y-6">
             {unitFields.map((fieldItem: UnitField, index: number) => (
                 <div key={fieldItem.id} className="p-4 border rounded-md space-y-4 relative">
@@ -171,16 +294,16 @@ export default function NuevaMotoForm({
                         size="icon"
                         type="button"
                         className="absolute top-1 right-1 h-6 w-6 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeUnit(index)}
-                        disabled={isPending}
+                        onClick={() => remove(index)}
+                        disabled={isSubmitting}
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>
                     <h4 className="text-md font-medium border-b pb-1">Unidad {index + 1}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <FormField
-                            control={formControl}
-                            name={`units.${index}.nroChasis` as const}
+                            control={control}
+                            name={`units.${index}.chassisNumber` as const}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Nro. Chasis</FormLabel>
@@ -190,8 +313,8 @@ export default function NuevaMotoForm({
                             )}
                         />
                         <FormField
-                            control={formControl}
-                            name={`units.${index}.nroMotor` as const}
+                            control={control}
+                            name={`units.${index}.engineNumber` as const}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Nro. Motor</FormLabel>
@@ -201,7 +324,7 @@ export default function NuevaMotoForm({
                             )}
                         />
                         <FormField
-                            control={formControl}
+                            control={control}
                             name={`units.${index}.colorId` as const}
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
@@ -212,8 +335,8 @@ export default function NuevaMotoForm({
                             )}
                         />
                         <FormField
-                            control={formControl}
-                            name={`units.${index}.kilometraje` as const}
+                            control={control}
+                            name={`units.${index}.mileage` as const}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Kilometraje</FormLabel>
@@ -223,40 +346,12 @@ export default function NuevaMotoForm({
                             )}
                         />
                         <FormField
-                            control={formControl}
-                            name={`units.${index}.sucursalId` as const}
+                            control={control}
+                            name={`units.${index}.branchId` as const}
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
                                     <FormLabel>Sucursal</FormLabel>
-                                    <SucursalSelector sucursales={sucursales} selectedSucursalId={field.value} onSelect={(id: number | null) => field.onChange(id)} />
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={formControl}
-                            name={`units.${index}.estadoVenta` as const}
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Estado Inicial</FormLabel>
-                                    <Select
-                                        value={field.value || EstadoVenta.STOCK}
-                                        onValueChange={(value: EstadoVenta) => field.onChange(value)}
-                                        disabled={isPending}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar estado..." />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {Object.values(EstadoVenta).map((estado) => (
-                                                <SelectItem key={estado} value={estado}>
-                                                    {estado}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <SucursalSelector sucursales={availableBranches} selectedSucursalId={field.value} onSelect={(id: number | null) => field.onChange(id)} />
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -271,160 +366,222 @@ export default function NuevaMotoForm({
                 size="sm"
                 className="mt-2 w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10"
                 onClick={addIdentificacion}
-                disabled={isPending}
+                disabled={isSubmitting}
             >
                 <Plus className="mr-2 h-4 w-4" />
                 Añadir Unidad
             </Button>
-            {formState.errors.units?.root && (
+            {errors.units?.root && (
                 <p className="text-sm font-medium text-destructive mt-2">
-                    {typeof formState.errors.units.root.message === 'string' ? formState.errors.units.root.message : 'Error en unidades'}
+                    {typeof errors.units.root.message === 'string' ? errors.units.root.message : 'Error en unidades'}
                 </p>
             )}
         </div>
-    ), [formControl, unitFields, removeUnit, isPending, availableColors, sucursales, addIdentificacion, formState, handleNullableNumberChange]);
+    );
 
-    const renderComercialFields = React.useCallback(() => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-                control={formControl}
-                name="precioCompra"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Precio Compra</FormLabel>
-                        <FormControl>
-                            <Input className="h-10" type="number" placeholder="Opcional" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={formControl}
-                name="precioVentaMinorista"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Precio Vta. Minorista</FormLabel>
-                        <FormControl>
-                            <Input className="h-10" type="number" placeholder="Requerido" {...field} onChange={e => field.onChange(e.target.value === '' ? 0 : e.target.valueAsNumber)} value={field.value ?? 0} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={formControl}
-                name="precioVentaMayorista"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Precio Vta. Mayorista</FormLabel>
-                        <FormControl>
-                            <Input className="h-10" type="number" placeholder="Opcional" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={formControl}
-                name="proveedorId"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Proveedor (Opcional)</FormLabel>
-                        {/* --- Envolver Select y Botón Info --- */}
-                        <div className="flex items-center gap-2">
-                            <Select
-                                value={field.value?.toString() ?? "none"}
-                                onValueChange={(value) => {
-                                    const numericValue = parseInt(value, 10);
-                                    formSetValue('proveedorId', isNaN(numericValue) ? null : numericValue, { shouldValidate: true });
-                                }}
-                                disabled={isPending}
-                            >
+    const renderPreciosFields = () => {
+        const calculateFinalPrice = (costo: number | null, ivaP: number | null, otrosImp: number | null, gananciaP: number | null) => {
+            const pc = costo ?? 0;
+            const iva = ivaP ?? 0;
+            const otros = otrosImp ?? 0;
+            const ganancia = gananciaP ?? 0;
+            if (pc <= 0) return otros; // If no cost, final price is just other taxes
+            const final = pc * (1 + ganancia / 100) * (1 + iva / 100) + otros;
+            return parseFloat(final.toFixed(2)); // Round to 2 decimal places
+        };
+
+        const calculateGainPercentage = (costo: number | null, precioFinal: number | null, ivaP: number | null, otrosImp: number | null) => {
+            const pc = costo ?? 0;
+            const pf = precioFinal ?? 0;
+            const iva = ivaP ?? 0;
+            const otros = otrosImp ?? 0;
+            const factorIVA = (1 + iva / 100);
+            if (pc <= 0 || factorIVA === 0) return 0; // Avoid division by zero or invalid cost
+            const ganancia = 100 * (((pf - otros) / (pc * factorIVA)) - 1);
+            return parseFloat(ganancia.toFixed(2)); // Round to 2 decimal places
+        };
+
+        React.useEffect(() => {
+            const {
+                costPrice,
+                ivaPorcentajeMinorista,
+                otrosImpuestosMinorista,
+                gananciaPorcentajeMinorista,
+                retailPrice
+            } = getValues();
+            const calculatedFinalMinorista = calculateFinalPrice(costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista, gananciaPorcentajeMinorista);
+            if (Math.abs((retailPrice || 0) - calculatedFinalMinorista) > 0.01) {
+                setValue('retailPrice', calculatedFinalMinorista, { shouldValidate: false });
+            }
+        }, [getValues('costPrice'), getValues('ivaPorcentajeMinorista'), getValues('otrosImpuestosMinorista'), getValues('gananciaPorcentajeMinorista'), setValue, getValues]);
+
+        React.useEffect(() => {
+            const {
+                costPrice,
+                ivaPorcentajeMayorista,
+                otrosImpuestosMayorista,
+                gananciaPorcentajeMayorista,
+                wholesalePrice
+            } = getValues();
+            const calculatedFinalMayorista = calculateFinalPrice(costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista, gananciaPorcentajeMayorista);
+            if (Math.abs((wholesalePrice || 0) - calculatedFinalMayorista) > 0.01) {
+                setValue('wholesalePrice', calculatedFinalMayorista, { shouldValidate: false });
+            }
+        }, [getValues('costPrice'), getValues('ivaPorcentajeMayorista'), getValues('otrosImpuestosMayorista'), getValues('gananciaPorcentajeMayorista'), setValue, getValues]);
+
+        const handleMinoristaGainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newGain = e.target.value === '' ? null : parseFloat(e.target.value);
+            setValue('gananciaPorcentajeMinorista', newGain, { shouldValidate: true });
+            const { costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista } = getValues();
+            const newFinal = calculateFinalPrice(costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista, newGain);
+            setValue('retailPrice', newFinal, { shouldValidate: true });
+        };
+
+        const handleMinoristaFinalPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newFinal = e.target.value === '' ? 0 : parseFloat(e.target.value);
+            setValue('retailPrice', newFinal, { shouldValidate: true });
+            const { costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista } = getValues();
+            const newGain = calculateGainPercentage(costPrice, newFinal, ivaPorcentajeMinorista, otrosImpuestosMinorista);
+            setValue('gananciaPorcentajeMinorista', newGain, { shouldValidate: true });
+        };
+
+        const handleMayoristaGainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newGain = e.target.value === '' ? null : parseFloat(e.target.value);
+            setValue('gananciaPorcentajeMayorista', newGain, { shouldValidate: true });
+            const { costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista } = getValues();
+            const newFinal = calculateFinalPrice(costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista, newGain);
+            setValue('wholesalePrice', newFinal, { shouldValidate: true });
+        };
+
+        const handleMayoristaFinalPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const newFinal = e.target.value === '' ? null : parseFloat(e.target.value);
+            setValue('wholesalePrice', newFinal, { shouldValidate: true });
+            const { costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista } = getValues();
+            const newGain = calculateGainPercentage(costPrice, newFinal, ivaPorcentajeMayorista, otrosImpuestosMayorista);
+            setValue('gananciaPorcentajeMayorista', newGain, { shouldValidate: true });
+        };
+
+        return (
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                    <FormField
+                        control={control}
+                        name="costPrice"
+                        render={({ field }) => (
+                            <FormItem className="sm:col-span-2">
+                                <FormLabel>Precio Costo</FormLabel>
                                 <FormControl>
-                                    {/* Hacer el trigger un poco más pequeño si es necesario */}
-                                    <SelectTrigger className="flex-grow">
-                                        <SelectValue placeholder="Seleccionar proveedor..." />
-                                    </SelectTrigger>
+                                    <Input className="h-10" type="number" placeholder="Costo base" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? ''} />
                                 </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="none">-- Ninguno --</SelectItem>
-                                    {availableSuppliers.map((supplier) => (
-                                        <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                            {supplier.commercialName || supplier.legalName}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {/* --- Modal y Trigger para Info Proveedor --- */}
-                            <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
-                                <DialogTrigger asChild>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-10 w-10 flex-shrink-0" // Ajustar tamaño
-                                        disabled={!field.value || field.value === 'none'} // Deshabilitar si no hay proveedor
-                                        onClick={() => {
-                                            const supplierId = field.value;
-                                            if (supplierId && supplierId !== 'none') {
-                                                // Buscar proveedor en la lista ya cargada
-                                                const supplier = availableSuppliers.find(s => s.id === supplierId);
-                                                if (supplier) {
-                                                    setSelectedSupplierInfo(supplier);
-                                                    setIsSupplierModalOpen(true);
-                                                } else {
-                                                    // Opcional: Mostrar error si no se encuentra (no debería pasar)
-                                                    console.error("Proveedor seleccionado no encontrado en la lista.")
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <Info className="h-4 w-4" />
-                                        <span className="sr-only">Ver Info Proveedor</span>
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[600px]">
-                                    <DialogHeader>
-                                        <DialogTitle>Información del Proveedor</DialogTitle>
-                                    </DialogHeader>
-                                    {selectedSupplierInfo ? (
-                                        <div className="max-h-[60vh] overflow-y-auto p-1 pr-3 space-y-1">
-                                            <DisplayData label="Razón Social" value={selectedSupplierInfo.legalName} />
-                                            <DisplayData label="Nombre Comercial" value={selectedSupplierInfo.commercialName} />
-                                            <DisplayData label="CUIT/CUIL" value={selectedSupplierInfo.taxIdentification} />
-                                            <DisplayData label="Condición IVA" value={selectedSupplierInfo.vatCondition} />
-                                            <DisplayData label="Teléfono Móvil" value={selectedSupplierInfo.mobileNumber} />
-                                            <DisplayData label="Email" value={selectedSupplierInfo.email} />
-                                            <DisplayData label="Dirección Comercial" value={selectedSupplierInfo.commercialAddress} />
-                                            <DisplayData label="Estado" value={selectedSupplierInfo.status} />
-                                            {/* Añadir más campos si se necesitan */}
-                                        </div>
-                                    ) : (
-                                        <p className="text-muted-foreground">Selecciona un proveedor para ver su información.</p>
-                                    )}
-                                    {/* Se puede añadir un botón de cierre si se quiere */}
-                                </DialogContent>
-                            </Dialog>
-                        </div>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-        </div>
-    ), [formControl, handleNullableNumberChange, isPending, availableSuppliers, formSetValue, isSupplierModalOpen, setIsSupplierModalOpen, selectedSupplierInfo, setSelectedSupplierInfo]);
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={control}
+                        name="currency"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Moneda</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger className="h-10">
+                                            <SelectValue placeholder="Moneda" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="ARS">$ ARS</SelectItem>
+                                        <SelectItem value="USD">U$S USD</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
-    const renderMultimediaFields = React.useCallback(() => (
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div className="space-y-4 p-4 border rounded-md">
+                        <h3 className="text-lg font-semibold mb-2 border-b pb-1">Precio Mayorista</h3>
+                        <FormField control={control} name="ivaPorcentajeMayorista" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>IVA (%)</FormLabel>
+                                <FormControl><Input className="h-9" type="number" placeholder="21" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? 21} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="otrosImpuestosMayorista" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Otros Impuestos ($)</FormLabel>
+                                <FormControl><Input className="h-9" type="number" placeholder="0" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? ''} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="gananciaPorcentajeMayorista" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Ganancia (%)</FormLabel>
+                                <FormControl><Input className={cn("h-9", field.value != null && field.value < 0 && "text-red-600 font-semibold")} type="number" placeholder="%" {...field} onChange={handleMayoristaGainChange} value={field.value ?? ''} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="wholesalePrice" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="font-bold text-base">Precio Final ($)</FormLabel>
+                                <FormControl><Input className="h-10 font-bold text-lg" type="number" placeholder="Calculado" {...field} onChange={handleMayoristaFinalPriceChange} value={field.value ?? ''} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
+
+                    <div className="space-y-4 p-4 border rounded-md">
+                        <h3 className="text-lg font-semibold mb-2 border-b pb-1">Precio Minorista</h3>
+                        <FormField control={control} name="ivaPorcentajeMinorista" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>IVA (%)</FormLabel>
+                                <FormControl><Input className="h-9" type="number" placeholder="21" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? 21} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="otrosImpuestosMinorista" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Otros Impuestos ($)</FormLabel>
+                                <FormControl><Input className="h-9" type="number" placeholder="0" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? ''} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="gananciaPorcentajeMinorista" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Ganancia (%)</FormLabel>
+                                <FormControl><Input className={cn("h-9", field.value != null && field.value < 0 && "text-red-600 font-semibold")} type="number" placeholder="%" {...field} onChange={handleMinoristaGainChange} value={field.value ?? ''} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="retailPrice" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="font-bold text-base">Precio Final ($)</FormLabel>
+                                <FormControl><Input className="h-10 font-bold text-lg" type="number" placeholder="Calculado" {...field} onChange={handleMinoristaFinalPriceChange} value={field.value ?? 0} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderMultimediaFields = () => (
         <div className="grid grid-cols-1 gap-4">
             <FormField
-                control={formControl}
-                name="imagenPrincipalUrl"
+                control={control}
+                name="imageUrl"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Imagen Principal</FormLabel>
                         <FormControl>
                             <UploadButton
-                                onChange={(url) => formSetValue("imagenPrincipalUrl", url)}
+                                onChange={(url: any) => setValue("imageUrl", url ? url.toString() : null)}
                             />
                         </FormControl>
                         <FormMessage />
@@ -432,13 +589,13 @@ export default function NuevaMotoForm({
                 )}
             />
         </div>
-    ), [formControl, formSetValue]);
+    );
 
-    const renderLegalFields = React.useCallback(() => (
+    const renderLegalFields = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-                control={formControl}
-                name="patente"
+                control={control}
+                name="licensePlate"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Patente</FormLabel>
@@ -448,45 +605,55 @@ export default function NuevaMotoForm({
                 )}
             />
         </div>
-    ), [formControl]);
+    );
 
-    // *** RETORNO SIMPLIFICADO: Solo el formulario con Tabs y botones ***
+    const hasErrorsInForm = Object.keys(errors).length > 0;
+
     return (
-        <form onSubmit={onSubmit} className="space-y-6">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
-                <TabsList className="grid w-full grid-cols-5 mb-4 h-auto">
-                    {TABS_ORDER.map(tab => (
-                        <TabsTrigger key={tab} value={tab} className="capitalize text-xs px-1 py-2 h-full">
-                            {tab === 'identificacion' ? 'Unidades' : tab}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-
-                {/* Renderizar contenido de cada tab */}
-                <TabsContent value="producto">{renderProductoFields()}</TabsContent>
-                <TabsContent value="identificacion">{renderIdentificacionFields()}</TabsContent>
-                <TabsContent value="comercial">{renderComercialFields()}</TabsContent>
-                <TabsContent value="multimedia">{renderMultimediaFields()}</TabsContent>
-                <TabsContent value="legal">{renderLegalFields()}</TabsContent>
-            </Tabs>
-
-            {/* Botones de Navegación / Envío */}
-            <div className="flex justify-between mt-6">
-                <Button type="button" variant="outline" onClick={() => {/* Lógica para tab anterior si se desea */ }}
-                    disabled={activeTab === TABS_ORDER[0] || isPending}>
-                    Anterior
-                </Button>
-                {activeTab !== TABS_ORDER[TABS_ORDER.length - 1] ? (
-                    <Button type="button" onClick={handleNextTab} disabled={isPending}>
-                        Siguiente
-                    </Button>
-                ) : (
-                    <Button type="submit" disabled={isPending}>
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Guardar Lote
-                    </Button>
+        <Form {...form}>
+            <form onSubmit={onSubmit} className="space-y-6">
+                {hasErrorsInForm && (
+                    <Alert variant="destructive">
+                        <AlertTitle>Error en el formulario</AlertTitle>
+                        <AlertDescription>
+                            Hay campos con errores. Por favor, revisa la información ingresada.
+                        </AlertDescription>
+                    </Alert>
                 )}
-            </div>
-        </form>
+
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-5 mb-4 h-auto">
+                        {TABS_ORDER.map(tab => (
+                            <TabsTrigger key={tab} value={tab} className="capitalize text-xs px-1 py-2 h-full">
+                                {tab === 'identificacion' ? 'Unidades' : tab}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+
+                    <TabsContent value="producto">{renderProductoFields()}</TabsContent>
+                    <TabsContent value="identificacion">{renderIdentificacionFields()}</TabsContent>
+                    <TabsContent value="precios">{renderPreciosFields()}</TabsContent>
+                    <TabsContent value="multimedia">{renderMultimediaFields()}</TabsContent>
+                    <TabsContent value="legal">{renderLegalFields()}</TabsContent>
+                </Tabs>
+
+                <div className="flex justify-between mt-6">
+                    <Button type="button" variant="outline" onClick={handlePreviousTab}
+                        disabled={activeTab === TABS_ORDER[0] || isSubmitting}>
+                        Anterior
+                    </Button>
+                    {activeTab !== TABS_ORDER[TABS_ORDER.length - 1] ? (
+                        <Button type="button" onClick={handleNextTab} disabled={isSubmitting}>
+                            Siguiente
+                        </Button>
+                    ) : (
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {submitButtonLabel || 'Guardar'}
+                        </Button>
+                    )}
+                </div>
+            </form>
+        </Form>
     );
 }

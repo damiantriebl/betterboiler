@@ -6,12 +6,13 @@ import ManageBrands from './ManageBrands';
 import ManageBranches from './ManageBranches';
 import ManageColors from './ManageColors';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type ColorConfig } from '@/types/ColorType';
+import { type ColorConfig, ColorType } from '@/types/ColorType';
 import { type Sucursal } from '@prisma/client';
 import { DisplayModelData, OrganizationBrandDisplayData } from './Interfaces';
 import { auth } from "@/auth";
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { Prisma } from '@prisma/client';
 
 async function getOrganizationBrandsData(organizationId: string): Promise<OrganizationBrandDisplayData[]> {
   try {
@@ -22,23 +23,66 @@ async function getOrganizationBrandsData(organizationId: string): Promise<Organi
         brand: {
           include: {
             models: {
-              select: { id: true, name: true },
+              select: {
+                id: true,
+                name: true,
+                organizationModelConfigs: {
+                  where: { organizationId: organizationId },
+                  select: { order: true, isVisible: true }
+                }
+              },
             },
           },
         },
       },
     });
 
-    const formattedData: OrganizationBrandDisplayData[] = orgBrandAssociations.map(assoc => ({
-      id: assoc.id,
-      order: assoc.order,
-      color: assoc.color,
-      brand: {
-        id: assoc.brand.id,
-        name: assoc.brand.name,
-        models: assoc.brand.models.map(m => ({ id: m.id, name: m.name, orgOrder: 0 }))
+    // Define the expected type for association with includes
+    type OrgBrandWithIncludes = Prisma.OrganizationBrandGetPayload<{
+      include: {
+        brand: {
+          include: {
+            models: {
+              select: {
+                id: true,
+                name: true,
+                organizationModelConfigs: {
+                  select: { order: true, isVisible: true },
+                  where: { organizationId: string }
+                }
+              }
+            }
+          }
+        }
       }
-    }));
+    }>;
+
+    // Process the fetched data to filter and format models based on organization config
+    const formattedData: OrganizationBrandDisplayData[] = orgBrandAssociations.map((assoc: OrgBrandWithIncludes) => {
+      // Filter models: Keep only those configured AND visible for this organization
+      const orgVisibleModels = assoc.brand.models
+        .filter(m => m.organizationModelConfigs && m.organizationModelConfigs.length > 0 && m.organizationModelConfigs[0].isVisible)
+        .map(m => ({
+          id: m.id,
+          name: m.name,
+          // Use the order and visibility from the specific OrganizationModelConfig
+          orgOrder: m.organizationModelConfigs[0].order,
+          isVisible: m.organizationModelConfigs[0].isVisible,
+        }))
+        // Sort the models based on their organization-specific order
+        .sort((a, b) => a.orgOrder - b.orgOrder);
+
+      return {
+        id: assoc.id,
+        order: assoc.order,
+        color: assoc.color,
+        brand: {
+          id: assoc.brand.id,
+          name: assoc.brand.name,
+          models: orgVisibleModels
+        }
+      };
+    });
 
     return formattedData;
 
@@ -58,10 +102,10 @@ async function getMotoColors(organizationId: string): Promise<ColorConfig[]> {
     const formattedColors: ColorConfig[] = colors.map(c => ({
       id: c.id.toString(),
       dbId: c.id,
-      nombre: c.nombre,
-      tipo: c.tipo as ColorConfig['tipo'],
-      color1: c.color1,
-      color2: c.color2 ?? undefined,
+      name: c.name,
+      type: c.type as ColorType,
+      colorOne: c.colorOne,
+      colorTwo: c.colorTwo ?? undefined,
       order: c.order
     }));
     return formattedColors;
@@ -122,12 +166,10 @@ export default async function ConfigurationPage() {
         </TabsContent>
 
         <TabsContent value="colores">
-          <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-            <ManageColors
-              initialColorsData={initialMotoColorsData}
-              organizationId={organizationId}
-            />
-          </Suspense>
+          <ManageColors
+            initialColorsData={initialMotoColorsData}
+            organizationId={organizationId}
+          />
         </TabsContent>
 
         <TabsContent value="sucursales">

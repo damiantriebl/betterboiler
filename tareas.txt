@@ -29,3 +29,33 @@ CONFIGURACION
 ADMIN
 * ROLE ENCARGADO ve todo para agregar
 * role user solo entra en ventas y dashboard
+// 15-4
+
+configuracion motos
+[x] el tirador de posicion de las motos no funciona muy bien
+[x] el ocultar moto no funciona
+[ ] late // tener la opcion de sumar los modelos que estan en todo el proyecto
+
+stock
+[ ] arreglar el tema de la imagen y archivos en stock/new
+[x] boton de atras no anda en stock/new
+[x] los precios de comericial, son precios no numeros, y precio compra es precio costo
+[x] en comercial va iva
+[x] precio compra + iva + ganancia minorista / mayorista en porcentaje
+[x] opcion de fijar de precio.
+[x] establecer la moneda
+[x] revisar año
+
+sales
+[ ] boton de editar la informacion esta fallando
+[ ] pagos revision
+[ ] revisar con Arca
+
+Agregar Tabla Clientes
+[x ] condicion fiscal
+[ ] hacer una creacion rapida de Clientes
+
+Reportes
+[ ] lista de precios
+[ ] poder subir por porcentaje a grupos
+[ ] con boton de deshacer
