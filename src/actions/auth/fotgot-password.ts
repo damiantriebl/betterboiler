@@ -2,9 +2,9 @@
 "use server";
 
 import { z } from "zod";
-import { forgotPasswordSchema } from "@/lib/authZod";
+import { forgotPasswordSchema } from "@/zod/authZod";
 import { authClient } from "@/auth-client";
-import { serverMessage } from "@/schemas/serverMessage";
+import { serverMessage } from "@/types/ServerMessageType";
 
 export async function forgotPasswordAction(prevState: { success: string | false; error: string | false; }, formData: FormData): Promise<serverMessage> {
   const email = formData.get("email");

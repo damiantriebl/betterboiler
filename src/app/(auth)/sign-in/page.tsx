@@ -11,8 +11,8 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/loadingButton";
-import { signInSchema } from "@/lib/authZod";
+import LoadingButton from "@/components/custom/LoadingButton";
+import { signInSchema } from "@/zod/AuthZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,7 +30,7 @@ export default function SignIn() {
 	const router = useRouter();
 	const { toast } = useToast();
 	const [pendingCredentials, setPendingCredentials] = useState(false);
-	
+
 	const form = useForm<z.infer<typeof signInSchema>>({
 		resolver: zodResolver(signInSchema),
 		defaultValues: {
@@ -40,13 +40,13 @@ export default function SignIn() {
 	});
 	useEffect(() => {
 		if (searchParams.get("error") === "not-logged") {
-		  toast({
-			title: "Error",
-			description: "No estás logueado para acceder.",
-			variant: "destructive",
-		  })
+			toast({
+				title: "Error",
+				description: "No estás logueado para acceder.",
+				variant: "destructive",
+			})
 		}
-	  }, [searchParams])
+	}, [searchParams])
 	const handleCredentialsSignIn = async (
 		values: z.infer<typeof signInSchema>
 	) => {
@@ -75,7 +75,7 @@ export default function SignIn() {
 		setPendingCredentials(false);
 	};
 
-	
+
 
 	return (
 		<div className="grow flex items-center justify-center p-4">
@@ -121,7 +121,7 @@ export default function SignIn() {
 							</LoadingButton>
 						</form>
 					</Form>
-					
+
 					<div className="mt-4 text-center text-sm">
 						<Link
 							href="/forgot-password"

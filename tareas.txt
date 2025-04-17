@@ -3,14 +3,13 @@
 * en ventas/:id confirmación de compra, aparecer el monto en 3) modificarlo y dejarlo mas estético 4) Enviar datos al arca opcional
 STOCK NUEVO
 
-* primero va el datos del producto GENERAL (sacar el color) 
-* en identificación agregar color. y un botón para ir sumando motos al sistema
-* agregar en indetificacion, la sucursal
-* poder agregar unica marca
-* inspeccionar si hay una api de motos
-* proveedor
-* precio de venta minorista / mayorista
-* stock total es automatico
+* primero va el datos del producto GENERAL (sacar el color) // done
+* en identificación agregar color. y un botón para ir sumando motos al sistema // done
+* poder agregar unica marca // done
+* inspeccionar si hay una api de motos // done, no tiene sentidos, proque hay muchas
+* proveedor // a medio
+* precio de venta minorista / mayorista // donde
+* stock total es automatico 
 * formularios atachados
 
 AJUSTES
@@ -19,14 +18,44 @@ AJUSTES
 
 CONFIGURACION
 
-* agregar marcas
-* agregar modelos
-* sucursales
-* colores
-* proveedor => cuit, teléfono, dirección, transporte. 
+* agregar marcas     //done
+* agregar modelos   // done
+* sucursales        // done
+* colores           // done
+* proveedor => cuit, teléfono, dirección, transporte. //done
 
 // accesorios
 
 ADMIN
 * ROLE ENCARGADO ve todo para agregar
 * role user solo entra en ventas y dashboard
+// 15-4
+
+configuracion motos
+[x] el tirador de posicion de las motos no funciona muy bien
+[x] el ocultar moto no funciona
+[ ] late // tener la opcion de sumar los modelos que estan en todo el proyecto
+
+stock
+[ ] arreglar el tema de la imagen y archivos en stock/new
+[x] boton de atras no anda en stock/new
+[x] los precios de comericial, son precios no numeros, y precio compra es precio costo
+[x] en comercial va iva
+[x] precio compra + iva + ganancia minorista / mayorista en porcentaje
+[x] opcion de fijar de precio.
+[x] establecer la moneda
+[x] revisar año
+
+sales
+[ ] boton de editar la informacion esta fallando
+[ ] pagos revision
+[ ] revisar con Arca
+
+Agregar Tabla Clientes
+[x ] condicion fiscal
+[ ] hacer una creacion rapida de Clientes
+
+Reportes
+[ ] lista de precios
+[ ] poder subir por porcentaje a grupos
+[ ] con boton de deshacer

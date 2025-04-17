@@ -1,4 +1,4 @@
-import { Motorcycle, EstadoVenta } from "@/types/types";
+import { Motorcycle, EstadoVenta } from "@/types/BikesType";
 
 export const marcas = ["Honda", "Yamaha", "Kawasaki", "Suzuki", "BMW", "KTM", "Ducati", "Benelli", "Royal Enfield", "Bajaj"] as const;
 export const tipos = ["Sport", "Naked", "Adventure", "Cruiser", "Scooter", "Street", "Touring"] as const;

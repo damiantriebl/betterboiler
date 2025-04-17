@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- las variables siempre en camelcase y los nombres de los archivos  que son componentes visuales en PascalCase y tienen que ser en ingles
+
+- los esquemas ts tanto como type y interface siempre tiene que estar en la carpeta /types
+
+- los esquemas zod siempre siempre tienen que estar en la carpeta /zod
+
+- los componentes visuales tienen que arrancar con la palabra en mayuscula, salvo los propios de next.js como page, error, router, etc. y los que son .ts, como las librerias, hooks, types, etc
+
+- las actions siempre llevan una notacion con kebab-case y siempre van en la carpeta action, es la excepcion a la regla
+- los hooks personalizados van en la carpeta /hooks
+- la carpeta components tiene hasta ahora admin para los componentes que son propios de la autentificacion, custom para todo el resto que son comunes, y UI los que son puros de shadcn
+- si un componente no se va a reutilizar y va a estar dentro de una sola page, va en la misma carpeta que la page.
+- en los actions, si necesitamos sacar la session actual de el usuario esta la funcion getOrganizationIdFromSession dentro del archivo [getOrganizationIdFromSession.ts](mdc:src/actions/getOrganizationIdFromSession.ts)

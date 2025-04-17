@@ -1,4 +1,4 @@
-import Logo from "@/components/custom/logo";
+import Logo from "@/components/custom/Logo";
 
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {

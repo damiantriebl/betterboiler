@@ -1,11 +1,11 @@
 import Link from "next/link";
-import LogoutButton from "./logoutButton";
+import LogoutButton from "./LogoutButton";
 
 import SessionButtons from "./SessionButtons";
 import { Button } from "../ui/button";
 import { Session } from "@/auth";
 import { headers } from "next/headers";
-import AvatarUser from "./avatarUser";
+import AvatarUser from "./AvatarUser";
 
 interface NavbarProps {
     session: Session | null;
@@ -21,8 +21,8 @@ export default async function Navbar({ session, organization }: NavbarProps) {
     return (
         <nav className="flex justify-between items-center py-3 px-4 fixed top-0 left-0 right-0 z-50 bg-slate-100">
             {session && <Link href="/profile">
-                    <AvatarUser name={session.user.name} src={session.user.profileCrop} />   
-                </Link>
+                <AvatarUser name={session.user.name} src={session.user.profileCrop} />
+            </Link>
             }
             <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
                 {organization?.name ?? "Aun no se le asignado ninguna organizacion"}

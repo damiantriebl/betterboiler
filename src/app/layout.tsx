@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster"
 import { auth } from '@/auth'
 import "./globals.css";
-import Navbar from "@/components/custom/navbar";
+import Navbar from "@/components/custom/Navbar";
 import { headers } from "next/headers";
 import { ToastProvider } from "@/components/ui/ToasterProvider";
 import prisma from "@/lib/prisma";
@@ -35,17 +35,17 @@ export default async function RootLayout({
   })
   const organization = session?.user.organizationId
     ? await prisma.organization.findUnique({
-        where: { id: session.user.organizationId },
-        select: { name: true },
-      })
+      where: { id: session.user.organizationId },
+      select: { name: true },
+    })
     : null;
-    
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-          {children}
+        {children}
         <Toaster />
 
       </body>

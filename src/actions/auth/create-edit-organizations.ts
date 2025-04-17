@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
-import { serverMessage } from "@/schemas/serverMessage";
+import { serverMessage } from "@/types/ServerMessageType";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
 import { uploadBufferToS3 } from "@/actions/S3/upload-buffer-to-s3";

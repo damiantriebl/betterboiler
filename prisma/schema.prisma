@@ -13,31 +13,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                String    @id @default(cuid()) @map("_id")
-  name              String
-  email             String    @unique
-  emailVerified     Boolean   @default(false)
-  profileOriginal   String?  
-  profileCrop       String?   
-  profileOriginalVariants String[]
-  profileCropVariants     String[]
-  premium           Boolean   @default(false)
-  role              String    @default("user")
-  banned            Boolean   @default(false)
-  banReason         String?
-  banExpires        Int? /// Unix timestamp for ban expiration
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  sessions          Session[]
-  accounts          Account[]
-
-  organizationId String?      // Hacer opcional el campo organizationId
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@map("user")
-}
-
 model Session {
   id             String   @id @default(cuid()) @map("_id")
   token          String   @unique
@@ -97,14 +72,327 @@ model Jwks {
 }
 
 model Organization {
-  id          String    @id @default(cuid()) @map("_id")
-  name        String
-  slug        String?   @unique
-  logo        String?
-  createdAt   DateTime  @default(now())
-  metadata    String?
-  users       User[]
+  id         String      @id @default(cuid()) @map("_id")
+  name       String
+  slug       String?     @unique
+  logo       String?
+  createdAt  DateTime    @default(now())
+  metadata   String?
+  users      User[]
+  motoColors MotoColor[]
+
+  // --- Relación con OrganizationBrand (Tabla Intermedia) ---
+  organizationBrands OrganizationBrand[]
+
+  // --- Relación con Configuración de Modelos ---
+  organizationModelConfigs OrganizationModelConfig[]
+
+  // --- Relación con Sucursales (Branches) ---
+  sucursales Sucursal[]
+
+  // Añadir relación inversa con Motorcycle
+  motorcycles Motorcycle[]
+
+  // Añadir relación inversa con Supplier
+  suppliers Supplier[]
 
   @@map("organization")
 }
 
+model User {
+  id                      String        @id @default(cuid()) @map("_id")
+  name                    String
+  email                   String        @unique
+  emailVerified           Boolean       @default(false)
+  profileOriginal         String?
+  profileCrop             String?
+  profileOriginalVariants String[]
+  profileCropVariants     String[]
+  premium                 Boolean       @default(false)
+  role                    String        @default("user")
+  banned                  Boolean       @default(false)
+  banReason               String?
+  banExpires              Int?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  sessions                Session[]
+  accounts                Account[]
+  organizationId          String?
+  organization            Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("user")
+}
+
+model Brand {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique // Vuelve a ser único globalmente
+  models Model[]
+
+  // --- Relación con OrganizationBrand (Tabla Intermedia) ---
+  organizationBrands OrganizationBrand[]
+
+  // Añadir relación inversa con Motorcycle
+  motorcycles Motorcycle[]
+}
+
+model Model {
+  id      Int    @id @default(autoincrement())
+  name    String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandId Int
+
+  // --- Relación con Configuración de Modelos ---
+  organizationModelConfigs OrganizationModelConfig[]
+
+  // Añadir relación inversa con Motorcycle
+  motorcycles Motorcycle[]
+
+  @@unique([name, brandId]) // Nombre único por marca
+  @@index([brandId]) // Mantener índice por marca para búsquedas
+}
+
+model MotoColor {
+  id        Int      @id @default(autoincrement())
+  name      String // nombre
+  type      String // tipo ('unico', 'bitono', 'patron')
+  colorOne  String // color1 (#RRGGBB)
+  colorTwo  String? // color2 (#RRGGBB), opcional
+  order     Int      @default(0) // Orden para DND (por organización)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- Relación con Organización ---
+  organizationId String // Clave foránea para la organización
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Añadir relación inversa con Motorcycle
+  motorcycles Motorcycle[] // Inverse relation with Motorcycle
+
+  // Asegurar que el nombre del color sea único para cada organización
+  @@unique([organizationId, name])
+
+  // Indexar para búsquedas rápidas por organización y orden
+  @@index([organizationId, order])
+}
+
+// --- NUEVO MODELO: Tabla Intermedia OrganizationBrand ---
+model OrganizationBrand {
+  id Int @id @default(autoincrement())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  brandId Int
+  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  // --- Campos específicos de la relación ---
+  order Int     @default(0) // Orden de esta marca DENTRO de esta organización
+  color String? // Color personalizado para esta marca EN esta organización
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- Constraints e Índices ---
+  @@unique([organizationId, brandId]) // Una organización solo puede tener una marca asociada una vez
+  @@index([organizationId, order]) // Para ordenar marcas por organización
+  @@index([brandId]) // Para buscar rápido qué organizaciones usan una marca
+}
+
+// --- NUEVO MODELO: Configuración de Modelos por Organización ---
+model OrganizationModelConfig {
+  id Int @id @default(autoincrement())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  modelId Int
+  model   Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  // --- Campos específicos de la relación ---
+  order     Int     @default(0) // Orden de este modelo DENTRO de esta organización (y marca)
+  isVisible Boolean @default(true) // Si este modelo es visible para esta organización
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- Constraints e Índices ---
+  @@unique([organizationId, modelId]) // Una organización solo configura un modelo una vez
+  // Índice para buscar/ordenar modelos por organización y su orden específico
+  // Podríamos necesitar filtrar por brandId indirectamente a través de modelId si hacemos queries complejas aquí
+  @@index([organizationId, modelId, order])
+  @@index([modelId]) // Para buscar rápido qué organizaciones configuran un modelo
+}
+
+// Modelo para Sucursales (Branches)
+model Sucursal {
+  id        Int      @id @default(autoincrement())
+  name      String // Name of the branch
+  order     Int // Orden dentro de la organización
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relación 1:N con Organization
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Añadir relación inversa con Motorcycle
+  motorcycles Motorcycle[] // Inverse relation with Motorcycle
+
+  // Restricción única por organización y nombre
+  @@unique([organizationId, name])
+  // Índice para ordenar por organización
+  @@index([organizationId, order])
+}
+
+// --- ACTUALIZAR MODELO Supplier --- 
+model Supplier {
+  id Int @id @default(autoincrement())
+
+  // Identificación y Fiscal
+  legalName            String // Razón Social
+  commercialName       String? // Nombre Comercial (opcional)
+  taxIdentification    String  @unique // Identificación Tributaria (CUIT/CUIL) - Debe ser único por Org
+  vatCondition         String // Condición frente al IVA
+  voucherType          String // Tipo de Comprobante Emitido
+  grossIncome          String? // Ingresos Brutos (Nro./Convenio)
+  localTaxRegistration String? // Inscripción Tributaria Local
+
+  // Contacto
+  contactName     String?
+  contactPosition String?
+  landlineNumber  String?
+  mobileNumber    String?
+  email           String? // Podría ser único por Org si se requiere
+  website         String?
+
+  // Direcciones
+  legalAddress      String?
+  commercialAddress String?
+  deliveryAddress   String?
+
+  // Bancaria
+  bank              String?
+  accountTypeNumber String?
+  cbu               String? // Podría ser único por Org
+  bankAlias         String?
+  swiftBic          String?
+
+  // Comercial
+  paymentCurrency     String? // Moneda de Pago Preferida
+  paymentMethods      String[] // Formas de Pago Aceptadas (puede ser un array de strings)
+  paymentTermDays     Int? // Plazo de Pago (días)
+  discountsConditions String? // Descuentos o Condiciones Especiales
+  creditLimit         Float? // Límite de Crédito ($)
+  returnPolicy        String? // Política de Devoluciones y Garantías
+
+  // Logística
+  shippingMethods     String? // Métodos de Envío
+  shippingCosts       String? // Costos de Envío
+  deliveryTimes       String? // Tiempos de Entrega Promedio
+  transportConditions String? // Condiciones de Transporte
+
+  // Adicional
+  itemsCategories      String? // Rubros / Categorías
+  certifications       String?
+  commercialReferences String?
+  status               String  @default("activo") // Estado (activo/inactivo)
+  notesObservations    String? // Notas / Observaciones Internas
+
+  // Relación con Organización
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Relación inversa con Motorcycle (si un proveedor puede estar asociado a una moto)
+  motorcycles Motorcycle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Índices y Restricciones
+  @@unique([organizationId, taxIdentification]) // CUIT único por organización
+  // @@unique([organizationId, email]) // Email único por organización (opcional)
+  // @@unique([organizationId, cbu]) // CBU único por organización (opcional)
+  @@index([organizationId]) // Índice para buscar proveedores por organización
+  @@index([organizationId, status]) // Índice para filtrar por estado
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  type        String   // 'Individual' | 'LegalEntity'
+  firstName   String
+  lastName    String?
+  companyName String?
+  taxId       String
+  email       String
+  phone       String?
+  mobile      String?
+  address     String?
+  vatStatus   String?
+  status      String   @default("active")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// --- MODELO Motorcycle (Modificar para incluir relación con Supplier) ---
+model Motorcycle {
+  id             Int      @id @default(autoincrement())
+  chassisNumber  String   @unique // nroChasis
+  engineNumber   String?  @unique // nroMotor
+  year           Int              // año
+  displacement   Int?             // cilindrada 
+  mileage        Int      @default(0) // kilometraje
+  costPrice      Float?           // precioCosto
+  retailPrice    Float            // precioVentaMinorista (Obligatorio)
+  wholesalePrice Float?           // precioVentaMayorista
+  licensePlate   String?          // patente
+  currency       String   @default("ARS") // Kept from previous change
+  observations   String?          // Kept for now
+  imageUrl       String?          // imagenPrincipalUrl
+  state          String   @default("AVAILABLE") // Kept for now (Estado físico/stock)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // --- Relaciones (Claves Foráneas) ---
+  brandId Int // FK para Marca
+  brand   Brand @relation(fields: [brandId], references: [id])
+
+  modelId Int // FK para Modelo
+  model   Model @relation(fields: [modelId], references: [id])
+
+  // --- Relación con MotoColor (usa el ID de MotoColor) ---
+  colorId Int // FK para MotoColor
+  color   MotoColor @relation(fields: [colorId], references: [id]) // Relation uses ID
+
+  // --- Relación con Sucursal (usa el ID de Sucursal) ---
+  branchId Int // Reverted to branchId
+  branch   Sucursal @relation(fields: [branchId], references: [id]) // Reverted relation name
+
+  // --- Relación con Proveedor (Opcional) ---
+  supplierId Int? // Hacer el ID opcional
+  supplier   Supplier? @relation(fields: [supplierId], references: [id]) // Relación con el nuevo modelo Supplier
+
+  // --- Relación con Organización ---
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  // --- Índices para búsquedas eficientes ---
+  @@index([brandId])
+  @@index([modelId])
+  @@index([colorId])
+  @@index([branchId]) // Reverted index name
+  @@index([supplierId]) // Añadir índice para supplierId
+  @@index([organizationId])
+  @@index([state]) // Indexar por estado si se busca frecuentemente
+  @@map("motorcycle") // Nombre de la tabla en la base de datos
+}
+
+// ---------------------------------------------
+
+// Considera añadir un modelo Proveedor si no lo tienes
+// model Proveedor {
+//   id    Int     @id @default(autoincrement())
+//   name  String
+//   // ... otros campos ...
+//   motorcycles Motorcycle[] // Relación inversa
+// }

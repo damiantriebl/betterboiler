@@ -1,4 +1,3 @@
-
 import UsersTable from "@/components/admin/userTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import OrganizationTable from "../../components/admin/organizationTable";
@@ -20,7 +19,7 @@ export default async function RootDashboard() {
                     <p className="text-muted-foreground">
                         Para uso interno de APEX.com
                     </p>
-                    <CreateOrganization/>
+                    <CreateOrganization />
                 </div>
 
                 <Card>
@@ -29,7 +28,7 @@ export default async function RootDashboard() {
 
                     </CardHeader>
                     <CardContent>
-                        <OrganizationTable/>
+                        <OrganizationTable />
                         <UsersTable />
                         <p className="w-full text-center text-lime-500 text-xl pt-10">Los cambios realizados se realizaran luego de volverse a loguear</p>
                     </CardContent>
