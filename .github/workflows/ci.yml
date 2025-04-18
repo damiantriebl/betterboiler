@@ -34,14 +34,10 @@ jobs:
         name: Install Biome
         run: pnpm add -g @biomejs/biome
 
-      - if: matrix.task == 'test'
-        name: Install tsx
-        run: pnpm add -D tsx
-
       - name: Run ${{ matrix.task }}
         run: |
           case "${{ matrix.task }}" in
-            test) pnpm tsx ./vitest.verify-env.ts && pnpm vitest run ;;
+            test) node ./vitest.verify-env.js && pnpm vitest run --reporter=verbose ;;
             lint) pnpm lint ;;
             format) biome format src --write --no-errors-on-unmatched ;;
             coverage) pnpm test:coverage ;;

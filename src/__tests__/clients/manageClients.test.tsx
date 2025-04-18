@@ -71,14 +71,13 @@ describe("Client Management Actions", () => {
   const mockClientComplete: ClientWithId = {
     id: "client123",
     ...mockClientData,
-    // Use defined lastName, provide default empty string for other potentially non-nullable fields
-    lastName: mockClientData.lastName || "", // Ensure it's string
-    companyName: "", // Changed from null
-    mobile: "", // Changed from null
-    address: "", // Changed from null
-    vatStatus: "", // Changed from null
-    notes: "", // Changed from null
-    // Añadir campos de Prisma
+    phone: mockClientData.phone ?? null,
+    lastName: mockClientData.lastName ?? null,
+    companyName: null,
+    mobile: null,
+    address: null,
+    vatStatus: null,
+    notes: null,
     createdAt: testDate,
     updatedAt: testDate,
   };

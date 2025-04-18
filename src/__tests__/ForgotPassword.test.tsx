@@ -1,28 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ForgotPassword from "../app/(auth)/forgot-password/page";
+import { setupServerAction } from "./setup";
 
-// Mock de los hooks y componentes utilizados
-vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({
-    toast: vi.fn(),
-  }),
-}));
-
-// Mock del componente LoadingButton
-vi.mock("@/components/custom/LoadingButton", () => ({
-  default: ({ children, pending }: { children: React.ReactNode; pending: boolean }) => (
-    <button disabled={pending}>{children}</button>
-  ),
-}));
-
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    useActionState: () => [{ success: false, error: false }, vi.fn(), false],
-  };
-});
+// Configurar mocks para server actions
+setupServerAction();
 
 describe("ForgotPassword Component", () => {
   beforeEach(() => {
