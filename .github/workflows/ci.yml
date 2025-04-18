@@ -2,8 +2,10 @@
 name: CI
 
 on:
-  push:         { branches: [main] }
-  pull_request: { branches: [main] }
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -12,24 +14,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [test, lint, format, coverage]
+        task: [verify, test, lint, format, coverage]
     name: ${{ matrix.task }}
 
-    steps:
+     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
-        with:
-          version: 8
-          run_install: false
-
+        with: { version: 8, run_install: false }
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
           cache-dependency-path: '**/pnpm-lock.yaml'
-
       - run: pnpm install --no-frozen-lockfile
+
+      - if: matrix.task == 'verify'
+        name: Verify aliases
+        run: pnpm run verify:aliases
 
       - if: matrix.task == 'format'
         name: Install Biome
@@ -38,10 +39,10 @@ jobs:
       - name: Run ${{ matrix.task }}
         run: |
           case "${{ matrix.task }}" in
-            test) node ./vitest.verify-env.js && pnpm vitest run --reporter=verbose ;;
-            lint) pnpm lint ;;
-            format) biome format src --write --no-errors-on-unmatched ;;
-            coverage) pnpm test:coverage ;;
+            test)     pnpm run test ;;
+            lint)     pnpm run lint ;;
+            format)   pnpm run format ;;
+            coverage) pnpm run test:coverage ;;
           esac
 
       - if: matrix.task == 'coverage'
@@ -49,4 +50,3 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
-          retention-days: 7

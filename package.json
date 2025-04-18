@@ -12,7 +12,7 @@
 		"lint": "biome lint src",
 		"fix:lint": "biome lint src --apply",
 		"verify:aliases": "node ./vitest.verify-env.js",
-		"test": "node ./vitest.verify-env.js && vitest run --reporter=verbose",
+		"test": "vitest run --reporter=verbose",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
 	},
