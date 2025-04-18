@@ -1,13 +1,7 @@
 // BadgeDashboard.tsx
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export interface BadgeDashboardProps {
   description: string;
@@ -32,9 +26,7 @@ export function BadgeDashboard({
     <Card className="@container/card">
       <CardHeader className="relative">
         <CardDescription>{description}</CardDescription>
-        <CardTitle className="text-2xl md:text-3xl font-semibold tabular-nums">
-          {title}
-        </CardTitle>
+        <CardTitle className="text-2xl md:text-3xl font-semibold tabular-nums">{title}</CardTitle>
         <div className="absolute right-4 top-4">
           <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
             <IconBadge className="w-3 h-3" /> {badgeValue}

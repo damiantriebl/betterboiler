@@ -1,7 +1,13 @@
 "use client";
 import { useState, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Label } from "@radix-ui/react-label";
@@ -9,10 +15,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { createOrUpdateOrganization } from "@/actions/auth/create-edit-organizations";
-import { serverMessage } from "@/types/ServerMessageType";
-import UploadButton, { UploadResult } from "@/components/custom/UploadCropperButton";
+import type { serverMessage } from "@/types/ServerMessageType";
+import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
 import { toast } from "@/hooks/use-toast";
-import { organizationSchema, OrganizationFormData } from "@/zod/OrganizationZod";
+import { organizationSchema, type OrganizationFormData } from "@/zod/OrganizationZod";
 
 interface Props {
   organization?: {
@@ -77,7 +83,6 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
     });
   });
 
-
   return (
     <Dialog open={open} onOpenChange={() => setOpen(!open)}>
       <DialogTrigger asChild>
@@ -88,9 +93,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {organization ? "Editar Organización" : "Crear Organización"}
-          </DialogTitle>
+          <DialogTitle>{organization ? "Editar Organización" : "Crear Organización"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -111,11 +114,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
               )}
             />
 
-            <UploadButton
-              placeholder="Subir logo"
-              crop={false}
-              onChange={handleUploadChange}
-            />
+            <UploadButton placeholder="Subir logo" crop={false} onChange={handleUploadChange} />
 
             {state.error && <p className="text-red-400">{state.error}</p>}
             <Button type="submit" disabled={isPending}>

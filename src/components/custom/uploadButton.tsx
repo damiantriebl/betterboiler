@@ -13,9 +13,9 @@ const UploadButton = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     setFile(f);
-    
+
     if (fileUrl) URL.revokeObjectURL(fileUrl);
-    
+
     if (f) {
       const newUrl = URL.createObjectURL(f);
       setFileUrl(newUrl);
@@ -28,25 +28,25 @@ const UploadButton = () => {
     console.log("Datos del formulario:", { file, fileUrl });
     setStatusMessage("creando...");
     setLoading(true);
-    if(file){
+    if (file) {
       setStatusMessage("subiendo...");
 
       const signedUrlRequest = await getSignedURL();
-      console.log('signed', signedUrlRequest)
-      if(signedUrlRequest.failure !== undefined){
-          setStatusMessage("failed")
-          console.error("error")
-          setLoading(false)
-          return
+      console.log("signed", signedUrlRequest);
+      if (signedUrlRequest.failure !== undefined) {
+        setStatusMessage("failed");
+        console.error("error");
+        setLoading(false);
+        return;
       }
-      const url = signedUrlRequest.success?.url
+      const url = signedUrlRequest.success?.url;
       await fetch(url, {
         method: "PUT",
         body: file,
         headers: {
-          "Content-type": file?.type
-        }
-      })
+          "Content-type": file?.type,
+        },
+      });
     }
     setTimeout(() => {
       setStatusMessage("Subido");
@@ -65,9 +65,7 @@ const UploadButton = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {statusMessage && (
-        <p className="bg-yellow-400 text-yellow-700 p-4">{statusMessage}</p>
-      )}
+      {statusMessage && <p className="bg-yellow-400 text-yellow-700 p-4">{statusMessage}</p>}
 
       <Input
         type="file"

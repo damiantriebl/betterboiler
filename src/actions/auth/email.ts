@@ -35,14 +35,13 @@ export async function sendEmail({
 
     return {
       success: true,
-      messageId: response.headers['x-message-id'],
+      messageId: response.headers["x-message-id"],
     };
-
   } catch (error) {
     console.error("Error sending email:", error);
     return {
       success: false,
       message: "Failed to send email. Please try again later.",
-    }
+    };
   }
 }

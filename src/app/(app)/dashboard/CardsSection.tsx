@@ -1,6 +1,6 @@
 // CardSection.tsx
 
-import { BadgeDashboard, BadgeDashboardProps } from "@/components/custom/BadgeDashboard";
+import { BadgeDashboard, type BadgeDashboardProps } from "@/components/custom/BadgeDashboard";
 
 export function CardSection() {
   const items: BadgeDashboardProps[] = [
@@ -40,8 +40,8 @@ export function CardSection() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {items.map((item, idx) => (
-        <BadgeDashboard key={idx} {...item} />
+      {items.map((item) => (
+        <BadgeDashboard key={item.title} {...item} />
       ))}
     </div>
   );

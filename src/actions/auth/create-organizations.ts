@@ -2,18 +2,18 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { serverMessage } from "@/app/(auth)/forgot-password/page";
+import type { serverMessage } from "@/app/(auth)/forgot-password/page";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 export async function createOrganization(
   prevState: { success: string | false; error: string | false },
-  formData: FormData
+  formData: FormData,
 ): Promise<serverMessage> {
   const name = formData.get("name") as string | null;
   const logo = formData.get("logo") as string | null;
   const session = await auth.api.getSession({ headers: await headers() });
-  
+
   if (!name) return { error: "Formato invalido", success: false };
 
   const slug = name.toLowerCase().replace(/ /g, "-");
@@ -26,7 +26,7 @@ export async function createOrganization(
         slug,
       },
     });
-    console.log('new organization', newOrganization)
+    console.log("new organization", newOrganization);
     revalidatePath("/root");
     return { success: "Organización creada con éxito.", error: false };
   } catch (error) {

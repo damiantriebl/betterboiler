@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 export default async function ProfilePage() {
   const session = await auth.api.getSession({
     headers: await headers(),
-  })
+  });
 
   if (!session?.user?.email) {
     return <p>Acceso denegado. Por favor, inicia sesión.</p>;
@@ -21,7 +21,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-col align-middle justify-center p-20 items-center" >
+    <div className="flex flex-col align-middle justify-center p-20 items-center">
       <ProfileForm user={{ id: user.id, name: user.name, email: user.email }} />
     </div>
   );

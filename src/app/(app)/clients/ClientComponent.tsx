@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import {
@@ -10,10 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import ClientForm from './ClientForm';
-import ClientTable from './ClientTable';
-import { Client } from './columns';
-import { toast } from '@/hooks/use-toast';
+import ClientForm from "./ClientForm";
+import ClientTable from "./ClientTable";
+import type { Client } from "./columns";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
   initialData: Client[];
@@ -57,7 +57,7 @@ export default function ClientComponent({ initialData }: Props) {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>
-                {editingClient ? 'Editar Cliente' : 'Agregar Nuevo Cliente'}
+                {editingClient ? "Editar Cliente" : "Agregar Nuevo Cliente"}
               </DialogTitle>
             </DialogHeader>
             <ClientForm
@@ -66,7 +66,7 @@ export default function ClientComponent({ initialData }: Props) {
                 handleCloseModal();
                 toast({
                   title: editingClient ? "Cliente actualizado" : "Cliente agregado",
-                  description: "La operación se completó exitosamente."
+                  description: "La operación se completó exitosamente.",
                 });
               }}
             />

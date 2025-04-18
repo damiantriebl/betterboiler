@@ -1,8 +1,8 @@
-import { Model } from "@prisma/client";
-import { OrganizationModelConfig } from "@prisma/client";
+import type { Model } from "@prisma/client";
+import type { OrganizationModelConfig } from "@prisma/client";
 
 export interface OrganizationBrandData {
-  id: number; 
+  id: number;
   name: string;
   color: string | null;
   order: number;
@@ -10,12 +10,12 @@ export interface OrganizationBrandData {
 }
 
 export interface OrganizationModelData {
-  id: number; 
+  id: number;
   name: string;
   order: number;
 }
 
-// --- Tipos para el Modelo N:M --- 
+// --- Tipos para el Modelo N:M ---
 // (Mover a un archivo types.ts centralizado sería ideal)
 export interface ModelData {
   id: number;
@@ -30,27 +30,27 @@ export interface BrandWithModelsData {
 }
 
 // --- Tipos para el Modelo N:M + Configuración de Modelo ---
-// Modelo de datos tal como viene de la BD 
+// Modelo de datos tal como viene de la BD
 interface ModelWithOrgConfig extends Model {
   organizationModelConfigs: OrganizationModelConfig[];
 }
 // Tipo para pasar al Frontend (combinado)
 export interface DisplayModelData {
-  id: number; 
+  id: number;
   name: string;
   orgOrder: number;
-  isVisible?: boolean
+  isVisible?: boolean;
 }
 
 export interface BrandWithDisplayModelsData {
   id: number;
   name: string;
-  models: DisplayModelData[]; 
+  models: DisplayModelData[];
 }
 
 export interface OrganizationBrandDisplayData {
-  id: number; 
-  order: number; 
+  id: number;
+  order: number;
   color: string | null;
   brand: BrandWithDisplayModelsData;
 }

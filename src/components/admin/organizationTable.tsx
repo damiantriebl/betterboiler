@@ -22,7 +22,6 @@ export default async function OrganizationTable() {
           <TableHead>Slug</TableHead>
           <TableHead>Logo</TableHead>
           <TableHead>Acciones</TableHead>
-
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -31,10 +30,10 @@ export default async function OrganizationTable() {
             <TableCell>{org.name}</TableCell>
             <TableCell>{org.slug}</TableCell>
             <TableCell>
-              {org.logo && org.logo.startsWith("/") || org?.logo?.startsWith("http") ? (
+              {(org.logo?.startsWith("/") || org?.logo?.startsWith("http")) ? (
                 <ImageZoom organization={org.name} imgLow={org.logo} imgHd={org.logo} alt="Logo" />
               ) : (
-                "Sin logo"
+                <span className="text-xs text-muted-foreground">Sin logo</span>
               )}
             </TableCell>
             <TableCell className="flex gap-2">
