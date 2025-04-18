@@ -1,81 +1,47 @@
+# .github/workflows/ci.yml
 name: CI
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  push:         { branches: [main] }
+  pull_request: { branches: [main] }
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Test
+  ci:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    strategy:
+      matrix:
+        task: [test, lint, format, coverage]   # <- lo que antes eran 4 jobs
+    name: ${{ matrix.task }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4           # primero pnpm
         with:
           version: 8
+          run_install: false                 # evitá doble install
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4          # ahora Node + cache
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: pnpm
+          cache-dependency-path: '**/pnpm-lock.yaml'
 
-      - name: Install dependencies
-        run: pnpm install
+      - run: pnpm install --frozen-lockfile  # crea el store
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run ${{ matrix.task }}
+        run: |
+          case "${{ matrix.task }}" in
+            test) pnpm test ;;
+            lint) pnpm lint ;;
+            format) pnpm format ;;
+            coverage) pnpm test:coverage ;;
+          esac
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+      - if: matrix.task == 'coverage'        # subí el reporte
+        uses: actions/upload-artifact@v4
         with:
-          version: 8
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Run lint
-        run: pnpm lint
-
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Check formatting
-        run: pnpm format 
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
