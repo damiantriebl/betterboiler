@@ -10,6 +10,7 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         task: [test, lint, format, coverage]
     name: ${{ matrix.task }}
