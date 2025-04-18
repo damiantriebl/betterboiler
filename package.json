@@ -8,7 +8,7 @@
 		"build": "next build",
 		"start": "next start",
 		"check:format": "biome format src --check",
-		"fix:format": "biome format src --write --no-errors-on-unmatched",
+		"format": "biome format src --write --no-errors-on-unmatched",
 		"lint": "biome lint src",
 		"fix:lint": "biome lint src --apply",
 		"test": "vitest run",

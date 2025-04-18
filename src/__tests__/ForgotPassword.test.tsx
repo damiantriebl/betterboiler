@@ -9,6 +9,13 @@ vi.mock("@/hooks/use-toast", () => ({
   }),
 }));
 
+// Mock del componente LoadingButton
+vi.mock("@/components/custom/LoadingButton", () => ({
+  default: ({ children, pending }: { children: React.ReactNode; pending: boolean }) => (
+    <button disabled={pending}>{children}</button>
+  ),
+}));
+
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
   return {
