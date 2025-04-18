@@ -49,3 +49,5 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+      - if: matrix.task == 'test'
+        run: pnpm add -D esbuild-register
