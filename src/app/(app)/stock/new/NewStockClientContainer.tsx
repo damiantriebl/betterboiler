@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useTransition } from "react";
-import { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
+import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { NewMotoForm } from "./NewMotoForm";
 import { motorcycleBatchSchema } from "@/zod/NewBikeZod";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createMotorcycleBatch } from "@/actions/stock/create-motorcycle-batch";
-import { type ColorConfig } from "@/types/ColorType";
-import { type BranchData } from "@/actions/stock/get-branch";
-import { type Supplier } from "@prisma/client";
-import { type BrandForCombobox } from "./page";
+import type { ColorConfig } from "@/types/ColorType";
+import type { BranchData } from "@/actions/stock/get-branch";
+import type { Supplier } from "@prisma/client";
+import type { BrandForCombobox } from "./page";
 import { useToast } from "@/hooks/use-toast";
 import { BatchPreview } from "./BatchPreview";
 

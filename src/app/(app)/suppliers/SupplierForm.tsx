@@ -1,9 +1,9 @@
 "use client"; // Asegurarse de que es un Client Component por los hooks
 
-import React, { useTransition, useEffect } from "react";
+import React, { useTransition, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supplierSchema, SupplierFormData } from "@/zod/SuppliersZod";
+import { supplierSchema, type SupplierFormData } from "@/zod/SuppliersZod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -28,7 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import LoadingButton from "@/components/custom/LoadingButton"; // Asumo que tienes este componente
 import { toast } from "@/hooks/use-toast"; // Añadir import para toast
 import { createSupplier, updateSupplier } from "@/actions/suppliers/manage-suppliers"; // Importar ambas acciones
-import { Supplier } from "@prisma/client"; // Importar tipo Supplier
+import type { Supplier } from "@prisma/client"; // Importar tipo Supplier
 
 interface SupplierFormProps {
   onSuccess?: (data: SupplierFormData) => void; // Use imported type
@@ -63,8 +63,8 @@ export default function SupplierForm({
   const allowedVoucherTypes = supplierSchema.shape.voucherType._def.values;
   const allowedStatuses = supplierSchema.shape.status._def.innerType._def.values; // Acceder a innerType
 
-  // Preparar defaultValues asegurando tipos correctos
-  const prepareDefaultValues = (data: Supplier | null): SupplierFormData => {
+  // Wrap prepareDefaultValues in useCallback
+  const prepareDefaultValues = useCallback((data: Supplier | null): SupplierFormData => {
     if (!data) {
       // Valores por defecto para CREACIÓN
       return {
@@ -149,7 +149,7 @@ export default function SupplierForm({
       status: ensureEnumOrDefault(data.status, allowedStatuses, "activo"),
       notesObservations: data.notesObservations ?? "",
     };
-  };
+  }, [allowedStatuses, allowedVatConditions, allowedVoucherTypes]);
 
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -157,9 +157,9 @@ export default function SupplierForm({
   });
 
   useEffect(() => {
-    // Resetear con valores preparados cuando initialData cambie
     form.reset(prepareDefaultValues(initialData ?? null));
-  }, [initialData, form.reset]); // Quitar prepareDefaultValues de las dependencias
+    // Now prepareDefaultValues is stable due to useCallback
+  }, [initialData, form.reset, prepareDefaultValues]);
 
   function onSubmit(data: SupplierFormData) {
     startTransition(async () => {

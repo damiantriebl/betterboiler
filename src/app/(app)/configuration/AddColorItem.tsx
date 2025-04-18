@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
-import { ColorConfig } from "@/types/ColorType";
+import type { ColorConfig } from "@/types/ColorType";
 import { cn } from "@/lib/utils";
 
 interface AddColorItemProps {

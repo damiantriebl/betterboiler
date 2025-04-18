@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type BrandForCombobox } from "./page"; // Importar tipo desde page
-import { type ColorConfig } from "@/types/ColorType";
+import type { BrandForCombobox } from "./page"; // Importar tipo desde page
+import type { ColorConfig } from "@/types/ColorType";
 import { cn } from "@/lib/utils";
 
 interface MotoPreviewCardProps {
@@ -55,7 +55,7 @@ export function MotoPreviewCard({
 
   const getDisplayValue = (
     value: string | number | null | undefined,
-    placeholder: string = "N/A",
+    placeholder = "N/A",
   ) => {
     // Devuelve el valor o el placeholder si es null, undefined o 0 (excepto para kilometraje que sí puede ser 0)
     if (value === 0 && placeholder !== "N/A") return value.toString(); // Permitir 0 si no es placeholder default

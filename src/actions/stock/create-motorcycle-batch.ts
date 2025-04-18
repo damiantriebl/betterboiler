@@ -107,13 +107,13 @@ export async function createMotorcycleBatch(
       if (error.code === "P2002") {
         return {
           success: false,
-          error: `Database Error: Possible duplicate Chassis or Engine Number.`,
+          error: "Database Error: Possible duplicate Chassis or Engine Number.",
         };
       }
       if (error.code === "P2003") {
         return {
           success: false,
-          error: `Database Error: The selected Color, Branch, Brand, Model, or Supplier does not exist.`,
+          error: "Database Error: The selected Color, Branch, Brand, Model, or Supplier does not exist.",
         };
       }
     }

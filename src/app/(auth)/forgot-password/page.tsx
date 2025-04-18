@@ -16,9 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { forgotPasswordAction } from "@/actions/auth/forgot-password";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { serverMessage } from "@/types/ServerMessageType";
-import { forgotPasswordSchema } from "@/zod/authZod";
+import type { z } from "zod";
+import type { serverMessage } from "@/types/ServerMessageType";
+import { forgotPasswordSchema } from "@/zod/AuthZod";
 
 export default function ForgotPassword() {
   const { toast } = useToast();
@@ -38,9 +38,10 @@ export default function ForgotPassword() {
       toast({
         title: "Éxito",
         description: state.success,
+        variant: "default",
       });
     }
-  }, [state]);
+  }, [state, toast]);
 
   const formResetPasswordSchema = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),

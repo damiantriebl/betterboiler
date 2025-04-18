@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   createOrEditBrand,
-  State as BrandActionState,
+  type State as BrandActionState,
 } from "@/actions/configuration/create-edit-brand"; // Importar la acción y el tipo State
 import { Loader2 } from "lucide-react";
 

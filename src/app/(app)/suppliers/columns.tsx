@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import {
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ProveedorFormData } from "./SupplierForm"; // Importamos el tipo desde el formulario
+import type { ProveedorFormData } from "./SupplierForm"; // Importamos el tipo desde el formulario
 
 // Tipo de dato para la fila (igual que ProveedorFormData por ahora)
 // En una implementación real, podría ser un tipo diferente devuelto por la API

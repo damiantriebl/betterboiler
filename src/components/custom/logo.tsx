@@ -1,7 +1,8 @@
-import { SVGProps } from "react";
+import type { SVGProps } from "react";
 
 const Logo = (props: SVGProps<SVGSVGElement>) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" baseProfile="tiny" viewBox="0 0 900.46 650.89">
+    <title>Apex Logo</title>
     <text
       fontFamily="LEMONMILK-Bold, 'LEMON MILK'"
       fontSize={226.57}

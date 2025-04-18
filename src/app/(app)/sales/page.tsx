@@ -1,4 +1,4 @@
-import { MotorcycleWithDetails, getMotorcycles } from "@/actions/sales/get-motorcycles";
+import { type MotorcycleWithDetails, getMotorcycles } from "@/actions/sales/get-motorcycles";
 import SalesClientComponent from "./SalesClientComponent";
 
 export default async function VentasPage() {

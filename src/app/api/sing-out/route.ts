@@ -1,5 +1,5 @@
 // app/api/sign-out/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   const response = NextResponse.json({ success: true });

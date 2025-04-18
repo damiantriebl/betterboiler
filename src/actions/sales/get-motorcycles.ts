@@ -29,8 +29,8 @@ export type MotorcycleTableRowData = {
   estadoVenta: EstadoVenta;
 };
 
-// Replace empty interface with type alias
-type GetMotorcyclesOptions = {};
+// Replace empty interface with type alias, using Record<string, unknown>
+type GetMotorcyclesOptions = Record<string, unknown>;
 
 export async function getMotorcycles(
   options: GetMotorcyclesOptions = {},

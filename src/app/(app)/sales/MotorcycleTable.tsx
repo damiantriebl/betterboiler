@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Motorcycle, EstadoVenta } from "@/types/BikesType";
+import { type Motorcycle, EstadoVenta } from "@/types/BikesType";
 import { formatPrice } from "@/lib/utils";
 import { useState, useTransition, useOptimistic } from "react";
 import {
@@ -159,25 +159,24 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
   };
 
   const getSortedData = () => {
-    if (!sortConfig.key || !sortConfig.direction) {
-      return optimisticMotorcycles;
-    }
+    if (!sortConfig.key || !sortConfig.direction) return optimisticMotorcycles;
 
     return [...optimisticMotorcycles].sort((a, b) => {
-      const aValue = a[sortConfig.key!];
-      const bValue = b[sortConfig.key!];
+      // Use correct type (likely Motorcycle, adjust if needed)
+      const key = sortConfig.key as keyof Motorcycle;
+      const aValue = a[key] ?? "";
+      const bValue = b[key] ?? "";
 
       if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortConfig.direction === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+        return sortConfig.direction === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
-
       if (typeof aValue === "number" && typeof bValue === "number") {
         return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue;
       }
-
-      return 0;
+      // Fallback comparison converting to string
+      const stringA = String(aValue);
+      const stringB = String(bValue);
+      return sortConfig.direction === "asc" ? stringA.localeCompare(stringB) : stringB.localeCompare(stringA);
     });
   };
 
@@ -535,7 +534,6 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
                 borderLeft: `6px solid ${moto.color}`,
               }}
             >
-              {console.log("moto", moto)}
               <TableCell className="font-medium">
                 <div className="flex flex-col">
                   <span className="text-xl font-bold">{moto.marca}</span>

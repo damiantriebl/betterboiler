@@ -3,7 +3,7 @@ import LogoutButton from "./LogoutButton";
 
 import SessionButtons from "./SessionButtons";
 import { Button } from "../ui/button";
-import { Session } from "@/auth";
+import type { Session } from "@/auth";
 import { headers } from "next/headers";
 import AvatarUser from "./AvatarUser";
 

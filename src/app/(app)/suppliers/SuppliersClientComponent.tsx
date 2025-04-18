@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import SupplierForm from "./SupplierForm";
 import SupplierTable from "./SupplierTable"; // Necesitamos importar SupplierTable aquí
-import { Supplier } from "@prisma/client"; // Usar el tipo Supplier de Prisma
+import type { Supplier } from "@prisma/client"; // Usar el tipo Supplier de Prisma
 // import { SupplierFormData } from '@/zod/SuppliersZod'; // Ya no necesitamos SupplierFormData aquí
 
 interface SuppliersClientComponentProps {

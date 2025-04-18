@@ -51,7 +51,7 @@ export default function CreateBrandModal({
   // const [color, setColor] = useState('#ffffff'); // Estado opcional para color
 
   useEffect(() => {
-    if (!open) return; // Solo actuar si el modal está abierto
+    if (!open) return; // Only act if the modal is open
 
     if (state.success) {
       toast({
@@ -59,13 +59,13 @@ export default function CreateBrandModal({
         description: state.message || `La marca "${name}" se asoció correctamente.`,
       });
       onSuccess?.();
-      onOpenChange(false); // Cerrar modal en éxito
+      onOpenChange(false); // Close modal on success
     } else if (state.error) {
       toast({ title: "Error al asociar marca", description: state.error, variant: "destructive" });
-      // No cerramos el modal en error para que el usuario corrija
+      // Do not close modal on error for user correction
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]); // Depender solo de `state` para reaccionar a la acción
+    // Added missing dependencies
+  }, [state, toast, name, onSuccess, onOpenChange, open]);
 
   // Resetear nombre y estado del formulario al ABRIR el modal
   useEffect(() => {

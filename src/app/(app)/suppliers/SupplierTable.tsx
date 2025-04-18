@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Supplier } from "@prisma/client";
+import type { Supplier } from "@prisma/client";
 import { deleteSupplier } from "@/actions/suppliers/manage-suppliers";
 import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -78,15 +78,12 @@ export default function SupplierTable({ initialData, onEdit, onDelete }: Supplie
 
     return [...initialData].sort((a, b) => {
       const aValueToSort =
-        sortConfig.key === "commercialName" ? a.commercialName || a.legalName : a[sortConfig.key!];
+        sortConfig.key === "commercialName" ? a.commercialName || a.legalName : a[sortConfig.key as keyof Supplier] ?? "";
       const bValueToSort =
-        sortConfig.key === "commercialName" ? b.commercialName || b.legalName : b[sortConfig.key!];
+        sortConfig.key === "commercialName" ? b.commercialName || b.legalName : b[sortConfig.key as keyof Supplier] ?? "";
 
-      const valA = aValueToSort ?? "";
-      const valB = bValueToSort ?? "";
-
-      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+      if (aValueToSort < bValueToSort) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValueToSort > bValueToSort) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
   };

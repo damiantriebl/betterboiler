@@ -15,7 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // Asegúrate que la ruta a types.ts sea correcta
 import { Badge } from "@/components/ui/badge"; // <-- Importar Badge
-import { ColorConfig } from "@/types/ColorType";
+import type { ColorConfig } from "@/types/ColorType";
 // Importar ColorItem
 import ColorItem from "./ColorItem";
 
@@ -47,6 +47,7 @@ export function ColorSelector({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
+        {/* biome-ignore lint/a11y/useSemanticElements: Using Button with Popover for custom combobox */}
         <Button
           variant="outline"
           role="combobox"
@@ -96,8 +97,8 @@ export function ColorSelector({
                   key={color.dbId ?? color.id}
                   value={color.dbId?.toString() ?? ""}
                   onSelect={(currentValue) => {
-                    const selectedId = parseInt(currentValue);
-                    if (!isNaN(selectedId)) {
+                    const selectedId = Number.parseInt(currentValue);
+                    if (!Number.isNaN(selectedId)) {
                       onSelect(selectedId);
                     }
                     setOpen(false);

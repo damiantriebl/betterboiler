@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import type { z } from "zod";
 import {
   Form,
   FormControl,
@@ -20,7 +20,7 @@ import LoadingButton from "@/components/custom/LoadingButton";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { resetPasswordAction } from "@/actions/auth/reset-password";
-import { serverMessage } from "@/types/ServerMessageType";
+import type { serverMessage } from "@/types/ServerMessageType";
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -44,12 +44,13 @@ function ResetPasswordContent() {
       toast({
         title: "Éxito",
         description: state.success,
+        variant: "success",
       });
       startTransition(() => {
         router.push("/sign-in");
       });
     }
-  }, [state]);
+  }, [state, toast, router]);
 
   const form = useForm<z.infer<typeof resetPasswordSchema>>({
     resolver: zodResolver(resetPasswordSchema),

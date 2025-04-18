@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import {
   type Control,
   type UseFormSetValue,
@@ -12,6 +12,7 @@ import {
   type UseFormStateReturn,
   useFieldArray,
   type UseFormReturn,
+  type ControllerRenderProps,
 } from "react-hook-form";
 import {
   Form,
@@ -31,22 +32,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import UploadButton from "@/components/custom/UploadCropperButton";
+import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
 import { Loader2, Plus, Trash2, Info, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BrandModelCombobox } from "@/components/custom/BrandModelCombobox";
 import { ColorSelector } from "@/components/custom/ColorSelector";
-import { type BranchData } from "@/actions/stock/get-branch";
+import type { BranchData } from "@/actions/stock/get-branch";
 import { SucursalSelector } from "@/components/custom/SucursalSelector";
-import { type BrandForCombobox, type ModelInfo } from "./page";
-import { type ColorConfig } from "@/types/ColorType";
-import {
-  type UnitIdentificationFormData as IdentificacionData,
-  type MotorcycleBatchFormData,
+import type { BrandForCombobox, ModelInfo } from "./page";
+import type { ColorConfig } from "@/types/ColorType";
+import type {
+  UnitIdentificationFormData as IdentificacionData,
+  MotorcycleBatchFormData,
 } from "@/zod/NewBikeZod";
 import { z } from "zod";
-import { type Supplier } from "@prisma/client";
+import type { Supplier } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -74,9 +75,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-    value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    value === "" ? (
+      value === undefined ||
+      (Array.isArray(value) && value.length === 0) ||
+      value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -160,7 +161,7 @@ export function NewMotoForm({
     name: "units",
   });
 
-  const addIdentificacion = () => {
+  const addIdentificacion = useCallback(() => {
     append({
       idTemporal: Date.now(),
       chassisNumber: "",
@@ -170,14 +171,13 @@ export function NewMotoForm({
       branchId: availableBranches.length > 0 ? Number(availableBranches[0].id) : 0,
       state: EstadoVenta.STOCK,
     });
-  };
+  }, [append, availableColors, availableBranches]);
 
-  // Agregar una unidad por defecto si no hay ninguna
   React.useEffect(() => {
     if (unitFields.length === 0) {
       addIdentificacion();
     }
-  }, [unitFields.length]);
+  }, [unitFields.length, addIdentificacion]);
 
   const handleNextTab = () => {
     const currentIndex = TABS_ORDER.indexOf(activeTab);
@@ -193,7 +193,10 @@ export function NewMotoForm({
     }
   };
 
-  const handleNullableNumberChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
+  const handleNullableNumberChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: ControllerRenderProps<FieldValues, string>
+  ) => {
     field.onChange(e.target.value === "" ? null : e.target.valueAsNumber);
   };
 
@@ -208,8 +211,8 @@ export function NewMotoForm({
             <Select
               value={field.value?.toString() ?? "none"}
               onValueChange={(value) => {
-                const numericValue = parseInt(value, 10);
-                setValue("supplierId", isNaN(numericValue) ? null : numericValue, {
+                const numericValue = Number.parseInt(value, 10);
+                setValue("supplierId", Number.isNaN(numericValue) ? null : numericValue, {
                   shouldValidate: true,
                 });
               }}
@@ -512,7 +515,7 @@ export function NewMotoForm({
   );
 
   const renderPreciosFields = () => {
-    const calculateFinalPrice = (
+    const calculateFinalPrice = useCallback((
       costo: number | null,
       ivaP: number | null,
       otrosImp: number | null,
@@ -522,12 +525,12 @@ export function NewMotoForm({
       const iva = ivaP ?? 0;
       const otros = otrosImp ?? 0;
       const ganancia = gananciaP ?? 0;
-      if (pc <= 0) return otros; // If no cost, final price is just other taxes
+      if (pc <= 0) return otros;
       const final = pc * (1 + ganancia / 100) * (1 + iva / 100) + otros;
-      return parseFloat(final.toFixed(2)); // Round to 2 decimal places
-    };
+      return Number.parseFloat(final.toFixed(2));
+    }, []);
 
-    const calculateGainPercentage = (
+    const calculateGainPercentage = useCallback((
       costo: number | null,
       precioFinal: number | null,
       ivaP: number | null,
@@ -538,65 +541,47 @@ export function NewMotoForm({
       const iva = ivaP ?? 0;
       const otros = otrosImp ?? 0;
       const factorIVA = 1 + iva / 100;
-      if (pc <= 0 || factorIVA === 0) return 0; // Avoid division by zero or invalid cost
+      if (pc <= 0 || factorIVA === 0) return 0;
       const ganancia = 100 * ((pf - otros) / (pc * factorIVA) - 1);
-      return parseFloat(ganancia.toFixed(2)); // Round to 2 decimal places
-    };
+      return Number.parseFloat(ganancia.toFixed(2));
+    }, []);
+
+    const costPrice = getValues("costPrice");
+    const ivaMinorista = getValues("ivaPorcentajeMinorista");
+    const otrosMinorista = getValues("otrosImpuestosMinorista");
+    const gananciaMinorista = getValues("gananciaPorcentajeMinorista");
+    const ivaMayorista = getValues("ivaPorcentajeMayorista");
+    const otrosMayorista = getValues("otrosImpuestosMayorista");
+    const gananciaMayorista = getValues("gananciaPorcentajeMayorista");
 
     React.useEffect(() => {
-      const {
-        costPrice,
-        ivaPorcentajeMinorista,
-        otrosImpuestosMinorista,
-        gananciaPorcentajeMinorista,
-        retailPrice,
-      } = getValues();
+      const retailPrice = getValues("retailPrice");
       const calculatedFinalMinorista = calculateFinalPrice(
         costPrice,
-        ivaPorcentajeMinorista,
-        otrosImpuestosMinorista,
-        gananciaPorcentajeMinorista,
+        ivaMinorista,
+        otrosMinorista,
+        gananciaMinorista,
       );
       if (Math.abs((retailPrice || 0) - calculatedFinalMinorista) > 0.01) {
         setValue("retailPrice", calculatedFinalMinorista, { shouldValidate: false });
       }
-    }, [
-      getValues("costPrice"),
-      getValues("ivaPorcentajeMinorista"),
-      getValues("otrosImpuestosMinorista"),
-      getValues("gananciaPorcentajeMinorista"),
-      setValue,
-      getValues,
-    ]);
+    }, [costPrice, ivaMinorista, otrosMinorista, gananciaMinorista, calculateFinalPrice]);
 
     React.useEffect(() => {
-      const {
-        costPrice,
-        ivaPorcentajeMayorista,
-        otrosImpuestosMayorista,
-        gananciaPorcentajeMayorista,
-        wholesalePrice,
-      } = getValues();
+      const wholesalePrice = getValues("wholesalePrice");
       const calculatedFinalMayorista = calculateFinalPrice(
         costPrice,
-        ivaPorcentajeMayorista,
-        otrosImpuestosMayorista,
-        gananciaPorcentajeMayorista,
+        ivaMayorista,
+        otrosMayorista,
+        gananciaMayorista,
       );
       if (Math.abs((wholesalePrice || 0) - calculatedFinalMayorista) > 0.01) {
         setValue("wholesalePrice", calculatedFinalMayorista, { shouldValidate: false });
       }
-    }, [
-      getValues("costPrice"),
-      getValues("ivaPorcentajeMayorista"),
-      getValues("otrosImpuestosMayorista"),
-      getValues("gananciaPorcentajeMayorista"),
-      setValue,
-      getValues,
-    ]);
+    }, [costPrice, ivaMayorista, otrosMayorista, gananciaMayorista, calculateFinalPrice]);
 
     const handleMinoristaGainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newGain = e.target.value === "" ? null : parseFloat(e.target.value);
+      const newGain = e.target.value === "" ? null : Number.parseFloat(e.target.value);
       setValue("gananciaPorcentajeMinorista", newGain, { shouldValidate: true });
       const { costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista } = getValues();
       const newFinal = calculateFinalPrice(
@@ -609,7 +594,7 @@ export function NewMotoForm({
     };
 
     const handleMinoristaFinalPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newFinal = e.target.value === "" ? 0 : parseFloat(e.target.value);
+      const newFinal = e.target.value === "" ? 0 : Number.parseFloat(e.target.value);
       setValue("retailPrice", newFinal, { shouldValidate: true });
       const { costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista } = getValues();
       const newGain = calculateGainPercentage(
@@ -622,7 +607,7 @@ export function NewMotoForm({
     };
 
     const handleMayoristaGainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newGain = e.target.value === "" ? null : parseFloat(e.target.value);
+      const newGain = e.target.value === "" ? null : Number.parseFloat(e.target.value);
       setValue("gananciaPorcentajeMayorista", newGain, { shouldValidate: true });
       const { costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista } = getValues();
       const newFinal = calculateFinalPrice(
@@ -635,7 +620,7 @@ export function NewMotoForm({
     };
 
     const handleMayoristaFinalPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newFinal = e.target.value === "" ? null : parseFloat(e.target.value);
+      const newFinal = e.target.value === "" ? null : Number.parseFloat(e.target.value);
       setValue("wholesalePrice", newFinal, { shouldValidate: true });
       const { costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista } = getValues();
       const newGain = calculateGainPercentage(
@@ -888,7 +873,7 @@ export function NewMotoForm({
             <FormLabel>Imagen Principal</FormLabel>
             <FormControl>
               <UploadButton
-                onChange={(url: any) => setValue("imageUrl", url ? url.toString() : null)}
+                onChange={(url: string | null) => setValue("imageUrl", url ? url.toString() : null)}
               />
             </FormControl>
             <FormMessage />

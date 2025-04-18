@@ -383,14 +383,14 @@ export async function renameBrandByDuplication(
         `[renameBrandByDuplication N:M] Eliminando antigua asociación ID: ${oldOrganizationBrandId}`,
       );
       await tx.organizationBrand.delete({ where: { id: oldOrganizationBrandId } });
-      console.log(`[renameBrandByDuplication N:M] Antigua asociación eliminada.`);
+      console.log("[renameBrandByDuplication N:M] Antigua asociación eliminada.");
 
       // **NO se copian modelos**, pertenecen a la Brand global
 
       return { newAssociationId: newAssociation.id, oldBrandName: oldBrandName };
     });
 
-    console.log(`[renameBrandByDuplication N:M] Transacción completada. Revalidando path...`);
+    console.log("[renameBrandByDuplication N:M] Transacción completada. Revalidando path...");
     revalidatePath("/configuracion");
     return {
       success: true,
@@ -500,7 +500,7 @@ export async function addModelToOrganizationBrand(
             throw new Error(
               `El modelo "${normalizedName}" ya está activo para esta marca en tu organización.`,
             );
-          } else {
+          }
             // Estaba oculto, ¡reactivarlo!
             const updatedConfig = await tx.organizationModelConfig.update({
               where: { id: existingConfig.id },
@@ -514,8 +514,7 @@ export async function addModelToOrganizationBrand(
               modelCreated: false,
               brandName: existingModel.name,
             }; // Añadir brandName para mensajes
-          }
-        } else {
+        }
           // El modelo global existe, pero NO hay config para esta org. ¡Crear la config!
           const maxOrderResult = await tx.organizationModelConfig.aggregate({
             _max: { order: true },
@@ -542,8 +541,7 @@ export async function addModelToOrganizationBrand(
             modelCreated: false,
             brandName: existingModel.name,
           };
-        }
-      } else {
+      }
         // El modelo global NO existe, crear modelo Y config
         // 4. Crear modelo global
         const newModel = await tx.model.create({
@@ -585,7 +583,6 @@ export async function addModelToOrganizationBrand(
           modelCreated: true,
           brandName: brand?.name ?? "",
         };
-      }
     }); // Fin transacción
 
     revalidatePath("/configuracion");
@@ -657,13 +654,13 @@ export async function updateOrganizationModel(
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      console.log(`[replaceModel N:M] Dentro de transacción...`);
+      console.log("[replaceModel N:M] Dentro de transacción...");
 
       // 1. Verificar permiso de la org sobre la Marca
       const hasPermission = await checkBrandPermission(organizationId, brandId);
       if (!hasPermission)
         throw new Error("No tienes permiso para modificar modelos de esta marca.");
-      console.log(`[replaceModel N:M] Permiso verificado.`);
+      console.log("[replaceModel N:M] Permiso verificado.");
 
       // 2. Obtener configuración ANTIGUA (para orden y verificar visibilidad)
       const oldConfig = await tx.organizationModelConfig.findUnique({
@@ -747,12 +744,12 @@ export async function updateOrganizationModel(
         where: { id: oldConfig.id },
         data: { isVisible: false },
       });
-      console.log(`[replaceModel N:M] Config ANTIGUA oculta.`);
+      console.log("[replaceModel N:M] Config ANTIGUA oculta.");
 
       return { newOrgModelConfigId, oldModelName, newModelCreated };
     }); // Fin transacción
 
-    console.log(`[replaceModel N:M] Transacción completada. Revalidando path...`);
+    console.log("[replaceModel N:M] Transacción completada. Revalidando path...");
     revalidatePath("/configuracion");
 
     const message = `Modelo "${result.oldModelName}" reemplazado por "${normalizedNewName}"${result.newModelCreated ? " (nuevo modelo global creado)" : ""} en tu organización.`;
@@ -936,7 +933,7 @@ export async function updateOrganizationModelsOrder(
       `[updateOrgModelsOrder] Total records updated: ${updatedCount} (Expected: ${modelOrders.length})`,
     ); // LOG CONTEO
     if (updatedCount !== modelOrders.length) {
-      console.warn(`[updateOrgModelsOrder] Update count mismatch!`);
+      console.warn("[updateOrgModelsOrder] Update count mismatch!");
     }
 
     console.log("[updateOrgModelsOrder] Revalidating path..."); // LOG REVALIDATE

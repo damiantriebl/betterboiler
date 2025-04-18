@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
-import { Prisma, Sucursal } from "@prisma/client"; // Importar tipo Sucursal
+import { Prisma, type Sucursal } from "@prisma/client"; // Importar tipo Sucursal
 import {
   createBranchSchema,
   updateBranchSchema,

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition, useCallback } from "react";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   PointerSensor,
   KeyboardSensor,
   closestCorners,
@@ -30,7 +30,8 @@ import {
   updateOrganizationModel,
   updateOrganizationModelsOrder,
 } from "@/actions/configuration/create-edit-brand";
-import { type OrganizationBrandDisplayData } from "./Interfaces";
+import type { OrganizationBrandDisplayData, DisplayModelData } from "./Interfaces";
+import type { Model } from "@prisma/client"; // Assuming Model type is available
 
 interface ManageBrandsProps {
   initialOrganizationBrands: OrganizationBrandDisplayData[];
@@ -63,8 +64,8 @@ export default function ManageBrands({
     const { active, over } = event;
     if (!organizationId || !active || !over || active.id === over.id) return;
 
-    const activeId = parseInt(active.id.toString(), 10);
-    const overId = parseInt(over.id.toString(), 10);
+    const activeId = Number.parseInt(active.id.toString(), 10);
+    const overId = Number.parseInt(over.id.toString(), 10);
 
     const oldIndex = associations.findIndex((a) => a.id === activeId);
     const newIndex = associations.findIndex((a) => a.id === overId);
@@ -192,13 +193,21 @@ export default function ManageBrands({
     if (brandIndex === -1) return;
 
     const updatedAssociations = [...associations];
+
+    // Map and then filter out undefined models before sorting
     const updatedModels = orderedModels
-      .map((modelOrder) => {
+      .map((modelOrder): (DisplayModelData & { orgOrder: number }) | undefined => {
         const originalModel = associations[brandIndex].brand.models.find(
           (m) => m.id === modelOrder.modelId,
         );
-        return { ...originalModel!, orgOrder: modelOrder.order };
+        if (!originalModel) {
+          console.warn(`Model with ID ${modelOrder.modelId} not found during order update.`);
+          return undefined; // Return undefined if model not found
+        }
+        // Removed the non-null assertion, spread is safe now
+        return { ...originalModel, orgOrder: modelOrder.order };
       })
+      .filter((model): model is DisplayModelData & { orgOrder: number } => model !== undefined) // Type guard filter
       .sort((a, b) => a.orgOrder - b.orgOrder);
 
     updatedAssociations[brandIndex] = {

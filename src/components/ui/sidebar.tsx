@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { VariantProps, cva } from "class-variance-authority";
+import { type VariantProps, cva } from "class-variance-authority";
 import { Icon, PanelLeft, User } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -93,7 +93,7 @@ const SidebarProvider = React.forwardRef<
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
       return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-    }, [isMobile, setOpen, setOpenMobile]);
+    }, [isMobile, setOpen]);
 
     // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
@@ -122,7 +122,7 @@ const SidebarProvider = React.forwardRef<
         setOpenMobile,
         toggleSidebar,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+      [state, open, setOpen, isMobile, openMobile, toggleSidebar],
     );
 
     return (
@@ -395,7 +395,15 @@ const SidebarContent = React.forwardRef<
   const { useSession } = authClient;
   const { data: session, isPending, error } = useSession();
 
-  const organizationName = session?.user?.organization?.name || "Organización";
+  // Usar type assertion más específica
+  interface OrganizationInfo {
+    id: string;
+    name: string;
+  }
+
+  const organizationName = session?.user && 'organization' in (session.user as any)
+    ? (session.user as unknown as { organization: OrganizationInfo }).organization?.name
+    : "Organización";
   const userName = session?.user?.name || "Usuario";
 
   const isActive = (path: string) => {
@@ -457,7 +465,12 @@ const SidebarContent = React.forwardRef<
                   isActive={isActive(item.href)}
                   tooltip={state === "collapsed" ? item.label : undefined}
                 >
-                  <a>
+                  <a
+                    className={cn(
+                      "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
+                      state === "expanded" ? "delay-200" : "delay-0",
+                    )}
+                  >
                     <item.icon className="size-12 shrink-0" />
                     <span
                       className={cn(
@@ -484,7 +497,12 @@ const SidebarContent = React.forwardRef<
                 isActive={isActive("/ayuda")}
                 tooltip={state === "collapsed" ? "Ayuda" : undefined}
               >
-                <a>
+                <a
+                  className={cn(
+                    "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
+                    state === "expanded" ? "delay-200" : "delay-0",
+                  )}
+                >
                   <HelpCircle className="size-4 shrink-0" />
                   <span
                     className={cn(
@@ -705,7 +723,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className,
       )}
       {...props}

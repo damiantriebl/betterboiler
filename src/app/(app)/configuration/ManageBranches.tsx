@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition } from "react";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   PointerSensor,
   KeyboardSensor,
   closestCorners,
@@ -20,7 +20,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import SucursalItem from "./BranchItem";
 import AddBranchItem from "./AddBranchItem";
 import { useToast } from "@/hooks/use-toast";
-import { type Sucursal } from "@prisma/client";
+import type { Sucursal } from "@prisma/client";
 import {
   createSucursal,
   updateSucursal,
@@ -65,10 +65,11 @@ export default function ManageBranches({ initialSucursalesData }: ManageBranches
     startAddTransition(async () => {
       const result: CreateSucursalState = await createSucursal(null, formData);
       if (result.success && result.sucursal) {
-        setSucursales((prev) => [...prev, result.sucursal!].sort((a, b) => a.order - b.order));
+        const newSucursal = result.sucursal;
+        setSucursales((prev) => [...prev, newSucursal].sort((a, b) => a.order - b.order));
         toast({
           title: "Sucursal añadida",
-          description: `"${result.sucursal.name}" se añadió con éxito.`,
+          description: `"${newSucursal.name}" se añadió con éxito.`,
         });
       } else {
         toast({ variant: "destructive", title: "Error al añadir", description: result.error });
@@ -123,10 +124,11 @@ export default function ManageBranches({ initialSucursalesData }: ManageBranches
 
       const result: UpdateSucursalState = await updateSucursal(null, formData);
       if (result.success && result.sucursal) {
-        setSucursales((prev) => prev.map((s) => (s.id === idToEdit ? result.sucursal! : s)));
+        const updatedSucursal = result.sucursal;
+        setSucursales((prev) => prev.map((s) => (s.id === idToEdit ? updatedSucursal : s)));
         toast({
           title: "Sucursal renombrada",
-          description: `"${originalSucursal.name}" ahora es "${result.sucursal.name}".`,
+          description: `"${originalSucursal.name}" ahora es "${updatedSucursal.name}".`,
         });
       } else {
         setSucursales(previousSucursales);

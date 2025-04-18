@@ -1,4 +1,4 @@
-import { betterAuth, BetterAuthOptions } from "better-auth";
+import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "./lib/prisma";
 import { sendEmail } from "./actions/auth/email";

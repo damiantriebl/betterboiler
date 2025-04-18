@@ -1,4 +1,4 @@
-import { Motorcycle, EstadoVenta } from "@/types/BikesType";
+import { type Motorcycle, EstadoVenta } from "@/types/BikesType";
 
 export const marcas = [
   "Honda",
@@ -90,7 +90,7 @@ Object.entries(modelos).forEach(([marca, modelosList], brandIndex) => {
   modelosList.forEach((modelo, modelIndex) => {
     const años = [2021, 2022, 2023, 2024];
     años.forEach((año, yearIndex) => {
-      const cilindrada = parseInt(modelo.match(/\d+/)?.[0] || "250");
+      const cilindrada = Number.parseInt(modelo.match(/\d+/)?.[0] || "250");
       const precio =
         cilindrada * 15000 + getNumberFromIndices(brandIndex, modelIndex, yearIndex, 500000);
       const kilometraje =

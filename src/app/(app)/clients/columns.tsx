@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef, Row, Column } from "@tanstack/react-table";
+import type { ColumnDef, Row, Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import {
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { ClientFormData } from "@/zod/ClientsZod";
+import type { ClientFormData } from "@/zod/ClientsZod";
 
 // Tipo de dato para la fila
 export type Client = ClientFormData & {

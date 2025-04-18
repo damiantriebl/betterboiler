@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 type ActionState = {
   success: boolean;
   error: string;
 };
 
-export function useActionState<T extends (...args: any[]) => Promise<ActionState>>(
+export function useActionState<T extends (...args: unknown[]) => Promise<ActionState>>(
   action: T,
   initialState: ActionState,
 ): [ActionState, T, boolean] {

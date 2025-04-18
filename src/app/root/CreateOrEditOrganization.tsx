@@ -15,10 +15,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { createOrUpdateOrganization } from "@/actions/auth/create-edit-organizations";
-import { serverMessage } from "@/types/ServerMessageType";
-import UploadButton, { UploadResult } from "@/components/custom/UploadCropperButton";
+import type { serverMessage } from "@/types/ServerMessageType";
+import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
 import { toast } from "@/hooks/use-toast";
-import { organizationSchema, OrganizationFormData } from "@/zod/OrganizationZod";
+import { organizationSchema, type OrganizationFormData } from "@/zod/OrganizationZod";
 
 interface Props {
   organization?: {

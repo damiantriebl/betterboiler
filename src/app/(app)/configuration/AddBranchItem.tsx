@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card"; // Usar CardHeader para consistencia

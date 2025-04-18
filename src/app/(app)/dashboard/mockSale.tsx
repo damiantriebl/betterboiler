@@ -1,4 +1,4 @@
-import { Sale } from "./SalesSection";
+import type { Sale } from "./SalesSection";
 
 export const mockSales: Sale[] = [
   {

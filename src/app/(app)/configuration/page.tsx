@@ -1,18 +1,18 @@
 import prisma from "@/lib/prisma";
-import { type Model, type OrganizationModelConfig, type OrganizationBrand } from "@prisma/client";
+import type { Model, OrganizationModelConfig, OrganizationBrand } from "@prisma/client";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ManageBrands from "./ManageBrands";
 import ManageBranches from "./ManageBranches";
 import ManageColors from "./ManageColors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type ColorConfig, ColorType } from "@/types/ColorType";
-import { type Sucursal } from "@prisma/client";
-import { DisplayModelData, OrganizationBrandDisplayData } from "./Interfaces";
+import type { ColorConfig, ColorType } from "@/types/ColorType";
+import type { Sucursal } from "@prisma/client";
+import { DisplayModelData, type OrganizationBrandDisplayData } from "./Interfaces";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 async function getOrganizationBrandsData(
   organizationId: string,

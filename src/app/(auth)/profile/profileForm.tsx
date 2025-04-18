@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { updateUserAction } from "@/actions/auth/update-user";
-import UploadButton, { UploadResult } from "@/components/custom/UploadCropperButton";
+import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";

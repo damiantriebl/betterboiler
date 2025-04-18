@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 
 const prismaClientSingleton = () => {
   const prisma = new PrismaClient({
@@ -19,6 +19,7 @@ const prismaClientSingleton = () => {
   return prisma;
 };
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: Prisma singleton pattern
 declare const globalThis: {
   prismaGlobal: ReturnType<typeof prismaClientSingleton>;
 } & typeof global;

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import type React from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { GripVertical, Trash2, Edit, Check, X as CancelIcon } from "lucide-react
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DisplayModelData } from "./Interfaces";
+import type { DisplayModelData } from "./Interfaces";
 
 // --- Props sin attributes, listeners, style ---
 export interface ModelItemProps {
@@ -41,11 +42,11 @@ export default function ModelItem({
   const style = isOverlay
     ? externalStyle
     : {
-        ...externalStyle,
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 10 : "auto",
-      };
+      ...externalStyle,
+      transform: CSS.Transform.toString(transform),
+      transition,
+      zIndex: isDragging ? 10 : "auto",
+    };
 
   useEffect(() => {
     if (isEditing) {
@@ -130,13 +131,15 @@ export default function ModelItem({
             disabled={isOverlay}
           />
         ) : (
-          <span
-            className="text-sm truncate cursor-pointer hover:text-primary/80"
+          <Button
+            variant="link"
+            className="text-sm truncate cursor-pointer hover:text-primary/80 focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 h-auto py-0"
             onClick={handleEditClick}
             title={`Editar: ${initialName}`}
+            type="button"
           >
             {initialName}
-          </span>
+          </Button>
         )}
       </div>
 

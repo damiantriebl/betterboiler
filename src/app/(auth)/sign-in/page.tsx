@@ -15,7 +15,7 @@ import LoadingButton from "@/components/custom/LoadingButton";
 import { signInSchema } from "@/zod/AuthZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import type { z } from "zod";
 import { useSearchParams } from "next/navigation";
 
 import Link from "next/link";
@@ -23,7 +23,7 @@ import { authClient } from "@/auth-client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
-import { ErrorContext } from "@better-fetch/fetch";
+import type { ErrorContext } from "@better-fetch/fetch";
 
 export default function SignIn() {
   const searchParams = useSearchParams();
@@ -46,7 +46,7 @@ export default function SignIn() {
         variant: "destructive",
       });
     }
-  }, [searchParams]);
+  }, [searchParams, toast]);
   const handleCredentialsSignIn = async (values: z.infer<typeof signInSchema>) => {
     await authClient.signIn.email(
       {

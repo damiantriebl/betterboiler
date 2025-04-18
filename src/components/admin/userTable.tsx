@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { User, Organization } from "@prisma/client";
 
 export default async function UsersTable() {
   const h = await headers();
@@ -25,8 +26,8 @@ export default async function UsersTable() {
   const [users, organizations] = await Promise.all([
     prisma.user.findMany({
       where:
-        isAdminRoute && session?.user.role !== "root"
-          ? { organizationId: session?.user.organizationId! }
+        isAdminRoute && session?.user.role !== "root" && session?.user.organizationId
+          ? { organizationId: session.user.organizationId }
           : {},
       include: isAdminRoute ? undefined : { organization: true },
     }),
@@ -66,8 +67,8 @@ export default async function UsersTable() {
               <TableCell>
                 <OrganizationSelect
                   userId={user.id}
-                  organizations={organizations!}
-                  userActualOrganization={user.organization!}
+                  organizations={organizations ?? []}
+                  userActualOrganization={(user as User & { organization: Organization }).organization}
                 />
               </TableCell>
             )}

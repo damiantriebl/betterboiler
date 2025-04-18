@@ -71,26 +71,34 @@ export async function updateUserAction(
 
     // Filter out unsuccessful signed URLs before mapping to fetch promises
     const originalFetchPromises = signedOriginalUrls
-      .filter((signed) => signed.success?.url) // Ensure URL exists
-      .map((signed, idx) =>
-        fetch(signed.success!.url, {
-          // Safe to use ! here after filter
-          method: "PUT",
-          body: originalOptimized[idx],
-          headers: { "Content-Type": "image/webp" },
-        }),
-      );
+      .filter((signed) => signed.success?.url)
+      .map((signed, idx) => {
+        // Changed ! to ?. Need to handle potential undefined URL before fetch
+        const url = signed.success?.url;
+        return url
+          ? fetch(url, { 
+              method: "PUT",
+              body: originalOptimized[idx],
+              headers: { "Content-Type": "image/webp" },
+            })
+          : Promise.resolve(null); // Return a resolved promise with null if URL is undefined
+      })
+      .filter((promise): promise is Promise<Response> => promise !== null); // Filter out the null promises
 
     const cropFetchPromises = signedCropUrls
-      .filter((signed) => signed.success?.url) // Ensure URL exists
-      .map((signed, idx) =>
-        fetch(signed.success!.url, {
-          // Safe to use ! here after filter
-          method: "PUT",
-          body: cropOptimized[idx],
-          headers: { "Content-Type": "image/webp" },
-        }),
-      );
+      .filter((signed) => signed.success?.url)
+      .map((signed, idx) => {
+        // Changed ! to ?. Need to handle potential undefined URL before fetch
+        const url = signed.success?.url;
+        return url
+          ? fetch(url, { 
+              method: "PUT",
+              body: cropOptimized[idx],
+              headers: { "Content-Type": "image/webp" },
+            })
+          : Promise.resolve(null); // Return a resolved promise with null if URL is undefined
+      })
+      .filter((promise): promise is Promise<Response> => promise !== null); // Filter out the null promises
 
     await Promise.all([...originalFetchPromises, ...cropFetchPromises]);
 

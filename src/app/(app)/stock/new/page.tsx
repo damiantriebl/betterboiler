@@ -3,10 +3,10 @@ import { NewStockClientContainer } from "./NewStockClientContainer";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
-import { type ColorConfig, type ColorType } from "@/types/ColorType";
+import type { ColorConfig, ColorType } from "@/types/ColorType";
 import { getBranchesForOrg, type BranchData } from "@/actions/stock/get-branch";
 import { getSuppliers } from "@/actions/suppliers/manage-suppliers";
-import { type Supplier } from "@prisma/client";
+import type { Supplier } from "@prisma/client";
 
 // Definir tipos localmente (copiado de NuevaMotoForm)
 export interface ModelInfo {

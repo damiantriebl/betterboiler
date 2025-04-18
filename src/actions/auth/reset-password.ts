@@ -29,7 +29,8 @@ export async function resetPasswordAction(
         error: "Usuario no encontrado. No existe ninguna cuenta registrada con este email.",
         success: false,
       };
-    } else if (error.message === "PASSWORD_TOO_SHORT") {
+    }
+    if (error.message === "PASSWORD_TOO_SHORT") {
       return { error: error.message || "contraseña muy corta.", success: false };
     }
     return { error: error.message || "Ocurrió un error inesperado.", success: false };

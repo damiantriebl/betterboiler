@@ -1,15 +1,24 @@
-export default function getCroppedImg(imageSrc: string, pixelCrop: any): Promise<Blob> {
+import type { Crop } from "react-image-crop";
+
+export default function getCroppedImg(imageSrc: string, pixelCrop: Crop): Promise<Blob | null> {
   const image = new Image();
   image.src = imageSrc;
 
   return new Promise((resolve, reject) => {
     image.onload = () => {
       const canvas = document.createElement("canvas");
+      if (!pixelCrop.width || !pixelCrop.height) {
+        return reject(new Error("Crop dimensions are missing"));
+      }
       canvas.width = pixelCrop.width;
       canvas.height = pixelCrop.height;
 
       const ctx = canvas.getContext("2d");
-      ctx?.drawImage(
+      if (!ctx) {
+        return reject(new Error("Failed to get canvas context"));
+      }
+
+      ctx.drawImage(
         image,
         pixelCrop.x,
         pixelCrop.y,
@@ -21,12 +30,11 @@ export default function getCroppedImg(imageSrc: string, pixelCrop: any): Promise
         pixelCrop.height,
       );
 
-      canvas.toBlob((file) => {
-        if (file) resolve(file);
-        else reject(new Error("Error al recortar imagen"));
-      }, "image/jpeg");
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, "image/webp");
     };
 
-    image.onerror = () => reject(new Error("No se pudo cargar la imagen original"));
+    image.onerror = (error) => reject(error);
   });
 }

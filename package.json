@@ -7,8 +7,10 @@
 		"dev": "next dev --turbopack",
 		"build": "next build",
 		"start": "next start",
-		"format": "biome format src --write",
+		"check:format": "biome format src --check",
+		"fix:format": "biome format src --write --no-errors-on-unmatched",
 		"lint": "biome lint src",
+		"fix:lint": "biome lint src --apply",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"

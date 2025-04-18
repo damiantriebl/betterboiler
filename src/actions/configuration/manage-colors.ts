@@ -13,7 +13,7 @@ import {
   deleteColorSchema,
   updateColorsOrderSchema,
 } from "@/zod/ColorsZod";
-import { type ColorConfig, ColorType } from "@/types/ColorType"; // Necesitamos ColorType
+import type { ColorConfig, ColorType } from "@/types/ColorType"; // Necesitamos ColorType
 
 // Definición básica de FormState
 type BaseFormState = {
@@ -61,7 +61,7 @@ export async function createMotoColor(
   }
 
   // Limpiar color2 si es null antes de validar
-  let color2Value = formData.get("colorTwo");
+  const color2Value = formData.get("colorTwo");
   if (color2Value === null) {
     formData.delete("colorTwo");
   }
@@ -152,7 +152,7 @@ export async function updateMotoColor(
   }
 
   // Limpiar color2 si es null
-  let color2Value = formData.get("colorTwo");
+  const color2Value = formData.get("colorTwo");
   if (color2Value === null) {
     formData.delete("colorTwo");
   }

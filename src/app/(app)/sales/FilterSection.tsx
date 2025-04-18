@@ -129,6 +129,7 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
         <Label>Estado de Venta</Label>
         <Popover>
           <PopoverTrigger asChild>
+            {/* biome-ignore lint/a11y/useSemanticElements: Using Button with Popover for custom combobox */}
             <Button
               variant="outline"
               role="combobox"

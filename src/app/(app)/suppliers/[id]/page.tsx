@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit } from "lucide-react";
-import { Supplier } from "@prisma/client";
+import type { Supplier } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -28,9 +28,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-    value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    value === "" ? (
+      value === undefined ||
+      (Array.isArray(value) && value.length === 0) ||
+      value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -58,8 +58,8 @@ export default function SupplierDetailPage() {
     const fetchSupplier = async () => {
       setIsLoading(true);
       setError(null);
-      const supplierId = parseInt(idParam, 10);
-      if (isNaN(supplierId)) {
+      const supplierId = Number.parseInt(idParam, 10);
+      if (Number.isNaN(supplierId)) {
         setError("ID de proveedor inválido.");
         setIsLoading(false);
         return;

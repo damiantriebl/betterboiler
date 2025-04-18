@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Client } from "./columns";
+import type { Client } from "./columns";
 import { deleteClient } from "@/actions/clients/manage-clients";
 import { toast } from "@/hooks/use-toast";
 
@@ -76,14 +76,11 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
     if (!sortConfig.key || !sortConfig.direction) return initialData;
 
     return [...initialData].sort((a, b) => {
-      const aValue = a[sortConfig.key!];
-      const bValue = b[sortConfig.key!];
+      const aValue = a[sortConfig.key as keyof Client] ?? "";
+      const bValue = b[sortConfig.key as keyof Client] ?? "";
 
-      const valA = aValue ?? "";
-      const valB = bValue ?? "";
-
-      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
   };

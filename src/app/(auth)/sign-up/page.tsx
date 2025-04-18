@@ -17,7 +17,7 @@ import Link from "next/link";
 import { signUpSchema } from "@/zod/AuthZod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import type { z } from "zod";
 import { authClient } from "@/auth-client";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";

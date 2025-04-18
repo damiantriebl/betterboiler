@@ -67,32 +67,36 @@ export const motorcycleBatchSchema = z
   .superRefine((data, ctx) => {
     const chassisNumbers = new Set<string>();
     const engineNumbers = new Set<string>();
+    const reportedDuplicates = { chassis: new Set<string>(), engine: new Set<string>() };
 
     data.units.forEach((unit, index) => {
-      // Validar Chassis Number
-      if (unit.chassisNumber) {
-        if (chassisNumbers.has(unit.chassisNumber)) {
+      const unitData = unit;
+      // Check for duplicate chassis numbers
+      if (unitData.chassisNumber && chassisNumbers.has(unitData.chassisNumber)) {
+        if (!reportedDuplicates.chassis.has(unitData.chassisNumber)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Duplicado`,
+            message: "Duplicado",
             path: ["units", index, "chassisNumber"],
           });
-        } else {
-          chassisNumbers.add(unit.chassisNumber);
+          reportedDuplicates.chassis.add(unitData.chassisNumber);
         }
+      } else if (unitData.chassisNumber) {
+        chassisNumbers.add(unitData.chassisNumber);
       }
 
-      // Validar Engine Number (solo si no es nulo/vacío)
-      if (unit.engineNumber) {
-        if (engineNumbers.has(unit.engineNumber)) {
+      // Check for duplicate engine numbers
+      if (unitData.engineNumber && engineNumbers.has(unitData.engineNumber)) {
+        if (!reportedDuplicates.engine.has(unitData.engineNumber)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Duplicado`,
+            message: "Duplicado",
             path: ["units", index, "engineNumber"],
           });
-        } else {
-          engineNumbers.add(unit.engineNumber);
+          reportedDuplicates.engine.add(unitData.engineNumber);
         }
+      } else if (unitData.engineNumber) {
+        engineNumbers.add(unitData.engineNumber);
       }
     });
   });

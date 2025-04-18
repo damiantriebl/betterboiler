@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useActionState, useTransition, useOptimistic } from "react";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   PointerSensor,
   KeyboardSensor,
   closestCorners,
@@ -32,7 +32,7 @@ import {
   type UpdateColorsOrderState,
 } from "@/actions/configuration/manage-colors";
 import ColorItem from "@/components/custom/ColorItem";
-import { ColorConfig, ColorType } from "@/types/ColorType";
+import { type ColorConfig, ColorType } from "@/types/ColorType";
 
 interface OptimisticColorConfig extends ColorConfig {
   isPending?: boolean;
@@ -181,7 +181,7 @@ export default function ManageColors({
       return;
     }
 
-    let dataToSend = { ...newColorData };
+    const dataToSend = { ...newColorData };
     if ((dataToSend.type === "BITONO" || dataToSend.type === "PATRON") && !dataToSend.colorTwo) {
       dataToSend.colorTwo = "#000000";
     }
@@ -213,7 +213,7 @@ export default function ManageColors({
     setDeletingColorId(colorToDelete.dbId);
 
     const formData = new FormData();
-    formData.append("id", colorToDelete.dbId!.toString());
+    formData.append("id", colorToDelete.dbId?.toString());
     formData.append("organizationId", organizationId);
 
     deleteAction(formData);
@@ -233,7 +233,7 @@ export default function ManageColors({
     setUpdatingColorId(updatedColorData.dbId);
 
     const formData = new FormData();
-    formData.append("id", updatedColorData.dbId!.toString());
+    formData.append("id", updatedColorData.dbId?.toString());
     formData.append("name", updatedColorData.name);
     formData.append("type", updatedColorData.type);
     formData.append("colorOne", updatedColorData.colorOne || "#ffffff");
@@ -254,8 +254,8 @@ export default function ManageColors({
       setActualColors(newArray);
 
       const colorOrders = newArray
-        .filter((color) => color.dbId !== undefined)
-        .map((color, index) => ({ id: color.dbId!, order: index }));
+        .filter((color): color is ColorConfig & { dbId: number } => color.dbId !== undefined)
+        .map((color, index) => ({ id: color.dbId, order: index }));
 
       orderAction({ colors: colorOrders, organizationId });
     }

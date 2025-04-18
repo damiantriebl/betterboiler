@@ -45,3 +45,8 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+          
+      - if: matrix.task == 'format'
+        name: Check formatting
+        run: biome format src --write --no-errors-on-unmatched
+

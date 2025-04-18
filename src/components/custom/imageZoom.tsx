@@ -27,6 +27,7 @@ const ImageZoom = ({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <button
+          type="button"
           aria-label={`Ampliar imagen: ${alt}`}
           className="rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
@@ -44,7 +45,6 @@ const ImageZoom = ({
 
       <DialogContent
         className="flex flex-col items-center justify-center"
-        role="dialog"
         aria-label={`Vista ampliada de ${alt}`}
       >
         <DialogTitle>{organization}</DialogTitle>

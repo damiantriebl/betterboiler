@@ -11,11 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { type ColorConfig } from "@/types/ColorType";
-import { type BranchData } from "@/actions/stock/get-branch";
-import { type Supplier } from "@prisma/client";
-import { type BrandForCombobox } from "./page"; // Asume que este tipo está en page.tsx
-import { type MotorcycleBatchFormData } from "@/zod/NewBikeZod"; // Importar el tipo principal
+import type { ColorConfig } from "@/types/ColorType";
+import type { BranchData } from "@/actions/stock/get-branch";
+import type { Supplier } from "@prisma/client";
+import type { BrandForCombobox } from "./page"; // Asume que este tipo está en page.tsx
+import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod"; // Importar el tipo principal
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Importar componentes de Tooltip
 
 // Interfaz para las props del Preview
@@ -46,12 +46,13 @@ export function BatchPreview({
     ? suppliers.find((s) => s.id === formData.supplierId)
     : null;
 
-  const formatCurrency = (value: number | null | undefined, currency: string = "ARS") => {
+  const formatCurrency = (value: number | null | undefined, currency = "ARS") => {
     if (value === null || value === undefined) return "N/A";
     return new Intl.NumberFormat("es-AR", { style: "currency", currency: currency }).format(value);
   };
 
-  const renderValue = (value: any, fallback = "...") =>
+  // Changed type from any to be more specific
+  const renderValue = (value: string | number | null | undefined, fallback = "...") =>
     value ?? <span className="text-muted-foreground">{fallback}</span>;
 
   // Determinar el color del borde
@@ -161,7 +162,7 @@ export function BatchPreview({
                                     style={{
                                       backgroundColor: selectedColor.colorOne,
                                     }}
-                                  ></span>
+                                  />
                                   <span>{selectedColor.name}</span>
                                 </TooltipTrigger>
                                 <TooltipContent>

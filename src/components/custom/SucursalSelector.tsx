@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // Importar el tipo BranchData definido en la acción
-import { type BranchData } from "@/actions/stock/get-branch";
+import type { BranchData } from "@/actions/stock/get-branch";
 
 interface SucursalSelectorProps {
   sucursales: BranchData[];
@@ -45,6 +45,7 @@ export function SucursalSelector({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
+        {/* biome-ignore lint/a11y/useSemanticElements: Using Button with Popover for custom combobox */}
         <Button
           variant="outline"
           role="combobox"
@@ -75,8 +76,8 @@ export function SucursalSelector({
                   key={sucursal.id}
                   value={sucursal.id.toString()} // Usar ID como valor
                   onSelect={(currentValue) => {
-                    const selectedId = parseInt(currentValue);
-                    if (!isNaN(selectedId)) {
+                    const selectedId = Number.parseInt(currentValue);
+                    if (!Number.isNaN(selectedId)) {
                       onSelect(selectedId);
                     }
                     setOpen(false);

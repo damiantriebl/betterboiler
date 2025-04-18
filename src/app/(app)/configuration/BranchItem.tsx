@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import type React from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";

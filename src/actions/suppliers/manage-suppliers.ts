@@ -3,9 +3,10 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth"; // Ajusta la ruta si es diferente
 import { supplierSchema, type SupplierFormData } from "@/zod/SuppliersZod";
-import { Prisma, Supplier } from "@prisma/client";
+import { Prisma, type Supplier } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers"; // Importar headers
+import type { MotorcycleWithDetails } from "@/actions/sales/get-motorcycles";
 
 // Tipo de resultado estándar para acciones
 export type SupplierActionResult = {
@@ -25,7 +26,7 @@ export async function createSupplier(formData: SupplierFormData): Promise<Suppli
   // Validar los datos con Zod
   const validation = supplierSchema.safeParse(formData);
   if (!validation.success) {
-    return { success: false, error: "Datos inválidos: " + validation.error.message };
+    return { success: false, error: `Datos inválidos: ${validation.error.message}` };
   }
 
   const dataToSave = validation.data;
@@ -68,7 +69,7 @@ export async function createSupplier(formData: SupplierFormData): Promise<Suppli
       if (error.code === "P2002") {
         return {
           success: false,
-          error: `Error de base de datos: Ya existe un proveedor con datos únicos conflictivos.`,
+          error: "Error de base de datos: Ya existe un proveedor con datos únicos conflictivos.",
         };
       }
     }
@@ -180,7 +181,7 @@ export async function updateSupplier(
   // Validar los datos con Zod
   const validation = supplierSchema.safeParse(formData);
   if (!validation.success) {
-    return { success: false, error: "Datos inválidos: " + validation.error.message };
+    return { success: false, error: `Datos inválidos: ${validation.error.message}` };
   }
 
   const dataToUpdate = validation.data;
@@ -245,7 +246,7 @@ export async function updateSupplier(
       if (error.code === "P2002") {
         return {
           success: false,
-          error: `Error de base de datos: Datos únicos conflictivos al actualizar.`,
+          error: "Error de base de datos: Datos únicos conflictivos al actualizar.",
         };
       }
       if (error.code === "P2025") {

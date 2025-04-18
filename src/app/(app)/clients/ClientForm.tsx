@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { clientSchema, ClientFormData } from "@/zod/ClientsZod";
+import { clientSchema, type ClientFormData } from "@/zod/ClientsZod";
 import { createClient, updateClient } from "@/actions/clients/manage-clients";
 import {
   Form,
@@ -58,7 +58,7 @@ export default function ClientForm({ client, onSubmit, onCancel }: ClientFormPro
   const handleSubmit = async (data: ClientFormData) => {
     setIsPending(true);
     try {
-      if (client && client.id) {
+      if (client?.id) {
         await updateClient(client.id, data);
       } else {
         await createClient(data);

@@ -1,7 +1,8 @@
 // src/components/custom/UploadCropperButton.tsx
 "use client";
-import React, { useState, useRef } from "react";
-import ReactCrop, { Crop } from "react-image-crop";
+import type React from "react";
+import { useState, useRef } from "react";
+import ReactCrop, { type Crop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Button } from "../ui/button";
 
@@ -37,7 +38,6 @@ const UploadButton: React.FC<UploadButtonProps> = ({
     y: 25,
     width: 50,
     height: 50,
-    aspect: aspect, // Usa la relación de aspecto
   });
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -119,7 +119,7 @@ const UploadButton: React.FC<UploadButtonProps> = ({
       }
     } catch (error) {
       setStatusMessage(
-        "Error al procesar imagen: " + (error instanceof Error ? error.message : "Desconocido"),
+        `Error al procesar imagen: ${error instanceof Error ? error.message : "Desconocido"}`,
       ); // Captura el error
       console.error("Error cropping image:", error); // Log del error
     } finally {
@@ -137,6 +137,7 @@ const UploadButton: React.FC<UploadButtonProps> = ({
         accept={accept}
         onChange={handleChange}
         className="hidden"
+        aria-label={placeholder}
       />
       <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
         {placeholder}

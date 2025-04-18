@@ -1,11 +1,11 @@
 // src/app/(app)/configuracion/BrandContainer.tsx
-import React from "react";
+import type React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GripVertical, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { DraggableSyntheticListeners } from "@dnd-kit/core";
+import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 
 // --- Props con edición inline para Renombrar/Duplicar ---
 interface BrandContainerProps {
@@ -15,7 +15,7 @@ interface BrandContainerProps {
   brandColor: string;
   onDelete?: () => void;
   renderColorButton: () => React.ReactNode;
-  dragAttributes: Record<string, any>;
+  dragAttributes: Record<string, unknown>;
   dragListeners: DraggableSyntheticListeners;
   // Añadir props para renombrado/duplicado
   isRenamingDuplicate: boolean;

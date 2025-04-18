@@ -72,7 +72,7 @@ function getChartData(type: ChartType): { mes: ChartData[]; anio: ChartData[] } 
 
     return Object.entries(grouped)
       .map(([label, quantity]) => ({
-        label: type === "displacement" ? parseInt(label) : label,
+        label: type === "displacement" ? Number.parseInt(label) : label,
         quantity,
         total,
       }))

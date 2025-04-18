@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motorcycles } from "@/data/motorcycles";
-import { Motorcycle } from "@/types/BikesType";
+import type { Motorcycle } from "@/types/BikesType";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,13 +21,12 @@ function Stepper({ currentStep, steps }: StepperProps) {
         <div key={step} className="flex items-center">
           <div
             className={`flex items-center justify-center w-8 h-8 rounded-full border-2 
-                        ${
-                          index < currentStep
-                            ? "bg-green-500 border-green-500 text-white"
-                            : index === currentStep
-                              ? "border-blue-500 text-blue-500"
-                              : "border-gray-300 text-gray-300"
-                        }`}
+                        ${index < currentStep
+                ? "bg-green-500 border-green-500 text-white"
+                : index === currentStep
+                  ? "border-blue-500 text-blue-500"
+                  : "border-gray-300 text-gray-300"
+              }`}
           >
             {index < currentStep ? "✓" : index + 1}
           </div>
@@ -101,7 +100,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     const { name, value } = e.target;
     setPaymentData((prev) => ({
       ...prev,
-      [name]: name === "cuotas" ? parseInt(value) : value,
+      [name]: name === "cuotas" ? Number.parseInt(value) : value,
     }));
   };
 
@@ -201,8 +200,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             <h3 className="text-lg font-semibold">Datos del Comprador</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block">Nombre</label>
+                <label htmlFor="nombre" className="block">Nombre</label>
                 <input
+                  id="nombre"
                   type="text"
                   name="nombre"
                   value={buyerData.nombre}
@@ -212,8 +212,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="block">Apellido</label>
+                <label htmlFor="apellido" className="block">Apellido</label>
                 <input
+                  id="apellido"
                   type="text"
                   name="apellido"
                   value={buyerData.apellido}
@@ -223,8 +224,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="block">DNI</label>
+                <label htmlFor="dni" className="block">DNI</label>
                 <input
+                  id="dni"
                   type="text"
                   name="dni"
                   value={buyerData.dni}
@@ -234,8 +236,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="block">Teléfono</label>
+                <label htmlFor="telefono" className="block">Teléfono</label>
                 <input
+                  id="telefono"
                   type="tel"
                   name="telefono"
                   value={buyerData.telefono}
@@ -245,8 +248,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="block">Email</label>
+                <label htmlFor="email" className="block">Email</label>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   value={buyerData.email}
@@ -256,8 +260,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="block">Dirección</label>
+                <label htmlFor="direccion" className="block">Dirección</label>
                 <input
+                  id="direccion"
                   type="text"
                   name="direccion"
                   value={buyerData.direccion}
@@ -275,10 +280,11 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             <h3 className="text-lg font-semibold">Método de Pago</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block" id="metodo-pago-label">
+                <label htmlFor="metodoPago" className="block" id="metodo-pago-label">
                   Método de Pago
                 </label>
                 <select
+                  id="metodoPago"
                   name="metodoPago"
                   value={paymentData.metodoPago}
                   onChange={handlePaymentDataChange}
@@ -292,10 +298,11 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block" id="cuotas-label">
+                <label htmlFor="cuotas" className="block" id="cuotas-label">
                   Cuotas
                 </label>
                 <select
+                  id="cuotas"
                   name="cuotas"
                   value={paymentData.cuotas.toString()}
                   onChange={handlePaymentDataChange}
@@ -309,10 +316,11 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block" id="banco-label">
+                <label htmlFor="banco" className="block" id="banco-label">
                   Banco
                 </label>
                 <select
+                  id="banco"
                   name="banco"
                   value={paymentData.banco}
                   onChange={handlePaymentDataChange}

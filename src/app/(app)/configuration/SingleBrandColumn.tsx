@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useTransition, useCallback, useRef } from "react";
+import type React from "react";
+import { useState, useEffect, useTransition, useCallback, useRef } from "react";
 import {
   DndContext as ModelDndContext,
-  DragEndEvent as ModelDragEndEvent,
+  type DragEndEvent as ModelDragEndEvent,
   DragOverlay,
-  DragStartEvent,
+  type DragStartEvent,
   PointerSensor as ModelPointerSensor,
   KeyboardSensor as ModelKeyboardSensor,
   closestCorners as modelClosestCorners,
@@ -33,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HexColorPicker } from "react-colorful";
 import { renameBrandByDuplication } from "@/actions/configuration/create-edit-brand";
-import { BrandWithDisplayModelsData, DisplayModelData } from "./Interfaces";
+import type { BrandWithDisplayModelsData, DisplayModelData } from "./Interfaces";
 import {
   dissociateOrganizationBrand,
   dissociateOrganizationModel,
@@ -246,8 +247,8 @@ export default function SingleBrandColumn({
     const { active, over } = event;
     if (!active || !over || active.id === over.id) return;
 
-    const activeModelId = parseInt(active.id.toString(), 10);
-    const overModelId = parseInt(over.id.toString(), 10);
+    const activeModelId = Number.parseInt(active.id.toString(), 10);
+    const overModelId = Number.parseInt(over.id.toString(), 10);
 
     const oldIndex = models.findIndex((m) => m.id === activeModelId);
     const newIndex = models.findIndex((m) => m.id === overModelId);
@@ -304,7 +305,7 @@ export default function SingleBrandColumn({
                       <span
                         className="size-4 rounded-full border"
                         style={{ backgroundColor: associationColor }}
-                      ></span>
+                      />
                     </Button>
                   </TooltipTrigger>
                 </PopoverTrigger>
@@ -366,8 +367,8 @@ export default function SingleBrandColumn({
               <ModelItem
                 model={activeModel}
                 isOverlay
-                onUpdate={() => {}}
-                onDissociate={() => {}}
+                onUpdate={() => { }}
+                onDissociate={() => { }}
               />
             ) : null}
           </DragOverlay>

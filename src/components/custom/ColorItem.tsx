@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import type React from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { HexColorPicker } from "react-colorful"; // Asegúrate de que la importación sea correcta
@@ -22,7 +23,7 @@ import {
   Clock,
 } from "lucide-react"; // Añadir iconos y Clock
 import { cn } from "@/lib/utils";
-import { ColorConfig, ColorType } from "@/types/ColorType";
+import type { ColorConfig, ColorType } from "@/types/ColorType";
 
 interface ColorItemProps {
   colorConfig: ColorConfig;
@@ -68,12 +69,12 @@ export default function ColorItem({
     style ??
     (sortable
       ? {
-          transform: CSS.Transform.toString(sortable.transform),
-          transition: sortable.transition,
-          opacity: sortable.isDragging || itemIsBusy ? 0.6 : 1,
-          zIndex: sortable.isDragging ? 10 : undefined,
-          pointerEvents: itemIsBusy ? "none" : undefined,
-        }
+        transform: CSS.Transform.toString(sortable.transform),
+        transition: sortable.transition,
+        opacity: sortable.isDragging || itemIsBusy ? 0.6 : 1,
+        zIndex: sortable.isDragging ? 10 : undefined,
+        pointerEvents: itemIsBusy ? "none" : undefined,
+      }
       : {});
   const finalIsDragging = isDragging ?? sortable?.isDragging ?? false;
 
@@ -185,7 +186,7 @@ export default function ColorItem({
     if (itemIsBusy) return;
 
     // Crear un objeto basado en el estado actual
-    let updatedConfigData: ColorConfig = { ...colorConfig, type: newType };
+    const updatedConfigData: ColorConfig = { ...colorConfig, type: newType };
 
     switch (newType) {
       case "SOLIDO":
@@ -295,7 +296,10 @@ export default function ColorItem({
             onOpenChange={(open) => !itemIsBusy && setIsPopover1Open(open)}
           >
             <PopoverTrigger asChild disabled={itemIsBusy}>
-              <button className="p-0 border-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+              <button
+                type="button"
+                className="p-0 border-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {renderColorCircle("sm")}
               </button>
             </PopoverTrigger>
@@ -385,25 +389,24 @@ export default function ColorItem({
             />
           ) : (
             <div className="flex items-center">
+              {/* biome-ignore lint/a11y/useButtonType: Span made accessible with role, tabIndex, and onKeyDown */}
               <span
                 className={cn(
-                  "font-medium text-sm truncate",
-                  itemIsBusy ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                  "cursor-pointer hover:text-primary hover:underline truncate",
+                  nameClassName,
+                  itemIsBusy && "cursor-not-allowed text-muted-foreground",
                 )}
-                title={name}
                 onClick={handleNameEditClick}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    handleNameEditClick();
+                  }
+                }}
+                role="button"
+                tabIndex={itemIsBusy ? -1 : 0}
               >
                 {name}
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 ml-1 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                onClick={handleNameEditClick}
-                disabled={itemIsBusy || !onUpdate}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
             </div>
           )}
           <select
@@ -424,7 +427,7 @@ export default function ColorItem({
             variant="ghost"
             size="icon"
             className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-            onClick={() => onDelete && onDelete(id)}
+            onClick={() => onDelete?.(id)}
             disabled={itemIsBusy || !onDelete}
             aria-label={`Eliminar color ${name}`}
           >
