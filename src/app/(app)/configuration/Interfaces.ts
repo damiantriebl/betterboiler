@@ -1,5 +1,5 @@
-import { Model } from "@prisma/client";
-import { OrganizationModelConfig } from "@prisma/client";
+import type { Model } from "@prisma/client";
+import type { OrganizationModelConfig } from "@prisma/client";
 
 export interface OrganizationBrandData {
   id: number;

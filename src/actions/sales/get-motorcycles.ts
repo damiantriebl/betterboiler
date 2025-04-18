@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { unstable_noStore as noStore } from "next/cache";
-import { EstadoVenta } from "@/types/BikesType";
+import type { EstadoVenta } from "@/types/BikesType";
 
 // Tipo específico y preciso para la tabla
 export type MotorcycleTableRowData = {
@@ -29,7 +29,8 @@ export type MotorcycleTableRowData = {
   estadoVenta: EstadoVenta;
 };
 
-interface GetMotorcyclesOptions {}
+// Replace empty interface with type alias
+type GetMotorcyclesOptions = {};
 
 export async function getMotorcycles(
   options: GetMotorcyclesOptions = {},

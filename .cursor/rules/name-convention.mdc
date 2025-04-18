@@ -25,3 +25,7 @@ alwaysApply: true
 - los test se hacen con vitest y con https://testing-library.com/
 - tienen que estar en la misma carpeta donde estan los componentes 
 - tienen que tener nombreComponente.test.tsx la idea es que todos los compoentntes tengas sus test
+
+# Lint y format
+
+- el lint y format usa Biome

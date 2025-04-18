@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { forgotPasswordSchema } from "@/zod/AuthZod";
 import { authClient } from "@/auth-client";
-import { serverMessage } from "@/types/ServerMessageType";
+import type { serverMessage } from "@/types/ServerMessageType";
 
 export async function forgotPasswordAction(
   prevState: { success: string | false; error: string | false },
@@ -28,9 +28,8 @@ export async function forgotPasswordAction(
         error: "Usuario no encontrado. No existe ninguna cuenta registrada con este email.",
         success: false,
       };
-    } else {
-      return { error: error.message || "Ocurrió un error inesperado.", success: false };
     }
+    return { error: error.message || "Ocurrió un error inesperado.", success: false };
   }
 
   return {

@@ -1,7 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { serverMessage } from "@/types/ServerMessageType";
+import type { serverMessage } from "@/types/ServerMessageType";
 import { getSignedURL } from "../S3/get-signed-url";
 import sharp from "sharp";
 
@@ -69,22 +69,30 @@ export async function updateUserAction(
       };
     }
 
-    await Promise.all([
-      ...signedOriginalUrls.map((signed, idx) =>
+    // Filter out unsuccessful signed URLs before mapping to fetch promises
+    const originalFetchPromises = signedOriginalUrls
+      .filter((signed) => signed.success?.url) // Ensure URL exists
+      .map((signed, idx) =>
         fetch(signed.success!.url, {
+          // Safe to use ! here after filter
           method: "PUT",
           body: originalOptimized[idx],
           headers: { "Content-Type": "image/webp" },
         }),
-      ),
-      ...signedCropUrls.map((signed, idx) =>
+      );
+
+    const cropFetchPromises = signedCropUrls
+      .filter((signed) => signed.success?.url) // Ensure URL exists
+      .map((signed, idx) =>
         fetch(signed.success!.url, {
+          // Safe to use ! here after filter
           method: "PUT",
           body: cropOptimized[idx],
           headers: { "Content-Type": "image/webp" },
         }),
-      ),
-    ]);
+      );
+
+    await Promise.all([...originalFetchPromises, ...cropFetchPromises]);
 
     const bucket = process.env.AWS_BUCKET_NAME;
     const region = process.env.AWS_BUCKET_REGION;

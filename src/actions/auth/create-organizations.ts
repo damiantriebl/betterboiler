@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { serverMessage } from "@/app/(auth)/forgot-password/page";
+import type { serverMessage } from "@/app/(auth)/forgot-password/page";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 

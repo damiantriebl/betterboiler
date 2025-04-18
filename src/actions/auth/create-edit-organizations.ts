@@ -1,10 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
-import { serverMessage } from "@/types/ServerMessageType";
+import type { serverMessage } from "@/types/ServerMessageType";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
-import { uploadBufferToS3 } from "@/actions/S3/upload-buffer-to-s3";
+import { uploadBufferToS3 } from "../S3/upload-buffer-to-s3";
 
 export async function createOrUpdateOrganization(formData: FormData): Promise<serverMessage> {
   const id = formData.get("id") as string | null;
@@ -30,7 +30,6 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
           await uploadBufferToS3({
             buffer: resizedBuffer,
             path: `organization/${id ?? "new"}/logo_${size}`,
-            contentType: "image/webp",
           });
         }),
       );
@@ -48,7 +47,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
     }
 
     let slug = name.toLowerCase().replace(/ /g, "-");
-    let exists = await prisma.organization.findUnique({ where: { slug } });
+    const exists = await prisma.organization.findUnique({ where: { slug } });
     if (exists) slug += `-${uuidv4().slice(0, 8)}`;
 
     const org = await prisma.organization.create({ data: { name, slug } });

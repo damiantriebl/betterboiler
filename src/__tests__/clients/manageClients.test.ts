@@ -6,7 +6,7 @@ import {
   getClients,
   getClientById,
 } from "@/actions/clients/manage-clients";
-import { ClientFormData } from "@/zod/ClientsZod";
+import type { ClientFormData } from "@/zod/ClientsZod";
 
 // Definir el tipo completo que incluye propiedades adicionales de Prisma
 type ClientWithId = ClientFormData & {
@@ -71,13 +71,13 @@ describe("Client Management Actions", () => {
   const mockClientComplete: ClientWithId = {
     id: "client123",
     ...mockClientData,
-    // Convertir opcionales a null para coincidir con el modelo Prisma
-    lastName: mockClientData.lastName || null,
-    companyName: null,
-    mobile: null,
-    address: null,
-    vatStatus: null,
-    notes: null,
+    // Use defined lastName, provide default empty string for other potentially non-nullable fields
+    lastName: mockClientData.lastName || "", // Ensure it's string
+    companyName: "", // Changed from null
+    mobile: "", // Changed from null
+    address: "", // Changed from null
+    vatStatus: "", // Changed from null
+    notes: "", // Changed from null
     // Añadir campos de Prisma
     createdAt: testDate,
     updatedAt: testDate,

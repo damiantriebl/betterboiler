@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row, Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import {
@@ -24,7 +24,7 @@ export type Client = ClientFormData & {
 export const columns: ColumnDef<Client>[] = [
   {
     accessorKey: "firstName",
-    header: ({ column }) => {
+    header: ({ column }: { column: Column<Client, unknown> }) => {
       return (
         <Button
           variant="ghost"
@@ -35,7 +35,7 @@ export const columns: ColumnDef<Client>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => {
+    cell: ({ row }: { row: Row<Client> }) => {
       const firstName = row.original.firstName;
       const lastName = row.original.lastName;
       // Mostrar nombre completo si existe apellido
@@ -52,24 +52,24 @@ export const columns: ColumnDef<Client>[] = [
   {
     accessorKey: "email",
     header: "Email",
-    cell: ({ row }) =>
+    cell: ({ row }: { row: Row<Client> }) =>
       row.original.email || <span className="text-muted-foreground italic">N/A</span>,
   },
   {
     accessorKey: "phone",
     header: "Teléfono",
-    cell: ({ row }) =>
+    cell: ({ row }: { row: Row<Client> }) =>
       row.original.phone || <span className="text-muted-foreground italic">N/A</span>,
   },
   {
     accessorKey: "taxId",
     header: "CUIT/CUIL",
-    cell: ({ row }) =>
+    cell: ({ row }: { row: Row<Client> }) =>
       row.original.taxId || <span className="text-muted-foreground italic">N/A</span>,
   },
   {
     accessorKey: "status",
-    header: ({ column }) => {
+    header: ({ column }: { column: Column<Client, unknown> }) => {
       return (
         <Button
           variant="ghost"
@@ -80,7 +80,7 @@ export const columns: ColumnDef<Client>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => {
+    cell: ({ row }: { row: Row<Client> }) => {
       const status = row.original.status;
       return (
         <Badge
@@ -98,7 +98,7 @@ export const columns: ColumnDef<Client>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
+    cell: ({ row }: { row: Row<Client> }) => {
       const client = row.original;
 
       return (

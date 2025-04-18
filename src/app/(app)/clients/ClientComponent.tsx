@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import ClientForm from "./ClientForm";
 import ClientTable from "./ClientTable";
-import { Client } from "./columns";
+import type { Client } from "./columns";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
