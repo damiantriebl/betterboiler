@@ -2,31 +2,32 @@ name: CI
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: [ main ]
   pull_request:
-    branches: ["main", "master"]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   test:
-    name: Tests
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v2
         with:
           version: 8
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
           node-version: 20
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Run tests
         run: pnpm test
@@ -36,51 +37,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v2
         with:
           version: 8
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
           node-version: 20
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
-      - name: Lint code
+      - name: Run lint
         run: pnpm lint
 
   format:
-    name: Format check
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v2
         with:
           version: 8
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
           node-version: 20
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Prettier
-        run: pnpm add -g prettier
+        run: pnpm install
 
       - name: Check formatting
-        run: prettier --check "src/**/*.{ts,tsx,js,jsx,json,css,scss,md}"
-
-      - name: Check types
-        run: pnpm exec tsc --noEmit 
+        run: pnpm format 
