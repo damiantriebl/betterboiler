@@ -1,7 +1,13 @@
 "use client";
 import { useState, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Label } from "@radix-ui/react-label";
@@ -77,7 +83,6 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
     });
   });
 
-
   return (
     <Dialog open={open} onOpenChange={() => setOpen(!open)}>
       <DialogTrigger asChild>
@@ -88,9 +93,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {organization ? "Editar Organización" : "Crear Organización"}
-          </DialogTitle>
+          <DialogTitle>{organization ? "Editar Organización" : "Crear Organización"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -111,11 +114,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
               )}
             />
 
-            <UploadButton
-              placeholder="Subir logo"
-              crop={false}
-              onChange={handleUploadChange}
-            />
+            <UploadButton placeholder="Subir logo" crop={false} onChange={handleUploadChange} />
 
             {state.error && <p className="text-red-400">{state.error}</p>}
             <Button type="submit" disabled={isPending}>

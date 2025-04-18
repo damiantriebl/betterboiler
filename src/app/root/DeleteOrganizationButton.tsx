@@ -1,6 +1,12 @@
 "use client";
 import { useTransition, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { deleteOrganization } from "../../actions/auth/delete-organization";
 
@@ -29,7 +35,9 @@ export default function DeleteOrganizationButton({ id, name }: { id: string; nam
           Esta acción es irreversible. También se eliminará la relación con todos sus usuarios.
         </p>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
           <Button variant="destructive" disabled={isPending} onClick={handleDelete}>
             {isPending ? "Eliminando..." : "Confirmar"}
           </Button>

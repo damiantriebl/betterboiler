@@ -31,12 +31,8 @@ interface Props {
 export default function UserActions({ userId, currentStatus, currentRole }: Props) {
   const [banned, setBanned] = useState(currentStatus);
   const [role, setRole] = useState(currentRole);
-  const router = useRouter(); 
-  const { 
-    data: session, 
-    isPending, 
-    error, 
-} = authClient.useSession() 
+  const router = useRouter();
+  const { data: session, isPending, error } = authClient.useSession();
 
   const toggleStatus = async () => {
     const newStatus = !banned;
@@ -52,9 +48,9 @@ export default function UserActions({ userId, currentStatus, currentRole }: Prop
   const handleRoleChange = async (newRole: string) => {
     setRole(newRole);
     const updatedUser = await authClient.admin.setRole({
-        userId,
-        role: newRole,
-      });
+      userId,
+      role: newRole,
+    });
   };
 
   const deleteUser = async () => {

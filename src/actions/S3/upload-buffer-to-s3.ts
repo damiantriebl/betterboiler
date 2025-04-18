@@ -14,14 +14,18 @@ interface UploadBufferProps {
   contentType?: string;
 }
 
-export async function uploadBufferToS3({ buffer, path, contentType = "image/webp" }: UploadBufferProps) {
+export async function uploadBufferToS3({
+  buffer,
+  path,
+  contentType = "image/webp",
+}: UploadBufferProps) {
   await s3Client.send(
     new PutObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME!,
       Key: path,
       Body: buffer,
       ContentType: contentType,
-    })
+    }),
   );
 
   return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${path}`;

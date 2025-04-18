@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition } from "react";
 import {
   Table,
   TableBody,
@@ -37,9 +37,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Client } from './columns';
-import { deleteClient } from '@/actions/clients/manage-clients';
-import { toast } from '@/hooks/use-toast';
+import { Client } from "./columns";
+import { deleteClient } from "@/actions/clients/manage-clients";
+import { toast } from "@/hooks/use-toast";
 
 interface ClientTableProps {
   initialData: Client[];
@@ -47,11 +47,11 @@ interface ClientTableProps {
   onDelete?: (clientId: string) => void;
 }
 
-type SortableKeys = 'firstName' | 'lastName' | 'companyName' | 'email' | 'status';
+type SortableKeys = "firstName" | "lastName" | "companyName" | "email" | "status";
 
 type SortConfig = {
   key: SortableKeys | null;
-  direction: 'asc' | 'desc' | null;
+  direction: "asc" | "desc" | null;
 };
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
@@ -64,9 +64,9 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleSort = (key: SortableKeys) => {
-    let direction: 'asc' | 'desc' | null = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
-    else if (sortConfig.key === key && sortConfig.direction === 'desc') direction = null;
+    let direction: "asc" | "desc" | null = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
+    else if (sortConfig.key === key && sortConfig.direction === "desc") direction = null;
 
     setSortConfig({ key: direction ? key : null, direction });
     setCurrentPage(1);
@@ -79,20 +79,22 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
       const aValue = a[sortConfig.key!];
       const bValue = b[sortConfig.key!];
 
-      const valA = aValue ?? '';
-      const valB = bValue ?? '';
+      const valA = aValue ?? "";
+      const valB = bValue ?? "";
 
-      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
   };
 
   const getSortIcon = (key: SortableKeys) => {
     if (sortConfig.key !== key) return <ChevronsUpDown className="w-4 h-4 ml-1 opacity-30" />;
-    return sortConfig.direction === 'asc'
-      ? <ChevronUp className="w-4 h-4 ml-1" />
-      : <ChevronDown className="w-4 h-4 ml-1" />;
+    return sortConfig.direction === "asc" ? (
+      <ChevronUp className="w-4 h-4 ml-1" />
+    ) : (
+      <ChevronDown className="w-4 h-4 ml-1" />
+    );
   };
 
   const sortedData = getSortedData();
@@ -112,7 +114,11 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
   };
 
   const handleDeleteClick = (client: Client) => {
-    if (!confirm(`¿Estás seguro de eliminar al cliente "${client.firstName} ${client.lastName || ''}"?`)) {
+    if (
+      !confirm(
+        `¿Estás seguro de eliminar al cliente "${client.firstName} ${client.lastName || ""}"?`,
+      )
+    ) {
       return;
     }
     setDeletingId(client.id);
@@ -121,14 +127,14 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
         await deleteClient(client.id);
         toast({
           title: "Cliente eliminado",
-          description: `Se eliminó al cliente ${client.firstName} ${client.lastName || ''}.`
+          description: `Se eliminó al cliente ${client.firstName} ${client.lastName || ""}.`,
         });
         if (onDelete) onDelete(client.id);
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error al eliminar",
-          description: "No se pudo eliminar el cliente."
+          description: "No se pudo eliminar el cliente.",
         });
       }
       setDeletingId(null);
@@ -146,13 +152,16 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
             </SelectTrigger>
             <SelectContent>
               {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                <SelectItem key={size} value={size.toString()}>
+                  {size}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="text-sm text-muted-foreground">
-          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a {Math.min(startIndex + pageSize, sortedData.length)} de {sortedData.length} clientes
+          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a{" "}
+          {Math.min(startIndex + pageSize, sortedData.length)} de {sortedData.length} clientes
         </div>
       </div>
 
@@ -160,23 +169,23 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
         <TableHeader>
           <TableRow>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort('firstName')} className="px-1">
+              <Button variant="ghost" onClick={() => handleSort("firstName")} className="px-1">
                 Nombre
-                {getSortIcon('firstName')}
+                {getSortIcon("firstName")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort('email')} className="px-1">
+              <Button variant="ghost" onClick={() => handleSort("email")} className="px-1">
                 Email
-                {getSortIcon('email')}
+                {getSortIcon("email")}
               </Button>
             </TableHead>
             <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
             <TableHead className="hidden sm:table-cell">CUIT/CUIL</TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort('status')} className="px-1">
+              <Button variant="ghost" onClick={() => handleSort("status")} className="px-1">
                 Estado
-                {getSortIcon('status')}
+                {getSortIcon("status")}
               </Button>
             </TableHead>
             <TableHead className="text-right">Acciones</TableHead>
@@ -191,7 +200,10 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
             </TableRow>
           )}
           {paginatedData.map((client: Client) => (
-            <TableRow key={client.id} className={cn(isDeleting && deletingId === client.id && "opacity-50")}>
+            <TableRow
+              key={client.id}
+              className={cn(isDeleting && deletingId === client.id && "opacity-50")}
+            >
               <TableCell className="font-medium">
                 {client.firstName} {client.lastName}
                 {client.companyName && (
@@ -206,9 +218,15 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
                 {client.taxId || <span className="text-muted-foreground italic">N/A</span>}
               </TableCell>
               <TableCell>
-                <Badge variant={client.status === 'active' ? 'default' : 'outline'}
-                  className={cn(client.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' : 'bg-gray-100 text-gray-600 border-gray-300')}>
-                  {client.status === 'active' ? 'Activo' : 'Inactivo'}
+                <Badge
+                  variant={client.status === "active" ? "default" : "outline"}
+                  className={cn(
+                    client.status === "active"
+                      ? "bg-green-100 text-green-800 border-green-300"
+                      : "bg-gray-100 text-gray-600 border-gray-300",
+                  )}
+                >
+                  {client.status === "active" ? "Activo" : "Inactivo"}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
@@ -224,7 +242,10 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
                     <DropdownMenuItem onClick={() => handleEditClick(client)} disabled={isDeleting}>
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigator.clipboard.writeText(client.id)} disabled={isDeleting}>
+                    <DropdownMenuItem
+                      onClick={() => navigator.clipboard.writeText(client.id)}
+                      disabled={isDeleting}
+                    >
                       Copiar ID
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -250,10 +271,12 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
               <PaginationItem>
                 <PaginationPrevious
                   onClick={() => handlePageChange(currentPage - 1)}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  className={
+                    currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                  }
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <PaginationItem key={page}>
                   <PaginationLink
                     onClick={() => handlePageChange(page)}
@@ -267,7 +290,9 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
               <PaginationItem>
                 <PaginationNext
                   onClick={() => handlePageChange(currentPage + 1)}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  className={
+                    currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"
+                  }
                 />
               </PaginationItem>
             </PaginationContent>

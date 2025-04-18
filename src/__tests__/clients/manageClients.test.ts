@@ -1,6 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, updateClient, deleteClient, getClients, getClientById } from '@/actions/clients/manage-clients';
-import { ClientFormData } from '@/zod/ClientsZod';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  createClient,
+  updateClient,
+  deleteClient,
+  getClients,
+  getClientById,
+} from "@/actions/clients/manage-clients";
+import { ClientFormData } from "@/zod/ClientsZod";
 
 // Definir el tipo completo que incluye propiedades adicionales de Prisma
 type ClientWithId = ClientFormData & {
@@ -18,13 +24,13 @@ type ClientWithId = ClientFormData & {
 };
 
 // Mock del módulo completo de Prisma
-vi.mock('@/lib/prisma', () => {
+vi.mock("@/lib/prisma", () => {
   const mockCreate = vi.fn();
   const mockUpdate = vi.fn();
   const mockDelete = vi.fn();
   const mockFindMany = vi.fn();
   const mockFindUnique = vi.fn();
-  
+
   return {
     default: {
       client: {
@@ -39,31 +45,31 @@ vi.mock('@/lib/prisma', () => {
 });
 
 // Mock de la función revalidatePath de Next.js
-vi.mock('next/cache', () => ({
+vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
 // Importar el mock para poder configurarlo en las pruebas
-import prisma from '@/lib/prisma';
+import prisma from "@/lib/prisma";
 
-describe('Client Management Actions', () => {
+describe("Client Management Actions", () => {
   // Date estable para pruebas
-  const testDate = new Date('2023-01-01');
-  
+  const testDate = new Date("2023-01-01");
+
   // Datos completos para el cliente mock
   const mockClientData: ClientFormData = {
-    type: 'Individual',
-    firstName: 'Juan',
-    lastName: 'Pérez',
-    taxId: '12345678901',
-    email: 'juan@example.com',
-    phone: '123456789',
-    status: 'active',
+    type: "Individual",
+    firstName: "Juan",
+    lastName: "Pérez",
+    taxId: "12345678901",
+    email: "juan@example.com",
+    phone: "123456789",
+    status: "active",
   };
 
   // Cliente con datos completos incluyendo campos de Prisma
   const mockClientComplete: ClientWithId = {
-    id: 'client123',
+    id: "client123",
     ...mockClientData,
     // Convertir opcionales a null para coincidir con el modelo Prisma
     lastName: mockClientData.lastName || null,
@@ -81,8 +87,8 @@ describe('Client Management Actions', () => {
     vi.clearAllMocks();
   });
 
-  describe('createClient', () => {
-    it('should create a new client successfully', async () => {
+  describe("createClient", () => {
+    it("should create a new client successfully", async () => {
       // Configurar el mock para simular una creación exitosa
       vi.mocked(prisma.client.create).mockResolvedValue(mockClientComplete);
 
@@ -98,30 +104,30 @@ describe('Client Management Actions', () => {
       expect(result).toEqual(mockClientComplete);
     });
 
-    it('should throw an error if the client data is invalid', async () => {
+    it("should throw an error if the client data is invalid", async () => {
       // Datos inválidos: falta el email
       const invalidClient = {
-        type: 'Individual',
-        firstName: 'Juan',
-        taxId: '12345678901',
+        type: "Individual",
+        firstName: "Juan",
+        taxId: "12345678901",
       } as ClientFormData;
 
       // Verificar que la función arroja un error
       await expect(createClient(invalidClient)).rejects.toThrow();
-      
+
       // Verificar que no se llamó a prisma.client.create
       expect(prisma.client.create).not.toHaveBeenCalled();
     });
   });
 
-  describe('updateClient', () => {
-    it('should update an existing client successfully', async () => {
-      const updateData = { firstName: 'Juan Carlos' };
+  describe("updateClient", () => {
+    it("should update an existing client successfully", async () => {
+      const updateData = { firstName: "Juan Carlos" };
       const updatedClient: ClientWithId = {
         ...mockClientComplete,
-        firstName: 'Juan Carlos',
+        firstName: "Juan Carlos",
       };
-      
+
       // Configurar el mock para simular una actualización exitosa
       vi.mocked(prisma.client.update).mockResolvedValue(updatedClient);
 
@@ -139,8 +145,8 @@ describe('Client Management Actions', () => {
     });
   });
 
-  describe('deleteClient', () => {
-    it('should delete a client successfully', async () => {
+  describe("deleteClient", () => {
+    it("should delete a client successfully", async () => {
       // Configurar el mock para simular una eliminación exitosa
       vi.mocked(prisma.client.delete).mockResolvedValue(mockClientComplete);
 
@@ -157,14 +163,14 @@ describe('Client Management Actions', () => {
     });
   });
 
-  describe('getClients', () => {
-    it('should fetch all clients successfully', async () => {
+  describe("getClients", () => {
+    it("should fetch all clients successfully", async () => {
       const mockClients: ClientWithId[] = [
         mockClientComplete,
         {
           ...mockClientComplete,
-          id: 'client2',
-          firstName: 'María',
+          id: "client2",
+          firstName: "María",
         },
       ];
 
@@ -176,7 +182,7 @@ describe('Client Management Actions', () => {
 
       // Verificar que se llamó a prisma.client.findMany con los parámetros correctos
       expect(prisma.client.findMany).toHaveBeenCalledWith({
-        orderBy: { firstName: 'asc' },
+        orderBy: { firstName: "asc" },
       });
 
       // Verificar que el resultado es el esperado
@@ -184,8 +190,8 @@ describe('Client Management Actions', () => {
     });
   });
 
-  describe('getClientById', () => {
-    it('should fetch a specific client successfully', async () => {
+  describe("getClientById", () => {
+    it("should fetch a specific client successfully", async () => {
       // Configurar el mock para simular una búsqueda exitosa
       vi.mocked(prisma.client.findUnique).mockResolvedValue(mockClientComplete);
 
@@ -201,20 +207,20 @@ describe('Client Management Actions', () => {
       expect(result).toEqual(mockClientComplete);
     });
 
-    it('should return null if client does not exist', async () => {
+    it("should return null if client does not exist", async () => {
       // Configurar el mock para simular un cliente no encontrado
       vi.mocked(prisma.client.findUnique).mockResolvedValue(null);
 
       // Ejecutar la función
-      const result = await getClientById('nonexistent-id');
+      const result = await getClientById("nonexistent-id");
 
       // Verificar que se llamó a prisma.client.findUnique con los parámetros correctos
       expect(prisma.client.findUnique).toHaveBeenCalledWith({
-        where: { id: 'nonexistent-id' },
+        where: { id: "nonexistent-id" },
       });
 
       // Verificar que el resultado es null
       expect(result).toBeNull();
     });
   });
-}); 
+});

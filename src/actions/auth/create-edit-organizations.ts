@@ -32,7 +32,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
             path: `organization/${id ?? "new"}/logo_${size}`,
             contentType: "image/webp",
           });
-        })
+        }),
       );
 
       logoUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/organization/${id ?? "new"}/logo_400`;
@@ -64,7 +64,6 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
 
     revalidatePath("/root");
     return { success: "Organización creada con éxito.", error: false };
-
   } catch (error) {
     console.error("🔥 ERROR SERVER ACTION:", error);
     return { error: (error as Error).message || "Ocurrió un error inesperado.", success: false };

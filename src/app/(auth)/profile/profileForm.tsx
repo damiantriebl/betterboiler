@@ -14,15 +14,17 @@ import { useToast } from "@/hooks/use-toast";
 
 const profileSchema = z.object({
   userId: z.string().nonempty(),
-  name: z.string().min(1, 'El nombre es obligatorio'),
-  email: z.string().email('Correo electrónico inválido'),
+  name: z.string().min(1, "El nombre es obligatorio"),
+  email: z.string().email("Correo electrónico inválido"),
   originalFile: z.instanceof(File).optional(),
   croppedFile: z.instanceof(Blob).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-export default function ProfileForm({ user }: { user: { id: string; name: string; email: string } }) {
+export default function ProfileForm({
+  user,
+}: { user: { id: string; name: string; email: string } }) {
   const { toast } = useToast();
 
   const form = useForm<ProfileFormData>({
@@ -34,23 +36,26 @@ export default function ProfileForm({ user }: { user: { id: string; name: string
     },
   });
 
-  const [state, formAction, isPending] = useActionState(updateUserAction, { success: false, error: '' });
+  const [state, formAction, isPending] = useActionState(updateUserAction, {
+    success: false,
+    error: "",
+  });
 
   const handleUploadChange = ({ originalFile, croppedBlob }: UploadResult) => {
-    form.setValue('originalFile', originalFile);
-    form.setValue('croppedFile', croppedBlob);
+    form.setValue("originalFile", originalFile);
+    form.setValue("croppedFile", croppedBlob);
   };
 
   const onSubmit = form.handleSubmit((data) => {
     const formData = new FormData();
-    formData.append('userId', data.userId);
-    formData.append('name', data.name);
-    formData.append('email', data.email);
+    formData.append("userId", data.userId);
+    formData.append("name", data.name);
+    formData.append("email", data.email);
     if (data.originalFile) {
-      formData.append('originalFile', data.originalFile, data.originalFile.name);
+      formData.append("originalFile", data.originalFile, data.originalFile.name);
     }
     if (data.croppedFile) {
-      formData.append('croppedFile', data.croppedFile, 'cropped.jpg');
+      formData.append("croppedFile", data.croppedFile, "cropped.jpg");
     }
 
     startTransition(() => {
@@ -59,9 +64,9 @@ export default function ProfileForm({ user }: { user: { id: string; name: string
   });
   useEffect(() => {
     if (state.error) {
-      toast({ title: 'Error', description: state.error, variant: 'destructive' });
+      toast({ title: "Error", description: state.error, variant: "destructive" });
     } else if (state.success) {
-      toast({ title: 'Éxito', description: 'Perfil actualizado correctamente' });
+      toast({ title: "Éxito", description: "Perfil actualizado correctamente" });
     }
   }, [state, toast]);
 

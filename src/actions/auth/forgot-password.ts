@@ -6,7 +6,10 @@ import { forgotPasswordSchema } from "@/zod/AuthZod";
 import { authClient } from "@/auth-client";
 import { serverMessage } from "@/types/ServerMessageType";
 
-export async function forgotPasswordAction(prevState: { success: string | false; error: string | false; }, formData: FormData): Promise<serverMessage> {
+export async function forgotPasswordAction(
+  prevState: { success: string | false; error: string | false },
+  formData: FormData,
+): Promise<serverMessage> {
   const email = formData.get("email");
 
   const validation = forgotPasswordSchema.safeParse({ email });
@@ -31,7 +34,8 @@ export async function forgotPasswordAction(prevState: { success: string | false;
   }
 
   return {
-    success: "Si existe una cuenta con este email, recibirás un enlace para restablecer tu contraseña.",
+    success:
+      "Si existe una cuenta con este email, recibirás un enlace para restablecer tu contraseña.",
     error: false,
   };
 }

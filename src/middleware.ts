@@ -28,32 +28,24 @@ export default async function authMiddleware(request: NextRequest) {
   response.headers.set("x-session", session ? "true" : "false");
 
   if (isAuth || isPassword) {
-    return session
-      ? NextResponse.redirect(new URL("/", request.url))
-      : response;
+    return session ? NextResponse.redirect(new URL("/", request.url)) : response;
   }
 
   if (!session && (isProtected || isAdmin || isRoot)) {
-    return NextResponse.redirect(
-      new URL("/sign-in?error=not-logged", request.url)
-    );
+    return NextResponse.redirect(new URL("/sign-in?error=not-logged", request.url));
   }
 
   if (isAdmin && session?.user.role !== "admin" && session?.user.role !== "root") {
-    return NextResponse.redirect(
-      new URL("/?error=not-admin-privilegies", request.url)
-    );
+    return NextResponse.redirect(new URL("/?error=not-admin-privilegies", request.url));
   }
 
   if (isRoot && session?.user.role !== "root") {
-    return NextResponse.redirect(
-      new URL("/?error=not-root-privilegies", request.url)
-    );
+    return NextResponse.redirect(new URL("/?error=not-root-privilegies", request.url));
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+  matcher: ["/((?!api|_next/static|_next/image|.*\\.png$).*)"],
 };

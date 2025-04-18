@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { clientSchema, ClientFormData } from "@/zod/ClientsZod";
-import { createClient, updateClient } from '@/actions/clients/manage-clients';
+import { createClient, updateClient } from "@/actions/clients/manage-clients";
 import {
   Form,
   FormControl,
@@ -25,12 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ClientFormProps {
   client?: Partial<ClientFormData & { id?: string }>;
@@ -45,19 +40,19 @@ export default function ClientForm({ client, onSubmit, onCancel }: ClientFormPro
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
-      firstName: client?.firstName || '',
-      lastName: client?.lastName || '',
-      companyName: client?.companyName || '',
-      email: client?.email || '',
-      phone: client?.phone || '',
-      mobile: client?.mobile || '',
-      taxId: client?.taxId || '',
-      address: client?.address || '',
-      vatStatus: client?.vatStatus || '',
-      type: client?.type || 'Individual',
-      status: client?.status || 'active',
-      notes: client?.notes || '',
-    }
+      firstName: client?.firstName || "",
+      lastName: client?.lastName || "",
+      companyName: client?.companyName || "",
+      email: client?.email || "",
+      phone: client?.phone || "",
+      mobile: client?.mobile || "",
+      taxId: client?.taxId || "",
+      address: client?.address || "",
+      vatStatus: client?.vatStatus || "",
+      type: client?.type || "Individual",
+      status: client?.status || "active",
+      notes: client?.notes || "",
+    },
   });
 
   const handleSubmit = async (data: ClientFormData) => {

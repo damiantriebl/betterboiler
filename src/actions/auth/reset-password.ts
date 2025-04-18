@@ -6,7 +6,10 @@ import { forgotPasswordSchema } from "@/zod/authZod";
 import { authClient } from "@/auth-client";
 import { serverMessage } from "@/app/(auth)/forgot-password/page";
 
-export async function resetPasswordAction(prevState: { success: string | false; error: string | false; }, formData: FormData): Promise<serverMessage> {
+export async function resetPasswordAction(
+  prevState: { success: string | false; error: string | false },
+  formData: FormData,
+): Promise<serverMessage> {
   const password = formData.get("password") as string | null;
   const token = formData.get("token") as string | null;
   if (!password || !token) {
@@ -15,7 +18,7 @@ export async function resetPasswordAction(prevState: { success: string | false; 
 
   const { error } = await authClient.resetPassword({
     newPassword: password,
-    token: token
+    token: token,
   });
 
   if (error) {
@@ -24,11 +27,9 @@ export async function resetPasswordAction(prevState: { success: string | false; 
         error: "Usuario no encontrado. No existe ninguna cuenta registrada con este email.",
         success: false,
       };
-    }else if (error.message === "PASSWORD_TOO_SHORT") {
+    } else if (error.message === "PASSWORD_TOO_SHORT") {
       return { error: error.message || "contraseña muy corta.", success: false };
-
-    }
-     else {
+    } else {
       return { error: error.message || "Ocurrió un error inesperado.", success: false };
     }
   }

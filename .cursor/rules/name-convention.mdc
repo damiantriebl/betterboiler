@@ -19,3 +19,9 @@ alwaysApply: true
 - la carpeta components tiene hasta ahora admin para los componentes que son propios de la autentificacion, custom para todo el resto que son comunes, y UI los que son puros de shadcn
 - si un componente no se va a reutilizar y va a estar dentro de una sola page, va en la misma carpeta que la page.
 - en los actions, si necesitamos sacar la session actual de el usuario esta la funcion getOrganizationIdFromSession dentro del archivo [getOrganizationIdFromSession.ts](mdc:src/actions/getOrganizationIdFromSession.ts)
+
+# Test
+
+- los test se hacen con vitest y con https://testing-library.com/
+- tienen que estar en la misma carpeta donde estan los componentes 
+- tienen que tener nombreComponente.test.tsx la idea es que todos los compoentntes tengas sus test
