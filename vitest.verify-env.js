@@ -18,31 +18,26 @@ const filesToCheck = [
   'hooks/use-toast',
 ];
 
-console.log('🔍 Verificando resolución de aliases...');
+ console.log('🔍 Verificando resolución de aliases...');
+ const srcPath = resolve(__dirname, 'src');
 
-// Obtener la raíz del proyecto
-const srcPath = resolve(__dirname, 'src');
-
-// Verificar si los archivos existen
 for (const file of filesToCheck) {
-  const basePath = resolve(srcPath, file);
-  
-  // Intentar ambas extensiones comunes
-  const pathWithTsx = `${basePath}.tsx`;
-  const pathWithTs = `${basePath}.ts`;
-  
-  const existsTsx = fs.existsSync(pathWithTsx);
-  const existsTs = fs.existsSync(pathWithTs);
-  
-  if (existsTsx || existsTs) {
-    console.log(`✅ @/${file} -> ${existsTsx ? pathWithTsx : pathWithTs}`);
+  const base = resolve(srcPath, file);
+ const variants = [
+    `${base}.tsx`,
+    `${base}.ts`,
+    `${base}/index.tsx`,
+    `${base}/index.ts`,
+  ];
+  const found = variants.find(p => fs.existsSync(p));
+  if (found) {
+    console.log(`✅ @/${file} -> ${found}`);
   } else {
     console.error(`❌ No se pudo resolver: @/${file}`);
-    console.error(`   Intentado como: ${pathWithTsx}`);
-    console.error(`   Intentado como: ${pathWithTs}`);
+    variants.forEach(p => console.error(`   Intentado: ${p}`));
     process.exit(1);
   }
-}
+ }
 
-console.log('✅ Todos los aliases se resuelven correctamente.');
-process.exit(0); 
+ console.log('✅ Todos los aliases se resuelven correctamente.');
+ process.exit(0);
