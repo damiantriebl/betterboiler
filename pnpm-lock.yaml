@@ -151,7 +151,7 @@ importers:
         specifier: ^6.6.3
         version: 6.6.3
       '@testing-library/react':
-        specifier: ^16.2.0
+        specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.1.1(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@testing-library/user-event':
         specifier: ^14.6.1
@@ -193,7 +193,7 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.8.2)(vite@6.2.4(@types/node@20.17.30)(jiti@1.21.7)(yaml@2.7.1))
       vitest:
-        specifier: ^3.0.9
+        specifier: ^3.1.1
         version: 3.1.1(@types/node@20.17.30)(jiti@1.21.7)(jsdom@26.0.0)(yaml@2.7.1)
 
 packages:

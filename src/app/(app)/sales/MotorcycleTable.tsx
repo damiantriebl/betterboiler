@@ -1,3 +1,5 @@
+"use client";
+
 import {
     Table,
     TableBody,
@@ -8,8 +10,8 @@ import {
 } from "@/components/ui/table";
 import { Motorcycle, EstadoVenta } from "@/types/BikesType";
 import { formatPrice } from "@/lib/utils";
-import { useState } from "react";
-import { ChevronDown, ChevronUp, ChevronsUpDown, Trash2, PauseCircle, DollarSign, BookmarkPlus, MoreHorizontal } from "lucide-react";
+import { useState, useTransition, useOptimistic } from "react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Trash2, Pause, Play, DollarSign, BookmarkPlus, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -47,6 +49,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import DeleteConfirmationDialog from "./DeleteDialog";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status";
+
 
 interface MotorcycleTableProps {
     initialData: Motorcycle[];
@@ -64,7 +69,7 @@ const estadoVentaConfig: Record<EstadoVenta, { label: string, className: string 
     },
     [EstadoVenta.VENDIDO]: {
         label: "Vendido",
-        className: "border-red-500 text-red-500 bg-transparent hover:bg-red-100"
+        className: "border-violet-500 text-violet-500 bg-transparent hover:bg-violet-100"
     },
     [EstadoVenta.PAUSADO]: {
         label: "Pausado",
@@ -76,11 +81,11 @@ const estadoVentaConfig: Record<EstadoVenta, { label: string, className: string 
     },
     [EstadoVenta.PROCESANDO]: {
         label: "Procesando",
-        className: "border-purple-500 text-purple-500 bg-transparent hover:bg-purple-100"
+        className: "border-orange-500 text-orange-500 bg-transparent hover:bg-orange-100"
     },
     [EstadoVenta.ELIMINADO]: {
         label: "Eliminado",
-        className: "border-gray-500 text-gray-500 bg-transparent hover:bg-gray-100"
+        className: "border-green-500 text-green-500 bg-transparent hover:bg-green-100"
     }
 };
 
@@ -97,11 +102,6 @@ const actionConfig = {
         icon: Trash2,
         className: "text-red-600 border-red-600 hover:bg-red-100"
     },
-    pausar: {
-        label: "Pausar",
-        icon: PauseCircle,
-        className: "text-yellow-600 border-yellow-600 hover:bg-yellow-100"
-    },
     reservar: {
         label: "Reservar",
         icon: BookmarkPlus,
@@ -111,6 +111,8 @@ const actionConfig = {
 
 export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
     const router = useRouter();
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
     const [sortConfig, setSortConfig] = useState<SortConfig>({
         key: null,
         direction: null
@@ -119,6 +121,18 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
     const [pageSize, setPageSize] = useState(10);
     const [selectedMoto, setSelectedMoto] = useState<Motorcycle | null>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [motorcycles, setMotorcycles] = useState(initialData);
+
+    const [optimisticMotorcycles, addOptimisticUpdate] = useOptimistic(
+        motorcycles,
+        (state, optimisticValue: { motorcycleId: number, newStatus: EstadoVenta }) => {
+            return state.map(moto =>
+                moto.id === optimisticValue.motorcycleId.toString()
+                    ? { ...moto, estadoVenta: optimisticValue.newStatus }
+                    : moto
+            );
+        }
+    );
 
     const handleSort = (key: keyof Motorcycle) => {
         let direction: 'asc' | 'desc' | null = 'asc';
@@ -137,10 +151,10 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
 
     const getSortedData = () => {
         if (!sortConfig.key || !sortConfig.direction) {
-            return initialData;
+            return optimisticMotorcycles;
         }
 
-        return [...initialData].sort((a, b) => {
+        return [...optimisticMotorcycles].sort((a, b) => {
             const aValue = a[sortConfig.key!];
             const bValue = b[sortConfig.key!];
 
@@ -183,12 +197,91 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
         setCurrentPage(1); // Resetear a la primera página al cambiar el tamaño
     };
 
+    const handleToggleStatus = (motoId: number, currentStatus: EstadoVenta) => {
+        const newStatus = currentStatus === EstadoVenta.STOCK ? EstadoVenta.PAUSADO : EstadoVenta.STOCK;
+        const actionLabel = newStatus === EstadoVenta.PAUSADO ? 'pausando' : 'activando';
+
+        addOptimisticUpdate({ motorcycleId: motoId, newStatus });
+
+        startTransition(async () => {
+            try {
+                const result = await updateMotorcycleStatus(motoId, newStatus);
+
+                if (result.success) {
+                    setMotorcycles(current =>
+                        current.map(moto =>
+                            moto.id === motoId.toString()
+                                ? { ...moto, estadoVenta: newStatus }
+                                : moto
+                        )
+                    );
+
+                    toast({
+                        title: "Estado Actualizado",
+                        description: `Moto ${actionLabel === 'pausando' ? 'pausada' : 'activada'} correctamente.`,
+                    });
+                } else {
+                    setMotorcycles(current => [...current]);
+
+                    toast({
+                        variant: "destructive",
+                        title: "Error al actualizar",
+                        description: result.error || "No se pudo cambiar el estado.",
+                    });
+                }
+            } catch (error) {
+                setMotorcycles(current => [...current]);
+
+                toast({
+                    variant: "destructive",
+                    title: "Error inesperado",
+                    description: "Ocurrió un error al actualizar el estado.",
+                });
+            }
+        });
+    };
+
     const handleAction = (action: keyof typeof actionConfig, moto: Motorcycle) => {
         if (action === 'eliminar') {
             setSelectedMoto(moto);
             setShowDeleteDialog(true);
         } else if (action === 'vender') {
-            router.push(`/ventas/${moto.id}`);
+            const newStatus = EstadoVenta.PROCESANDO;
+
+            addOptimisticUpdate({ motorcycleId: Number(moto.id), newStatus });
+
+            startTransition(async () => {
+                try {
+                    const result = await updateMotorcycleStatus(Number(moto.id), newStatus);
+
+                    if (result.success) {
+                        setMotorcycles(current =>
+                            current.map(m =>
+                                m.id === moto.id ? { ...m, estadoVenta: newStatus } : m
+                            )
+                        );
+
+                        router.push(`/sales/${moto.id}`);
+
+                    } else {
+                        setMotorcycles(current => [...current]);
+
+                        toast({
+                            variant: "destructive",
+                            title: "Error al actualizar estado",
+                            description: result.error || "No se pudo cambiar el estado a PROCESANDO.",
+                        });
+                    }
+                } catch (error) {
+                    setMotorcycles(current => [...current]);
+
+                    toast({
+                        variant: "destructive",
+                        title: "Error inesperado",
+                        description: "Ocurrió un error al preparar la moto para venta.",
+                    });
+                }
+            });
         } else {
             console.log(`Acción ${action} en moto:`, moto);
         }
@@ -202,81 +295,111 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
         }
     };
 
+    const ActionButtons = ({ moto }: { moto: Motorcycle }) => {
+        const canToggleStatus = moto.estadoVenta === EstadoVenta.STOCK || moto.estadoVenta === EstadoVenta.PAUSADO;
+        const isPaused = moto.estadoVenta === EstadoVenta.PAUSADO;
+        const canSell = moto.estadoVenta === EstadoVenta.STOCK;
 
-    const ActionButtons = ({ moto }: { moto: Motorcycle }) => (
-        <div className="hidden xl:flex flex-col gap-2">
-            <div className="flex gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn("w-full flex items-center gap-1", actionConfig.vender.className)}
-                    onClick={() => handleAction('vender', moto)}
-                >
-                    <actionConfig.vender.icon className="h-4 w-4" />
-                    {actionConfig.vender.label}
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn("w-full flex items-center gap-1", actionConfig.eliminar.className)}
-                    onClick={() => handleAction('eliminar', moto)}
-                >
-                    <actionConfig.eliminar.icon className="h-4 w-4" />
-                    {actionConfig.eliminar.label}
-                </Button>
-            </div>
-            <div className="flex gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn("w-full flex items-center gap-1", actionConfig.pausar.className)}
-                    onClick={() => handleAction('pausar', moto)}
-                >
-                    <actionConfig.pausar.icon className="h-4 w-4" />
-                    {actionConfig.pausar.label}
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn("w-full flex items-center gap-1", actionConfig.reservar.className)}
-                    onClick={() => handleAction('reservar', moto)}
-                >
-                    <actionConfig.reservar.icon className="h-4 w-4" />
-                    {actionConfig.reservar.label}
-                </Button>
-            </div>
-        </div>
-    );
-
-    const ActionMenu = ({ moto }: { moto: Motorcycle }) => (
-        <div className="xl:hidden">
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
+        return (
+            <div className="hidden xl:flex flex-col gap-2">
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn("w-full flex items-center gap-1", actionConfig.vender.className)}
+                        onClick={() => handleAction('vender', moto)}
+                        disabled={!canSell}
+                    >
+                        <actionConfig.vender.icon className="h-4 w-4" />
+                        {actionConfig.vender.label}
                     </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[160px]">
-                    {(Object.keys(actionConfig) as Array<keyof typeof actionConfig>).map((action) => {
-                        const config = actionConfig[action];
-                        return (
-                            <DropdownMenuItem
-                                key={action}
-                                onClick={() => handleAction(action, moto)}
-                                className={cn(
-                                    "flex items-center gap-2 cursor-pointer",
-                                    config.className
-                                )}
-                            >
-                                <config.icon className="h-4 w-4" />
-                                {config.label}
-                            </DropdownMenuItem>
-                        );
-                    })}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
-    );
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn("w-full flex items-center gap-1", actionConfig.eliminar.className)}
+                        onClick={() => handleAction('eliminar', moto)}
+                    >
+                        <actionConfig.eliminar.icon className="h-4 w-4" />
+                        {actionConfig.eliminar.label}
+                    </Button>
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                            "w-full flex items-center gap-1",
+                            isPaused ? "text-green-600 border-green-600 hover:bg-green-100" : "text-yellow-600 border-yellow-600 hover:bg-yellow-100"
+                        )}
+                        onClick={() => handleToggleStatus(Number(moto.id), moto.estadoVenta)}
+                        disabled={!canToggleStatus || isPending}
+                    >
+                        {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                        {isPaused ? "Activar" : "Pausar"}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn("w-full flex items-center gap-1", actionConfig.reservar.className)}
+                        onClick={() => handleAction('reservar', moto)}
+                    >
+                        <actionConfig.reservar.icon className="h-4 w-4" />
+                        {actionConfig.reservar.label}
+                    </Button>
+                </div>
+            </div>
+        );
+    };
+
+    const ActionMenu = ({ moto }: { moto: Motorcycle }) => {
+        const canToggleStatus = moto.estadoVenta === EstadoVenta.STOCK || moto.estadoVenta === EstadoVenta.PAUSADO;
+        const isPaused = moto.estadoVenta === EstadoVenta.PAUSADO;
+        const canSell = moto.estadoVenta === EstadoVenta.STOCK;
+
+        return (
+            <div className="xl:hidden">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[160px]">
+                        <DropdownMenuItem
+                            onClick={() => handleToggleStatus(Number(moto.id), moto.estadoVenta)}
+                            disabled={!canToggleStatus || isPending}
+                            className={cn(
+                                "flex items-center gap-2 cursor-pointer",
+                                isPaused ? "text-green-600 focus:bg-green-100" : "text-yellow-600 focus:bg-yellow-100"
+                            )}
+                        >
+                            {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                            {isPaused ? "Activar" : "Pausar"}
+                        </DropdownMenuItem>
+                        {(Object.keys(actionConfig) as Array<keyof typeof actionConfig>).map((action) => {
+                            const config = actionConfig[action];
+                            const isDisabled = action === 'vender' && !canSell;
+
+                            return (
+                                <DropdownMenuItem
+                                    key={action}
+                                    onClick={() => handleAction(action, moto)}
+                                    disabled={isDisabled}
+                                    className={cn(
+                                        "flex items-center gap-2 cursor-pointer",
+                                        config.className.replace(/border-\S+/, '')
+                                    )}
+                                >
+                                    <config.icon className="h-4 w-4" />
+                                    {config.label}
+                                </DropdownMenuItem>
+                            );
+                        })}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        );
+    };
 
     return (
         <div >
@@ -392,7 +515,14 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
                 </TableHeader>
                 <TableBody>
                     {paginatedData.map((moto) => (
-                        <TableRow key={moto.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableRow
+                            key={moto.id}
+                            className="cursor-pointer hover:bg-muted/50 relative"
+                            style={{
+                                borderLeft: `6px solid ${moto.color}`,
+                            }}
+                        >
+                            {console.log('moto', moto)}
                             <TableCell className="font-medium">
                                 <div className="flex flex-col">
                                     <span className="text-xl font-bold">{moto.marca}</span>
@@ -408,7 +538,8 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
                                 <Badge
                                     variant="outline"
                                     className={cn(
-                                        "font-normal whitespace-nowrap"
+                                        "font-normal whitespace-nowrap",
+                                        estadoVentaConfig[moto.estadoVenta]?.className
                                     )}
                                 >
                                     {estadoVentaConfig[moto.estadoVenta]?.label ?? 'Desconocido'}
@@ -473,6 +604,6 @@ export default function MotorcycleTable({ initialData }: MotorcycleTableProps) {
                     </PaginationContent>
                 </Pagination>
             </div>
-        </div>
+        </div >
     );
 } 

@@ -78,10 +78,10 @@ export async function createMotorcycleBatch(prevState: CreateBatchState | null, 
                         colorId: unitData.colorId,      
                         mileage: unitData.mileage, // Use correct English name
                         branchId: unitData.branchId,   // Use correct English name
+                        state: unitData.state,
                         
                         // --- Other Required Data ---
                         organizationId: organizationId,
-                        state: "AVAILABLE", 
                     }
                 });
                 createdMotorcycles.push(newMotorcycle);

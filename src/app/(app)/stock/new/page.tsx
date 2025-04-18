@@ -118,7 +118,6 @@ export default async function NuevaMotoPage() {
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-6">Ingresar Nueva Moto</h1>
 
-            {/* Renderizar el Client Container pasándole los datos iniciales */}
             <div className="mb-12"> {/* Añadir margen inferior */}
                 <NewStockClientContainer
                     availableBrands={availableBrands}

@@ -56,10 +56,17 @@ export default function SignUp() {
 				},
 				onError: (ctx) => {
 					console.log("error", ctx);
-					toast({
-						title: "Algo paso",
-						description: ctx.error.message ?? "Algo salio mal.",
-					});
+					if (ctx.error.message === "User already exists") {
+						toast({
+							title: "Email ya registrado",
+							description: "Trate con otro email o recupere su contraseña.",
+						});
+					} else {
+						toast({
+							title: "Algo paso",
+							description: "Algo salio mal.",
+						});
+					}
 				},
 			}
 		);

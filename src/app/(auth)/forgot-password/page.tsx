@@ -13,12 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import LoadingButton from "@/components/custom/LoadingButton";
 import { useToast } from "@/hooks/use-toast";
-import { forgotPasswordAction } from "@/actions/auth/fotgot-password";
+import { forgotPasswordAction } from "@/actions/auth/forgot-password";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { forgotPasswordSchema } from "@/zod/authZod";
 import { z } from "zod";
 import { serverMessage } from "@/types/ServerMessageType";
+import { forgotPasswordSchema } from "@/zod/authZod";
 
 
 export default function ForgotPassword() {

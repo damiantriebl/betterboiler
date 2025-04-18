@@ -2,7 +2,7 @@
 "use server";
 
 import { z } from "zod";
-import { forgotPasswordSchema } from "@/zod/authZod";
+import { forgotPasswordSchema } from "@/zod/AuthZod";
 import { authClient } from "@/auth-client";
 import { serverMessage } from "@/types/ServerMessageType";
 

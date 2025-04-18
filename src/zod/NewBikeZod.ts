@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { EstadoVenta } from "@/types/BikesType"; // Importar el enum
 
 // Schema for ONE identification unit
 export const unitIdentificationSchema = z.object({
@@ -9,6 +10,7 @@ export const unitIdentificationSchema = z.object({
     colorId: z.coerce.number({ invalid_type_error: "Selecciona un color" }).int().positive("Selecciona un color"),
     mileage: z.coerce.number().int().nonnegative("Km no puede ser negativo").default(0), // kilometraje
     branchId: z.coerce.number({ invalid_type_error: "Selecciona una sucursal" }).int().positive("Selecciona una sucursal"), // sucursalId
+    state: z.nativeEnum(EstadoVenta).default(EstadoVenta.STOCK), // Añadir state
 });
 
 // Main schema for the BATCH

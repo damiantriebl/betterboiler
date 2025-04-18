@@ -39,9 +39,9 @@ const DisplayData = ({ label, value }: { label: string, value: string | number |
         ? <span className="text-muted-foreground italic">N/A</span>
         : Array.isArray(value) ? value.join(', ') : value;
     return (
-        <div className="grid grid-cols-3 gap-2 py-1 border-b border-dashed last:border-b-0">
-            <span className="font-medium text-sm col-span-1">{label}:</span>
-            <span className="text-sm col-span-2">{displayValue}</span>
+        <div className="flex gap-2 items-baseline py-1 border-b border-dashed last:border-b-0">
+            <span className="font-medium text-sm w-1/3 flex-none">{label}:</span>
+            <span className="text-sm flex-grow">{displayValue}</span>
         </div>
     );
 };
@@ -107,12 +107,13 @@ export function NewMotoForm({
 
     const addIdentificacion = () => {
         append({
-            idTemporal: Date.now(), // Convertimos a number
+            idTemporal: Date.now(),
             chassisNumber: "",
             engineNumber: "",
-            colorId: availableColors.length > 0 ? Number(availableColors[0].id) : 0, // Convertimos a number
+            colorId: availableColors.length > 0 ? Number(availableColors[0].id) : 0,
             mileage: 0,
-            branchId: availableBranches.length > 0 ? Number(availableBranches[0].id) : 0, // Convertimos a number
+            branchId: availableBranches.length > 0 ? Number(availableBranches[0].id) : 0,
+            state: EstadoVenta.STOCK,
         });
     };
 
@@ -224,12 +225,12 @@ export function NewMotoForm({
     );
 
     const renderProductoFields = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-wrap gap-4">
             <FormField
                 control={control}
                 name="modelId"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col md:col-span-2">
+                    <FormItem className="flex flex-col w-full">
                         <FormLabel>Marca y Modelo</FormLabel>
                         <BrandModelCombobox
                             brands={availableBrands}
@@ -251,7 +252,7 @@ export function NewMotoForm({
                 control={control}
                 name="year"
                 render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-full md:w-[calc(50%-0.5rem)]">
                         <FormLabel>Año</FormLabel>
                         <FormControl>
                             <Input
@@ -272,7 +273,7 @@ export function NewMotoForm({
                 control={control}
                 name="displacement"
                 render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-full md:w-[calc(50%-0.5rem)]">
                         <FormLabel>Cilindrada (cc)</FormLabel>
                         <FormControl>
                             <Input className="h-10" type="number" placeholder="Ej: 190" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? ''} />
@@ -281,7 +282,9 @@ export function NewMotoForm({
                     </FormItem>
                 )}
             />
-            {renderSupplierField()}
+            <div className="w-full md:w-[calc(50%-0.5rem)]">
+                {renderSupplierField()}
+            </div>
         </div>
     );
 
@@ -300,12 +303,12 @@ export function NewMotoForm({
                         <Trash2 className="h-4 w-4" />
                     </Button>
                     <h4 className="text-md font-medium border-b pb-1">Unidad {index + 1}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="flex flex-wrap gap-4">
                         <FormField
                             control={control}
                             name={`units.${index}.chassisNumber` as const}
                             render={({ field }) => (
-                                <FormItem>
+                                <FormItem className="w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]">
                                     <FormLabel>Nro. Chasis</FormLabel>
                                     <FormControl><Input className="h-10" placeholder="ABC123XYZ" {...field} /></FormControl>
                                     <FormMessage />
@@ -316,7 +319,7 @@ export function NewMotoForm({
                             control={control}
                             name={`units.${index}.engineNumber` as const}
                             render={({ field }) => (
-                                <FormItem>
+                                <FormItem className="w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]">
                                     <FormLabel>Nro. Motor</FormLabel>
                                     <FormControl><Input className="h-10" placeholder="Opcional" {...field} value={field.value ?? ''} /></FormControl>
                                     <FormMessage />
@@ -327,7 +330,7 @@ export function NewMotoForm({
                             control={control}
                             name={`units.${index}.colorId` as const}
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
+                                <FormItem className="flex flex-col w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]">
                                     <FormLabel>Color</FormLabel>
                                     <ColorSelector colors={availableColors} selectedColorId={field.value} onSelect={(id: number | null) => field.onChange(id)} />
                                     <FormMessage />
@@ -338,7 +341,7 @@ export function NewMotoForm({
                             control={control}
                             name={`units.${index}.mileage` as const}
                             render={({ field }) => (
-                                <FormItem>
+                                <FormItem className="w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]">
                                     <FormLabel>Kilometraje</FormLabel>
                                     <FormControl><Input className="h-10" type="number" placeholder="0" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? 0} /></FormControl>
                                     <FormMessage />
@@ -349,9 +352,39 @@ export function NewMotoForm({
                             control={control}
                             name={`units.${index}.branchId` as const}
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
+                                <FormItem className="flex flex-col w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]">
                                     <FormLabel>Sucursal</FormLabel>
                                     <SucursalSelector sucursales={availableBranches} selectedSucursalId={field.value} onSelect={(id: number | null) => field.onChange(id)} />
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={control}
+                            name={`units.${index}.state` as const}
+                            render={({ field }) => (
+                                <FormItem className="w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]">
+                                    <FormLabel>Estado</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value || EstadoVenta.STOCK}
+                                        value={field.value}
+                                        disabled={isSubmitting}
+
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Seleccionar estado..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {Object.values(EstadoVenta).map((estado) => (
+                                                <SelectItem key={estado} value={estado}>
+                                                    {estado}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -462,13 +495,13 @@ export function NewMotoForm({
         };
 
         return (
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div className="space-y-6 ">
+                <div className="flex flex-col sm:flex-row gap-4 items-end">
                     <FormField
                         control={control}
                         name="costPrice"
                         render={({ field }) => (
-                            <FormItem className="sm:col-span-2">
+                            <FormItem className="w-full sm:w-2/3">
                                 <FormLabel>Precio Costo</FormLabel>
                                 <FormControl>
                                     <Input className="h-10" type="number" placeholder="Costo base" {...field} onChange={e => handleNullableNumberChange(e, field)} value={field.value ?? ''} />
@@ -481,7 +514,7 @@ export function NewMotoForm({
                         control={control}
                         name="currency"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="w-full sm:w-1/3">
                                 <FormLabel>Moneda</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                     <FormControl>
@@ -502,8 +535,8 @@ export function NewMotoForm({
 
                 <Separator />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <div className="space-y-4 p-4 border rounded-md">
+                <div className="flex flex-col md:flex-row gap-x-6 gap-y-4">
+                    <div className="space-y-4 p-4 border rounded-md w-full md:w-1/2">
                         <h3 className="text-lg font-semibold mb-2 border-b pb-1">Precio Mayorista</h3>
                         <FormField control={control} name="ivaPorcentajeMayorista" render={({ field }) => (
                             <FormItem>
@@ -535,7 +568,7 @@ export function NewMotoForm({
                         )} />
                     </div>
 
-                    <div className="space-y-4 p-4 border rounded-md">
+                    <div className="space-y-4 p-4 border rounded-md w-full md:w-1/2">
                         <h3 className="text-lg font-semibold mb-2 border-b pb-1">Precio Minorista</h3>
                         <FormField control={control} name="ivaPorcentajeMinorista" render={({ field }) => (
                             <FormItem>
@@ -572,7 +605,7 @@ export function NewMotoForm({
     };
 
     const renderMultimediaFields = () => (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="flex flex-col gap-4">
             <FormField
                 control={control}
                 name="imageUrl"
@@ -592,12 +625,12 @@ export function NewMotoForm({
     );
 
     const renderLegalFields = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-wrap gap-4">
             <FormField
                 control={control}
                 name="licensePlate"
                 render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-full md:w-[calc(50%-0.5rem)]">
                         <FormLabel>Patente</FormLabel>
                         <FormControl><Input className="h-10" placeholder="Opcional" {...field} value={field.value ?? ''} /></FormControl>
                         <FormMessage />
@@ -622,9 +655,9 @@ export function NewMotoForm({
                 )}
 
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-5 mb-4 h-auto">
+                    <TabsList className="flex w-full justify-around mb-4 h-auto flex-wrap">
                         {TABS_ORDER.map(tab => (
-                            <TabsTrigger key={tab} value={tab} className="capitalize text-xs px-1 py-2 h-full">
+                            <TabsTrigger key={tab} value={tab} className="capitalize text-xs px-1 py-2 h-full flex-1 min-w-fit">
                                 {tab === 'identificacion' ? 'Unidades' : tab}
                             </TabsTrigger>
                         ))}
