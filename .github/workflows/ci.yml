@@ -34,10 +34,14 @@ jobs:
         name: Install Biome
         run: pnpm add -g @biomejs/biome
 
+      - if: matrix.task == 'test'
+        name: Install tsx
+        run: pnpm add -D tsx
+
       - name: Run ${{ matrix.task }}
         run: |
           case "${{ matrix.task }}" in
-            test) pnpm test ;;
+            test) pnpm tsx ./vitest.verify-env.ts && pnpm vitest run ;;
             lint) pnpm lint ;;
             format) biome format src --write --no-errors-on-unmatched ;;
             coverage) pnpm test:coverage ;;
@@ -49,5 +53,3 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
-      - if: matrix.task == 'test'
-        run: pnpm add -D esbuild-register
