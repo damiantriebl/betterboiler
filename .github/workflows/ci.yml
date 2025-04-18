@@ -11,42 +11,41 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        task: [test, lint, format, coverage]   # <- lo que antes eran 4 jobs
+        task: [test, lint, format, coverage]
     name: ${{ matrix.task }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4           # primero pnpm
+      - uses: pnpm/action-setup@v4
         with:
           version: 8
-          run_install: false                 # evitá doble install
+          run_install: false
 
-      - uses: actions/setup-node@v4          # ahora Node + cache
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
           cache-dependency-path: '**/pnpm-lock.yaml'
 
-      - run: pnpm install --no-frozen-lockfile  # crea el store
+      - run: pnpm install --no-frozen-lockfile
+
+      - if: matrix.task == 'format'
+        name: Install Biome
+        run: pnpm add -g @biomejs/biome
 
       - name: Run ${{ matrix.task }}
         run: |
           case "${{ matrix.task }}" in
             test) pnpm test ;;
             lint) pnpm lint ;;
-            format) pnpm format ;;
+            format) biome format src --write --no-errors-on-unmatched ;;
             coverage) pnpm test:coverage ;;
           esac
 
-      - if: matrix.task == 'coverage'        # subí el reporte
+      - if: matrix.task == 'coverage'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
           retention-days: 7
-          
-      - if: matrix.task == 'format'
-        name: Check formatting
-        run: biome format src --write --no-errors-on-unmatched
-

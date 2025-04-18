@@ -11,7 +11,8 @@
 		"format": "biome format src --write --no-errors-on-unmatched",
 		"lint": "biome lint src",
 		"fix:lint": "biome lint src --apply",
-		"test": "vitest run",
+		"verify:aliases": "node -r esbuild-register ./vitest.verify-env.ts",
+		"test": "node -r esbuild-register ./vitest.verify-env.ts && vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
 	},
