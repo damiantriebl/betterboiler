@@ -16,17 +16,22 @@ jobs:
       matrix:
         task: [verify, test, lint, format, coverage]
     name: ${{ matrix.task }}
-
-     steps:
+    steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
-        with: { version: 8, run_install: false }
+        with:
+          version: 8
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
           cache-dependency-path: '**/pnpm-lock.yaml'
-      - run: pnpm install --no-frozen-lockfile
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
 
       - if: matrix.task == 'verify'
         name: Verify aliases
@@ -39,10 +44,21 @@ jobs:
       - name: Run ${{ matrix.task }}
         run: |
           case "${{ matrix.task }}" in
-            test)     pnpm run test ;;
-            lint)     pnpm run lint ;;
-            format)   pnpm run format ;;
-            coverage) pnpm run test:coverage ;;
+            verify)
+              pnpm run verify:aliases
+              ;;
+            test)
+              pnpm run test
+              ;;
+            lint)
+              pnpm run lint
+              ;;
+            format)
+              pnpm run format
+              ;;
+            coverage)
+              pnpm run test:coverage
+              ;;
           esac
 
       - if: matrix.task == 'coverage'
