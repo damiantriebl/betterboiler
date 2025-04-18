@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ForgotPassword from "../app/(auth)/forgot-password/page";
-import { setupServerAction } from "./setup";
 
-// Configurar mocks para server actions
-setupServerAction();
+
 
 describe("ForgotPassword Component", () => {
   beforeEach(() => {
