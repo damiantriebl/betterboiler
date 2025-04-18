@@ -80,4 +80,7 @@ jobs:
         run: pnpm add -g prettier
 
       - name: Check formatting
-        run: prettier --check "src/**/*.{ts,tsx,js,jsx,json,css,scss,md}" 
+        run: prettier --check "src/**/*.{ts,tsx,js,jsx,json,css,scss,md}"
+
+      - name: Check types
+        run: pnpm exec tsc --noEmit 

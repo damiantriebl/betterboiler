@@ -8,13 +8,13 @@ El proyecto tiene configurados varios scripts para ejecutar las pruebas:
 
 ```bash
 # Ejecutar todas las pruebas
-npm test
+pnpm test
 
 # Ejecutar pruebas en modo watch (útil durante el desarrollo)
-npm run test:watch
+pnpm test:watch
 
 # Ejecutar pruebas con informe de cobertura
-npm run test:coverage
+pnpm test:coverage
 ```
 
 ## Estructura de Pruebas
@@ -98,7 +98,7 @@ vi.mocked(fetchDatos).mockResolvedValue({ datos: [] });
 
 ## GitHub Actions
 
-Este proyecto tiene configurados workflows de GitHub Actions para ejecutar pruebas automáticamente:
+Este proyecto tiene configurados workflows de GitHub Actions que usan pnpm para ejecutar pruebas automáticamente:
 
 - Las pruebas se ejecutan automáticamente en cada push y pull request
 - Se genera un informe de cobertura de código
