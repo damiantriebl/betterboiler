@@ -68,7 +68,9 @@ export default async function UsersTable() {
                 <OrganizationSelect
                   userId={user.id}
                   organizations={organizations ?? []}
-                  userActualOrganization={(user as User & { organization: Organization }).organization}
+                  userActualOrganization={
+                    (user as User & { organization: Organization }).organization
+                  }
                 />
               </TableCell>
             )}

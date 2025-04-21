@@ -5,10 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
-import { Loader2, UserPlus, X, ChevronsUpDown, ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import {
+  Loader2,
+  UserPlus,
+  X,
+  ChevronsUpDown,
+  ChevronDown,
+  ChevronUp,
+  MoreHorizontal,
+} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { getClients } from "@/actions/clients/get-clients";
-import { Client, MotorcycleState, Motorcycle as PrismaMotorcycle } from "@prisma/client";
+import { type Client, MotorcycleState, Motorcycle as PrismaMotorcycle } from "@prisma/client";
 import {
   Table,
   TableBody,
@@ -44,7 +52,10 @@ import AddClientModal from "@/components/client/AddClientModal";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status";
 import { useToast } from "@/hooks/use-toast";
-import { getMotorcycleById, type MotorcycleWithRelations as ServerMotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
+import {
+  getMotorcycleById,
+  type MotorcycleWithRelations as ServerMotorcycleWithRelations,
+} from "@/actions/sales/get-motorcycle-by-id";
 
 // Definir nuestro tipo local compatible con el servidor
 type MotorcycleWithRelations = ServerMotorcycleWithRelations & {
@@ -63,12 +74,13 @@ function Stepper({ currentStep, steps }: StepperProps) {
         <div key={step} className="flex items-center">
           <div
             className={`flex items-center justify-center w-8 h-8 rounded-full border-2 
-                        ${index < currentStep
-                ? "bg-green-500 border-green-500 text-white"
-                : index === currentStep
-                  ? "border-blue-500 text-blue-500"
-                  : "border-gray-300 text-gray-300"
-              }`}
+                        ${
+                          index < currentStep
+                            ? "bg-green-500 border-green-500 text-white"
+                            : index === currentStep
+                              ? "border-blue-500 text-blue-500"
+                              : "border-gray-300 text-gray-300"
+                        }`}
           >
             {index < currentStep ? "✓" : index + 1}
           </div>
@@ -111,9 +123,9 @@ interface SaleProcessState {
 
 export default function VentaPage({ params }: { params: { id: string } }) {
   const searchParams = useSearchParams();
-  const isReserved = searchParams.get('reserved') === 'true';
-  const reservationAmount = searchParams.get('amount') ? Number(searchParams.get('amount')) : 0;
-  const initialClientIdFromReservation = searchParams.get('clientId') || null; // Obtener ID inicial si viene de reserva
+  const isReserved = searchParams.get("reserved") === "true";
+  const reservationAmount = searchParams.get("amount") ? Number(searchParams.get("amount")) : 0;
+  const initialClientIdFromReservation = searchParams.get("clientId") || null; // Obtener ID inicial si viene de reserva
 
   // --- Estado Local (no persistente o cargado después) ---
   const [moto, setMoto] = useState<MotorcycleWithRelations | null>(null);
@@ -122,7 +134,10 @@ export default function VentaPage({ params }: { params: { id: string } }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
   // Sort state for client table
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Client | null; direction: "asc" | "desc" | null }>({ key: null, direction: null });
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Client | null;
+    direction: "asc" | "desc" | null;
+  }>({ key: null, direction: null });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   // --- Fin Estado Local ---
@@ -137,10 +152,17 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     // Establecer cliente inicial SOLO si viene de una reserva, sino null
     selectedClientId: isReserved ? initialClientIdFromReservation : null,
     buyerData: {
-      nombre: "", apellido: "", dni: "", telefono: "", email: "", direccion: "",
+      nombre: "",
+      apellido: "",
+      dni: "",
+      telefono: "",
+      email: "",
+      direccion: "",
     },
     paymentData: {
-      metodoPago: "", cuotas: 1, banco: "",
+      metodoPago: "",
+      cuotas: 1,
+      banco: "",
     },
     // Mostrar tabla por defecto, excepto si viene de reserva con cliente
     showClientTable: !(isReserved && initialClientIdFromReservation),
@@ -148,22 +170,25 @@ export default function VentaPage({ params }: { params: { id: string } }) {
 
   const [saleState, setSaleState] = useLocalStorage<SaleProcessState>(
     localStorageKey,
-    initialSaleState
+    initialSaleState,
   );
   // --- Fin Estado Persistente ---
 
-  // --- useOptimistic --- 
+  // --- useOptimistic ---
   const [optimisticMotoState, addOptimisticUpdate] = useOptimistic(
     saleState,
-    (currentState: SaleProcessState, optimisticValue: { motorcycleId: number; newStatus: MotorcycleState }) => {
+    (
+      currentState: SaleProcessState,
+      optimisticValue: { motorcycleId: number; newStatus: MotorcycleState },
+    ) => {
       console.warn("Lógica optimista necesita implementación correcta");
       return currentState;
-    }
+    },
   );
   // --- Fin useOptimistic ---
 
-  // --- Derivar selectedClient del estado persistente --- 
-  const selectedClient = clients.find(c => c.id === saleState.selectedClientId) || null;
+  // --- Derivar selectedClient del estado persistente ---
+  const selectedClient = clients.find((c) => c.id === saleState.selectedClientId) || null;
   // --- Fin Derivación ---
 
   // --- Hook useTransition ---
@@ -185,7 +210,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
           toast({
             variant: "destructive",
             title: "Error",
-            description: "No se pudo encontrar la moto seleccionada."
+            description: "No se pudo encontrar la moto seleccionada.",
           });
         }
       } catch (error) {
@@ -193,7 +218,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Ocurrió un error al cargar los datos de la moto."
+          description: "Ocurrió un error al cargar los datos de la moto.",
         });
       } finally {
         setLoadingMoto(false);
@@ -206,15 +231,15 @@ export default function VentaPage({ params }: { params: { id: string } }) {
         const clientsList = await getClients();
         setClients(clientsList);
 
-        // Si viene de reserva y tenemos el ID del cliente, 
+        // Si viene de reserva y tenemos el ID del cliente,
         // asegurar que los datos del comprador en el estado persistente se actualicen
         if (isReserved && saleState.selectedClientId) {
-          const reservedClientData = clientsList.find(c => c.id === saleState.selectedClientId);
+          const reservedClientData = clientsList.find((c) => c.id === saleState.selectedClientId);
           if (reservedClientData) {
-            // Solo actualiza buyerData si está vacío, para no sobrescribir datos ya ingresados 
+            // Solo actualiza buyerData si está vacío, para no sobrescribir datos ya ingresados
             // si el usuario navegó atrás y adelante.
             if (!saleState.buyerData.nombre && !saleState.buyerData.email) {
-              setSaleState(prevState => ({
+              setSaleState((prevState) => ({
                 ...prevState,
                 buyerData: {
                   nombre: reservedClientData.firstName,
@@ -223,21 +248,31 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   telefono: reservedClientData.phone || reservedClientData.mobile || "",
                   email: reservedClientData.email,
                   direccion: reservedClientData.address || "",
-                }
+                },
               }));
             }
           }
         }
-
-      } catch (error) { console.error("Error al cargar clientes:", error); }
-      finally { setLoadingClients(false); }
+      } catch (error) {
+        console.error("Error al cargar clientes:", error);
+      } finally {
+        setLoadingClients(false);
+      }
     };
 
     loadMotorcycle();
     loadClients();
-  }, [params.id, isReserved, toast]);
+  }, [
+    params.id,
+    isReserved,
+    toast,
+    saleState.selectedClientId,
+    saleState.buyerData.nombre,
+    saleState.buyerData.email,
+    setSaleState,
+  ]);
 
-  // --- FUNCIONES RESTAURADAS/ADAPTADAS --- 
+  // --- FUNCIONES RESTAURADAS/ADAPTADAS ---
 
   // Función placeholder para Editar Info
   const handleEditInfo = () => {
@@ -267,8 +302,8 @@ export default function VentaPage({ params }: { params: { id: string } }) {
           : bValue.localeCompare(aValue);
       }
       // Añadir comparación numérica si es necesario para otros campos
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue;
       }
       return 0; // Fallback
     });
@@ -304,10 +339,10 @@ export default function VentaPage({ params }: { params: { id: string } }) {
 
   // --- FIN FUNCIONES RESTAURADAS/ADAPTADAS ---
 
-  // --- Actualizar funciones para usar saleState y setSaleState --- 
+  // --- Actualizar funciones para usar saleState y setSaleState ---
 
   const handleSelectClient = (client: Client) => {
-    setSaleState(prevState => ({
+    setSaleState((prevState) => ({
       ...prevState,
       selectedClientId: client.id,
       showClientTable: false, // Ocultar tabla al seleccionar
@@ -319,23 +354,23 @@ export default function VentaPage({ params }: { params: { id: string } }) {
         telefono: client.phone || client.mobile || "",
         email: client.email,
         direccion: client.address || "",
-      }
+      },
     }));
   };
 
   const handleCancelClientSelection = () => {
-    setSaleState(prevState => ({
+    setSaleState((prevState) => ({
       ...prevState,
       selectedClientId: null,
       showClientTable: true, // Mostrar tabla de nuevo
       // Limpiar buyerData al cancelar selección
-      buyerData: initialSaleState.buyerData
+      buyerData: initialSaleState.buyerData,
     }));
   };
 
   const handleBuyerDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setSaleState(prevState => ({
+    setSaleState((prevState) => ({
       ...prevState,
       buyerData: { ...prevState.buyerData, [name]: value },
     }));
@@ -343,9 +378,12 @@ export default function VentaPage({ params }: { params: { id: string } }) {
 
   const handlePaymentDataChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setSaleState(prevState => ({
+    setSaleState((prevState) => ({
       ...prevState,
-      paymentData: { ...prevState.paymentData, [name]: name === "cuotas" ? Number.parseInt(value) : value },
+      paymentData: {
+        ...prevState.paymentData,
+        [name]: name === "cuotas" ? Number.parseInt(value) : value,
+      },
     }));
   };
 
@@ -367,17 +405,19 @@ export default function VentaPage({ params }: { params: { id: string } }) {
         pago: saleState.paymentData,
       });
     }
-    setSaleState(prevState => ({ ...prevState, currentStep: prevState.currentStep + 1 }));
+    setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep + 1 }));
   };
 
   const handleBack = () => {
     if (saleState.currentStep === 0) return;
-    setSaleState(prevState => ({ ...prevState, currentStep: prevState.currentStep - 1 }));
+    setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep - 1 }));
   };
 
   // Callback para el modal AddClientModal (ya existente y correcto)
   const handleClientAdded = (newClient: Client) => {
-    setClients(prevClients => [newClient, ...prevClients].sort((a, b) => a.firstName.localeCompare(b.firstName)));
+    setClients((prevClients) =>
+      [newClient, ...prevClients].sort((a, b) => a.firstName.localeCompare(b.firstName)),
+    );
     handleSelectClient(newClient); // Esta función ya actualiza saleState
   };
 
@@ -391,14 +431,14 @@ export default function VentaPage({ params }: { params: { id: string } }) {
           setClients((current) =>
             current.map((moto) =>
               moto.id === motoId.toString() ? { ...moto, estadoVenta: newStatus } : moto,
-            )
+            ),
           );
-          toast({ title: "Proceso Cancelado", /*...*/ });
+          toast({ title: "Proceso Cancelado" /*...*/ });
         } else {
-          toast({ variant: "destructive", title: "Error al Cancelar", /*...*/ });
+          toast({ variant: "destructive", title: "Error al Cancelar" /*...*/ });
         }
       } catch (error) {
-        toast({ variant: "destructive", title: "Error Inesperado", /*...*/ });
+        toast({ variant: "destructive", title: "Error Inesperado" /*...*/ });
         console.error("Error cancelando proceso:", error);
       }
     });
@@ -406,19 +446,24 @@ export default function VentaPage({ params }: { params: { id: string } }) {
 
   // ... (resto de funciones como handleSort, getSortIcon, etc., que no necesitan cambiar) ...
 
-  // --- Actualizar renderStepContent para mostrar datos reales de la moto --- 
+  // --- Actualizar renderStepContent para mostrar datos reales de la moto ---
   const renderStepContent = () => {
-    switch (saleState.currentStep) { // <-- Usar saleState.currentStep
+    switch (
+      saleState.currentStep // <-- Usar saleState.currentStep
+    ) {
       case 0:
         return (
           <div className="space-y-6">
             {isReserved && (
               <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mb-4">
-                <h3 className="text-lg font-semibold text-blue-700 mb-2">
-                  Moto Reservada
-                </h3>
-                <p>Esta moto tiene una reserva de <span className="font-bold">{formatPrice(reservationAmount)}</span>.</p>
-                <p className="text-sm text-blue-600">El monto de la reserva será descontado del precio final.</p>
+                <h3 className="text-lg font-semibold text-blue-700 mb-2">Moto Reservada</h3>
+                <p>
+                  Esta moto tiene una reserva de{" "}
+                  <span className="font-bold">{formatPrice(reservationAmount)}</span>.
+                </p>
+                <p className="text-sm text-blue-600">
+                  El monto de la reserva será descontado del precio final.
+                </p>
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">
@@ -426,22 +471,27 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 <h3 className="text-lg font-semibold mb-2">Detalles de la Moto</h3>
                 <div className="space-y-2">
                   <p>
-                    <span className="font-medium">Marca:</span> {moto?.brand?.name || 'No disponible'}
+                    <span className="font-medium">Marca:</span>{" "}
+                    {moto?.brand?.name || "No disponible"}
                   </p>
                   <p>
-                    <span className="font-medium">Modelo:</span> {moto?.model?.name || 'No disponible'}
+                    <span className="font-medium">Modelo:</span>{" "}
+                    {moto?.model?.name || "No disponible"}
                   </p>
                   <p>
-                    <span className="font-medium">Año:</span> {moto?.year || 'No disponible'}
+                    <span className="font-medium">Año:</span> {moto?.year || "No disponible"}
                   </p>
                   <p>
-                    <span className="font-medium">Cilindrada:</span> {moto?.displacement || 'No disponible'}cc
+                    <span className="font-medium">Cilindrada:</span>{" "}
+                    {moto?.displacement || "No disponible"}cc
                   </p>
                   <p>
-                    <span className="font-medium">Número de Chasis:</span> {moto?.chassisNumber || 'No disponible'}
+                    <span className="font-medium">Número de Chasis:</span>{" "}
+                    {moto?.chassisNumber || "No disponible"}
                   </p>
                   <p>
-                    <span className="font-medium">Color:</span> {moto?.color?.name || 'No disponible'}
+                    <span className="font-medium">Color:</span>{" "}
+                    {moto?.color?.name || "No disponible"}
                   </p>
                 </div>
               </div>
@@ -449,19 +499,23 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 <h3 className="text-lg font-semibold mb-2">Estado y Ubicación</h3>
                 <div className="space-y-2">
                   <p>
-                    <span className="font-medium">Estado:</span> {moto?.state === MotorcycleState.STOCK ? 'Disponible' : moto?.state}
+                    <span className="font-medium">Estado:</span>{" "}
+                    {moto?.state === MotorcycleState.STOCK ? "Disponible" : moto?.state}
                   </p>
                   <p>
                     <span className="font-medium">Kilometraje:</span> {moto?.mileage || 0}km
                   </p>
                   <p>
-                    <span className="font-medium">Estado de Venta:</span> {moto?.estadoVenta || moto?.state || 'No disponible'}
+                    <span className="font-medium">Estado de Venta:</span>{" "}
+                    {moto?.estadoVenta || moto?.state || "No disponible"}
                   </p>
                   <p>
-                    <span className="font-medium">Ubicación:</span> {moto?.branch?.name || 'No disponible'}
+                    <span className="font-medium">Ubicación:</span>{" "}
+                    {moto?.branch?.name || "No disponible"}
                   </p>
                   <p>
-                    <span className="font-medium">Precio:</span> {formatPrice(moto?.retailPrice ?? 0)}
+                    <span className="font-medium">Precio:</span>{" "}
+                    {formatPrice(moto?.retailPrice ?? 0)}
                   </p>
                 </div>
               </div>
@@ -481,7 +535,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
               <div className="bg-blue-50 p-4 rounded-lg mb-4 flex justify-between items-center">
                 <div>
                   <p className="font-medium text-blue-700">Cliente seleccionado:</p>
-                  <p className="text-lg font-bold">{selectedClient.firstName} {selectedClient.lastName}</p>
+                  <p className="text-lg font-bold">
+                    {selectedClient.firstName} {selectedClient.lastName}
+                  </p>
                   <p>{selectedClient.email}</p>
                 </div>
                 {!isReserved && (
@@ -526,13 +582,21 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                         <TableHeader>
                           <TableRow>
                             <TableHead>
-                              <Button variant="ghost" onClick={() => handleSort("firstName")} className="p-0 font-medium">
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleSort("firstName")}
+                                className="p-0 font-medium"
+                              >
                                 Nombre
                                 {getSortIcon("firstName")}
                               </Button>
                             </TableHead>
                             <TableHead>
-                              <Button variant="ghost" onClick={() => handleSort("email")} className="p-0 font-medium">
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleSort("email")}
+                                className="p-0 font-medium"
+                              >
                                 Email
                                 {getSortIcon("email")}
                               </Button>
@@ -545,7 +609,10 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                         <TableBody>
                           {paginatedClients.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                              <TableCell
+                                colSpan={5}
+                                className="h-24 text-center text-muted-foreground"
+                              >
                                 No hay clientes disponibles.
                               </TableCell>
                             </TableRow>
@@ -582,7 +649,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                     {paginatedClients.length > 0 && (
                       <div className="flex items-center justify-between py-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Clientes por página:</span>
+                          <span className="text-sm text-muted-foreground">
+                            Clientes por página:
+                          </span>
                           <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
                             <SelectTrigger className="w-[70px] h-8">
                               <SelectValue placeholder={pageSize.toString()} />
@@ -602,11 +671,13 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                             <PaginationItem>
                               <PaginationPrevious
                                 onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                                className={cn(currentPage === 1 && "pointer-events-none opacity-50")}
+                                className={cn(
+                                  currentPage === 1 && "pointer-events-none opacity-50",
+                                )}
                               />
                             </PaginationItem>
                             {Array.from({ length: totalPages }).map((_, i) => (
-                              <PaginationItem key={i}>
+                              <PaginationItem key={`page-${i + 1}`}>
                                 <PaginationLink
                                   isActive={currentPage === i + 1}
                                   onClick={() => handlePageChange(i + 1)}
@@ -617,8 +688,12 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                             ))}
                             <PaginationItem>
                               <PaginationNext
-                                onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-                                className={cn(currentPage === totalPages && "pointer-events-none opacity-50")}
+                                onClick={() =>
+                                  currentPage < totalPages && handlePageChange(currentPage + 1)
+                                }
+                                className={cn(
+                                  currentPage === totalPages && "pointer-events-none opacity-50",
+                                )}
                               />
                             </PaginationItem>
                           </PaginationContent>
@@ -631,7 +706,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label htmlFor="nombre" className="block">Nombre</label>
+                  <label htmlFor="nombre" className="block">
+                    Nombre
+                  </label>
                   <input
                     id="nombre"
                     type="text"
@@ -644,7 +721,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="apellido" className="block">Apellido</label>
+                  <label htmlFor="apellido" className="block">
+                    Apellido
+                  </label>
                   <input
                     id="apellido"
                     type="text"
@@ -657,7 +736,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="dni" className="block">DNI</label>
+                  <label htmlFor="dni" className="block">
+                    DNI
+                  </label>
                   <input
                     id="dni"
                     type="text"
@@ -670,7 +751,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="telefono" className="block">Teléfono</label>
+                  <label htmlFor="telefono" className="block">
+                    Teléfono
+                  </label>
                   <input
                     id="telefono"
                     type="tel"
@@ -683,7 +766,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="email" className="block">Email</label>
+                  <label htmlFor="email" className="block">
+                    Email
+                  </label>
                   <input
                     id="email"
                     type="email"
@@ -696,7 +781,9 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="direccion" className="block">Dirección</label>
+                  <label htmlFor="direccion" className="block">
+                    Dirección
+                  </label>
                   <input
                     id="direccion"
                     type="text"
@@ -720,10 +807,14 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             {isReserved && (
               <div className="p-4 bg-blue-50 rounded-lg mb-4">
                 <p className="font-medium">
-                  Monto de reserva: <span className="text-blue-700 font-bold">{formatPrice(reservationAmount)}</span>
+                  Monto de reserva:{" "}
+                  <span className="text-blue-700 font-bold">{formatPrice(reservationAmount)}</span>
                 </p>
                 <p className="font-medium">
-                  Monto restante: <span className="text-green-700 font-bold">{formatPrice((moto?.retailPrice ?? 0) - reservationAmount)}</span>
+                  Monto restante:{" "}
+                  <span className="text-green-700 font-bold">
+                    {formatPrice((moto?.retailPrice ?? 0) - reservationAmount)}
+                  </span>
                 </p>
               </div>
             )}
@@ -731,10 +822,12 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             <div className="p-4 bg-gray-50 rounded-lg mb-4">
               <h4 className="font-medium text-gray-700 mb-2">Resumen de la moto:</h4>
               <p>
-                <span className="font-medium">Moto:</span> {moto?.brand?.name} {moto?.model?.name} ({moto?.year})
+                <span className="font-medium">Moto:</span> {moto?.brand?.name} {moto?.model?.name} (
+                {moto?.year})
               </p>
               <p>
-                <span className="font-medium">Precio Total:</span> {formatPrice(moto?.retailPrice ?? 0)}
+                <span className="font-medium">Precio Total:</span>{" "}
+                {formatPrice(moto?.retailPrice ?? 0)}
               </p>
             </div>
 
@@ -812,19 +905,38 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                 </p>
                 {isReserved && (
                   <div className="p-4 bg-blue-50 rounded-lg mb-4">
-                    <p>Se aplicó un monto de reserva de <span className="font-bold">{formatPrice(reservationAmount)}</span>.</p>
+                    <p>
+                      Se aplicó un monto de reserva de{" "}
+                      <span className="font-bold">{formatPrice(reservationAmount)}</span>.
+                    </p>
                   </div>
                 )}
                 <div className="p-4 bg-green-50 rounded-lg">
                   <p className="font-medium mb-2">Resumen de la venta:</p>
-                  <p><span className="font-medium">Cliente:</span> {saleState.buyerData.nombre} {saleState.buyerData.apellido}</p>
-                  <p><span className="font-medium">Moto:</span> {moto?.brand?.name} {moto?.model?.name} ({moto?.year})</p>
-                  <p><span className="font-medium">Precio:</span> {formatPrice(moto?.retailPrice ?? 0)}</p>
-                  <p><span className="font-medium">Método de pago:</span> {saleState.paymentData.metodoPago}</p>
-                  {saleState.paymentData.metodoPago === 'financiacion' && (
-                    <p><span className="font-medium">Cuotas:</span> {saleState.paymentData.cuotas}</p>
+                  <p>
+                    <span className="font-medium">Cliente:</span> {saleState.buyerData.nombre}{" "}
+                    {saleState.buyerData.apellido}
+                  </p>
+                  <p>
+                    <span className="font-medium">Moto:</span> {moto?.brand?.name}{" "}
+                    {moto?.model?.name} ({moto?.year})
+                  </p>
+                  <p>
+                    <span className="font-medium">Precio:</span>{" "}
+                    {formatPrice(moto?.retailPrice ?? 0)}
+                  </p>
+                  <p>
+                    <span className="font-medium">Método de pago:</span>{" "}
+                    {saleState.paymentData.metodoPago}
+                  </p>
+                  {saleState.paymentData.metodoPago === "financiacion" && (
+                    <p>
+                      <span className="font-medium">Cuotas:</span> {saleState.paymentData.cuotas}
+                    </p>
                   )}
-                  <p className="mt-2">Los documentos de la venta serán enviados al email registrado.</p>
+                  <p className="mt-2">
+                    Los documentos de la venta serán enviados al email registrado.
+                  </p>
                 </div>
               </div>
             )}
@@ -844,7 +956,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
   // Para recuperar valores
   const getReservationFromLocalStorage = (motorcycleId: number) => {
     const key = `reservation-${motorcycleId}`;
-    return parseFloat(localStorage.getItem(key) || "0");
+    return Number.parseFloat(localStorage.getItem(key) || "0");
   };
 
   // Al cambiar el valor de reserva
@@ -857,7 +969,11 @@ export default function VentaPage({ params }: { params: { id: string } }) {
   };
 
   if (!moto) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (

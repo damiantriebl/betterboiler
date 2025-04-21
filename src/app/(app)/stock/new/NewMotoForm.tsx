@@ -75,9 +75,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-      value === undefined ||
-      (Array.isArray(value) && value.length === 0) ||
-      value === "" ? (
+    value === undefined ||
+    (Array.isArray(value) && value.length === 0) ||
+    value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -195,7 +195,7 @@ export function NewMotoForm({
 
   const handleNullableNumberChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: ControllerRenderProps<FieldValues, string>
+    field: ControllerRenderProps<FieldValues, string>,
   ) => {
     field.onChange(e.target.value === "" ? null : e.target.valueAsNumber);
   };
@@ -515,36 +515,42 @@ export function NewMotoForm({
   );
 
   const renderPreciosFields = () => {
-    const calculateFinalPrice = useCallback((
-      costo: number | null,
-      ivaP: number | null,
-      otrosImp: number | null,
-      gananciaP: number | null,
-    ) => {
-      const pc = costo ?? 0;
-      const iva = ivaP ?? 0;
-      const otros = otrosImp ?? 0;
-      const ganancia = gananciaP ?? 0;
-      if (pc <= 0) return otros;
-      const final = pc * (1 + ganancia / 100) * (1 + iva / 100) + otros;
-      return Number.parseFloat(final.toFixed(2));
-    }, []);
+    const calculateFinalPrice = useCallback(
+      (
+        costo: number | null,
+        ivaP: number | null,
+        otrosImp: number | null,
+        gananciaP: number | null,
+      ) => {
+        const pc = costo ?? 0;
+        const iva = ivaP ?? 0;
+        const otros = otrosImp ?? 0;
+        const ganancia = gananciaP ?? 0;
+        if (pc <= 0) return otros;
+        const final = pc * (1 + ganancia / 100) * (1 + iva / 100) + otros;
+        return Number.parseFloat(final.toFixed(2));
+      },
+      [],
+    );
 
-    const calculateGainPercentage = useCallback((
-      costo: number | null,
-      precioFinal: number | null,
-      ivaP: number | null,
-      otrosImp: number | null,
-    ) => {
-      const pc = costo ?? 0;
-      const pf = precioFinal ?? 0;
-      const iva = ivaP ?? 0;
-      const otros = otrosImp ?? 0;
-      const factorIVA = 1 + iva / 100;
-      if (pc <= 0 || factorIVA === 0) return 0;
-      const ganancia = 100 * ((pf - otros) / (pc * factorIVA) - 1);
-      return Number.parseFloat(ganancia.toFixed(2));
-    }, []);
+    const calculateGainPercentage = useCallback(
+      (
+        costo: number | null,
+        precioFinal: number | null,
+        ivaP: number | null,
+        otrosImp: number | null,
+      ) => {
+        const pc = costo ?? 0;
+        const pf = precioFinal ?? 0;
+        const iva = ivaP ?? 0;
+        const otros = otrosImp ?? 0;
+        const factorIVA = 1 + iva / 100;
+        if (pc <= 0 || factorIVA === 0) return 0;
+        const ganancia = 100 * ((pf - otros) / (pc * factorIVA) - 1);
+        return Number.parseFloat(ganancia.toFixed(2));
+      },
+      [],
+    );
 
     const costPrice = getValues("costPrice");
     const ivaMinorista = getValues("ivaPorcentajeMinorista");

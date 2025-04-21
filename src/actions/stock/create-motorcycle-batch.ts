@@ -61,13 +61,13 @@ export async function createMotorcycleBatch(
 
   try {
     // Primero, verificar si hay números de chasis duplicados en el lote
-    const chassisNumbers = units.map(unit => unit.chassisNumber);
+    const chassisNumbers = units.map((unit) => unit.chassisNumber);
     const uniqueChassisNumbers = new Set(chassisNumbers);
-    
+
     if (uniqueChassisNumbers.size !== chassisNumbers.length) {
       return {
         success: false,
-        error: "Hay números de chasis duplicados en el lote. Cada número de chasis debe ser único."
+        error: "Hay números de chasis duplicados en el lote. Cada número de chasis debe ser único.",
       };
     }
 
@@ -75,19 +75,19 @@ export async function createMotorcycleBatch(
     const existingMotorcycles = await prisma.motorcycle.findMany({
       where: {
         chassisNumber: {
-          in: chassisNumbers
-        }
+          in: chassisNumbers,
+        },
       },
       select: {
-        chassisNumber: true
-      }
+        chassisNumber: true,
+      },
     });
 
     if (existingMotorcycles.length > 0) {
-      const duplicateChassisNumbers = existingMotorcycles.map(m => m.chassisNumber).join(", ");
+      const duplicateChassisNumbers = existingMotorcycles.map((m) => m.chassisNumber).join(", ");
       return {
         success: false,
-        error: `Ya existen motos con los siguientes números de chasis: ${duplicateChassisNumbers}`
+        error: `Ya existen motos con los siguientes números de chasis: ${duplicateChassisNumbers}`,
       };
     }
 
@@ -143,9 +143,9 @@ export async function createMotorcycleBatch(
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
         // Obtener el campo que causó el error de unicidad
-        const target = error.meta?.target as string[] || [];
+        const target = (error.meta?.target as string[]) || [];
         const fieldName = target.length > 0 ? target[0] : "desconocido";
-        
+
         return {
           success: false,
           error: `Error de duplicidad: Ya existe una moto con el mismo ${fieldName === "chassisNumber" ? "número de chasis" : fieldName === "engineNumber" ? "número de motor" : fieldName}.`,
@@ -154,7 +154,8 @@ export async function createMotorcycleBatch(
       if (error.code === "P2003") {
         return {
           success: false,
-          error: "Error de referencia: La Marca, Modelo, Color, Sucursal o Proveedor seleccionado no existe.",
+          error:
+            "Error de referencia: La Marca, Modelo, Color, Sucursal o Proveedor seleccionado no existe.",
         };
       }
     }

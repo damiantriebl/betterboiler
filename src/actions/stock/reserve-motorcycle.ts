@@ -24,4 +24,4 @@ export const reserveMotorcycle = async ({
   } catch (error) {
     return { success: false, error: "No se pudo reservar la moto" };
   }
-}; 
+};

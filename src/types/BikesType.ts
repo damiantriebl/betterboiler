@@ -19,4 +19,4 @@ export type Motorcycle = {
 };
 
 // Exportar solamente MotorcycleState desde Prisma como fuente única de verdad
-export { MotorcycleState } from '@prisma/client';
+export { MotorcycleState } from "@prisma/client";

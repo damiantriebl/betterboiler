@@ -1,4 +1,4 @@
-import { type Motorcycle } from "@/types/BikesType";
+import type { Motorcycle } from "@/types/BikesType";
 import { MotorcycleState } from "@prisma/client";
 
 export const marcas = [
@@ -67,7 +67,11 @@ const selectFromArray = <T>(arr: readonly T[], index: number): T => {
 };
 
 // Función para determinar el estado de venta basado en índices
-const getEstadoVenta = (brandIndex: number, modelIndex: number, yearIndex: number): MotorcycleState => {
+const getEstadoVenta = (
+  brandIndex: number,
+  modelIndex: number,
+  yearIndex: number,
+): MotorcycleState => {
   // Usamos una fórmula diferente para mejor distribución
   const value = (brandIndex * 13 + modelIndex * 17 + yearIndex * 23) % 20;
 

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import type { ClientFormData } from "@/zod/ClientsZod";
-import { MotorcycleState } from '@prisma/client';
+import type { MotorcycleState } from "@prisma/client";
 
 // Tipo de dato para la fila
 export type Client = ClientFormData & {

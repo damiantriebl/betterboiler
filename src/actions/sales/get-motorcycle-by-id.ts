@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
-import { Motorcycle, Brand, Model, Sucursal, MotoColor } from "@prisma/client";
+import type { Motorcycle, Brand, Model, Sucursal, MotoColor } from "@prisma/client";
 
 // Definimos el tipo correcto para la moto incluyendo relaciones
 export type MotorcycleWithRelations = Motorcycle & {
@@ -25,20 +25,20 @@ export async function getMotorcycleById(id: string): Promise<MotorcycleWithRelat
     }
 
     const motorcycle = await prisma.motorcycle.findUnique({
-      where: { 
+      where: {
         id: Number(id),
-        organizationId: organizationId
+        organizationId: organizationId,
       },
       include: {
         brand: true,
         model: true,
         branch: true,
         color: true,
-      }
+      },
     });
     return motorcycle;
   } catch (error) {
     console.error("Error al obtener la moto:", error);
     return null;
   }
-} 
+}

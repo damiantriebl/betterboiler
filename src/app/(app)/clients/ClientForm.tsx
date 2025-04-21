@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { clientSchema, type ClientFormData } from "@/zod/ClientsZod";
 import { createClient, updateClient } from "@/actions/clients/manage-clients";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 import {
   Form,
   FormControl,

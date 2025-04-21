@@ -53,10 +53,7 @@ export function MotoPreviewCard({
   // Usar el color definido en OrganizationBrand o un gris por defecto
   const brandColor = selectedBrand?.color || "#cccccc";
 
-  const getDisplayValue = (
-    value: string | number | null | undefined,
-    placeholder = "N/A",
-  ) => {
+  const getDisplayValue = (value: string | number | null | undefined, placeholder = "N/A") => {
     // Devuelve el valor o el placeholder si es null, undefined o 0 (excepto para kilometraje que sí puede ser 0)
     if (value === 0 && placeholder !== "N/A") return value.toString(); // Permitir 0 si no es placeholder default
     return value !== null && value !== undefined && value !== 0 ? value.toString() : placeholder;

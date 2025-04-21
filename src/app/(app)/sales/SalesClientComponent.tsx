@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import MotorcycleTable from "./MotorcycleTable"; // Asegúrate que MotorcycleTable esté en la misma carpeta
 import FilterSection from "./FilterSection"; // Asegúrate que FilterSection esté en la misma carpeta
 // Asegúrate de que los tipos se importen correctamente
-import { Motorcycle, MotorcycleState, Brand, Model, Sucursal } from "@prisma/client";
+import type { Motorcycle, MotorcycleState, Brand, Model, Sucursal } from "@prisma/client";
 // Eliminar la importación del tipo antiguo y enum si ya no se usan aquí
 // import { type Motorcycle as OldMotorcycleType, EstadoVenta } from "@/types/BikesType";
 
@@ -24,11 +24,14 @@ type MotorcycleWithRelations = Motorcycle & {
 
 // Definir las props que espera este componente
 interface SalesClientComponentProps {
-  initialData: any[]; // Usar any para evitar problemas de tipado
-  clients?: any[];
+  initialData: MotorcycleWithRelations[]; // Usar el tipo más específico
+  clients?: Client[]; // Usar el tipo más específico
 }
 
-export default function SalesClientComponent({ initialData, clients = [] }: SalesClientComponentProps) {
+export default function SalesClientComponent({
+  initialData,
+  clients = [],
+}: SalesClientComponentProps) {
   console.log("SalesClientComponent initialData:", initialData); // Log para debug
 
   // --- Toda la lógica de estado y manejo de filtros va aquí ---
@@ -40,10 +43,11 @@ export default function SalesClientComponent({ initialData, clients = [] }: Sale
     estadosVenta: [] as MotorcycleState[], // <-- Usar MotorcycleState[]
   });
   // Usar los datos iniciales recibidos para el estado filtrado inicial
-  const [filteredData, setFilteredData] = useState<any[]>(initialData); // Usar any para evitar problemas de tipado
+  const [filteredData, setFilteredData] = useState<MotorcycleWithRelations[]>(initialData); // Usar el tipo más específico
   const [key, setKey] = useState(0); // Para refrescar la tabla si es necesario
 
-  const handleFilterChange = (filterType: string, value: string | MotorcycleState[]) => { // <-- Recibir MotorcycleState[]
+  const handleFilterChange = (filterType: string, value: string | MotorcycleState[]) => {
+    // <-- Recibir MotorcycleState[]
     const newFilters = { ...filters, [filterType]: value };
     setFilters(newFilters);
 
@@ -57,7 +61,7 @@ export default function SalesClientComponent({ initialData, clients = [] }: Sale
           moto.brand?.name.toLowerCase().includes(searchTerm) ||
           moto.model?.name.toLowerCase().includes(searchTerm) ||
           moto.chassisNumber?.toLowerCase().includes(searchTerm) || // Buscar también por chasis
-          false
+          false,
       );
     }
     if (newFilters.marca !== "todas") {
@@ -73,7 +77,9 @@ export default function SalesClientComponent({ initialData, clients = [] }: Sale
     // Filtrar usando MotorcycleState[]
     if (Array.isArray(newFilters.estadosVenta) && newFilters.estadosVenta.length > 0) {
       // No es necesario castear a string[], ya son MotorcycleState[]
-      filtered = filtered.filter((moto) => (newFilters.estadosVenta as MotorcycleState[]).includes(moto.state));
+      filtered = filtered.filter((moto) =>
+        (newFilters.estadosVenta as MotorcycleState[]).includes(moto.state),
+      );
     }
     // --- Fin Lógica de Filtrado ---
 

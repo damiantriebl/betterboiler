@@ -76,7 +76,7 @@ export async function updateUserAction(
         // Changed ! to ?. Need to handle potential undefined URL before fetch
         const url = signed.success?.url;
         return url
-          ? fetch(url, { 
+          ? fetch(url, {
               method: "PUT",
               body: originalOptimized[idx],
               headers: { "Content-Type": "image/webp" },
@@ -91,7 +91,7 @@ export async function updateUserAction(
         // Changed ! to ?. Need to handle potential undefined URL before fetch
         const url = signed.success?.url;
         return url
-          ? fetch(url, { 
+          ? fetch(url, {
               method: "PUT",
               body: cropOptimized[idx],
               headers: { "Content-Type": "image/webp" },

@@ -10,7 +10,7 @@
 		"check:format": "biome format src --check",
 		"format": "biome format src --write --no-errors-on-unmatched",
 		"lint": "biome lint src",
-		"fix:lint": "biome lint src --apply",
+		"fix:lint": "biome lint src --write",
 		"verify:aliases": "node ./vitest.verify-env.js",
 		"test": "vitest run --reporter=verbose",
 		"test:watch": "vitest",

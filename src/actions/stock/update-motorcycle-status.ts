@@ -33,18 +33,18 @@ export async function updateMotorcycleStatus(
 
   // Estados permitidos a los que esta acción puede cambiar
   const validTargetStates = Object.values(MotorcycleState).filter(
-    (state) => state !== MotorcycleState.VENDIDO // Excluir VENDIDO
+    (state) => state !== MotorcycleState.VENDIDO, // Excluir VENDIDO
   );
 
   // Validar que el nuevo estado sea uno de los permitidos
-  if (!validTargetStates.includes(newStatus as any)) { // Usar as any para satisfacer al linter con el array filtrado
+  if (!validTargetStates.includes(newStatus as MotorcycleState)) {
     return { success: false, error: `Estado objetivo inválido: ${newStatus}` };
   }
 
   let moto: { state: MotorcycleState } | null = null;
 
   try {
-    const data: any = { state: newStatus };
+    const data: Prisma.MotorcycleUpdateInput = { state: newStatus };
 
     moto = await prisma.motorcycle.findUnique({
       where: { id: motorcycleId, organizationId },
@@ -52,43 +52,44 @@ export async function updateMotorcycleStatus(
     });
 
     if (!moto) {
-        return { success: false, error: "Moto no encontrada." };
+      return { success: false, error: "Moto no encontrada." };
     }
 
     // Lógica específica al cambiar de estado
-    if (newStatus === MotorcycleState.STOCK && 
-        (moto.state === MotorcycleState.RESERVADO || 
-         moto.state === MotorcycleState.PROCESANDO || 
-         moto.state === MotorcycleState.ELIMINADO)) 
-    {
+    if (
+      newStatus === MotorcycleState.STOCK &&
+      (moto.state === MotorcycleState.RESERVADO ||
+        moto.state === MotorcycleState.PROCESANDO ||
+        moto.state === MotorcycleState.ELIMINADO)
+    ) {
       data.clientId = null;
     }
 
     let allowedCurrentStates: Prisma.MotorcycleWhereInput[] = [];
 
     switch (newStatus) {
-        case MotorcycleState.STOCK:
-            allowedCurrentStates = [
-                { state: MotorcycleState.PAUSADO },
-                { state: MotorcycleState.RESERVADO },
-                { state: MotorcycleState.PROCESANDO },
-                { state: MotorcycleState.ELIMINADO },
-            ];
-            break;
-        case MotorcycleState.PAUSADO:
-            allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
-            break;
-        case MotorcycleState.PROCESANDO:
-            allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
-            break;
-        case MotorcycleState.ELIMINADO:
-            allowedCurrentStates = [
-                { state: MotorcycleState.STOCK }, 
-                { state: MotorcycleState.PAUSADO },
-            ];
-            break;
-        default: 
-            return { success: false, error: "Transición de estado no manejada." };
+      case MotorcycleState.STOCK:
+        allowedCurrentStates = [
+          { state: MotorcycleState.PAUSADO },
+          { state: MotorcycleState.RESERVADO },
+          { state: MotorcycleState.PROCESANDO },
+          { state: MotorcycleState.ELIMINADO },
+        ];
+        break;
+      case MotorcycleState.PAUSADO:
+        allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
+        break;
+      case MotorcycleState.PROCESANDO:
+        allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
+        break;
+      case MotorcycleState.ELIMINADO:
+        allowedCurrentStates = [
+          { state: MotorcycleState.STOCK },
+          { state: MotorcycleState.PAUSADO },
+        ];
+        break;
+      default:
+        return { success: false, error: "Transición de estado no manejada." };
     }
 
     const updatedMotorcycle = await prisma.motorcycle.update({
@@ -104,22 +105,23 @@ export async function updateMotorcycleStatus(
     revalidatePath("/sales");
     revalidatePath("/stock");
     return { success: true };
-
   } catch (error) {
     console.error("🔥 SERVER ACTION ERROR (updateMotorcycleStatus):", error);
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2025") {
         // Ajustar mensaje de error usando la variable 'moto' con alcance superior
-        const currentStateMessage = moto ? `su estado actual (${moto.state})` : "podría no existir o";
+        const currentStateMessage = moto
+          ? `su estado actual (${moto.state})`
+          : "podría no existir o";
         return {
           success: false,
-          error:
-            `No se pudo actualizar el estado. La moto ${currentStateMessage} no permite esta transición a ${newStatus}.`,
+          error: `No se pudo actualizar el estado. La moto ${currentStateMessage} no permite esta transición a ${newStatus}.`,
         };
       }
     }
-    const message = error instanceof Error ? error.message : "Error inesperado al actualizar estado.";
+    const message =
+      error instanceof Error ? error.message : "Error inesperado al actualizar estado.";
     return { success: false, error: message };
   }
 }

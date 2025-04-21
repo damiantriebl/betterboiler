@@ -1,17 +1,17 @@
 import { getMotorcycles, type MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
 import { getClients } from "@/actions/clients/get-clients";
 import SalesClientComponent from "./SalesClientComponent";
-import { Client } from "@prisma/client";
+import type { Client } from "@prisma/client";
 
 export default async function VentasPage() {
-  // Dar tipo explícito a initialData como any para evitar problemas de tipado
-  let initialData: any[] = [];
+  // Usar el tipo específico en lugar de any
+  let initialData: MotorcycleTableRowData[] = [];
   let clients: Client[] = [];
 
   try {
     const result = await getMotorcycles();
     // Asegurarse de que todas las relaciones, incluida reservation, estén presentes
-    initialData = result.map(moto => ({
+    initialData = result.map((moto) => ({
       ...moto,
       estadoVenta: moto.estadoVenta,
       // Asegurarse de que se incluya la reserva con su monto

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import AddClientModal from "@/components/client/AddClientModal";
-import { type Client } from "@prisma/client"; // O el tipo que uses
+import type { Client } from "@prisma/client"; // O el tipo que uses
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const [value, setValue] = useState<T>(() => {

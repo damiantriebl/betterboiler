@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Prisma, MotorcycleState } from "@prisma/client";
+import { Prisma, type MotorcycleState } from "@prisma/client";
 import { headers } from "next/headers";
 import { unstable_noStore as noStore } from "next/cache";
 
@@ -84,13 +84,13 @@ export async function getMotorcycles(
             id: true,
             amount: true,
             clientId: true,
-            status: true
+            status: true,
           },
           where: {
-            status: "active"
+            status: "active",
           },
-          take: 1 // Tomar solo la primera reserva activa
-        }
+          take: 1, // Tomar solo la primera reserva activa
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -110,7 +110,8 @@ export async function getMotorcycles(
         : null;
 
       // Obtener la primera reserva activa (si existe)
-      const activeReservation = moto.reservations && moto.reservations.length > 0 ? moto.reservations[0] : null;
+      const activeReservation =
+        moto.reservations && moto.reservations.length > 0 ? moto.reservations[0] : null;
 
       return {
         // Campos directos
@@ -129,7 +130,7 @@ export async function getMotorcycles(
         branch: moto.branch ?? null,
         supplier: moto.supplier ?? undefined,
         // Usar la reserva activa extraída antes
-        reservation: activeReservation
+        reservation: activeReservation,
       };
     });
 

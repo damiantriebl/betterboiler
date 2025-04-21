@@ -28,9 +28,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-      value === undefined ||
-      (Array.isArray(value) && value.length === 0) ||
-      value === "" ? (
+    value === undefined ||
+    (Array.isArray(value) && value.length === 0) ||
+    value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")

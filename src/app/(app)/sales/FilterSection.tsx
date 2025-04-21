@@ -136,7 +136,8 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
               role="combobox"
               className={cn("justify-between", filters.estadosVenta.length > 0 && "text-primary")}
             >
-              {filters.estadosVenta.length === estadosVentaPrisma.length || filters.estadosVenta.length === 0
+              {filters.estadosVenta.length === estadosVentaPrisma.length ||
+              filters.estadosVenta.length === 0
                 ? "Ver todo"
                 : filters.estadosVenta.length === 1
                   ? formatEstadoVenta(filters.estadosVenta[0])
@@ -153,7 +154,8 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      filters.estadosVenta.length === estadosVentaPrisma.length || filters.estadosVenta.length === 0
+                      filters.estadosVenta.length === estadosVentaPrisma.length ||
+                        filters.estadosVenta.length === 0
                         ? "opacity-100"
                         : "opacity-0",
                     )}
@@ -161,13 +163,15 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
                   Ver todo
                 </CommandItem>
                 {estadosVentaPrisma.map((estado) => (
-                  <CommandItem key={estado} value={estado} onSelect={() => handleEstadoVentaSelect(estado)}>
+                  <CommandItem
+                    key={estado}
+                    value={estado}
+                    onSelect={() => handleEstadoVentaSelect(estado)}
+                  >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        filters.estadosVenta.includes(estado)
-                          ? "opacity-100"
-                          : "opacity-0",
+                        filters.estadosVenta.includes(estado) ? "opacity-100" : "opacity-0",
                       )}
                     />
                     {formatEstadoVenta(estado)}
@@ -177,24 +181,25 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
             </Command>
           </PopoverContent>
         </Popover>
-        {filters.estadosVenta.length > 0 && filters.estadosVenta.length < estadosVentaPrisma.length && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {filters.estadosVenta.map((estado) => (
-              <Badge
-                key={estado}
-                variant="secondary"
-                className="cursor-pointer"
-                onClick={() => {
-                  const newEstados = filters.estadosVenta.filter((e) => e !== estado);
-                  onFilterChange("estadosVenta", newEstados.length > 0 ? newEstados : []);
-                }}
-              >
-                {formatEstadoVenta(estado)}
-                <span className="ml-1">×</span>
-              </Badge>
-            ))}
-          </div>
-        )}
+        {filters.estadosVenta.length > 0 &&
+          filters.estadosVenta.length < estadosVentaPrisma.length && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {filters.estadosVenta.map((estado) => (
+                <Badge
+                  key={estado}
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const newEstados = filters.estadosVenta.filter((e) => e !== estado);
+                    onFilterChange("estadosVenta", newEstados.length > 0 ? newEstados : []);
+                  }}
+                >
+                  {formatEstadoVenta(estado)}
+                  <span className="ml-1">×</span>
+                </Badge>
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );
