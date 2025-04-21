@@ -42,11 +42,11 @@ export default function ModelItem({
   const style = isOverlay
     ? externalStyle
     : {
-      ...externalStyle,
-      transform: CSS.Transform.toString(transform),
-      transition,
-      zIndex: isDragging ? 10 : "auto",
-    };
+        ...externalStyle,
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : "auto",
+      };
 
   useEffect(() => {
     if (isEditing) {

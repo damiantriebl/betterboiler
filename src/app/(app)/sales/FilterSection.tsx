@@ -7,8 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { colores, marcas, tipos, ubicaciones, estadosVenta } from "@/data/motorcycles";
-import { EstadoVenta } from "@/types/BikesType";
+import { colores, marcas, tipos, ubicaciones } from "@/data/motorcycles";
+import { MotorcycleState } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -28,31 +28,33 @@ interface FilterSectionProps {
     marca: string;
     tipo: string;
     ubicacion: string;
-    estadosVenta: EstadoVenta[];
+    estadosVenta: MotorcycleState[];
   };
-  onFilterChange: (filterType: string, value: string | EstadoVenta[]) => void;
+  onFilterChange: (filterType: string, value: string | MotorcycleState[]) => void;
 }
 
+const estadosVentaPrisma = Object.values(MotorcycleState);
+
 export default function FilterSection({ filters, onFilterChange }: FilterSectionProps) {
-  const formatEstadoVenta = (estado: string) => {
-    if (estado === "ver-todo") return "Ver todo";
-    return estado.charAt(0).toUpperCase() + estado.slice(1);
+  const formatEstadoVenta = (estado: MotorcycleState) => {
+    return estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase();
   };
 
-  const handleEstadoVentaSelect = (estado: string) => {
-    if (estado === "ver-todo") {
-      // Si selecciona "Ver todo", incluimos todos los estados
-      onFilterChange("estadosVenta", [...estadosVenta]);
+  const handleEstadoVentaSelect = (estadoValue: string) => {
+    const estado = estadoValue as MotorcycleState;
+
+    if (estadoValue === "ver-todo") {
+      onFilterChange("estadosVenta", [...estadosVentaPrisma]);
       return;
     }
 
-    const isSelected = filters.estadosVenta.includes(estado as EstadoVenta);
-    let newEstados: EstadoVenta[];
+    const isSelected = filters.estadosVenta.includes(estado);
+    let newEstados: MotorcycleState[];
 
     if (isSelected) {
       newEstados = filters.estadosVenta.filter((e) => e !== estado);
     } else {
-      newEstados = [...filters.estadosVenta, estado as EstadoVenta];
+      newEstados = [...filters.estadosVenta, estado];
     }
 
     onFilterChange("estadosVenta", newEstados);
@@ -129,17 +131,17 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
         <Label>Estado de Venta</Label>
         <Popover>
           <PopoverTrigger asChild>
-            {/* biome-ignore lint/a11y/useSemanticElements: Using Button with Popover for custom combobox */}
             <Button
               variant="outline"
               role="combobox"
               className={cn("justify-between", filters.estadosVenta.length > 0 && "text-primary")}
             >
-              {filters.estadosVenta.length === estadosVenta.length
+              {filters.estadosVenta.length === estadosVentaPrisma.length ||
+              filters.estadosVenta.length === 0
                 ? "Ver todo"
-                : filters.estadosVenta.length > 0
-                  ? `${filters.estadosVenta.length} seleccionados`
-                  : "Seleccionar estados"}
+                : filters.estadosVenta.length === 1
+                  ? formatEstadoVenta(filters.estadosVenta[0])
+                  : `${filters.estadosVenta.length} seleccionados`}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -152,21 +154,24 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      filters.estadosVenta.length === estadosVenta.length
+                      filters.estadosVenta.length === estadosVentaPrisma.length ||
+                        filters.estadosVenta.length === 0
                         ? "opacity-100"
                         : "opacity-0",
                     )}
                   />
                   Ver todo
                 </CommandItem>
-                {estadosVenta.map((estado) => (
-                  <CommandItem key={estado} onSelect={() => handleEstadoVentaSelect(estado)}>
+                {estadosVentaPrisma.map((estado) => (
+                  <CommandItem
+                    key={estado}
+                    value={estado}
+                    onSelect={() => handleEstadoVentaSelect(estado)}
+                  >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        filters.estadosVenta.includes(estado as EstadoVenta)
-                          ? "opacity-100"
-                          : "opacity-0",
+                        filters.estadosVenta.includes(estado) ? "opacity-100" : "opacity-0",
                       )}
                     />
                     {formatEstadoVenta(estado)}
@@ -176,35 +181,25 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
             </Command>
           </PopoverContent>
         </Popover>
-        {filters.estadosVenta.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {filters.estadosVenta.length === estadosVenta.length ? (
-              <Badge
-                variant="secondary"
-                className="cursor-pointer"
-                onClick={() => onFilterChange("estadosVenta", [EstadoVenta.STOCK])}
-              >
-                Ver todo
-                <span className="ml-1">×</span>
-              </Badge>
-            ) : (
-              filters.estadosVenta.map((estado) => (
+        {filters.estadosVenta.length > 0 &&
+          filters.estadosVenta.length < estadosVentaPrisma.length && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {filters.estadosVenta.map((estado) => (
                 <Badge
                   key={estado}
                   variant="secondary"
                   className="cursor-pointer"
                   onClick={() => {
                     const newEstados = filters.estadosVenta.filter((e) => e !== estado);
-                    onFilterChange("estadosVenta", newEstados);
+                    onFilterChange("estadosVenta", newEstados.length > 0 ? newEstados : []);
                   }}
                 >
                   {formatEstadoVenta(estado)}
                   <span className="ml-1">×</span>
                 </Badge>
-              ))
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );

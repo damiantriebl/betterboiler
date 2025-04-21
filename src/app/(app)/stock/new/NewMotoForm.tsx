@@ -48,6 +48,7 @@ import type {
 } from "@/zod/NewBikeZod";
 import { z } from "zod";
 import type { Supplier } from "@prisma/client";
+import { MotorcycleState } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +56,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { EstadoVenta } from "@/types/BikesType";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -75,9 +75,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-      value === undefined ||
-      (Array.isArray(value) && value.length === 0) ||
-      value === "" ? (
+    value === undefined ||
+    (Array.isArray(value) && value.length === 0) ||
+    value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -169,7 +169,7 @@ export function NewMotoForm({
       colorId: availableColors.length > 0 ? Number(availableColors[0].id) : 0,
       mileage: 0,
       branchId: availableBranches.length > 0 ? Number(availableBranches[0].id) : 0,
-      state: EstadoVenta.STOCK,
+      state: MotorcycleState.STOCK,
     });
   }, [append, availableColors, availableBranches]);
 
@@ -195,7 +195,7 @@ export function NewMotoForm({
 
   const handleNullableNumberChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: ControllerRenderProps<FieldValues, string>
+    field: ControllerRenderProps<FieldValues, string>,
   ) => {
     field.onChange(e.target.value === "" ? null : e.target.valueAsNumber);
   };
@@ -468,7 +468,7 @@ export function NewMotoForm({
                   <FormLabel>Estado</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value || EstadoVenta.STOCK}
+                    defaultValue={field.value || MotorcycleState.STOCK}
                     value={field.value}
                     disabled={isSubmitting}
                   >
@@ -478,7 +478,7 @@ export function NewMotoForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.values(EstadoVenta).map((estado) => (
+                      {Object.values(MotorcycleState).map((estado) => (
                         <SelectItem key={estado} value={estado}>
                           {estado}
                         </SelectItem>
@@ -515,36 +515,42 @@ export function NewMotoForm({
   );
 
   const renderPreciosFields = () => {
-    const calculateFinalPrice = useCallback((
-      costo: number | null,
-      ivaP: number | null,
-      otrosImp: number | null,
-      gananciaP: number | null,
-    ) => {
-      const pc = costo ?? 0;
-      const iva = ivaP ?? 0;
-      const otros = otrosImp ?? 0;
-      const ganancia = gananciaP ?? 0;
-      if (pc <= 0) return otros;
-      const final = pc * (1 + ganancia / 100) * (1 + iva / 100) + otros;
-      return Number.parseFloat(final.toFixed(2));
-    }, []);
+    const calculateFinalPrice = useCallback(
+      (
+        costo: number | null,
+        ivaP: number | null,
+        otrosImp: number | null,
+        gananciaP: number | null,
+      ) => {
+        const pc = costo ?? 0;
+        const iva = ivaP ?? 0;
+        const otros = otrosImp ?? 0;
+        const ganancia = gananciaP ?? 0;
+        if (pc <= 0) return otros;
+        const final = pc * (1 + ganancia / 100) * (1 + iva / 100) + otros;
+        return Number.parseFloat(final.toFixed(2));
+      },
+      [],
+    );
 
-    const calculateGainPercentage = useCallback((
-      costo: number | null,
-      precioFinal: number | null,
-      ivaP: number | null,
-      otrosImp: number | null,
-    ) => {
-      const pc = costo ?? 0;
-      const pf = precioFinal ?? 0;
-      const iva = ivaP ?? 0;
-      const otros = otrosImp ?? 0;
-      const factorIVA = 1 + iva / 100;
-      if (pc <= 0 || factorIVA === 0) return 0;
-      const ganancia = 100 * ((pf - otros) / (pc * factorIVA) - 1);
-      return Number.parseFloat(ganancia.toFixed(2));
-    }, []);
+    const calculateGainPercentage = useCallback(
+      (
+        costo: number | null,
+        precioFinal: number | null,
+        ivaP: number | null,
+        otrosImp: number | null,
+      ) => {
+        const pc = costo ?? 0;
+        const pf = precioFinal ?? 0;
+        const iva = ivaP ?? 0;
+        const otros = otrosImp ?? 0;
+        const factorIVA = 1 + iva / 100;
+        if (pc <= 0 || factorIVA === 0) return 0;
+        const ganancia = 100 * ((pf - otros) / (pc * factorIVA) - 1);
+        return Number.parseFloat(ganancia.toFixed(2));
+      },
+      [],
+    );
 
     const costPrice = getValues("costPrice");
     const ivaMinorista = getValues("ivaPorcentajeMinorista");

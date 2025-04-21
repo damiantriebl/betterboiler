@@ -501,58 +501,21 @@ export async function addModelToOrganizationBrand(
               `El modelo "${normalizedName}" ya está activo para esta marca en tu organización.`,
             );
           }
-            // Estaba oculto, ¡reactivarlo!
-            const updatedConfig = await tx.organizationModelConfig.update({
-              where: { id: existingConfig.id },
-              data: { isVisible: true },
-            });
-            return {
-              modelId: modelId,
-              orgModelConfigId: updatedConfig.id,
-              reactivated: true,
-              configCreated: false,
-              modelCreated: false,
-              brandName: existingModel.name,
-            }; // Añadir brandName para mensajes
-        }
-          // El modelo global existe, pero NO hay config para esta org. ¡Crear la config!
-          const maxOrderResult = await tx.organizationModelConfig.aggregate({
-            _max: { order: true },
-            where: {
-              organizationId: organizationId,
-              model: { brandId: brandId }, // Corregido: usar brandId directamente
-            },
-          });
-          const nextOrder = (maxOrderResult._max.order ?? -1) + 1;
-
-          const newOrgModelConfig = await tx.organizationModelConfig.create({
-            data: {
-              organizationId: organizationId,
-              modelId: modelId,
-              order: nextOrder,
-              isVisible: true,
-            },
+          // Estaba oculto, ¡reactivarlo!
+          const updatedConfig = await tx.organizationModelConfig.update({
+            where: { id: existingConfig.id },
+            data: { isVisible: true },
           });
           return {
             modelId: modelId,
-            orgModelConfigId: newOrgModelConfig.id,
-            reactivated: false,
-            configCreated: true,
+            orgModelConfigId: updatedConfig.id,
+            reactivated: true,
+            configCreated: false,
             modelCreated: false,
             brandName: existingModel.name,
-          };
-      }
-        // El modelo global NO existe, crear modelo Y config
-        // 4. Crear modelo global
-        const newModel = await tx.model.create({
-          data: {
-            name: normalizedName,
-            brandId: brandId,
-          },
-        });
-        const newModelId = newModel.id;
-
-        // 5. Calcular orden
+          }; // Añadir brandName para mensajes
+        }
+        // El modelo global existe, pero NO hay config para esta org. ¡Crear la config!
         const maxOrderResult = await tx.organizationModelConfig.aggregate({
           _max: { order: true },
           where: {
@@ -562,27 +525,64 @@ export async function addModelToOrganizationBrand(
         });
         const nextOrder = (maxOrderResult._max.order ?? -1) + 1;
 
-        // 6. Crear config
         const newOrgModelConfig = await tx.organizationModelConfig.create({
           data: {
             organizationId: organizationId,
-            modelId: newModelId,
+            modelId: modelId,
             order: nextOrder,
             isVisible: true,
           },
         });
-
-        // Necesitamos el nombre de la marca para el mensaje
-        const brand = await tx.brand.findUnique({ where: { id: brandId }, select: { name: true } });
-
         return {
-          modelId: newModelId,
+          modelId: modelId,
           orgModelConfigId: newOrgModelConfig.id,
           reactivated: false,
-          configCreated: false,
-          modelCreated: true,
-          brandName: brand?.name ?? "",
+          configCreated: true,
+          modelCreated: false,
+          brandName: existingModel.name,
         };
+      }
+      // El modelo global NO existe, crear modelo Y config
+      // 4. Crear modelo global
+      const newModel = await tx.model.create({
+        data: {
+          name: normalizedName,
+          brandId: brandId,
+        },
+      });
+      const newModelId = newModel.id;
+
+      // 5. Calcular orden
+      const maxOrderResult = await tx.organizationModelConfig.aggregate({
+        _max: { order: true },
+        where: {
+          organizationId: organizationId,
+          model: { brandId: brandId }, // Corregido: usar brandId directamente
+        },
+      });
+      const nextOrder = (maxOrderResult._max.order ?? -1) + 1;
+
+      // 6. Crear config
+      const newOrgModelConfig = await tx.organizationModelConfig.create({
+        data: {
+          organizationId: organizationId,
+          modelId: newModelId,
+          order: nextOrder,
+          isVisible: true,
+        },
+      });
+
+      // Necesitamos el nombre de la marca para el mensaje
+      const brand = await tx.brand.findUnique({ where: { id: brandId }, select: { name: true } });
+
+      return {
+        modelId: newModelId,
+        orgModelConfigId: newOrgModelConfig.id,
+        reactivated: false,
+        configCreated: false,
+        modelCreated: true,
+        brandName: brand?.name ?? "",
+      };
     }); // Fin transacción
 
     revalidatePath("/configuracion");

@@ -1,18 +1,27 @@
-import { type MotorcycleWithDetails, getMotorcycles } from "@/actions/sales/get-motorcycles";
+import { getMotorcycles, type MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
+import { getClients } from "@/actions/clients/get-clients";
 import SalesClientComponent from "./SalesClientComponent";
+import type { Client } from "@prisma/client";
 
 export default async function VentasPage() {
-  // Dar tipo explícito a initialData
-  let initialData: MotorcycleWithDetails[] = [];
+  // Usar el tipo específico en lugar de any
+  let initialData: MotorcycleTableRowData[] = [];
+  let clients: Client[] = [];
+
   try {
     const result = await getMotorcycles();
-    // Ajustar cómo se extraen los datos según la estructura devuelta por getMotorcycles
-    // Ejemplo si getMotorcycles devuelve el array directamente:
-    initialData = result ?? [];
-    // Ejemplo si getMotorcycles devuelve { success: boolean, data: [...] }:
-    // initialData = (result && Array.isArray(result)) ? result : []; // O la lógica correcta
+    // Asegurarse de que todas las relaciones, incluida reservation, estén presentes
+    initialData = result.map((moto) => ({
+      ...moto,
+      estadoVenta: moto.estadoVenta,
+      // Asegurarse de que se incluya la reserva con su monto
+      reservation: moto.reservation,
+    }));
+
+    // Obtener clientes
+    clients = await getClients();
   } catch (error) {
-    console.error("Error fetching initial motorcycles in page.tsx:", error);
+    console.error("Error fetching initial data in page.tsx:", error);
   }
 
   return (
@@ -23,8 +32,8 @@ export default async function VentasPage() {
           Explora nuestra amplia selección de motocicletas disponibles
         </p>
       </div>
-      {/* Renderizar SÓLO el Client Component, pasándole los datos */}
-      <SalesClientComponent initialData={initialData} />
+      {/* Renderizar SÓLO el Client Component, pasándole los datos completos */}
+      <SalesClientComponent initialData={initialData} clients={clients} />
     </main>
   );
 }

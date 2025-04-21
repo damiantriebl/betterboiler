@@ -2,10 +2,9 @@
 
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Prisma } from "@prisma/client";
+import { Prisma, type MotorcycleState } from "@prisma/client";
 import { headers } from "next/headers";
 import { unstable_noStore as noStore } from "next/cache";
-import type { EstadoVenta } from "@/types/BikesType";
 
 // Tipo específico y preciso para la tabla
 export type MotorcycleTableRowData = {
@@ -26,7 +25,13 @@ export type MotorcycleTableRowData = {
   mileage: number;
   retailPrice: number;
   currency: string;
-  estadoVenta: EstadoVenta;
+  estadoVenta: MotorcycleState;
+  reservation?: {
+    id: number;
+    amount: number;
+    clientId: string;
+    status: string;
+  } | null;
 };
 
 // Replace empty interface with type alias, using Record<string, unknown>
@@ -56,6 +61,7 @@ export async function getMotorcycles(
         retailPrice: true,
         currency: true,
         state: true,
+        chassisNumber: true,
         brand: {
           // Incluir marca y su relación OrganizationBrand
           select: {
@@ -72,6 +78,19 @@ export async function getMotorcycles(
         color: { select: { name: true, colorOne: true, colorTwo: true } },
         branch: { select: { name: true } },
         supplier: { select: { legalName: true, commercialName: true } },
+        // Cambiar "reservation" por "reservations" y obtener solo la reserva activa
+        reservations: {
+          select: {
+            id: true,
+            amount: true,
+            clientId: true,
+            status: true,
+          },
+          where: {
+            status: "active",
+          },
+          take: 1, // Tomar solo la primera reserva activa
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -90,6 +109,10 @@ export async function getMotorcycles(
           }
         : null;
 
+      // Obtener la primera reserva activa (si existe)
+      const activeReservation =
+        moto.reservations && moto.reservations.length > 0 ? moto.reservations[0] : null;
+
       return {
         // Campos directos
         id: moto.id,
@@ -98,13 +121,16 @@ export async function getMotorcycles(
         mileage: moto.mileage,
         retailPrice: moto.retailPrice,
         currency: moto.currency,
-        estadoVenta: moto.state as EstadoVenta,
+        estadoVenta: moto.state,
+        chassisNumber: moto.chassisNumber,
         // Relaciones (asegurando null si no existen)
         brand: finalBrand,
         model: moto.model ?? null,
         color: moto.color ?? null,
         branch: moto.branch ?? null,
         supplier: moto.supplier ?? undefined,
+        // Usar la reserva activa extraída antes
+        reservation: activeReservation,
       };
     });
 

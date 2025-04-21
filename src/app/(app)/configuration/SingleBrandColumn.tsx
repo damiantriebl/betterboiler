@@ -367,8 +367,8 @@ export default function SingleBrandColumn({
               <ModelItem
                 model={activeModel}
                 isOverlay
-                onUpdate={() => { }}
-                onDissociate={() => { }}
+                onUpdate={() => {}}
+                onDissociate={() => {}}
               />
             ) : null}
           </DragOverlay>

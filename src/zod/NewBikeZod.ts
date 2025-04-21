@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { EstadoVenta } from "@/types/BikesType"; // Importar el enum
+import { MotorcycleState } from "@prisma/client"; // Importar el enum de Prisma
 
 // Schema for ONE identification unit
 export const unitIdentificationSchema = z.object({
@@ -16,7 +16,7 @@ export const unitIdentificationSchema = z.object({
     .number({ invalid_type_error: "Selecciona una sucursal" })
     .int()
     .positive("Selecciona una sucursal"), // sucursalId
-  state: z.nativeEnum(EstadoVenta).default(EstadoVenta.STOCK), // Añadir state
+  state: z.nativeEnum(MotorcycleState).default(MotorcycleState.STOCK), // Usar MotorcycleState
 });
 
 // Main schema for the BATCH

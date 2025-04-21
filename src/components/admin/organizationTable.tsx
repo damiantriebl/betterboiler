@@ -30,7 +30,7 @@ export default async function OrganizationTable() {
             <TableCell>{org.name}</TableCell>
             <TableCell>{org.slug}</TableCell>
             <TableCell>
-              {(org.logo?.startsWith("/") || org?.logo?.startsWith("http")) ? (
+              {org.logo?.startsWith("/") || org?.logo?.startsWith("http") ? (
                 <ImageZoom organization={org.name} imgLow={org.logo} imgHd={org.logo} alt="Logo" />
               ) : (
                 <span className="text-xs text-muted-foreground">Sin logo</span>
