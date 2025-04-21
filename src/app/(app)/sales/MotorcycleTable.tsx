@@ -8,16 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  type Motorcycle,
-  MotorcycleState,
-  Prisma,
-  type Brand,
-  type Model,
-  type Sucursal,
-  type Reservation,
-  type Client,
-} from "@prisma/client";
+import { type Motorcycle, MotorcycleState, Prisma, type Brand, type Model, type Sucursal, type Reservation, type Client } from "@prisma/client";
 import { formatPrice, cn } from "@/lib/utils";
 import { useState, useTransition, useOptimistic } from "react";
 import {
@@ -75,10 +66,14 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status";
 import { ReserveModal } from "./ReserveModal";
-import { type Client as ClientType } from "@/app/(app)/clients/columns";
+import type { Client as ClientType } from "@/app/(app)/clients/columns";
 import { MotorcycleDetailModal, type MotorcycleWithReservation } from "./MotorcycleDetailModal";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -99,34 +94,13 @@ type MotorcycleWithRelations = Motorcycle & {
   reservation?: Reservation | null;
 };
 
-// Definir un tipo para clients que es más genérico pero sigue siendo fuertemente tipado
-interface ClientBase {
-  id: string;
-  firstName: string;
-  lastName?: string | null;
-  email: string;
-  [key: string]: any; // Permite propiedades adicionales pero mantiene las esenciales tipadas
-}
-
 interface MotorcycleTableProps {
   initialData: MotorcycleWithRelations[];
-  clients: ClientBase[]; // Usar el tipo más genérico
+  clients: Record<string, unknown>[]; // Usar Record en lugar de any
 }
 
 type SortConfig = {
-  key:
-    | keyof Pick<
-        Motorcycle,
-        | "id"
-        | "year"
-        | "mileage"
-        | "retailPrice"
-        | "state"
-        | "chassisNumber"
-        | "createdAt"
-        | "updatedAt"
-      >
-    | null;
+  key: keyof Pick<Motorcycle, 'id' | 'year' | 'mileage' | 'retailPrice' | 'state' | 'chassisNumber' | 'createdAt' | 'updatedAt'> | null;
   direction: "asc" | "desc" | null;
 };
 
@@ -186,15 +160,7 @@ interface ReservationUpdate {
 }
 
 // Definición de las columnas disponibles en la tabla
-type ColumnId =
-  | "chassisId"
-  | "year"
-  | "brandModel"
-  | "displacement"
-  | "branch"
-  | "state"
-  | "price"
-  | "actions";
+type ColumnId = 'chassisId' | 'year' | 'brandModel' | 'displacement' | 'branch' | 'state' | 'price' | 'actions';
 
 interface ColumnDefinition {
   id: ColumnId;
@@ -215,37 +181,34 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [motorcycles, setMotorcycles] = useState<MotorcycleWithRelations[]>(initialData);
   const [showReserveModal, setShowReserveModal] = useState(false);
-  const [selectedReserveMoto, setSelectedReserveMoto] = useState<MotorcycleWithRelations | null>(
-    null,
-  );
+  const [selectedReserveMoto, setSelectedReserveMoto] = useState<MotorcycleWithRelations | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedMotoForModal, setSelectedMotoForModal] =
-    useState<MotorcycleWithReservation | null>(null);
+  const [selectedMotoForModal, setSelectedMotoForModal] = useState<MotorcycleWithReservation | null>(null);
   const [brandFilter, setBrandFilter] = useState<string>("todas");
   const [modelFilter, setModelFilter] = useState<string>("todos");
   const [stateFilter, setStateFilter] = useState<MotorcycleState | string>("todos");
 
   // Definir columnas disponibles y su visibilidad por defecto
   const availableColumns: ColumnDefinition[] = [
-    { id: "brandModel", label: "Marca / Modelo", defaultVisible: true },
-    { id: "chassisId", label: "Chasis / ID", defaultVisible: true },
-    { id: "year", label: "Año", defaultVisible: true },
-    { id: "displacement", label: "Cilindrada", defaultVisible: true },
-    { id: "branch", label: "Ubicación", defaultVisible: true },
-    { id: "state", label: "Estado Venta", defaultVisible: true },
-    { id: "price", label: "Precio", defaultVisible: true },
-    { id: "actions", label: "Acciones", defaultVisible: true },
+    { id: 'brandModel', label: 'Marca / Modelo', defaultVisible: true },
+    { id: 'chassisId', label: 'Chasis / ID', defaultVisible: true },
+    { id: 'year', label: 'Año', defaultVisible: true },
+    { id: 'displacement', label: 'Cilindrada', defaultVisible: true },
+    { id: 'branch', label: 'Ubicación', defaultVisible: true },
+    { id: 'state', label: 'Estado Venta', defaultVisible: true },
+    { id: 'price', label: 'Precio', defaultVisible: true },
+    { id: 'actions', label: 'Acciones', defaultVisible: true },
   ];
 
   // Estado para controlar visibilidad de columnas
   const [visibleColumns, setVisibleColumns] = useState<ColumnId[]>(
-    availableColumns.filter((col) => col.defaultVisible).map((col) => col.id),
+    availableColumns.filter(col => col.defaultVisible).map(col => col.id)
   );
 
   const toggleColumnVisibility = (columnId: ColumnId) => {
-    setVisibleColumns((prev) => {
+    setVisibleColumns(prev => {
       if (prev.includes(columnId)) {
-        return prev.filter((id) => id !== columnId);
+        return prev.filter(id => id !== columnId);
       }
       return [...prev, columnId];
     });
@@ -255,28 +218,21 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
 
   const [optimisticMotorcycles, addOptimisticUpdate] = useOptimistic(
     motorcycles,
-    (
-      state: MotorcycleWithRelations[],
-      optimisticValue: {
-        motorcycleId: number;
-        newStatus: MotorcycleState;
-        reservation?: Reservation | null;
-      },
-    ) => {
+    (state: MotorcycleWithRelations[], optimisticValue: { motorcycleId: number; newStatus: MotorcycleState; reservation?: Reservation | null }) => {
       return state.map((moto) =>
         moto.id === optimisticValue.motorcycleId
           ? {
-              ...moto,
-              state: optimisticValue.newStatus,
-              estadoVenta: optimisticValue.newStatus,
-              reservation: optimisticValue.reservation,
-            }
+            ...moto,
+            state: optimisticValue.newStatus,
+            estadoVenta: optimisticValue.newStatus,
+            reservation: optimisticValue.reservation
+          }
           : moto,
       );
     },
   );
 
-  const handleSort = (key: NonNullable<SortConfig["key"]>) => {
+  const handleSort = (key: NonNullable<SortConfig['key']>) => {
     let direction: "asc" | "desc" | null = "asc";
 
     if (sortConfig.key === key) {
@@ -296,21 +252,21 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
 
     // Aplicar filtro por marca
     if (brandFilter && brandFilter !== "todas") {
-      filtered = filtered.filter((moto) =>
-        moto.brand?.name?.toLowerCase().includes(brandFilter.toLowerCase()),
+      filtered = filtered.filter(moto =>
+        moto.brand?.name?.toLowerCase().includes(brandFilter.toLowerCase())
       );
     }
 
     // Aplicar filtro por modelo
     if (modelFilter && modelFilter !== "todos") {
-      filtered = filtered.filter((moto) =>
-        moto.model?.name?.toLowerCase().includes(modelFilter.toLowerCase()),
+      filtered = filtered.filter(moto =>
+        moto.model?.name?.toLowerCase().includes(modelFilter.toLowerCase())
       );
     }
 
     // Aplicar filtro por estado
     if (stateFilter && stateFilter !== "todos") {
-      filtered = filtered.filter((moto) => moto.state === stateFilter);
+      filtered = filtered.filter(moto => moto.state === stateFilter);
     }
 
     return filtered;
@@ -322,28 +278,24 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
     if (!sortConfig.key || !sortConfig.direction) return filteredData;
 
     return [...filteredData].sort((a, b) => {
-      const key = sortConfig.key as NonNullable<SortConfig["key"]>;
-      const aValue = a[key] ?? (typeof a[key] === "number" ? 0 : "");
-      const bValue = b[key] ?? (typeof b[key] === "number" ? 0 : "");
+      const key = sortConfig.key as NonNullable<SortConfig['key']>;
+      const aValue = a[key] ?? (typeof a[key] === 'number' ? 0 : "");
+      const bValue = b[key] ?? (typeof b[key] === 'number' ? 0 : "");
 
       if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortConfig.direction === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+        return sortConfig.direction === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
       if (typeof aValue === "number" && typeof bValue === "number") {
         return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue;
       }
       if (aValue instanceof Date && bValue instanceof Date) {
-        return sortConfig.direction === "asc"
-          ? aValue.getTime() - bValue.getTime()
-          : bValue.getTime() - aValue.getTime();
+        return sortConfig.direction === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
       }
       return 0;
     });
   };
 
-  const getSortIcon = (key: NonNullable<SortConfig["key"]>) => {
+  const getSortIcon = (key: NonNullable<SortConfig['key']>) => {
     if (sortConfig.key !== key) {
       return <ChevronsUpDown className="h-4 w-4 ml-1 text-muted-foreground" />;
     }
@@ -394,15 +346,13 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         if (result.success) {
           setMotorcycles((current) =>
             current.map((moto) =>
-              moto.id === motoId
-                ? { ...moto, state: newStatus, estadoVenta: newStatus, reservation: null }
-                : moto,
+              moto.id === motoId ? { ...moto, state: newStatus, estadoVenta: newStatus, reservation: null } : moto,
             ),
           );
 
           toast({
             title: "Estado Actualizado",
-            description: `Moto ${actionLabel === "restaurando" ? "restaurada a stock" : actionLabel === "pausando" ? "pausada" : "activada"} correctamente.`,
+            description: `Moto ${actionLabel === "restaurando" ? "restaurada a stock" : (actionLabel === "pausando" ? "pausada" : "activada")} correctamente.`,
           });
         } else {
           setMotorcycles((current) => [...current]);
@@ -434,15 +384,10 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         if (result.success) {
           setMotorcycles((current) =>
             current.map((moto) =>
-              moto.id === motoId
-                ? { ...moto, state: newStatus, estadoVenta: newStatus, reservation: null }
-                : moto,
+              moto.id === motoId ? { ...moto, state: newStatus, estadoVenta: newStatus, reservation: null } : moto,
             ),
           );
-          toast({
-            title: "Moto Eliminada",
-            description: "La moto ha sido marcada como eliminada (lógicamente).",
-          });
+          toast({ title: "Moto Eliminada", description: "La moto ha sido marcada como eliminada (lógicamente)." });
         } else {
           setMotorcycles((current) => [...current]);
 
@@ -464,14 +409,11 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
     });
   };
 
-  const handleAction = (
-    action: "vender" | "reservar" | "eliminarLogico",
-    moto: MotorcycleWithReservation,
-  ) => {
+  const handleAction = (action: 'vender' | 'reservar' | 'eliminarLogico', moto: MotorcycleWithReservation) => {
     // Determinar el estado real (estadoVenta tiene prioridad sobre state)
-    const estado = (moto.estadoVenta as MotorcycleState) || moto.state;
+    const estado = moto.estadoVenta as MotorcycleState || moto.state;
 
-    if (action === "eliminarLogico") {
+    if (action === 'eliminarLogico') {
       setSelectedMoto(moto as MotorcycleWithRelations);
       setShowDeleteDialog(true);
     } else if (action === "vender") {
@@ -530,25 +472,25 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         prev.map((m) =>
           m.id === updatedMoto.motorcycleId
             ? {
-                ...m,
-                state: MotorcycleState.RESERVADO,
-                estadoVenta: MotorcycleState.RESERVADO,
-                reservation: {
-                  id: updatedMoto.reservationId,
-                  amount: updatedMoto.amount,
-                  motorcycleId: updatedMoto.motorcycleId,
-                  clientId: updatedMoto.clientId,
-                  expirationDate: null,
-                  status: "active",
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  organizationId: m.organizationId,
-                  notes: null,
-                  paymentMethod: null,
-                },
+              ...m,
+              state: MotorcycleState.RESERVADO,
+              estadoVenta: MotorcycleState.RESERVADO,
+              reservation: {
+                id: updatedMoto.reservationId,
+                amount: updatedMoto.amount,
+                motorcycleId: updatedMoto.motorcycleId,
+                clientId: updatedMoto.clientId,
+                expirationDate: null,
+                status: "active",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                organizationId: m.organizationId,
+                notes: null,
+                paymentMethod: null
               }
-            : m,
-        ),
+            }
+            : m
+        )
       );
 
       // Actualizar UI de forma optimista
@@ -564,11 +506,10 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
           status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
-          organizationId:
-            motorcycles.find((m) => m.id === updatedMoto.motorcycleId)?.organizationId || "",
+          organizationId: motorcycles.find(m => m.id === updatedMoto.motorcycleId)?.organizationId || "",
           notes: null,
-          paymentMethod: null,
-        },
+          paymentMethod: null
+        }
       });
 
       toast({
@@ -588,14 +529,12 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
           // Confirmar la actualización en el estado real
           setMotorcycles((current) =>
             current.map((moto) =>
-              moto.id === motoId
-                ? {
-                    ...moto,
-                    state: newStatus,
-                    estadoVenta: newStatus,
-                    reservation: null,
-                  }
-                : moto,
+              moto.id === motoId ? {
+                ...moto,
+                state: newStatus,
+                estadoVenta: newStatus,
+                reservation: null
+              } : moto,
             ),
           );
           toast({
@@ -634,16 +573,17 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
 
   const ActionButtons = ({ moto }: { moto: MotorcycleWithReservation }) => {
     // Usar estadoVenta si está disponible, sino usar state
-    const estado = (moto.estadoVenta as MotorcycleState) || moto.state;
+    const estado = moto.estadoVenta as MotorcycleState || moto.state;
 
     const isEliminado = estado === MotorcycleState.ELIMINADO;
-    const canToggleStatus = estado === MotorcycleState.STOCK || estado === MotorcycleState.PAUSADO;
+    const canToggleStatus =
+      estado === MotorcycleState.STOCK || estado === MotorcycleState.PAUSADO;
     const isPaused = estado === MotorcycleState.PAUSADO;
     const canSell = estado === MotorcycleState.STOCK;
     const isReserved = estado === MotorcycleState.RESERVADO;
     const isProcessing = estado === MotorcycleState.PROCESANDO;
 
-    // --- ESTADO ELIMINADO ---
+    // --- ESTADO ELIMINADO --- 
     if (isEliminado) {
       return (
         <div className="hidden xl:flex flex-col gap-2">
@@ -659,7 +599,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
       );
     }
 
-    // --- ESTADO RESERVADO ---
+    // --- ESTADO RESERVADO --- 
     if (isReserved) {
       return (
         <div className="hidden xl:flex flex-col gap-2">
@@ -671,11 +611,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
               variant="outline"
               size="sm"
               className="w-full flex items-center gap-1 text-green-600 border-green-600 hover:bg-green-100"
-              onClick={() =>
-                router.push(
-                  `/sales/${moto.id}?reserved=true&amount=${moto.reservation?.amount || 0}&clientId=${moto.reservation?.clientId || ""}`,
-                )
-              }
+              onClick={() => router.push(`/sales/${moto.id}?reserved=true&amount=${moto.reservation?.amount || 0}&clientId=${moto.reservation?.clientId || ''}`)}
             >
               <DollarSign className="h-4 w-4" />
               Continuar compra
@@ -694,7 +630,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
       );
     }
 
-    // --- ESTADO PROCESANDO ---
+    // --- ESTADO PROCESANDO --- 
     if (isProcessing) {
       return (
         <div className="hidden xl:flex flex-col gap-2">
@@ -718,7 +654,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
       );
     }
 
-    // --- ESTADOS NORMALES (STOCK, PAUSADO) ---
+    // --- ESTADOS NORMALES (STOCK, PAUSADO) --- 
     return (
       <div className="hidden xl:flex flex-col gap-2">
         <div className="flex gap-2">
@@ -783,7 +719,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
 
   const ActionMenu = ({ moto }: { moto: MotorcycleWithReservation }) => {
     // Usar estadoVenta si está disponible, sino usar state
-    const estado = (moto.estadoVenta as MotorcycleState) || moto.state;
+    const estado = moto.estadoVenta as MotorcycleState || moto.state;
 
     const isEliminado = estado === MotorcycleState.ELIMINADO;
     const canBePausedOrActivated =
@@ -889,20 +825,16 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
   };
 
   // Lista de marcas disponibles (únicas)
-  const availableBrands = [
-    ...new Set(
-      optimisticMotorcycles.filter((moto) => moto.brand?.name).map((moto) => moto.brand?.name),
-    ),
-  ]
+  const availableBrands = [...new Set(optimisticMotorcycles
+    .filter(moto => moto.brand?.name)
+    .map(moto => moto.brand?.name))]
     .filter((name): name is string => name !== undefined && name !== "")
     .sort();
 
   // Lista de modelos disponibles (únicos)
-  const availableModels = [
-    ...new Set(
-      optimisticMotorcycles.filter((moto) => moto.model?.name).map((moto) => moto.model?.name),
-    ),
-  ]
+  const availableModels = [...new Set(optimisticMotorcycles
+    .filter(moto => moto.model?.name)
+    .map(moto => moto.model?.name))]
     .filter((name): name is string => name !== undefined && name !== "")
     .sort();
 
@@ -934,9 +866,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
       />
       <div className="flex flex-wrap gap-3 mb-4 items-center bg-muted/20 p-3 rounded-md">
         <div className="flex items-center gap-2">
-          <label htmlFor="brand-filter" className="text-sm font-medium">
-            Marca:
-          </label>
+          <label htmlFor="brand-filter" className="text-sm font-medium">Marca:</label>
           <Select value={brandFilter} onValueChange={setBrandFilter}>
             <SelectTrigger id="brand-filter" className="w-[180px]">
               <SelectValue placeholder="Todas las marcas" />
@@ -953,9 +883,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         </div>
 
         <div className="flex items-center gap-2">
-          <label htmlFor="model-filter" className="text-sm font-medium">
-            Modelo:
-          </label>
+          <label htmlFor="model-filter" className="text-sm font-medium">Modelo:</label>
           <Select value={modelFilter} onValueChange={setModelFilter}>
             <SelectTrigger id="model-filter" className="w-[180px]">
               <SelectValue placeholder="Todos los modelos" />
@@ -972,9 +900,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         </div>
 
         <div className="flex items-center gap-2">
-          <label htmlFor="state-filter" className="text-sm font-medium">
-            Estado:
-          </label>
+          <label htmlFor="state-filter" className="text-sm font-medium">Estado:</label>
           <Select value={stateFilter} onValueChange={(value) => setStateFilter(value)}>
             <SelectTrigger id="state-filter" className="w-[180px]">
               <SelectValue placeholder="Todos los estados" />
@@ -1037,16 +963,8 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Motos por página:</span>
           <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-[80px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
+            <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+            <SelectContent>{PAGE_SIZE_OPTIONS.map(size => <SelectItem key={size} value={size.toString()}>{size}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="text-sm text-muted-foreground">
@@ -1057,44 +975,42 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
       <Table>
         <TableHeader>
           <TableRow>
-            {isColumnVisible("brandModel") && <TableHead>Marca / Modelo</TableHead>}
-            {isColumnVisible("chassisId") && <TableHead>Chasis / ID</TableHead>}
-            {isColumnVisible("year") && (
+            {isColumnVisible('brandModel') && (
+              <TableHead>Marca / Modelo</TableHead>
+            )}
+            {isColumnVisible('chassisId') && (
+              <TableHead>Chasis / ID</TableHead>
+            )}
+            {isColumnVisible('year') && (
               <TableHead className="w-[100px]">
-                <Button
-                  variant="ghost"
-                  onClick={() => handleSort("year")}
-                  className="p-0 hover:bg-muted"
-                >
+                <Button variant="ghost" onClick={() => handleSort("year")} className="p-0 hover:bg-muted">
                   Año {getSortIcon("year")}
                 </Button>
               </TableHead>
             )}
-            {isColumnVisible("displacement") && <TableHead>Cilindrada</TableHead>}
-            {isColumnVisible("branch") && <TableHead>Ubicación</TableHead>}
-            {isColumnVisible("state") && (
+            {isColumnVisible('displacement') && (
+              <TableHead>Cilindrada</TableHead>
+            )}
+            {isColumnVisible('branch') && (
+              <TableHead>Ubicación</TableHead>
+            )}
+            {isColumnVisible('state') && (
               <TableHead className="w-[130px] text-center">
-                <Button
-                  variant="ghost"
-                  onClick={() => handleSort("state")}
-                  className="flex items-center justify-center w-full p-0 hover:bg-muted"
-                >
+                <Button variant="ghost" onClick={() => handleSort("state")} className="flex items-center justify-center w-full p-0 hover:bg-muted">
                   Estado Venta {getSortIcon("state")}
                 </Button>
               </TableHead>
             )}
-            {isColumnVisible("price") && (
+            {isColumnVisible('price') && (
               <TableHead className="text-right">
-                <Button
-                  variant="ghost"
-                  onClick={() => handleSort("retailPrice")}
-                  className="flex items-center justify-end w-full p-0 hover:bg-muted"
-                >
+                <Button variant="ghost" onClick={() => handleSort("retailPrice")} className="flex items-center justify-end w-full p-0 hover:bg-muted">
                   Precio {getSortIcon("retailPrice")}
                 </Button>
               </TableHead>
             )}
-            {isColumnVisible("actions") && <TableHead>Acciones</TableHead>}
+            {isColumnVisible('actions') && (
+              <TableHead>Acciones</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1106,24 +1022,16 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
             </TableRow>
           ) : (
             paginatedData.map((moto) => (
-              <TableRow
-                key={moto.id}
-                className="cursor-pointer hover:bg-muted/50 relative"
-                onDoubleClick={() => handleOpenDetailModal(moto as MotorcycleWithReservation)}
-              >
-                {isColumnVisible("brandModel") && (
+              <TableRow key={moto.id} className="cursor-pointer hover:bg-muted/50 relative" onDoubleClick={() => handleOpenDetailModal(moto as MotorcycleWithReservation)}>
+                {isColumnVisible('brandModel') && (
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-base font-bold uppercase">
-                        {moto.brand?.name || "N/A"}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {moto.model?.name || "N/A"}
-                      </span>
+                      <span className="text-base font-bold uppercase">{moto.brand?.name || 'N/A'}</span>
+                      <span className="text-sm text-muted-foreground">{moto.model?.name || 'N/A'}</span>
                     </div>
                   </TableCell>
                 )}
-                {isColumnVisible("chassisId") && (
+                {isColumnVisible('chassisId') && (
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
                       <span className="font-mono text-sm">{moto.chassisNumber}</span>
@@ -1131,22 +1039,22 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                     </div>
                   </TableCell>
                 )}
-                {isColumnVisible("year") && (
+                {isColumnVisible('year') && (
                   <TableCell className="w-[100px]">{moto.year}</TableCell>
                 )}
-                {isColumnVisible("displacement") && (
-                  <TableCell>{moto.displacement ?? "N/A"} cc</TableCell>
+                {isColumnVisible('displacement') && (
+                  <TableCell>{moto.displacement ?? 'N/A'} cc</TableCell>
                 )}
-                {isColumnVisible("branch") && (
+                {isColumnVisible('branch') && (
                   <TableCell className="text-muted-foreground">
-                    {moto.branch?.name || "N/A"}
+                    {moto.branch?.name || 'N/A'}
                   </TableCell>
                 )}
-                {isColumnVisible("state") && (
+                {isColumnVisible('state') && (
                   <TableCell className="w-[130px] text-center">
                     {(() => {
                       // Verificar si es un objeto completo con estadoVenta
-                      if (moto.estadoVenta && typeof moto.estadoVenta === "string") {
+                      if (moto.estadoVenta && typeof moto.estadoVenta === 'string') {
                         // Usar estadoVenta como estado
                         const stateKey = moto.estadoVenta as MotorcycleState;
 
@@ -1155,8 +1063,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                             variant="outline"
                             className={cn(
                               "font-normal whitespace-nowrap",
-                              estadoVentaConfig[stateKey]?.className ||
-                                "border-gray-500 text-gray-500",
+                              estadoVentaConfig[stateKey]?.className || "border-gray-500 text-gray-500"
                             )}
                           >
                             {estadoVentaConfig[stateKey]?.label || stateKey || "Desconocido"}
@@ -1164,7 +1071,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                         );
                       }
                       // Fallback al estado tradicional
-                      if (moto.state && typeof moto.state === "string") {
+                      if (moto.state && typeof moto.state === 'string') {
                         const stateKey = moto.state as MotorcycleState;
 
                         return (
@@ -1172,8 +1079,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                             variant="outline"
                             className={cn(
                               "font-normal whitespace-nowrap",
-                              estadoVentaConfig[stateKey]?.className ||
-                                "border-gray-500 text-gray-500",
+                              estadoVentaConfig[stateKey]?.className || "border-gray-500 text-gray-500"
                             )}
                           >
                             {estadoVentaConfig[stateKey]?.label || stateKey || "Desconocido"}
@@ -1181,20 +1087,14 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                         );
                       }
 
-                      return (
-                        <Badge variant="outline" className="border-gray-500 text-gray-500">
-                          Desconocido
-                        </Badge>
-                      );
+                      return <Badge variant="outline" className="border-gray-500 text-gray-500">Desconocido</Badge>;
                     })()}
                   </TableCell>
                 )}
-                {isColumnVisible("price") && (
-                  <TableCell className="text-right font-medium">
-                    {formatPrice(moto.retailPrice)}
-                  </TableCell>
+                {isColumnVisible('price') && (
+                  <TableCell className="text-right font-medium">{formatPrice(moto.retailPrice)}</TableCell>
                 )}
-                {isColumnVisible("actions") && (
+                {isColumnVisible('actions') && (
                   <TableCell>
                     <div className="flex items-center justify-end">
                       <ActionButtons moto={moto as MotorcycleWithReservation} />
@@ -1211,28 +1111,22 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious
-                onClick={() => handlePageChange(currentPage - 1)}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
+              <PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
             </PaginationItem>
 
-            {Array.from(
-              { length: Math.min(5, Math.ceil(sortedData.length / pageSize)) },
-              (_, i) => {
-                const pageNumber = i + 1;
-                return (
-                  <PaginationItem key={pageNumber}>
-                    <PaginationLink
-                      isActive={currentPage === pageNumber}
-                      onClick={() => handlePageChange(pageNumber)}
-                    >
-                      {pageNumber}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              },
-            )}
+            {Array.from({ length: Math.min(5, Math.ceil(sortedData.length / pageSize)) }, (_, i) => {
+              const pageNumber = i + 1;
+              return (
+                <PaginationItem key={pageNumber}>
+                  <PaginationLink
+                    isActive={currentPage === pageNumber}
+                    onClick={() => handlePageChange(pageNumber)}
+                  >
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
 
             {Math.ceil(sortedData.length / pageSize) > 5 && (
               <PaginationItem>
@@ -1241,14 +1135,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
             )}
 
             <PaginationItem>
-              <PaginationNext
-                onClick={() => handlePageChange(currentPage + 1)}
-                className={
-                  currentPage === Math.ceil(sortedData.length / pageSize)
-                    ? "pointer-events-none opacity-50"
-                    : "cursor-pointer"
-                }
-              />
+              <PaginationNext onClick={() => handlePageChange(currentPage + 1)} className={currentPage === Math.ceil(sortedData.length / pageSize) ? "pointer-events-none opacity-50" : "cursor-pointer"} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
