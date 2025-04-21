@@ -48,6 +48,7 @@ import type {
 } from "@/zod/NewBikeZod";
 import { z } from "zod";
 import type { Supplier } from "@prisma/client";
+import { MotorcycleState } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +56,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { EstadoVenta } from "@/types/BikesType";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -169,7 +169,7 @@ export function NewMotoForm({
       colorId: availableColors.length > 0 ? Number(availableColors[0].id) : 0,
       mileage: 0,
       branchId: availableBranches.length > 0 ? Number(availableBranches[0].id) : 0,
-      state: EstadoVenta.STOCK,
+      state: MotorcycleState.STOCK,
     });
   }, [append, availableColors, availableBranches]);
 
@@ -468,7 +468,7 @@ export function NewMotoForm({
                   <FormLabel>Estado</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value || EstadoVenta.STOCK}
+                    defaultValue={field.value || MotorcycleState.STOCK}
                     value={field.value}
                     disabled={isSubmitting}
                   >
@@ -478,7 +478,7 @@ export function NewMotoForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.values(EstadoVenta).map((estado) => (
+                      {Object.values(MotorcycleState).map((estado) => (
                         <SelectItem key={estado} value={estado}>
                           {estado}
                         </SelectItem>

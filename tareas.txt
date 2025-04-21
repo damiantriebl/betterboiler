@@ -47,6 +47,7 @@ stock
 [x] revisar año
 
 sales
+[x] boton de pausa, y de vender
 [ ] boton de editar la informacion esta fallando
 [ ] pagos revision
 [ ] revisar con Arca

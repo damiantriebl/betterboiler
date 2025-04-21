@@ -1,4 +1,5 @@
-import { type Motorcycle, EstadoVenta } from "@/types/BikesType";
+import { type Motorcycle } from "@/types/BikesType";
+import { MotorcycleState } from "@prisma/client";
 
 export const marcas = [
   "Honda",
@@ -40,7 +41,7 @@ export const ubicaciones = [
   "Mar del Plata",
   "San Miguel de Tucumán",
 ] as const;
-export const estadosVenta = Object.values(EstadoVenta);
+export const estadosVenta = Object.values(MotorcycleState);
 
 const modelos = {
   Honda: ["CB 190R", "XR 150L", "CRF 250L", "CB 300R", "CBR 650R", "Africa Twin", "CB 1000R"],
@@ -66,7 +67,7 @@ const selectFromArray = <T>(arr: readonly T[], index: number): T => {
 };
 
 // Función para determinar el estado de venta basado en índices
-const getEstadoVenta = (brandIndex: number, modelIndex: number, yearIndex: number): EstadoVenta => {
+const getEstadoVenta = (brandIndex: number, modelIndex: number, yearIndex: number): MotorcycleState => {
   // Usamos una fórmula diferente para mejor distribución
   const value = (brandIndex * 13 + modelIndex * 17 + yearIndex * 23) % 20;
 
@@ -76,11 +77,11 @@ const getEstadoVenta = (brandIndex: number, modelIndex: number, yearIndex: numbe
   // 3/20 = 15% pausado
   // 3/20 = 15% reservado
   // 2/20 = 10% procesando
-  if (value < 8) return EstadoVenta.STOCK;
-  if (value < 12) return EstadoVenta.VENDIDO;
-  if (value < 15) return EstadoVenta.PAUSADO;
-  if (value < 18) return EstadoVenta.RESERVADO;
-  return EstadoVenta.PROCESANDO;
+  if (value < 8) return MotorcycleState.STOCK;
+  if (value < 12) return MotorcycleState.VENDIDO;
+  if (value < 15) return MotorcycleState.PAUSADO;
+  if (value < 18) return MotorcycleState.RESERVADO;
+  return MotorcycleState.PROCESANDO;
 };
 
 export const motorcycles: Motorcycle[] = [];

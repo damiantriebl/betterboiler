@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { clientSchema, type ClientFormData } from "@/zod/ClientsZod";
 import { createClient, updateClient } from "@/actions/clients/manage-clients";
+import { Client } from "@prisma/client";
 import {
   Form,
   FormControl,
@@ -29,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ClientFormProps {
   client?: Partial<ClientFormData & { id?: string }>;
-  onSubmit?: (data: ClientFormData) => void;
+  onSubmit?: (client: Client) => void;
   onCancel?: () => void;
 }
 
@@ -58,12 +59,13 @@ export default function ClientForm({ client, onSubmit, onCancel }: ClientFormPro
   const handleSubmit = async (data: ClientFormData) => {
     setIsPending(true);
     try {
+      let resultClient: Client;
       if (client?.id) {
-        await updateClient(client.id, data);
+        resultClient = await updateClient(client.id, data);
       } else {
-        await createClient(data);
+        resultClient = await createClient(data);
       }
-      if (onSubmit) onSubmit(data);
+      if (onSubmit) onSubmit(resultClient);
     } catch (error) {
       console.error("Error al guardar cliente:", error);
     } finally {

@@ -13,12 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import type { ClientFormData } from "@/zod/ClientsZod";
+import { MotorcycleState } from '@prisma/client';
 
 // Tipo de dato para la fila
 export type Client = ClientFormData & {
   id: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  motorcycles?: { id: string; brand: string; model: string; state: MotorcycleState }[];
 };
 
 export const columns: ColumnDef<Client>[] = [

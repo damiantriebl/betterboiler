@@ -3,8 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
-import { EstadoVenta } from "@/types/BikesType"; // Importar enum
-import { Prisma } from "@prisma/client";
+import { MotorcycleState, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 // Helper para obtener organizationId (asumiendo que está disponible)
@@ -24,63 +23,103 @@ interface UpdateStatusState {
   error?: string | null;
 }
 
-// Acción para actualizar el estado (permite STOCK, PAUSADO o PROCESANDO)
+// Acción para actualizar el estado (permite STOCK, PAUSADO, PROCESANDO o ELIMINADO)
 export async function updateMotorcycleStatus(
   motorcycleId: number,
-  newStatus: EstadoVenta, // El nuevo estado deseado
+  newStatus: MotorcycleState,
 ): Promise<UpdateStatusState> {
   const organizationId = await getOrganizationIdFromSession();
   if (!organizationId) return { success: false, error: "Usuario no autenticado." };
 
-  // Validar que el nuevo estado sea solo STOCK, PAUSADO o PROCESANDO
-  if (
-    newStatus !== EstadoVenta.STOCK &&
-    newStatus !== EstadoVenta.PAUSADO &&
-    newStatus !== EstadoVenta.PROCESANDO
-  ) {
-    return { success: false, error: "Estado inválido solicitado." };
+  // Estados permitidos a los que esta acción puede cambiar
+  const validTargetStates = Object.values(MotorcycleState).filter(
+    (state) => state !== MotorcycleState.VENDIDO // Excluir VENDIDO
+  );
+
+  // Validar que el nuevo estado sea uno de los permitidos
+  if (!validTargetStates.includes(newStatus as any)) { // Usar as any para satisfacer al linter con el array filtrado
+    return { success: false, error: `Estado objetivo inválido: ${newStatus}` };
   }
 
+  let moto: { state: MotorcycleState } | null = null;
+
   try {
+    const data: any = { state: newStatus };
+
+    moto = await prisma.motorcycle.findUnique({
+      where: { id: motorcycleId, organizationId },
+      select: { state: true },
+    });
+
+    if (!moto) {
+        return { success: false, error: "Moto no encontrada." };
+    }
+
+    // Lógica específica al cambiar de estado
+    if (newStatus === MotorcycleState.STOCK && 
+        (moto.state === MotorcycleState.RESERVADO || 
+         moto.state === MotorcycleState.PROCESANDO || 
+         moto.state === MotorcycleState.ELIMINADO)) 
+    {
+      data.clientId = null;
+    }
+
+    let allowedCurrentStates: Prisma.MotorcycleWhereInput[] = [];
+
+    switch (newStatus) {
+        case MotorcycleState.STOCK:
+            allowedCurrentStates = [
+                { state: MotorcycleState.PAUSADO },
+                { state: MotorcycleState.RESERVADO },
+                { state: MotorcycleState.PROCESANDO },
+                { state: MotorcycleState.ELIMINADO },
+            ];
+            break;
+        case MotorcycleState.PAUSADO:
+            allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
+            break;
+        case MotorcycleState.PROCESANDO:
+            allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
+            break;
+        case MotorcycleState.ELIMINADO:
+            allowedCurrentStates = [
+                { state: MotorcycleState.STOCK }, 
+                { state: MotorcycleState.PAUSADO },
+            ];
+            break;
+        default: 
+            return { success: false, error: "Transición de estado no manejada." };
+    }
+
     const updatedMotorcycle = await prisma.motorcycle.update({
       where: {
         id: motorcycleId,
         organizationId: organizationId,
-        // Permitir cambiar a PROCESANDO desde STOCK o PAUSADO
-        OR: [
-          { state: EstadoVenta.STOCK }, // Permite actualizar si está en STOCK
-          { state: EstadoVenta.PAUSADO }, // Permite actualizar si está PAUSADO
-          // Otros estados según necesidad
-        ],
+        OR: allowedCurrentStates,
       },
-      data: {
-        state: newStatus, // Actualizar al nuevo estado
-      },
+      data: data,
     });
 
-    // Si update no encuentra el registro (o no cumple el `where`), lanzará un error P2025
-    // que será capturado abajo. Si llega aquí, se actualizó.
-
-    console.log(`Motorcycle ${motorcycleId} status updated to ${newStatus}`);
-    revalidatePath("/sales"); // Revalidar la página de ventas
-    revalidatePath("/stock"); // Podría ser útil revalidar stock también
+    console.log(`Motorcycle ${motorcycleId} status updated from ${moto.state} to ${newStatus}`);
+    revalidatePath("/sales");
+    revalidatePath("/stock");
     return { success: true };
+
   } catch (error) {
     console.error("🔥 SERVER ACTION ERROR (updateMotorcycleStatus):", error);
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2025: Registro no encontrado (o no cumplió la condición WHERE)
       if (error.code === "P2025") {
-        // Puede ser que el ID no exista O que el estado actual sea RESERVADO/ELIMINADO
+        // Ajustar mensaje de error usando la variable 'moto' con alcance superior
+        const currentStateMessage = moto ? `su estado actual (${moto.state})` : "podría no existir o";
         return {
           success: false,
           error:
-            "No se pudo actualizar el estado. La moto podría no existir o tener un estado no modificable (Reservado/Eliminado).",
+            `No se pudo actualizar el estado. La moto ${currentStateMessage} no permite esta transición a ${newStatus}.`,
         };
       }
     }
-    const message =
-      error instanceof Error ? error.message : "Error inesperado al actualizar estado.";
+    const message = error instanceof Error ? error.message : "Error inesperado al actualizar estado.";
     return { success: false, error: message };
   }
 }

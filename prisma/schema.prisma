@@ -96,6 +96,9 @@ model Organization {
   // Añadir relación inversa con Supplier
   suppliers Supplier[]
 
+  // Añadir relación inversa con Reservation
+  reservations Reservation[]
+
   @@map("organization")
 }
 
@@ -328,10 +331,21 @@ model Client {
   mobile      String?
   address     String?
   vatStatus   String?
-  status      String   @default("active")
+  status      String   @default("activo")
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  motorcycles Motorcycle[] // Relación inversa: motos compradas por el cliente
+  reservations Reservation[] // Relación inversa: reservas hechas por el cliente
+}
+
+enum MotorcycleState {
+  STOCK
+  VENDIDO
+  PAUSADO
+  RESERVADO
+  PROCESANDO
+  ELIMINADO
 }
 
 // --- MODELO Motorcycle (Modificar para incluir relación con Supplier) ---
@@ -349,7 +363,7 @@ model Motorcycle {
   currency       String   @default("ARS") // Kept from previous change
   observations   String?          // Kept for now
   imageUrl       String?          // imagenPrincipalUrl
-  state          String   @default("AVAILABLE") // Kept for now (Estado físico/stock)
+  state          MotorcycleState @default(STOCK)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -376,6 +390,13 @@ model Motorcycle {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
+  // --- Relación con Client
+  clientId String? // FK opcional
+  client   Client? @relation(fields: [clientId], references: [id])
+  
+  // --- Relación con Reservation (una moto puede tener múltiples reservas)
+  reservations Reservation[]
+
   // --- Índices para búsquedas eficientes ---
   @@index([brandId])
   @@index([modelId])
@@ -387,12 +408,33 @@ model Motorcycle {
   @@map("motorcycle") // Nombre de la tabla en la base de datos
 }
 
-// ---------------------------------------------
+// --- NUEVO MODELO: Reservas ---
+model Reservation {
+  id               Int      @id @default(autoincrement())
+  amount           Float    // Monto de la reserva
+  expirationDate   DateTime?    // Fecha de vencimiento de la reserva (opcional)
+  notes            String?  // Notas o comentarios sobre la reserva
+  paymentMethod    String?  // Método de pago usado para la reserva
+  status           String   @default("active") // active, completed, cancelled, expired
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-// Considera añadir un modelo Proveedor si no lo tienes
-// model Proveedor {
-//   id    Int     @id @default(autoincrement())
-//   name  String
-//   // ... otros campos ...
-//   motorcycles Motorcycle[] // Relación inversa
-// }
+  // --- Relación con Motorcycle (una reserva pertenece a una moto) ---
+  motorcycleId     Int      // Una moto puede tener múltiples reservas
+  motorcycle       Motorcycle @relation(fields: [motorcycleId], references: [id])
+
+  // --- Relación con Client (una reserva es hecha por un cliente) ---
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id])
+
+  // --- Relación con Organization ---
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  // --- Índices para búsquedas eficientes ---
+  @@index([motorcycleId])
+  @@index([clientId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([expirationDate])
+}
