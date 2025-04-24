@@ -13,7 +13,7 @@ export default async function VentasPage() {
     // Asegurarse de que todas las relaciones, incluida reservation, estén presentes
     initialData = result.map((moto) => ({
       ...moto,
-      estadoVenta: moto.estadoVenta,
+      // No necesitamos asignar estado nuevamente, ya que viene en moto
       // Asegurarse de que se incluya la reserva con su monto
       reservation: moto.reservation,
     }));

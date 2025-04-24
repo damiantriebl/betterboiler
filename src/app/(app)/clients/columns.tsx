@@ -15,12 +15,32 @@ import { Badge } from "@/components/ui/badge";
 import type { ClientFormData } from "@/zod/ClientsZod";
 import type { MotorcycleState } from "@prisma/client";
 
-// Tipo de dato para la fila
-export type Client = ClientFormData & {
+// Definición del tipo Cliente para las columnas
+// Asegurarse que los tipos opcionales usen 'null' en lugar de 'undefined' 
+// para coincidir con Prisma
+export type Client = {
   id: string;
+  type: "Individual" | "LegalEntity";
+  firstName: string;
+  lastName?: string | null; // Cambiado de undefined a null
+  companyName?: string | null; // Cambiado de undefined a null
+  taxId: string;
+  email: string;
+  phone?: string | null; // Asegurar que sea string | null
+  mobile?: string | null; // Asegurar que sea string | null
+  address?: string | null;
+  vatStatus?: string | null; // Cambiado de undefined a null
+  status: "active" | "inactive";
+  notes?: string | null; // Cambiado de undefined a null
   createdAt: Date;
   updatedAt: Date;
-  motorcycles?: { id: string; brand: string; model: string; state: MotorcycleState }[];
+  // Asegúrate que la relación con motorcycles también coincida con la estructura real
+  motorcycles?: {
+    id: string;
+    brand: string;
+    model: string;
+    state: MotorcycleState; // Importa MotorcycleState si no está ya
+  }[] | null; // Puede ser un array o null
 };
 
 export const columns: ColumnDef<Client>[] = [
