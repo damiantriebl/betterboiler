@@ -29,8 +29,10 @@ export function PriceDisplay({
     // Forzar re-renderizado después de montar el componente
     useEffect(() => {
         setMounted(true);
+    }, []);
 
-        // Log para depuración
+    useEffect(() => {
+        // Log para depuración cuando cambian las props o el estado interno
         console.log("PriceDisplay render:", {
             mode,
             showCost: showCost(),
@@ -40,7 +42,7 @@ export function PriceDisplay({
             wholesalePrice,
             retailPrice
         });
-    }, [mode, costPrice, wholesalePrice, retailPrice]);
+    }, [mode, costPrice, wholesalePrice, retailPrice, showCost, showWholesale, showRetail]);
 
     // Determinar tamaños basados en la prop size
     const sizeClasses = {

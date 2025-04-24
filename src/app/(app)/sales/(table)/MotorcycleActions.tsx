@@ -1,4 +1,4 @@
-import { MotorcycleState, Reservation } from "@prisma/client";
+import { MotorcycleState, type Reservation } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
     DollarSign,

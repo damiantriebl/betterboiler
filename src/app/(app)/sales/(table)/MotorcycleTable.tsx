@@ -10,7 +10,6 @@ import FilterSection from "./FilterSection";
 import PaginationControl from "./PaginationControl";
 import MotorcycleRow from "./MotorcycleRow";
 import { estadoVentaConfig } from "./MotorcycleStatusBadge";
-import { type MotorcycleWithActions } from "./MotorcycleActions";
 import DeleteConfirmationDialog from "../DeleteDialog";
 import { ReserveModal } from "../ReserveModal";
 import { MotorcycleDetailModal, type MotorcycleWithDetails } from "../MotorcycleDetailModal";
@@ -21,7 +20,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Client as ClientColumn } from "@/app/(app)/clients/columns";
+import type { Client as ClientColumn } from "@/app/(app)/clients/columns";
 import { ColumnSelector } from "./ColumnSelector";
 import { PriceDisplay } from "@/components/ui/price-display";
 import MotorcycleStatusBadge from "./MotorcycleStatusBadge";
@@ -616,20 +615,18 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                                     <TableCell>
                                         <div className="flex items-center justify-end">
                                             <ActionButtons
-                                                moto={moto as any}
-                                                onAction={handleAction as any}
+                                                moto={moto}
+                                                onAction={handleAction}
                                                 onToggleStatus={handleToggleStatus}
                                                 onCancelProcess={handleCancelProcess}
                                                 onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                                                isPending={isPending}
                                             />
                                             <ActionMenu
-                                                moto={moto as any}
-                                                onAction={handleAction as any}
+                                                moto={moto}
+                                                onAction={handleAction}
                                                 onToggleStatus={handleToggleStatus}
                                                 onCancelProcess={handleCancelProcess}
                                                 onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                                                isPending={isPending}
                                             />
                                         </div>
                                     </TableCell>

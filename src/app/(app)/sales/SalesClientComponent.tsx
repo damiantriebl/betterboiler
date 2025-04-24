@@ -24,7 +24,10 @@ export default function SalesClientComponent({
       {/* Usar directamente MotorcycleTable que tiene sus propios filtros */}
       <MotorcycleTable
         // Convertir MotorcycleTableRowData al tipo que espera MotorcycleTable (MotorcycleWithRelations)
+        // biome-ignore lint/suspicious/noExplicitAny: TODO: Refactorizar tipos. MotorcycleTable espera MotorcycleWithFullDetails[] pero recibe MotorcycleTableRowData[].
         initialData={initialData as any}
+        // TODO: Refactorizar tipos. MotorcycleTable espera ClientColumn[] pero recibe Client[].
+        // biome-ignore lint/suspicious/noExplicitAny: TODO: Refactorizar tipos. MotorcycleTable espera ClientColumn[] pero recibe Client[].
         clients={clients as any}
       />
     </Card>

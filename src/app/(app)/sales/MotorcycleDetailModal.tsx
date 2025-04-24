@@ -13,9 +13,9 @@ import { formatPrice } from "@/lib/utils";
 import {
   type Motorcycle,
   MotorcycleState,
-  Brand,
-  Model,
-  Sucursal,
+  type Brand,
+  type Model,
+  type Sucursal,
   type MotoColor,
   type Reservation,
 } from "@prisma/client";

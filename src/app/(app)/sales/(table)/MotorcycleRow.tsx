@@ -1,7 +1,7 @@
 import { TableRow } from "@/components/ui/table";
-import { type MotorcycleWithActions } from "./MotorcycleActions";
-import { MotorcycleState, Brand, Model, Sucursal, type MotoColor } from "@prisma/client";
-import React from "react";
+import type { MotorcycleWithActions } from "./MotorcycleActions";
+import type { MotorcycleState, Brand, Model, Sucursal, MotoColor } from "@prisma/client";
+import type React from "react";
 
 interface MotorcycleRowProps {
     moto: MotorcycleWithActions & {
@@ -21,7 +21,7 @@ interface MotorcycleRowProps {
     onToggleStatus: (motoId: number, currentStatus: MotorcycleState) => void;
     onCancelProcess: (motoId: number) => void;
     onNavigateToDetail: (motoId: string) => void;
-    onRowDoubleClick: (moto: any) => void;
+    onRowDoubleClick: (moto: MotorcycleRowProps['moto']) => void;
     isPending?: boolean;
     children: React.ReactNode;
 }

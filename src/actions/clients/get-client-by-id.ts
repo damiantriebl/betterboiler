@@ -26,7 +26,7 @@ export const getClientById = cache(async (clientId: string) => {
       return null;
     }
 
-    console.log(`[Action getClientById] Client found:`, client);
+    console.log("[Action getClientById] Client found:", client);
     return client;
   } catch (error) {
     console.error(`[Action getClientById] Error fetching client ID ${clientId}:`, error);
