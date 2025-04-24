@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
-import type { Motorcycle, Brand, Model, Sucursal, MotoColor } from "@prisma/client";
+import type { Motorcycle, Brand, Model, Sucursal, MotoColor, Client, Reservation } from "@prisma/client";
 
 // Definimos el tipo correcto para la moto incluyendo relaciones
 export type MotorcycleWithRelations = Motorcycle & {
@@ -11,6 +11,8 @@ export type MotorcycleWithRelations = Motorcycle & {
   model?: Model | null;
   branch?: Sucursal | null;
   color?: MotoColor | null;
+  client?: Client | null;
+  reservations?: (Reservation & { client: Client | null })[];
 };
 
 export async function getMotorcycleById(id: string): Promise<MotorcycleWithRelations | null> {
@@ -34,6 +36,10 @@ export async function getMotorcycleById(id: string): Promise<MotorcycleWithRelat
         model: true,
         branch: true,
         color: true,
+        client: true,
+        reservations: {
+          include: { client: true },
+        },
       },
     });
     return motorcycle;

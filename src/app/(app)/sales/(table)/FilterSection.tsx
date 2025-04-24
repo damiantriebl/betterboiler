@@ -7,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { colores, marcas, tipos, ubicaciones } from "@/data/motorcycles";
 import { MotorcycleState } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,13 +28,25 @@ interface FilterSectionProps {
     tipo: string;
     ubicacion: string;
     estadosVenta: MotorcycleState[];
+    years: number[];
   };
-  onFilterChange: (filterType: string, value: string | MotorcycleState[]) => void;
+  onFilterChange: (filterType: string, value: string | MotorcycleState[] | number[]) => void;
+  availableYears?: number[];
+  availableBrands?: string[];
+  availableModels?: string[];
+  availableBranches?: string[];
 }
 
 const estadosVentaPrisma = Object.values(MotorcycleState);
 
-export default function FilterSection({ filters, onFilterChange }: FilterSectionProps) {
+export default function FilterSection({
+  filters,
+  onFilterChange,
+  availableYears = [],
+  availableBrands = [],
+  availableModels = [],
+  availableBranches = []
+}: FilterSectionProps) {
   const formatEstadoVenta = (estado: MotorcycleState) => {
     return estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase();
   };
@@ -60,8 +71,32 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
     onFilterChange("estadosVenta", newEstados);
   };
 
+  const formatYear = (year: number) => {
+    return year.toString();
+  };
+
+  const handleYearSelect = (yearValue: string) => {
+    const year = Number(yearValue);
+
+    if (yearValue === "todos-años") {
+      onFilterChange("years", [...availableYears]);
+      return;
+    }
+
+    const isSelected = filters.years.includes(year);
+    let newYears: number[];
+
+    if (isSelected) {
+      newYears = filters.years.filter((y) => y !== year);
+    } else {
+      newYears = [...filters.years, year];
+    }
+
+    onFilterChange("years", newYears);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
       <div className="flex flex-col gap-2">
         <Label>Buscar</Label>
         <Input
@@ -81,7 +116,7 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todas">Todas las marcas</SelectItem>
-            {marcas.map((marca) => (
+            {availableBrands.map((marca) => (
               <SelectItem key={marca} value={marca}>
                 {marca}
               </SelectItem>
@@ -91,16 +126,16 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Tipo</Label>
+        <Label>Modelo</Label>
         <Select value={filters.tipo} onValueChange={(value) => onFilterChange("tipo", value)}>
           <SelectTrigger>
             <SelectValue placeholder="Seleccionar tipo" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los tipos</SelectItem>
-            {tipos.map((tipo) => (
-              <SelectItem key={tipo} value={tipo}>
-                {tipo}
+            {availableModels.map((modelo) => (
+              <SelectItem key={modelo} value={modelo}>
+                {modelo}
               </SelectItem>
             ))}
           </SelectContent>
@@ -118,13 +153,88 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todas">Todas las ubicaciones</SelectItem>
-            {ubicaciones.map((ubicacion) => (
+            {availableBranches.map((ubicacion) => (
               <SelectItem key={ubicacion} value={ubicacion}>
                 {ubicacion}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Año</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className={cn("justify-between", filters.years.length > 0 && "text-primary")}
+            >
+              {filters.years.length === availableYears.length ||
+                filters.years.length === 0
+                ? "Todos los años"
+                : filters.years.length === 1
+                  ? formatYear(filters.years[0])
+                  : `${filters.years.length} seleccionados`}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0">
+            <Command>
+              <CommandInput placeholder="Buscar año..." />
+              <CommandEmpty>No se encontraron años.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem key="todos-años" onSelect={() => handleYearSelect("todos-años")}>
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      filters.years.length === availableYears.length ||
+                        filters.years.length === 0
+                        ? "opacity-100"
+                        : "opacity-0",
+                    )}
+                  />
+                  Todos los años
+                </CommandItem>
+                {availableYears.map((year) => (
+                  <CommandItem
+                    key={year}
+                    value={year.toString()}
+                    onSelect={() => handleYearSelect(year.toString())}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        filters.years.includes(year) ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    {formatYear(year)}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {filters.years.length > 0 &&
+          filters.years.length < availableYears.length && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {filters.years.map((year) => (
+                <Badge
+                  key={year}
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const newYears = filters.years.filter((y) => y !== year);
+                    onFilterChange("years", newYears.length > 0 ? newYears : []);
+                  }}
+                >
+                  {formatYear(year)}
+                  <span className="ml-1">×</span>
+                </Badge>
+              ))}
+            </div>
+          )}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -137,7 +247,7 @@ export default function FilterSection({ filters, onFilterChange }: FilterSection
               className={cn("justify-between", filters.estadosVenta.length > 0 && "text-primary")}
             >
               {filters.estadosVenta.length === estadosVentaPrisma.length ||
-              filters.estadosVenta.length === 0
+                filters.estadosVenta.length === 0
                 ? "Ver todo"
                 : filters.estadosVenta.length === 1
                   ? formatEstadoVenta(filters.estadosVenta[0])

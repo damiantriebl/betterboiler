@@ -1,22 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import { auth } from "@/auth";
 import "./globals.css";
-import Navbar from "@/components/custom/Navbar";
 import { headers } from "next/headers";
-import { ToastProvider } from "@/components/ui/ToasterProvider";
 import prisma from "@/lib/prisma";
+import { Lato } from 'next/font/google'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const WorkSans = Lato({
+  subsets: ['latin'],
+  weight: ['400', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -34,14 +29,14 @@ export default async function RootLayout({
   });
   const organization = session?.user.organizationId
     ? await prisma.organization.findUnique({
-        where: { id: session.user.organizationId },
-        select: { name: true },
-      })
+      where: { id: session.user.organizationId },
+      select: { name: true },
+    })
     : null;
 
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body lang="es" className={`${WorkSans.className} antialiased`}>
         {children}
         <Toaster />
       </body>

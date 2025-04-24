@@ -51,6 +51,9 @@ sales
 [ ] boton de editar la informacion esta fallando
 [ ] pagos revision
 [ ] revisar con Arca
+[ ] reservado tiene que decir que cliente es con algo
+[ ] cliente rapido
+[ ] reserva con tipo de divisa, si peso o dolar
 
 Agregar Tabla Clientes
 [x ] condicion fiscal
@@ -60,3 +63,4 @@ Reportes
 [ ] lista de precios
 [ ] poder subir por porcentaje a grupos
 [ ] con boton de deshacer
+[ ] caja chica y diario

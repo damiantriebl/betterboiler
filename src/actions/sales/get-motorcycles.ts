@@ -6,7 +6,7 @@ import { Prisma, type MotorcycleState } from "@prisma/client";
 import { headers } from "next/headers";
 import { unstable_noStore as noStore } from "next/cache";
 
-// Tipo específico y preciso para la tabla
+// Actualizar el tipo para incluir costPrice y wholesalePrice
 export type MotorcycleTableRowData = {
   id: number;
   brand: {
@@ -24,8 +24,11 @@ export type MotorcycleTableRowData = {
   displacement: number | null;
   mileage: number;
   retailPrice: number;
+  wholesalePrice: number | null;
+  costPrice: number | null;
   currency: string;
-  estadoVenta: MotorcycleState;
+  state: MotorcycleState;
+  chassisNumber: string;
   reservation?: {
     id: number;
     amount: number;
@@ -59,6 +62,8 @@ export async function getMotorcycles(
         displacement: true,
         mileage: true,
         retailPrice: true,
+        wholesalePrice: true,
+        costPrice: true,
         currency: true,
         state: true,
         chassisNumber: true,
@@ -120,8 +125,10 @@ export async function getMotorcycles(
         displacement: moto.displacement,
         mileage: moto.mileage,
         retailPrice: moto.retailPrice,
+        wholesalePrice: moto.wholesalePrice,
+        costPrice: moto.costPrice,
         currency: moto.currency,
-        estadoVenta: moto.state,
+        state: moto.state,
         chassisNumber: moto.chassisNumber,
         // Relaciones (asegurando null si no existen)
         brand: finalBrand,

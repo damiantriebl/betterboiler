@@ -58,9 +58,7 @@ import {
 } from "@/actions/sales/get-motorcycle-by-id";
 
 // Definir nuestro tipo local compatible con el servidor
-type MotorcycleWithRelations = ServerMotorcycleWithRelations & {
-  estadoVenta?: string;
-};
+type MotorcycleWithRelations = ServerMotorcycleWithRelations;
 
 interface StepperProps {
   currentStep: number;
@@ -74,13 +72,12 @@ function Stepper({ currentStep, steps }: StepperProps) {
         <div key={step} className="flex items-center">
           <div
             className={`flex items-center justify-center w-8 h-8 rounded-full border-2 
-                        ${
-                          index < currentStep
-                            ? "bg-green-500 border-green-500 text-white"
-                            : index === currentStep
-                              ? "border-blue-500 text-blue-500"
-                              : "border-gray-300 text-gray-300"
-                        }`}
+                        ${index < currentStep
+                ? "bg-green-500 border-green-500 text-white"
+                : index === currentStep
+                  ? "border-blue-500 text-blue-500"
+                  : "border-gray-300 text-gray-300"
+              }`}
           >
             {index < currentStep ? "✓" : index + 1}
           </div>
@@ -430,7 +427,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
         if (result.success) {
           setClients((current) =>
             current.map((moto) =>
-              moto.id === motoId.toString() ? { ...moto, estadoVenta: newStatus } : moto,
+              moto.id === motoId.toString() ? { ...moto, state: newStatus } : moto,
             ),
           );
           toast({ title: "Proceso Cancelado" /*...*/ });
@@ -449,7 +446,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
   // --- Actualizar renderStepContent para mostrar datos reales de la moto ---
   const renderStepContent = () => {
     switch (
-      saleState.currentStep // <-- Usar saleState.currentStep
+    saleState.currentStep // <-- Usar saleState.currentStep
     ) {
       case 0:
         return (
@@ -507,7 +504,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   </p>
                   <p>
                     <span className="font-medium">Estado de Venta:</span>{" "}
-                    {moto?.estadoVenta || moto?.state || "No disponible"}
+                    {moto?.state || "No disponible"}
                   </p>
                   <p>
                     <span className="font-medium">Ubicación:</span>{" "}
