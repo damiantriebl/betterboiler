@@ -1,43 +1,17 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { MotorcycleState, Motorcycle, Brand, Prisma } from "@prisma/client";
+import { MotorcycleState } from "@prisma/client";
 import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import type { ReportFilters } from "@/types/reports";
+import type { InventoryStatusReport } from "@/types/reports";
 
-type InventoryReportType = {
-    total: number;
-    totalValue: number;
-    byState: Array<{
-        state: string;
-        count: number;
-    }>;
-    valueByState: Array<{
-        state: string;
-        value: number;
-    }>;
-    byBrand: Array<{
-        brandId: number;
-        brandName: string;
-        _count: number;
-    }>;
-};
+export async function getInventoryStatusReport(filters: ReportFilters): Promise<InventoryStatusReport> {
+    const organizationId = filters.organizationId;
+    const dateRange = filters.dateRange;
 
-type BrandCount = {
-    brandId: number;
-    brandName: string;
-    _count: number;
-};
-
-type MotorcycleWithBrand = Motorcycle & {
-    brand: Brand | null;
-};
-
-export async function getInventoryStatusReport(
-    organizationId: string,
-    dateRange?: { from: Date; to?: Date }
-): Promise<InventoryReportType> {
-    // Contar por estado
-    const countByState = await prisma.motorcycle.groupBy({
+    // Obtener conteos por estado
+    const byState = await prisma.motorcycle.groupBy({
         by: ['state'],
         where: {
             organizationId,
@@ -51,9 +25,9 @@ export async function getInventoryStatusReport(
         _count: true
     });
 
-    // Calcular valores por estado
-    const valuesByState = await prisma.motorcycle.groupBy({
-        by: ['state'],
+    // Obtener valores por estado y moneda
+    const valueByState = await prisma.motorcycle.groupBy({
+        by: ['state', 'currency'],
         where: {
             organizationId,
             ...(dateRange?.from && {
@@ -64,12 +38,14 @@ export async function getInventoryStatusReport(
             })
         },
         _sum: {
-            salePrice: true
+            retailPrice: true,
+            costPrice: true
         }
     });
 
-    // Obtener motos por marca con sus nombres
-    const motorcyclesByBrand = await prisma.motorcycle.findMany({
+    // Obtener conteos por marca
+    const byBrand = await prisma.motorcycle.groupBy({
+        by: ['brandId'],
         where: {
             organizationId,
             ...(dateRange?.from && {
@@ -79,43 +55,49 @@ export async function getInventoryStatusReport(
                 }
             })
         },
-        include: {
-            brand: true
+        _count: true
+    });
+
+    // Obtener nombres de marcas
+    const brands = await prisma.brand.findMany({
+        where: {
+            id: {
+                in: byBrand.map(b => b.brandId)
+            }
         }
     });
 
-    // Agrupar y contar por marca
-    const brandCounts = motorcyclesByBrand.reduce<Record<string, BrandCount>>((acc: Record<string, BrandCount>, curr: MotorcycleWithBrand) => {
-        if (!curr.brand) return acc;
-        
-        const brandId = curr.brand.id.toString();
-        const brandName = curr.brand.name;
-        
-        if (!acc[brandId]) {
-            acc[brandId] = {
-                brandId: Number(brandId),
-                brandName,
-                _count: 0
-            };
-        }
-        acc[brandId]._count++;
-        return acc;
-    }, {});
-
-    // Calcular el resumen
-    const summary: InventoryReportType = {
-        total: countByState.reduce((acc: number, curr: any) => acc + (curr._count ?? 0), 0),
-        totalValue: valuesByState.reduce((acc: number, curr: any) => acc + (curr._sum?.salePrice ?? 0), 0),
-        byState: countByState.map((state: any) => ({
-            state: state.state,
-            count: state._count ?? 0
-        })),
-        valueByState: valuesByState.map((state: any) => ({
-            state: state.state,
-            value: state._sum?.salePrice ?? 0
-        })),
-        byBrand: Object.values(brandCounts)
+    // Preparar el resumen
+    const stateCount = new Map(byState.map(s => [s.state, s._count]));
+    const summary = {
+        total: byState.reduce((acc, curr) => acc + curr._count, 0),
+        inStock: stateCount.get(MotorcycleState.STOCK) || 0,
+        reserved: stateCount.get(MotorcycleState.RESERVADO) || 0,
+        sold: stateCount.get(MotorcycleState.VENDIDO) || 0,
+        processing: stateCount.get(MotorcycleState.PROCESANDO) || 0
     };
 
-    return summary;
+    // Formatear datos por marca
+    const formattedByBrand = byBrand.map(item => ({
+        brandId: item.brandId,
+        brandName: brands.find(b => b.id === item.brandId)?.name || 'Desconocida',
+        _count: item._count
+    }));
+
+    return {
+        summary,
+        byState: byState.map(item => ({
+            state: item.state as MotorcycleState,
+            _count: item._count
+        })),
+        byBrand: formattedByBrand,
+        valueByState: valueByState.map(item => ({
+            state: item.state as MotorcycleState,
+            currency: item.currency,
+            _sum: {
+                retailPrice: item._sum.retailPrice || 0,
+                costPrice: item._sum.costPrice || 0
+            }
+        }))
+    };
 } 
