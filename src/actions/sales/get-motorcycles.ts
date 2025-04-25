@@ -29,11 +29,14 @@ export type MotorcycleTableRowData = {
   currency: string;
   state: MotorcycleState;
   chassisNumber: string;
+  engineNumber: string | null;
   reservation?: {
     id: number;
     amount: number;
     clientId: string;
     status: string;
+    paymentMethod?: string | null;
+    notes?: string | null;
   } | null;
 };
 
@@ -67,15 +70,13 @@ export async function getMotorcycles(
         currency: true,
         state: true,
         chassisNumber: true,
+        engineNumber: true,
         brand: {
-          // Incluir marca y su relación OrganizationBrand
           select: {
             name: true,
             organizationBrands: {
-              // Incluir explícitamente la relación
               where: { organizationId: organizationId },
               select: { color: true },
-              // No usar take: 1 aquí, traer el array (aunque debería ser de 1)
             },
           },
         },
@@ -90,6 +91,8 @@ export async function getMotorcycles(
             amount: true,
             clientId: true,
             status: true,
+            paymentMethod: true,
+            notes: true,
           },
           where: {
             status: "active",
@@ -130,6 +133,7 @@ export async function getMotorcycles(
         currency: moto.currency,
         state: moto.state,
         chassisNumber: moto.chassisNumber,
+        engineNumber: moto.engineNumber,
         // Relaciones (asegurando null si no existen)
         brand: finalBrand,
         model: moto.model ?? null,

@@ -49,18 +49,23 @@ stock
 sales
 [x] boton de pausa, y de vender
 [ ] boton de editar la informacion esta fallando
-[ ] pagos revision
+[x] pagos revision
 [ ] revisar con Arca
-[ ] reservado tiene que decir que cliente es con algo
+[x] reservado tiene que decir que cliente es con algo
 [ ] cliente rapido
-[ ] reserva con tipo de divisa, si peso o dolar
+[x] reserva con tipo de divisa, si peso o dolar
 
 Agregar Tabla Clientes
 [x ] condicion fiscal
-[ ] hacer una creacion rapida de Clientes
+[x] hacer una creacion rapida de Clientes
 
 Reportes
 [ ] lista de precios
 [ ] poder subir por porcentaje a grupos
 [ ] con boton de deshacer
 [ ] caja chica y diario
+
+usuario 
+[ ] marca de organizacion
+[ ] estilos
+[ ] colores

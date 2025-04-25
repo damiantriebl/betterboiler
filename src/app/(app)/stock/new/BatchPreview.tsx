@@ -15,7 +15,7 @@ import type { ColorConfig } from "@/types/ColorType";
 import type { BranchData } from "@/actions/stock/get-branch";
 import type { Supplier } from "@prisma/client";
 import type { BrandForCombobox } from "./page"; // Asume que este tipo está en page.tsx
-import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod"; // Importar el tipo principal
+import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Importar componentes de Tooltip
 
 // Interfaz para las props del Preview

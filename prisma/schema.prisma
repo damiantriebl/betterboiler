@@ -122,6 +122,7 @@ model User {
   accounts                Account[]
   organizationId          String?
   organization            Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sales                   Motorcycle[] @relation("MotorcycleSales") // Relación inversa con las ventas
 
   @@map("user")
 }
@@ -351,19 +352,22 @@ enum MotorcycleState {
 // --- MODELO Motorcycle (Modificar para incluir relación con Supplier) ---
 model Motorcycle {
   id             Int      @id @default(autoincrement())
-  chassisNumber  String   @unique // nroChasis
-  engineNumber   String?  @unique // nroMotor
-  year           Int              // año
-  displacement   Int?             // cilindrada 
-  mileage        Int      @default(0) // kilometraje
-  costPrice      Float?           // precioCosto
-  retailPrice    Float            // precioVentaMinorista (Obligatorio)
-  wholesalePrice Float?           // precioVentaMayorista
-  licensePlate   String?          // patente
-  currency       String   @default("ARS") // Kept from previous change
-  observations   String?          // Kept for now
-  imageUrl       String?          // imagenPrincipalUrl
+  chassisNumber  String   @unique
+  engineNumber   String?  @unique
+  year           Int
+  displacement   Int?
+  mileage        Int      @default(0)
+  costPrice      Float?
+  retailPrice    Float
+  wholesalePrice Float?
+  licensePlate   String?
+  currency       String   @default("ARS")
+  observations   String?
+  imageUrl       String?
   state          MotorcycleState @default(STOCK)
+  soldAt         DateTime?
+  sellerId       String? // ID del vendedor que realizó la venta
+  seller         User?    @relation("MotorcycleSales", fields: [sellerId], references: [id]) // Relación con el vendedor
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -401,17 +405,19 @@ model Motorcycle {
   @@index([brandId])
   @@index([modelId])
   @@index([colorId])
-  @@index([branchId]) // Reverted index name
-  @@index([supplierId]) // Añadir índice para supplierId
+  @@index([branchId])
+  @@index([supplierId])
   @@index([organizationId])
-  @@index([state]) // Indexar por estado si se busca frecuentemente
-  @@map("motorcycle") // Nombre de la tabla en la base de datos
+  @@index([state])
+  @@index([sellerId])
+  @@map("motorcycle")
 }
 
 // --- NUEVO MODELO: Reservas ---
 model Reservation {
   id               Int      @id @default(autoincrement())
   amount           Float    // Monto de la reserva
+  currency         String   @default("USD") // Moneda de la reserva (USD o ARS)
   expirationDate   DateTime?    // Fecha de vencimiento de la reserva (opcional)
   notes            String?  // Notas o comentarios sobre la reserva
   paymentMethod    String?  // Método de pago usado para la reserva

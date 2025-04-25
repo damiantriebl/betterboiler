@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
-import { Icon, PanelLeft, User } from "lucide-react";
+import { FileSpreadsheet, Icon, PanelLeft, User } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -417,6 +417,7 @@ const SidebarContent = React.forwardRef<
     { href: "/sales", icon: ShoppingCart, label: "Ventas" },
     { href: "/suppliers", icon: Truck, label: "Proveedores" },
     { href: "/clients", icon: User, label: "Clientes" },
+    { href: "/reports", icon: FileSpreadsheet, label: "Reportes" },
     { href: "/configuration", icon: Settings, label: "Configuración" },
   ];
 
@@ -724,7 +725,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className,
       )}
       {...props}

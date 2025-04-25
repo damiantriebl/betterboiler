@@ -34,16 +34,31 @@ import { cn } from "@/lib/utils";
 import { usePriceDisplayStore } from "@/stores/price-display-store";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Suspense } from "react";
-import { ClientDetail } from "@/components/custom/ClientDetail";
+import { useMemo } from "react";
+import { ClientDetail } from "./ClientDetail";
 
 export interface MotorcycleWithDetails extends Motorcycle {
   brand?: Brand | null;
   model?: Model | null;
   branch?: Sucursal | null;
   color?: MotoColor | null;
-  reservations?: (Reservation & { clientId: string; amount?: number; createdAt?: Date | string; paymentMethod?: string | null; notes?: string | null })[];
-  reservation?: { clientId: string; amount?: number; createdAt?: Date | string; paymentMethod?: string | null; notes?: string | null } | null;
+  reservations?: (Reservation & {
+    clientId: string;
+    amount?: number;
+    createdAt?: Date | string;
+    status: string;
+    paymentMethod?: string | null;
+    notes?: string | null
+  })[];
+  reservation?: {
+    id: number;
+    clientId: string;
+    amount?: number;
+    createdAt?: Date | string;
+    status: string;
+    paymentMethod?: string | null;
+    notes?: string | null
+  } | null;
 }
 
 interface Props {
@@ -80,6 +95,8 @@ export function MotorcycleDetailModal({
 }: Props) {
   if (!isOpen || !motorcycle) return null;
 
+  console.log('MotorcycleDetailModal - Full motorcycle data:', JSON.stringify(motorcycle, null, 2));
+
   const { id, state, currency } = motorcycle;
   const isStock = state === MotorcycleState.STOCK;
   const isPausado = state === MotorcycleState.PAUSADO;
@@ -89,16 +106,18 @@ export function MotorcycleDetailModal({
   const canSell = isStock;
   const canPause = isStock || isPausado;
 
-  let clientId: string | null = null;
-  let reservationData = null;
-
-  if (isProcesando) {
-    clientId = motorcycle.clientId ?? null;
-  } else if (isReservado) {
-    const active = motorcycle.reservations?.find(r => r.status === 'active') ?? motorcycle.reservation;
-    clientId = active?.clientId ?? null;
-    reservationData = active ?? null;
-  }
+  const { clientId, rawReservationData } = useMemo(() => {
+    let derivedClientId: string | null = null;
+    let derivedReservationData = null;
+    if (isProcesando) {
+      derivedClientId = motorcycle.clientId ?? null;
+    } else if (isReservado) {
+      const active = motorcycle.reservations?.find(r => r.status === 'active') ?? motorcycle.reservation;
+      derivedClientId = active?.clientId ?? null;
+      derivedReservationData = active ?? null;
+    }
+    return { clientId: derivedClientId, rawReservationData: derivedReservationData };
+  }, [isProcesando, isReservado, motorcycle]);
 
   const shouldShowWholesale = usePriceDisplayStore(s => s.showWholesale());
   const shouldShowCost = usePriceDisplayStore(s => s.showCost());
@@ -121,8 +140,22 @@ export function MotorcycleDetailModal({
     );
     if (isReservado) return (
       <>
-        <Button variant="outline" size="sm" onClick={() => onCancelProcess(id)}>Quitar Reserva</Button>
-        <Button variant="outline" size="sm" onClick={() => onNavigateToSale(id.toString())}>Continuar Compra</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-600 border-red-600 hover:bg-red-100"
+          onClick={() => onCancelProcess(id)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" /> Quitar Reserva
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-blue-600 border-blue-600 hover:bg-blue-100"
+          onClick={() => onNavigateToSale(id.toString())}
+        >
+          <Play className="mr-2 h-4 w-4" /> Continuar Compra
+        </Button>
       </>
     );
 
@@ -152,9 +185,16 @@ export function MotorcycleDetailModal({
           <Info className="mr-2 h-4 w-4 text-blue-600" />
           {isReservado ? 'Detalles de la Reserva' : 'En Proceso Para'}
         </h3>
-        <Suspense fallback={<p className="text-sm text-muted-foreground">Buscando cliente...</p>}>
-          <ClientDetail clientId={clientId} currency={currency} reservationData={reservationData} />
-        </Suspense>
+        <ClientDetail
+          clientId={clientId}
+          currency={rawReservationData?.currency || "USD"}
+          reservationData={useMemo(() => rawReservationData ? {
+            amount: rawReservationData.amount,
+            createdAt: rawReservationData.createdAt,
+            paymentMethod: rawReservationData.paymentMethod,
+            notes: rawReservationData.notes
+          } : undefined, [rawReservationData])}
+        />
       </div>
     );
   };
@@ -181,7 +221,7 @@ export function MotorcycleDetailModal({
             <div>
               <h3 className="text-base font-semibold mb-2 border-b pb-1">Precios ({currency})</h3>
               <div className="space-y-1">
-                <DetailItem label="Precio Venta" value={formatPrice(motorcycle.retailPrice)} />
+                <DetailItem label="Precio Venta" value={formatPrice(motorcycle.retailPrice, currency)} />
                 {shouldShowWholesale && motorcycle.wholesalePrice && <DetailItem label="Precio Mayorista" value={formatPrice(motorcycle.wholesalePrice)} />}
                 {shouldShowCost && motorcycle.costPrice && <DetailItem label="Precio Costo" value={formatPrice(motorcycle.costPrice)} />}
               </div>
@@ -190,7 +230,7 @@ export function MotorcycleDetailModal({
               <h3 className="text-base font-semibold mb-2 border-b pb-1">Identificación</h3>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 <DetailItem label="Nro. Chasis" value={motorcycle.chassisNumber} />
-                <DetailItem label="Nro. Motor" value={motorcycle.engineNumber} />
+                <DetailItem label="Nro. Motor" value={motorcycle.engineNumber ?? 'N/A'} />
                 <DetailItem label="Patente" value={motorcycle.licensePlate} />
               </div>
             </div>

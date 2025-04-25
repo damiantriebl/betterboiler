@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, useOptimistic } from "react";
+import { useEffect, useState, useTransition, useOptimistic, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,9 +56,14 @@ import {
   getMotorcycleById,
   type MotorcycleWithRelations as ServerMotorcycleWithRelations,
 } from "@/actions/sales/get-motorcycle-by-id";
+import { completeSale } from "@/actions/sales/complete-sale";
+import { useRouter } from "next/navigation";
 
 // Definir nuestro tipo local compatible con el servidor
-type MotorcycleWithRelations = ServerMotorcycleWithRelations;
+type MotorcycleWithRelations = ServerMotorcycleWithRelations & {
+  exchangeRate?: number;
+  soldAt?: Date | null;
+};
 
 interface StepperProps {
   currentStep: number;
@@ -106,9 +111,23 @@ interface PaymentFormData {
   metodoPago: string;
   cuotas: number;
   banco: string;
+  exchangeRate?: number;
+  // New fields for different payment methods
+  tarjetaNumero?: string;
+  tarjetaVencimiento?: string;
+  tarjetaCVV?: string;
+  tarjetaTipo?: string;
+  transferenciaCBU?: string;
+  transferenciaTitular?: string;
+  chequeNumero?: string;
+  chequeFecha?: string;
+  chequeEmisor?: string;
+  mercadoPagoCheckout?: boolean;
+  todoPagoWidget?: boolean;
+  rapipagoCodigo?: string;
+  qrCode?: string;
 }
 
-// --- Definir la estructura del estado para Local Storage ---
 interface SaleProcessState {
   currentStep: number;
   selectedClientId: string | null;
@@ -116,12 +135,42 @@ interface SaleProcessState {
   paymentData: PaymentFormData;
   showClientTable: boolean;
 }
-// --- Fin definición estructura ---
+
+function calculateRemainingAmount(
+  totalPrice: number,
+  totalCurrency: string,
+  reservationAmount: number,
+  reservationCurrency: string,
+  exchangeRate?: number
+): number {
+  if (totalCurrency === reservationCurrency) {
+    return totalPrice - reservationAmount;
+  }
+
+  if (!exchangeRate) {
+    console.warn("No se proporcionó tipo de cambio para la conversión");
+    return totalPrice;
+  }
+
+  if (totalCurrency === "USD" && reservationCurrency === "ARS") {
+    // Convertir la reserva en ARS a USD
+    const reservationInUSD = reservationAmount / exchangeRate;
+    return totalPrice - reservationInUSD;
+  } else if (totalCurrency === "ARS" && reservationCurrency === "USD") {
+    // Convertir la reserva en USD a ARS
+    const reservationInARS = reservationAmount * exchangeRate;
+    return totalPrice - reservationInARS;
+  }
+
+  return totalPrice;
+}
 
 export default function VentaPage({ params }: { params: { id: string } }) {
+  const { id } = params; // Simplified approach without use()
   const searchParams = useSearchParams();
   const isReserved = searchParams.get("reserved") === "true";
   const reservationAmount = searchParams.get("amount") ? Number(searchParams.get("amount")) : 0;
+  const reservationCurrency = searchParams.get("currency") || "USD"; // Obtener la moneda de la reserva
   const initialClientIdFromReservation = searchParams.get("clientId") || null; // Obtener ID inicial si viene de reserva
 
   // --- Estado Local (no persistente o cargado después) ---
@@ -140,9 +189,10 @@ export default function VentaPage({ params }: { params: { id: string } }) {
   // --- Fin Estado Local ---
 
   const { toast } = useToast();
+  const router = useRouter();
 
   // --- Estado Persistente con Local Storage ---
-  const localStorageKey = `saleProcess-${params.id}`;
+  const localStorageKey = `saleProcess-${id}`;
 
   const initialSaleState: SaleProcessState = {
     currentStep: 0,
@@ -191,7 +241,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
   // --- Hook useTransition ---
   const [isTransitionPending, startTransition] = useTransition();
 
-  const steps = ["Confirmar Moto", "Datos del Comprador", "Método de Pago", "Confirmación"];
+  const steps = ["Confirmar Moto", "Método de Pago", "Seleccionar Cliente", "Confirmación"];
 
   // Efecto para cargar moto y clientes
   useEffect(() => {
@@ -199,7 +249,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
       try {
         setLoadingMoto(true);
         // Cargamos la moto usando la acción del servidor
-        const motorcycle = await getMotorcycleById(params.id);
+        const motorcycle = await getMotorcycleById(id);
         if (motorcycle) {
           setMoto(motorcycle);
         } else {
@@ -260,7 +310,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     loadMotorcycle();
     loadClients();
   }, [
-    params.id,
+    id,
     isReserved,
     toast,
     saleState.selectedClientId,
@@ -373,35 +423,62 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     }));
   };
 
-  const handlePaymentDataChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handlePaymentDataChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target;
     setSaleState((prevState) => ({
       ...prevState,
       paymentData: {
         ...prevState.paymentData,
-        [name]: name === "cuotas" ? Number.parseInt(value) : value,
+        [name]: name === "cuotas" || name === "exchangeRate" ? Number(value) : value,
       },
     }));
   };
 
   const handleNext = async () => {
     if (saleState.currentStep === steps.length - 1) return;
+
+    // Validación específica para el paso de selección de cliente (paso 2)
     if (saleState.currentStep === 2) {
+      if (!saleState.selectedClientId) {
+        toast({
+          title: "Error",
+          description: "Debe seleccionar un cliente para continuar",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setLoading(false);
-      console.log("Venta completada:", {
-        moto: {
-          marca: moto?.brand?.name,
-          modelo: moto?.model?.name,
-          año: moto?.year,
-          precio: moto?.retailPrice,
-          id: moto?.id,
-        },
-        comprador: saleState.buyerData,
-        pago: saleState.paymentData,
-      });
+      try {
+        await completeSale(id, saleState.selectedClientId);
+
+        if (moto) {
+          setMoto({
+            ...moto,
+            state: MotorcycleState.VENDIDO,
+            soldAt: new Date(),
+          });
+        }
+
+        toast({
+          title: "Venta Completada",
+          description: "La venta se ha registrado exitosamente.",
+        });
+
+        setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep + 1 }));
+      } catch (error) {
+        console.error("Error al completar la venta:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Ocurrió un error al procesar la venta.",
+        });
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
+
     setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep + 1 }));
   };
 
@@ -410,45 +487,10 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep - 1 }));
   };
 
-  // Callback para el modal AddClientModal (ya existente y correcto)
-  const handleClientAdded = (newClient: Client) => {
-    setClients((prevClients) =>
-      [newClient, ...prevClients].sort((a, b) => a.firstName.localeCompare(b.firstName)),
-    );
-    handleSelectClient(newClient); // Esta función ya actualiza saleState
-  };
-
-  const handleCancelProcess = (motoId: number) => {
-    const newStatus = MotorcycleState.STOCK;
-    startTransition(async () => {
-      addOptimisticUpdate({ motorcycleId: motoId, newStatus: newStatus });
-      try {
-        const result = await updateMotorcycleStatus(motoId, newStatus);
-        if (result.success) {
-          setClients((current) =>
-            current.map((moto) =>
-              moto.id === motoId.toString() ? { ...moto, state: newStatus } : moto,
-            ),
-          );
-          toast({ title: "Proceso Cancelado" /*...*/ });
-        } else {
-          toast({ variant: "destructive", title: "Error al Cancelar" /*...*/ });
-        }
-      } catch (error) {
-        toast({ variant: "destructive", title: "Error Inesperado" /*...*/ });
-        console.error("Error cancelando proceso:", error);
-      }
-    });
-  };
-
-  // ... (resto de funciones como handleSort, getSortIcon, etc., que no necesitan cambiar) ...
-
   // --- Actualizar renderStepContent para mostrar datos reales de la moto ---
   const renderStepContent = () => {
-    switch (
-    saleState.currentStep // <-- Usar saleState.currentStep
-    ) {
-      case 0:
+    switch (saleState.currentStep) {
+      case 0: // Confirmar Moto
         return (
           <div className="space-y-6">
             {isReserved && (
@@ -522,12 +564,355 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             </Button>
           </div>
         );
-      case 1:
+
+      case 1: // Método de Pago
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Datos del Comprador</h3>
+            <h3 className="text-lg font-semibold">Método de Pago</h3>
 
-            {/* Si tiene cliente reservado o seleccionado */}
+            {isReserved && (
+              <div className="p-4 bg-blue-50 rounded-lg mb-4">
+                <p className="font-medium">
+                  Monto de reserva:{" "}
+                  <span className="text-blue-700 font-bold">
+                    {formatPrice(reservationAmount, reservationCurrency)}
+                  </span>
+                </p>
+                {moto?.currency !== reservationCurrency && (
+                  <div className="flex flex-row gap-10">
+                    <div className="mt-2 p-2 bg-yellow-50 rounded">
+                      <p className="text-base px-8 py-4 text-yellow-700">
+                        Nota: La moto está en {moto?.currency} y la reserva en {reservationCurrency}
+                      </p>
+                    </div>
+                    <div className="mt-2">
+                      <label htmlFor="exchangeRate" className="block text-sm font-medium text-gray-700">
+                        Tipo de Cambio (ARS/USD)
+                      </label>
+                      <input
+                        id="exchangeRate"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name="exchangeRate"
+                        value={saleState.paymentData.exchangeRate || ""}
+                        onChange={handlePaymentDataChange}
+                        className="mt-1 w-full p-2 border rounded bg-white"
+                        placeholder="Ej: 1000"
+                      />
+                    </div>
+                  </div>
+                )}
+                <p className="font-medium mt-2">
+                  Monto restante:{" "}
+                  <span className="text-green-700 font-bold">
+                    {formatPrice(
+                      calculateRemainingAmount(
+                        moto?.retailPrice ?? 0,
+                        moto?.currency || "USD",
+                        reservationAmount,
+                        reservationCurrency,
+                        saleState.paymentData.exchangeRate
+                      ),
+                      moto?.currency || "USD"
+                    )}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            <div className="p-4 bg-gray-50 rounded-lg mb-4">
+              <h4 className="font-medium text-gray-700 mb-2">Resumen de la moto:</h4>
+              <p>
+                <span className="font-medium">Moto:</span> {moto?.brand?.name} {moto?.model?.name} (
+                {moto?.year})
+              </p>
+              <p>
+                <span className="font-medium">Precio Total:</span>{" "}
+                {formatPrice(moto?.retailPrice ?? 0, moto?.currency || "USD")}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="metodoPago" className="block" id="metodo-pago-label">
+                  Método de Pago
+                </label>
+                <select
+                  id="metodoPago"
+                  name="metodoPago"
+                  value={saleState.paymentData.metodoPago}
+                  onChange={handlePaymentDataChange}
+                  className="w-full p-2 border rounded"
+                  aria-labelledby="metodo-pago-label"
+                >
+                  <option value="">Seleccionar método</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia bancaria</option>
+                  <option value="tarjeta">Tarjeta - Crédito/Débito</option>
+                  <option value="mercadopago">MercadoPago</option>
+                  <option value="todopago">TodoPago</option>
+                  <option value="rapipago">Rapipago/PagoFácil</option>
+                  <option value="qr">QR - Cuenta DNI/Link</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+
+              {/* Dynamic payment method fields */}
+              {saleState.paymentData.metodoPago === "transferencia" && (
+                <>
+                  <div className="space-y-2">
+                    <label htmlFor="transferenciaCBU" className="block">
+                      CBU/CVU
+                    </label>
+                    <input
+                      id="transferenciaCBU"
+                      type="text"
+                      name="transferenciaCBU"
+                      value={saleState.paymentData.transferenciaCBU || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="Ingrese CBU/CVU"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="transferenciaTitular" className="block">
+                      Titular
+                    </label>
+                    <input
+                      id="transferenciaTitular"
+                      type="text"
+                      name="transferenciaTitular"
+                      value={saleState.paymentData.transferenciaTitular || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="Nombre del titular"
+                    />
+                  </div>
+                </>
+              )}
+
+              {saleState.paymentData.metodoPago === "tarjeta" && (
+                <>
+                  <div className="space-y-2">
+                    <label htmlFor="tarjetaNumero" className="block">
+                      Número de Tarjeta
+                    </label>
+                    <input
+                      id="tarjetaNumero"
+                      type="text"
+                      name="tarjetaNumero"
+                      value={saleState.paymentData.tarjetaNumero || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="1234 5678 9012 3456"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="tarjetaVencimiento" className="block">
+                      Vencimiento
+                    </label>
+                    <input
+                      id="tarjetaVencimiento"
+                      type="text"
+                      name="tarjetaVencimiento"
+                      value={saleState.paymentData.tarjetaVencimiento || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="MM/AA"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="tarjetaCVV" className="block">
+                      CVV
+                    </label>
+                    <input
+                      id="tarjetaCVV"
+                      type="text"
+                      name="tarjetaCVV"
+                      value={saleState.paymentData.tarjetaCVV || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="123"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="tarjetaTipo" className="block">
+                      Tipo de Tarjeta
+                    </label>
+                    <select
+                      id="tarjetaTipo"
+                      name="tarjetaTipo"
+                      value={saleState.paymentData.tarjetaTipo || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="">Seleccionar tipo</option>
+                      <option value="visa">Visa</option>
+                      <option value="mastercard">Mastercard</option>
+                      <option value="amex">American Express</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="cuotas" className="block">
+                      Cuotas
+                    </label>
+                    <select
+                      id="cuotas"
+                      name="cuotas"
+                      value={saleState.paymentData.cuotas.toString()}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="1">1 cuota</option>
+                      <option value="3">3 cuotas</option>
+                      <option value="6">6 cuotas</option>
+                      <option value="12">12 cuotas</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {saleState.paymentData.metodoPago === "cheque" && (
+                <>
+                  <div className="space-y-2">
+                    <label htmlFor="chequeNumero" className="block">
+                      Número de Cheque
+                    </label>
+                    <input
+                      id="chequeNumero"
+                      type="text"
+                      name="chequeNumero"
+                      value={saleState.paymentData.chequeNumero || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="Número de cheque"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="chequeFecha" className="block">
+                      Fecha
+                    </label>
+                    <input
+                      id="chequeFecha"
+                      type="date"
+                      name="chequeFecha"
+                      value={saleState.paymentData.chequeFecha || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="chequeEmisor" className="block">
+                      Emisor
+                    </label>
+                    <input
+                      id="chequeEmisor"
+                      type="text"
+                      name="chequeEmisor"
+                      value={saleState.paymentData.chequeEmisor || ""}
+                      onChange={handlePaymentDataChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="Nombre del emisor"
+                    />
+                  </div>
+                </>
+              )}
+
+              {saleState.paymentData.metodoPago === "rapipago" && (
+                <div className="space-y-2">
+                  <label htmlFor="rapipagoCodigo" className="block">
+                    Código de Pago
+                  </label>
+                  <input
+                    id="rapipagoCodigo"
+                    type="text"
+                    name="rapipagoCodigo"
+                    value={saleState.paymentData.rapipagoCodigo || ""}
+                    onChange={handlePaymentDataChange}
+                    className="w-full p-2 border rounded"
+                    placeholder="Código generado"
+                    readOnly
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      // Aquí iría la lógica para generar el código
+                      const codigo = Math.random().toString(36).substring(2, 10).toUpperCase();
+                      setSaleState((prev) => ({
+                        ...prev,
+                        paymentData: { ...prev.paymentData, rapipagoCodigo: codigo },
+                      }));
+                    }}
+                  >
+                    Generar Código
+                  </Button>
+                </div>
+              )}
+
+              {saleState.paymentData.metodoPago === "qr" && (
+                <div className="space-y-2">
+                  <label className="block">Código QR</label>
+                  <div className="p-4 border rounded flex justify-center">
+                    {/* Aquí iría el componente QR */}
+                    <div className="w-48 h-48 bg-gray-100 flex items-center justify-center">
+                      QR Code Placeholder
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {saleState.paymentData.metodoPago === "mercadopago" && (
+                <div className="space-y-2">
+                  <label className="block">MercadoPago Checkout</label>
+                  <div className="p-4 border rounded">
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={() => {
+                        setSaleState((prev) => ({
+                          ...prev,
+                          paymentData: { ...prev.paymentData, mercadoPagoCheckout: true },
+                        }));
+                      }}
+                    >
+                      Iniciar Checkout
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {saleState.paymentData.metodoPago === "todopago" && (
+                <div className="space-y-2">
+                  <label className="block">TodoPago Widget</label>
+                  <div className="p-4 border rounded">
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={() => {
+                        setSaleState((prev) => ({
+                          ...prev,
+                          paymentData: { ...prev.paymentData, todoPagoWidget: true },
+                        }));
+                      }}
+                    >
+                      Iniciar Widget
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 2: // Seleccionar Cliente
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Selección de Cliente</h3>
+
+            {/* Cliente seleccionado */}
             {selectedClient && (
               <div className="bg-blue-50 p-4 rounded-lg mb-4 flex justify-between items-center">
                 <div>
@@ -551,13 +936,13 @@ export default function VentaPage({ params }: { params: { id: string } }) {
               </div>
             )}
 
-            {/* Si no está reservada y no hay cliente seleccionado, mostrar tabla o formulario */}
-            {!isReserved && saleState.showClientTable ? (
+            {/* Tabla de selección de cliente */}
+            {!isReserved && !selectedClient && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h4 className="text-md font-medium">Seleccionar un cliente existente</h4>
                   <AddClientModal
-                    onClientAdded={handleClientAdded}
+                    onClientAdded={handleSelectClient}
                     triggerButton={
                       <Button variant="outline" size="sm">
                         <UserPlus className="h-4 w-4 mr-2" />
@@ -567,7 +952,6 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   />
                 </div>
 
-                {/* Tabla de clientes */}
                 {loadingClients ? (
                   <div className="flex justify-center p-8">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -700,193 +1084,11 @@ export default function VentaPage({ params }: { params: { id: string } }) {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="nombre" className="block">
-                    Nombre
-                  </label>
-                  <input
-                    id="nombre"
-                    type="text"
-                    name="nombre"
-                    value={saleState.buyerData.nombre}
-                    onChange={handleBuyerDataChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Nombre"
-                    disabled={isReserved}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="apellido" className="block">
-                    Apellido
-                  </label>
-                  <input
-                    id="apellido"
-                    type="text"
-                    name="apellido"
-                    value={saleState.buyerData.apellido}
-                    onChange={handleBuyerDataChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Apellido"
-                    disabled={isReserved}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="dni" className="block">
-                    DNI
-                  </label>
-                  <input
-                    id="dni"
-                    type="text"
-                    name="dni"
-                    value={saleState.buyerData.dni}
-                    onChange={handleBuyerDataChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="DNI"
-                    disabled={isReserved}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="telefono" className="block">
-                    Teléfono
-                  </label>
-                  <input
-                    id="telefono"
-                    type="tel"
-                    name="telefono"
-                    value={saleState.buyerData.telefono}
-                    onChange={handleBuyerDataChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Teléfono"
-                    disabled={isReserved}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="email" className="block">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={saleState.buyerData.email}
-                    onChange={handleBuyerDataChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Email"
-                    disabled={isReserved}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="direccion" className="block">
-                    Dirección
-                  </label>
-                  <input
-                    id="direccion"
-                    type="text"
-                    name="direccion"
-                    value={saleState.buyerData.direccion}
-                    onChange={handleBuyerDataChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Dirección"
-                    disabled={isReserved}
-                  />
-                </div>
-              </div>
             )}
           </div>
         );
-      case 2:
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Método de Pago</h3>
 
-            {isReserved && (
-              <div className="p-4 bg-blue-50 rounded-lg mb-4">
-                <p className="font-medium">
-                  Monto de reserva:{" "}
-                  <span className="text-blue-700 font-bold">{formatPrice(reservationAmount)}</span>
-                </p>
-                <p className="font-medium">
-                  Monto restante:{" "}
-                  <span className="text-green-700 font-bold">
-                    {formatPrice((moto?.retailPrice ?? 0) - reservationAmount)}
-                  </span>
-                </p>
-              </div>
-            )}
-
-            <div className="p-4 bg-gray-50 rounded-lg mb-4">
-              <h4 className="font-medium text-gray-700 mb-2">Resumen de la moto:</h4>
-              <p>
-                <span className="font-medium">Moto:</span> {moto?.brand?.name} {moto?.model?.name} (
-                {moto?.year})
-              </p>
-              <p>
-                <span className="font-medium">Precio Total:</span>{" "}
-                {formatPrice(moto?.retailPrice ?? 0)}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="metodoPago" className="block" id="metodo-pago-label">
-                  Método de Pago
-                </label>
-                <select
-                  id="metodoPago"
-                  name="metodoPago"
-                  value={saleState.paymentData.metodoPago}
-                  onChange={handlePaymentDataChange}
-                  className="w-full p-2 border rounded"
-                  aria-labelledby="metodo-pago-label"
-                >
-                  <option value="">Seleccionar método</option>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="financiacion">Financiación</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="cuotas" className="block" id="cuotas-label">
-                  Cuotas
-                </label>
-                <select
-                  id="cuotas"
-                  name="cuotas"
-                  value={saleState.paymentData.cuotas.toString()}
-                  onChange={handlePaymentDataChange}
-                  className="w-full p-2 border rounded"
-                  aria-labelledby="cuotas-label"
-                >
-                  <option value="1">1 cuota</option>
-                  <option value="6">6 cuotas</option>
-                  <option value="12">12 cuotas</option>
-                  <option value="24">24 cuotas</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="banco" className="block" id="banco-label">
-                  Banco
-                </label>
-                <select
-                  id="banco"
-                  name="banco"
-                  value={saleState.paymentData.banco}
-                  onChange={handlePaymentDataChange}
-                  className="w-full p-2 border rounded"
-                  aria-labelledby="banco-label"
-                >
-                  <option value="">Seleccionar banco</option>
-                  <option value="santander">Santander</option>
-                  <option value="bbva">BBVA</option>
-                  <option value="galicia">Galicia</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        );
-      case 3:
+      case 3: // Confirmación
         return (
           <div className="text-center space-y-4">
             {loading ? (
@@ -939,6 +1141,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             )}
           </div>
         );
+
       default:
         return null;
     }

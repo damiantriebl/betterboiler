@@ -10,6 +10,7 @@ interface MotorcycleRowProps {
         branch?: Sucursal | null;
         color?: MotoColor | null;
         chassisNumber: string;
+        engineNumber: string;
         year: number;
         displacement?: number | null;
         retailPrice: number;

@@ -13,7 +13,7 @@ import {
   unitIdentificationSchema,
   type MotorcycleBatchFormData,
   type UnitIdentificationFormData,
-} from "@/zod/NewBikeZod";
+} from "@/zod/MotorcycleBatchSchema";
 
 // --- Schemas (Removed local definitions) ---
 /* 

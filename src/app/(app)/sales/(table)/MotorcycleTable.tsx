@@ -436,7 +436,8 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
     };
 
     const handleOpenDetailModal = (moto: MotorcycleWithFullDetails) => {
-        setSelectedMotoForModal(moto as MotorcycleWithDetails);
+        console.log('handleOpenDetailModal - Moto data:', JSON.stringify(moto, null, 2));
+        setSelectedMotoForModal(moto);
         setIsDetailModalOpen(true);
     };
 

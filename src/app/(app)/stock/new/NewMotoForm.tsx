@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useActionState } from "react";
+import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
 
 // Tipos inferidos de react-hook-form para los field arrays
 type UnitField = IdentificacionData & { id: string }; // react-hook-form añade un 'id' propio
@@ -75,9 +76,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-    value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    value === "" ? (
+      value === undefined ||
+      (Array.isArray(value) && value.length === 0) ||
+      value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -92,35 +93,28 @@ const DisplayData = ({
   );
 };
 
-// Interfaz de Props - Recibe form completo
+// Interfaz de Props - Recibe form completo y nuevas props para edición
 interface NewMotoFormProps {
-  form: UseFormReturn<MotorcycleBatchFormData>; // Cambiar props individuales por form
-  // Eliminar props individuales ya contenidas en form
-  // control: Control<MotorcycleBatchFormData>;
-  // formState: UseFormStateReturn<MotorcycleBatchFormData>;
-  // errors: FieldErrors<MotorcycleBatchFormData>;
-  // getValues: UseFormGetValues<MotorcycleBatchFormData>;
-  // setValue: UseFormSetValue<MotorcycleBatchFormData>;
-  // clearErrors: UseFormClearErrors<MotorcycleBatchFormData>;
+  form: UseFormReturn<MotorcycleBatchFormData>;
   availableColors: ColorConfig[];
-  availableBrands: BrandForCombobox[]; // Mantener este tipo por ahora
+  availableBrands: BrandForCombobox[];
   availableBranches: BranchData[];
   suppliers: Supplier[];
   isSubmitting: boolean;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; // Mantener onSubmit para el <form> tag
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   selectedBrand?: BrandForCombobox | null;
   selectedModel?: ModelInfo | null;
   availableSuppliers?: Supplier[];
   isLoading?: boolean;
-  unitId?: number;
-  serverSuccess?: boolean | null; // Mantener props de estado del servidor si se usan
+  serverSuccess?: boolean | null;
   serverError?: string | null;
   submitButtonLabel?: string;
+  isEditing?: boolean;
+  initialData?: MotorcycleWithRelations | null;
 }
 
 export function NewMotoForm({
-  form, // Usar form
-  // Eliminar props individuales
+  form,
   availableColors,
   availableBrands,
   availableBranches,
@@ -131,12 +125,12 @@ export function NewMotoForm({
   selectedModel,
   availableSuppliers,
   isLoading,
-  unitId,
-  serverSuccess, // Mantener si se usan
+  serverSuccess,
   serverError,
   submitButtonLabel,
+  isEditing = false,
+  initialData = null,
 }: NewMotoFormProps) {
-  // Extraer métodos necesarios de form si se usan directamente (aunque FormField los obtiene del contexto)
   const {
     control,
     setValue,
@@ -151,7 +145,6 @@ export function NewMotoForm({
   const currentYear = new Date().getFullYear();
   const maxYear = currentYear + 1;
 
-  // Usar useFieldArray para obtener fields, append y remove
   const {
     fields: unitFields,
     append,
@@ -174,10 +167,36 @@ export function NewMotoForm({
   }, [append, availableColors, availableBranches]);
 
   React.useEffect(() => {
-    if (unitFields.length === 0) {
+    if (isEditing && initialData) {
+      form.reset({
+        brandId: initialData.brandId,
+        modelId: initialData.modelId,
+        year: initialData.year,
+        displacement: initialData.displacement,
+        units: initialData.id ? [{
+          idTemporal: initialData.id,
+          chassisNumber: initialData.chassisNumber,
+          engineNumber: initialData.engineNumber ?? "",
+          colorId: initialData.colorId,
+          mileage: initialData.mileage,
+          branchId: initialData.branchId,
+          state: initialData.state,
+          licensePlate: initialData.licensePlate ?? "",
+          observations: initialData.observations ?? "",
+        }] : [],
+        currency: initialData.currency,
+        costPrice: initialData.costPrice,
+        wholesalePrice: initialData.wholesalePrice,
+        retailPrice: initialData.retailPrice,
+        imageUrl: initialData.imageUrl,
+        supplierId: initialData.supplierId ?? null,
+      });
+      const initialBrand = availableBrands.find(b => b.id === initialData.brandId);
+      if (initialBrand) setValue('brandId', initialBrand.id);
+    } else if (unitFields.length === 0) {
       addIdentificacion();
     }
-  }, [unitFields.length, addIdentificacion]);
+  }, [isEditing, initialData, form, addIdentificacion, unitFields.length, availableBrands, setValue]);
 
   const handleNextTab = () => {
     const currentIndex = TABS_ORDER.indexOf(activeTab);

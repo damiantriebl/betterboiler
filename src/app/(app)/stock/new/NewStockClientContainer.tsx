@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useTransition } from "react";
-import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
+import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { NewMotoForm } from "./NewMotoForm";
-import { motorcycleBatchSchema } from "@/zod/NewBikeZod";
+import { motorcycleBatchSchema } from "@/zod/MotorcycleBatchSchema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createMotorcycleBatch } from "@/actions/stock/create-motorcycle-batch";
 import type { ColorConfig } from "@/types/ColorType";

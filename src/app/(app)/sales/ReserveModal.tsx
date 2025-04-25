@@ -29,6 +29,7 @@ interface ReserveModalProps {
     reservationId: number;
     amount: number;
     clientId: string;
+    currency: string;
   }) => void;
 }
 
@@ -42,6 +43,7 @@ export function ReserveModal({
   const [amount, setAmount] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("USD");
   const [notes, setNotes] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +58,7 @@ export function ReserveModal({
         motorcycleId,
         clientId: selectedClientId,
         amount: Number.parseFloat(amount),
+        currency: "USD",
         expirationDate: null,
         paymentMethod: paymentMethod || null,
         notes: notes || null,
@@ -68,6 +71,7 @@ export function ReserveModal({
           reservationId: result.data.id,
           amount: Number.parseFloat(amount),
           clientId: selectedClientId,
+          currency: "USD",
         });
         onClose();
       } else {
@@ -85,6 +89,7 @@ export function ReserveModal({
     setAmount("");
     setSelectedClientId("");
     setPaymentMethod("");
+    setCurrency("USD");
     setNotes("");
     onClose();
   };
@@ -111,18 +116,32 @@ export function ReserveModal({
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="amount">Monto de la reserva</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Monto de la reserva</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="currency">Moneda</Label>
+              <Select value={currency} onValueChange={setCurrency} required>
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Seleccionar moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="ARS">ARS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="paymentMethod">Método de pago</Label>
