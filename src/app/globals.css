@@ -114,6 +114,16 @@ body {
   }
 }
 
+@layer components {
+  .organization-logo-container {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .organization-logo-container:hover {
+    @apply transform scale-105;
+  }
+}
+
 .pattern-diagonal-lines {
   background-color: var(--pattern-bg-color, #e0e0e0);
   background-image: repeating-linear-gradient(

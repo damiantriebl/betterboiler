@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import type { SalesReport } from "@/types/SalesReportType";
+import type { SalesReport } from "@/types/reports";
 
 const styles = StyleSheet.create({
     page: {

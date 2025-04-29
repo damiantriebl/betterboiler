@@ -64,12 +64,19 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
     form.setValue("logoFile", originalFile);
   };
 
+  const handleThumbnailUploadChange = ({ originalFile }: UploadResult) => {
+    form.setValue("thumbnailFile", originalFile);
+  };
+
   const onSubmit = form.handleSubmit((data) => {
     const formData = new FormData();
     if (data.id) formData.append("id", data.id);
     formData.append("name", data.name);
     if (data.logoFile) {
       formData.append("logoFile", data.logoFile, data.logoFile.name);
+    }
+    if (data.thumbnailFile) {
+      formData.append("thumbnailFile", data.thumbnailFile, data.thumbnailFile.name);
     }
 
     startTransition(async () => {
@@ -114,7 +121,17 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
               )}
             />
 
-            <UploadButton placeholder="Subir logo" crop={false} onChange={handleUploadChange} />
+            <FormItem>
+              <Label>Logo Principal</Label>
+              <UploadButton placeholder="Subir logo" crop={false} onChange={handleUploadChange} />
+              <FormMessage />
+            </FormItem>
+
+            <FormItem>
+              <Label>Miniatura (Max 200x200)</Label>
+              <UploadButton placeholder="Subir miniatura" crop={false} onChange={handleThumbnailUploadChange} />
+              <FormMessage />
+            </FormItem>
 
             {state.error && <p className="text-red-400">{state.error}</p>}
             <Button type="submit" disabled={isPending}>

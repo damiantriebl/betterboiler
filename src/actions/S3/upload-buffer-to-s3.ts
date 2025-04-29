@@ -22,10 +22,13 @@ export async function uploadBufferToS3({ buffer, path }: UploadBufferToS3Params)
         Key: path,
         Body: buffer,
         ContentType: "image/webp",
+        CacheControl: "public, max-age=31536000",
       }),
     );
-    console.log("Buffer uploaded successfully to:", path);
-    return { success: true, path };
+
+    const publicUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${path}`;
+    console.log("Buffer uploaded successfully to:", publicUrl);
+    return { success: true, path, url: publicUrl };
   } catch (error) {
     console.error("Error uploading buffer to S3:", error);
     return { success: false, error: (error as Error).message };

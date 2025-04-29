@@ -76,6 +76,7 @@ model Organization {
   name       String
   slug       String?     @unique
   logo       String?
+  thumbnail  String?     // Nuevo campo para la miniatura
   createdAt  DateTime    @default(now())
   metadata   String?
   users      User[]

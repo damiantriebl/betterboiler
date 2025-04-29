@@ -128,7 +128,7 @@ export function BatchPreview({
                 {" "}
                 {/* Header fijo */}
                 <TableRow>
-                  <TableHead className="w-[40px]">#</TableHead>{" "}
+                  <TableHead className="w-[40px]">#</TableHead>
                   {/* Ajustar ancho si es necesario */}
                   <TableHead>Chasis</TableHead>
                   <TableHead>Motor</TableHead>

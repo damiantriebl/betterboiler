@@ -22,8 +22,17 @@ import type { ReportFilters } from "@/types/reports";
 import { useOrganization } from "@/hooks/use-organization";
 import type { DateRange } from "react-day-picker";
 import { InventoryReport } from "@/components/custom/reports/InventoryReport";
-import type { InventoryStatusReport } from "@/types/reports";
-import { SalesReport } from "@/components/reports/SalesReport";
+import { SalesReport } from "@/components/custom/reports/SalesReport";
+import type { InventoryStatusReport, ReservationsReport as ReservationsReportType, SalesReport as SalesReportType } from "@/types/reports";
+import { ReservationsReport } from "@/components/reports/ReservationsReport";
+
+type LocalFilters = {
+    organizationId: string;
+    branchId: string;
+    brandId: string;
+    modelId: string;
+    dateRange: DateRange | undefined;
+};
 
 const reportFetchers = {
     "inventory-status": getInventoryStatusReport,
@@ -39,42 +48,25 @@ const reportFetchers = {
 export default function ReportsPage() {
     const { organization, loading: orgLoading, error: orgError } = useOrganization();
     const orgId = organization?.id ?? "";
-    const [selectedDateRange, setSelectedDateRange] = useState<PredefinedDateRange>("currentMonth");
+    const [selectedDateRange, setSelectedDateRange] = useState<string>("currentMonth");
     const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
     const [reportLoading, setReportLoading] = useState(false);
     const [inventoryReport, setInventoryReport] = useState<InventoryStatusReport | null>(null);
-    const [filters, setFilters] = useState<Omit<ReportFilters, 'dateRange'> & { dateRange?: DateRange }>({
+    const [reservationsReport, setReservationsReport] = useState<ReservationsReportType | null>(null);
+    const [salesReport, setSalesReport] = useState<SalesReportType | null>(null);
+    const [filters, setFilters] = useState<LocalFilters>({
         organizationId: orgId,
-        dateRange: undefined,
         branchId: "all",
         brandId: "all",
         modelId: "all",
+        dateRange: undefined
     });
 
-    const getPredefinedDateRange = (range: PredefinedDateRange): DateRange => {
-        const now = new Date();
-        switch (range) {
-            case "today":
-                return { from: startOfDay(now), to: endOfDay(now) };
-            case "currentMonth":
-                return { from: startOfMonth(now), to: endOfMonth(now) };
-            case "lastMonth":
-                const lastMonth = subMonths(now, 1);
-                return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
-            case "ytd":
-                return { from: startOfYear(now), to: now };
-            case "lastYear":
-                const lastYear = subYears(now, 1);
-                return { from: startOfYear(lastYear), to: endOfYear(lastYear) };
-            default:
-                return customDateRange || { from: undefined, to: undefined };
-        }
-    };
-
-    const handleDateRangeChange = (range: PredefinedDateRange) => {
-        setSelectedDateRange(range);
-        const newDateRange = (range === "custom" ? customDateRange : getPredefinedDateRange(range));
-        setFilters(prev => ({ ...prev, dateRange: newDateRange }));
+    const handleDateRangeChange = (newRange: DateRange | undefined) => {
+        setFilters(prev => ({
+            ...prev,
+            dateRange: newRange
+        }));
     };
 
     const handleCustomDateRangeChange = (range: DateRange | undefined) => {
@@ -84,16 +76,37 @@ export default function ReportsPage() {
         }
     };
 
-    const handleGenerateReport = async (reportType: keyof typeof reportFetchers) => {
+    const handleGenerateReport = async (type: string) => {
         if (!organization?.id) return;
 
         setReportLoading(true);
         try {
-            const fetcher = reportFetchers[reportType];
-            if (fetcher) {
-                const reportData = await fetcher({ ...filters, organizationId: organization.id });
-                if (reportType.includes("inventory")) setInventoryReport(reportData as InventoryStatusReport);
-                console.log("Reporte generado:", reportData);
+            const requestData: LocalFilters = {
+                ...filters,
+                organizationId: organization.id
+            };
+
+            const response = await fetch(`/api/reports/${type}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(requestData),
+            });
+
+            if (!response.ok) throw new Error("Error generando reporte");
+
+            const data = await response.json();
+            switch (type) {
+                case "inventory-status":
+                    setInventoryReport(data);
+                    break;
+                case "reservations":
+                    setReservationsReport(data);
+                    break;
+                case "sales":
+                    setSalesReport(data);
+                    break;
             }
         } catch (error) {
             console.error("Error generando reporte:", error);
@@ -169,6 +182,72 @@ export default function ReportsPage() {
         }
     };
 
+    const handleExportReservationsPDF = async () => {
+        if (!organization?.id) return;
+
+        setReportLoading(true);
+        try {
+            const response = await fetch("/api/reports/reservation/generate-pdf", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ dateRange: filters.dateRange }),
+            });
+
+            if (!response.ok) throw new Error("Error generando PDF");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "reporte-reservas.pdf";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Error exportando PDF:", error);
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    const handleClearFilters = () => {
+        setFilters({
+            organizationId: orgId,
+            branchId: "all",
+            brandId: "all",
+            modelId: "all",
+            dateRange: undefined
+        });
+        setSelectedDateRange("");
+    };
+
+    const handleBranchChange = (value: string) => {
+        setFilters(prev => ({
+            ...prev,
+            branchId: value,
+            dateRange: prev.dateRange
+        }));
+    };
+
+    const handleBrandChange = (value: string) => {
+        setFilters(prev => ({
+            ...prev,
+            brandId: value,
+            dateRange: prev.dateRange
+        }));
+    };
+
+    const handleModelChange = (value: string) => {
+        setFilters(prev => ({
+            ...prev,
+            modelId: value,
+            dateRange: prev.dateRange
+        }));
+    };
+
     if (!organization) {
         return (
             <div className="container mx-auto py-6">
@@ -211,37 +290,37 @@ export default function ReportsPage() {
                             <div className="flex flex-wrap gap-4">
                                 <Button
                                     variant={selectedDateRange === "today" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("today")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
                                 >
                                     Hoy
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("currentMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0) })}
                                 >
                                     Este Mes
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), to: new Date(new Date().getFullYear(), new Date().getMonth(), 0) })}
                                 >
                                     Mes Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("ytd")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), 0, 1), to: new Date() })}
                                 >
                                     Este Año
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastYear")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear() - 1, 0, 1), to: new Date(new Date().getFullYear() - 1, 11, 31) })}
                                 >
                                     Año Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "custom" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("custom")}
+                                    onClick={() => handleDateRangeChange(undefined)}
                                 >
                                     Personalizado
                                 </Button>
@@ -257,7 +336,7 @@ export default function ReportsPage() {
                             <div className="flex flex-wrap gap-4">
                                 <Select
                                     value={filters.branchId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, branchId: value }))}
+                                    onValueChange={handleBranchChange}
                                 >
                                     <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder="Sucursal" />
@@ -270,7 +349,7 @@ export default function ReportsPage() {
 
                                 <Select
                                     value={filters.brandId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, brandId: value }))}
+                                    onValueChange={handleBrandChange}
                                 >
                                     <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder="Marca" />
@@ -285,7 +364,8 @@ export default function ReportsPage() {
                                     organizationId: orgId,
                                     branchId: "all",
                                     brandId: "all",
-                                    modelId: "all"
+                                    modelId: "all",
+                                    dateRange: undefined
                                 })}>
                                     Limpiar Filtros
                                 </Button>
@@ -325,37 +405,37 @@ export default function ReportsPage() {
                             <div className="flex flex-wrap gap-4">
                                 <Button
                                     variant={selectedDateRange === "today" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("today")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
                                 >
                                     Hoy
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("currentMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0) })}
                                 >
                                     Este Mes
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), to: new Date(new Date().getFullYear(), new Date().getMonth(), 0) })}
                                 >
                                     Mes Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("ytd")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), 0, 1), to: new Date() })}
                                 >
                                     Este Año
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastYear")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear() - 1, 0, 1), to: new Date(new Date().getFullYear() - 1, 11, 31) })}
                                 >
                                     Año Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "custom" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("custom")}
+                                    onClick={() => handleDateRangeChange(undefined)}
                                 >
                                     Personalizado
                                 </Button>
@@ -371,7 +451,7 @@ export default function ReportsPage() {
                             <div className="flex flex-wrap gap-4">
                                 <Select
                                     value={filters.branchId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, branchId: value }))}
+                                    onValueChange={handleBranchChange}
                                 >
                                     <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder="Sucursal" />
@@ -384,7 +464,7 @@ export default function ReportsPage() {
 
                                 <Select
                                     value={filters.brandId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, brandId: value }))}
+                                    onValueChange={handleBrandChange}
                                 >
                                     <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder="Marca" />
@@ -399,7 +479,8 @@ export default function ReportsPage() {
                                     organizationId: orgId,
                                     branchId: "all",
                                     brandId: "all",
-                                    modelId: "all"
+                                    modelId: "all",
+                                    dateRange: undefined
                                 })}>
                                     Limpiar Filtros
                                 </Button>
@@ -434,7 +515,7 @@ export default function ReportsPage() {
 
                             {/* Contenido del tab seleccionado */}
                             <div className="mt-4">
-                                <SalesReport dateRange={filters.dateRange} />
+                                <SalesReport data={salesReport} dateRange={filters.dateRange} />
                             </div>
                         </TabsContent>
 
@@ -442,37 +523,37 @@ export default function ReportsPage() {
                             <div className="flex flex-wrap gap-4">
                                 <Button
                                     variant={selectedDateRange === "today" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("today")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
                                 >
                                     Hoy
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("currentMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0) })}
                                 >
                                     Este Mes
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), to: new Date(new Date().getFullYear(), new Date().getMonth(), 0) })}
                                 >
                                     Mes Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("ytd")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), 0, 1), to: new Date() })}
                                 >
                                     Este Año
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastYear")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear() - 1, 0, 1), to: new Date(new Date().getFullYear() - 1, 11, 31) })}
                                 >
                                     Año Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "custom" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("custom")}
+                                    onClick={() => handleDateRangeChange(undefined)}
                                 >
                                     Personalizado
                                 </Button>
@@ -480,51 +561,14 @@ export default function ReportsPage() {
 
                             {selectedDateRange === "custom" && (
                                 <DatePickerWithRange
-                                    value={customDateRange}
-                                    onChange={handleCustomDateRangeChange}
+                                    value={filters.dateRange}
+                                    onChange={handleDateRangeChange}
                                 />
                             )}
 
-                            <div className="flex flex-wrap gap-4">
-                                <Select
-                                    value={filters.branchId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, branchId: value }))}
-                                >
-                                    <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder="Sucursal" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas</SelectItem>
-                                        {/* Add branch options */}
-                                    </SelectContent>
-                                </Select>
-
-                                <Select
-                                    value={filters.brandId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, brandId: value }))}
-                                >
-                                    <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder="Marca" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas</SelectItem>
-                                        {/* Add brand options */}
-                                    </SelectContent>
-                                </Select>
-
-                                <Button onClick={() => setFilters({
-                                    organizationId: orgId,
-                                    branchId: "all",
-                                    brandId: "all",
-                                    modelId: "all"
-                                })}>
-                                    Limpiar Filtros
-                                </Button>
-                            </div>
-
                             <div className="flex justify-end gap-4">
                                 <Button
-                                    onClick={() => handleGenerateReport("active-reservations")}
+                                    onClick={() => handleGenerateReport("reservations")}
                                     disabled={reportLoading}
                                 >
                                     {reportLoading ? (
@@ -540,8 +584,8 @@ export default function ReportsPage() {
                                     )}
                                 </Button>
                                 <Button
-                                    onClick={handleExportInventoryPDF}
-                                    disabled={reportLoading || !inventoryReport}
+                                    onClick={handleExportReservationsPDF}
+                                    disabled={reportLoading}
                                     variant="outline"
                                 >
                                     <Download className="mr-2 h-4 w-4" />
@@ -551,7 +595,11 @@ export default function ReportsPage() {
 
                             {/* Contenido del tab seleccionado */}
                             <div className="mt-4">
-                                <div>Reporte de Reservas (En desarrollo)</div>
+                                {reservationsReport ? (
+                                    <ReservationsReport data={reservationsReport} />
+                                ) : (
+                                    <div>Seleccione un rango de fechas y genere el reporte</div>
+                                )}
                             </div>
                         </TabsContent>
 
@@ -559,37 +607,37 @@ export default function ReportsPage() {
                             <div className="flex flex-wrap gap-4">
                                 <Button
                                     variant={selectedDateRange === "today" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("today")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
                                 >
                                     Hoy
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("currentMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0) })}
                                 >
                                     Este Mes
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastMonth")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), to: new Date(new Date().getFullYear(), new Date().getMonth(), 0) })}
                                 >
                                     Mes Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("ytd")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear(), 0, 1), to: new Date() })}
                                 >
                                     Este Año
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("lastYear")}
+                                    onClick={() => handleDateRangeChange({ from: new Date(new Date().getFullYear() - 1, 0, 1), to: new Date(new Date().getFullYear() - 1, 11, 31) })}
                                 >
                                     Año Anterior
                                 </Button>
                                 <Button
                                     variant={selectedDateRange === "custom" ? "default" : "outline"}
-                                    onClick={() => handleDateRangeChange("custom")}
+                                    onClick={() => handleDateRangeChange(undefined)}
                                 >
                                     Personalizado
                                 </Button>
@@ -597,15 +645,15 @@ export default function ReportsPage() {
 
                             {selectedDateRange === "custom" && (
                                 <DatePickerWithRange
-                                    value={customDateRange}
-                                    onChange={handleCustomDateRangeChange}
+                                    value={filters.dateRange}
+                                    onChange={handleDateRangeChange}
                                 />
                             )}
 
                             <div className="flex flex-wrap gap-4">
                                 <Select
                                     value={filters.branchId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, branchId: value }))}
+                                    onValueChange={handleBranchChange}
                                 >
                                     <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder="Sucursal" />
@@ -618,7 +666,7 @@ export default function ReportsPage() {
 
                                 <Select
                                     value={filters.brandId}
-                                    onValueChange={(value) => setFilters(prev => ({ ...prev, brandId: value }))}
+                                    onValueChange={handleBrandChange}
                                 >
                                     <SelectTrigger className="w-[200px]">
                                         <SelectValue placeholder="Marca" />
@@ -633,7 +681,8 @@ export default function ReportsPage() {
                                     organizationId: orgId,
                                     branchId: "all",
                                     brandId: "all",
-                                    modelId: "all"
+                                    modelId: "all",
+                                    dateRange: undefined
                                 })}>
                                     Limpiar Filtros
                                 </Button>

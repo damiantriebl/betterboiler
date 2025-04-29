@@ -9,6 +9,7 @@ export const organizationSchema = z.object({
   logo: z.string().nullable().optional(),
   // For client-side validation including the file:
   logoFile: z.instanceof(File).optional(),
+  thumbnailFile: z.instanceof(File).optional(),
 });
 
 export type OrganizationFormData = z.infer<typeof organizationSchema>;

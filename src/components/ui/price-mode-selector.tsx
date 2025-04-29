@@ -2,9 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { usePriceDisplayStore, type PriceDisplayMode } from "@/stores/price-display-store";
-import { Diamond, Percent } from "lucide-react";
+import { Diamond, DiamondMinus, DiamondPlus, Percent } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 import { useEffect } from "react";
 
 export function PriceModeSelector() {
@@ -27,7 +26,7 @@ export function PriceModeSelector() {
 
     return (
         <TooltipProvider>
-            <div className="flex items-center gap-1 border rounded-md bg-background p-0.5">
+            <div className="relative top-0 left-150 flex gap-1 border-b border-x  rounded-b-md bg-background p-0.5">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button
@@ -38,7 +37,6 @@ export function PriceModeSelector() {
                         >
                             <div className="relative">
                                 <Diamond className="h-4 w-4" />
-                                <Badge variant="outline" className="absolute -top-2 -right-2 h-3.5 w-3.5 p-0 flex items-center justify-center text-[9px] font-bold">3</Badge>
                             </div>
                             <span className="hidden sm:inline">Todos</span>
                             <span className="sr-only">Todos los precios</span>
@@ -56,8 +54,7 @@ export function PriceModeSelector() {
                             onClick={() => handleSetMode('retail-wholesale')}
                         >
                             <div className="relative">
-                                <Diamond className="h-4 w-4" />
-                                <Badge variant="outline" className="absolute -top-2 -right-2 h-3.5 w-3.5 p-0 flex items-center justify-center text-[9px] font-bold">2</Badge>
+                                <DiamondMinus className="h-4 w-4" />
                             </div>
                             <span className="hidden sm:inline">Mayorista</span>
                             <span className="sr-only">Mayorista y minorista</span>
@@ -75,8 +72,7 @@ export function PriceModeSelector() {
                             onClick={() => handleSetMode('retail-only')}
                         >
                             <div className="relative">
-                                <Diamond className="h-4 w-4" />
-                                <Percent className="absolute -top-2 -right-2 h-3.5 w-3.5 text-[9px] font-bold" />
+                                <DiamondPlus className="h-4 w-4" />
                             </div>
                             <span className="hidden sm:inline">Minorista</span>
                             <span className="sr-only">Solo minorista</span>
