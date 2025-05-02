@@ -25,6 +25,8 @@ interface BrandContainerProps {
   onRenameDuplicateKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   onRenameDuplicateBlur: () => void;
   renameInputRef: React.RefObject<HTMLInputElement | null>;
+  isPending?: boolean;
+  isDragging?: boolean;
 }
 
 export default function BrandContainer({
@@ -43,6 +45,8 @@ export default function BrandContainer({
   onRenameDuplicateKeyDown,
   onRenameDuplicateBlur,
   renameInputRef,
+  isPending,
+  isDragging,
 }: BrandContainerProps) {
   return (
     <Card className="w-full flex flex-col border-l-4" style={{ borderLeftColor: brandColor }}>
@@ -94,6 +98,7 @@ export default function BrandContainer({
               onClick={onDelete}
               className="h-7 w-7 text-destructive"
               aria-label="Eliminar asociación de marca"
+              disabled={isPending}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

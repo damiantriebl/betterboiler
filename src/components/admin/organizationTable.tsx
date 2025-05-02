@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import prisma from "@/lib/prisma";
-import { OrganizationLogo } from "@/components/custom/OrganizationLogo";
+import OrganizationLogo from "@/components/custom/OrganizationLogo";
 
 export default async function OrganizationTable() {
   const organizations = await prisma.organization.findMany({

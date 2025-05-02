@@ -3,6 +3,9 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
+	"prisma": {
+        "seed": "tsx prisma/seed.tsx"
+      },
 	"scripts": {
 		"dev": "next dev --turbopack",
 		"build": "next build",

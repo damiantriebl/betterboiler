@@ -60,7 +60,7 @@ Agregar Tabla Clientes
 [x] hacer una creacion rapida de Clientes
 
 Reportes
-[ ] lista de precios
+[x] lista de precios
 [ ] poder subir por porcentaje a grupos
 [ ] con boton de deshacer
 [ ] caja chica y diario

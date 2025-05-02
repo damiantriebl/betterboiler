@@ -22,6 +22,7 @@ alwaysApply: true
 
 # MUY IMPORTANTE (STACK)
 
+- el manejador de paquetes es siempre PNPM, (no se usa ni npm, ni yarn, ni bun)
 - se trata siempre de mantener el stack
 - Next 15 priorizando server components cuando se pueda
 - React 19, no se usa useCallback ni useMemo, se usa useActionState y useOptimistic donde se pueda utilizar

@@ -131,6 +131,7 @@ model User {
 model Brand {
   id     Int     @id @default(autoincrement())
   name   String  @unique // Vuelve a ser único globalmente
+  color  String? // Add optional color field for default brand color
   models Model[]
 
   // --- Relación con OrganizationBrand (Tabla Intermedia) ---

@@ -11,7 +11,7 @@ interface Org { logo: string | null; thumbnail: string | null; name: string }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [org, setOrg] = useState<Org | null>(null)
-  const [scrolled, setScrolled] = useState(false)
+  const [scrollAmount, setScrollAmount] = useState(0)
   const mainRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { getOrganization().then(setOrg).catch(console.error) }, [])
@@ -19,9 +19,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const el = mainRef.current
     if (!el) return
-    const onScroll = () => setScrolled(el.scrollTop > 20)
-    el.addEventListener('scroll', onScroll, { passive: true })
-    return () => el.removeEventListener('scroll', onScroll)
+
+    const scrollTransitionDistance = 100
+
+    const handleScroll = () => {
+      const currentScroll = el.scrollTop
+      const amount = Math.min(1, Math.max(0, currentScroll / scrollTransitionDistance))
+      setScrollAmount(amount)
+    }
+
+    handleScroll()
+
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => el.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
@@ -38,7 +48,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-end w-full justify-end pr-16">
             <PriceModeSelector />
           </div>
-          {org && <NavbarSticky organization={org} isScrolled={scrolled} />}
+          {org && <NavbarSticky organization={org} scrollAmount={scrollAmount} />}
 
           <div className="w-full">
             {children}
