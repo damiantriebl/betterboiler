@@ -195,6 +195,7 @@ const generateInstallments = (
   const startDate = new Date(account.startDate);
   const financialPrincipal = account.totalAmount - account.downPayment;
 
+  // Calculate amortization schedule if interest rate is applicable
   const frenchAmortizationPlan = (account.interestRate ?? 0) > 0 && financialPrincipal > 0
     ? calculateFrenchAmortizationSchedule(
       financialPrincipal,
@@ -209,6 +210,7 @@ const generateInstallments = (
       account.paymentFrequency as PaymentFrequency
     );
 
+  // paymentsByInstallmentNumber and annulled logic as before
   const paymentsByInstallmentNumber: Record<number, Payment[]> = {};
   if (account.payments) {
     for (const payment of account.payments) {
@@ -221,16 +223,22 @@ const generateInstallments = (
     }
   }
 
+  let runningCapital = financialPrincipal;
+  const periodsPerYear = getPeriodsPerYear(account.paymentFrequency as PaymentFrequency);
+  const periodicInterestRate = (account.interestRate ?? 0) / 100 / periodsPerYear;
+
   for (let i = 0; i < account.numberOfInstallments; i++) {
     const installmentNumber = i + 1;
-    const planEntry = frenchAmortizationPlan.find(p => p.installmentNumber === installmentNumber);
     const dueDate = new Date(startDate);
+    const planEntry = frenchAmortizationPlan.find(entry => entry.installmentNumber === installmentNumber);
+
+    // Calculate dueDate (as in your existing code)
     switch (account.paymentFrequency as PaymentFrequency) {
       case "WEEKLY": dueDate.setDate(new Date(startDate).getDate() + 7 * i); break;
       case "BIWEEKLY": dueDate.setDate(new Date(startDate).getDate() + 14 * i); break;
-      case "MONTHLY": const mDate = new Date(startDate); mDate.setMonth(mDate.getMonth() + i); dueDate.setTime(mDate.getTime()); break;
-      case "QUARTERLY": const qDate = new Date(startDate); qDate.setMonth(qDate.getMonth() + 3 * i); dueDate.setTime(qDate.getTime()); break;
-      case "ANNUALLY": const aDate = new Date(startDate); aDate.setFullYear(aDate.getFullYear() + i); dueDate.setTime(aDate.getTime()); break;
+      case "MONTHLY": { const mDate = new Date(startDate); mDate.setMonth(mDate.getMonth() + i); dueDate.setTime(mDate.getTime()); break; }
+      case "QUARTERLY": { const qDate = new Date(startDate); qDate.setMonth(qDate.getMonth() + 3 * i); dueDate.setTime(qDate.getTime()); break; }
+      case "ANNUALLY": { const aDate = new Date(startDate); aDate.setFullYear(aDate.getFullYear() + i); dueDate.setTime(aDate.getTime()); break; }
     }
 
     const paymentsForThisInstallment = paymentsByInstallmentNumber[installmentNumber] || [];
@@ -275,28 +283,35 @@ const generateInstallments = (
     // 2. Si la cuota está en proceso de anulación (D/H existen o el pago original fue anulado en sesión)
     // Y/O si no está efectivamente pagada (es decir, está pendiente o su pago fue anulado)
     // Entonces, mostrar la cuota "Pendiente" según el plan francés, si aplica.
-    if (isUnderAnnulmentProcess || !isEffectivelyPaid) {
-      if (planEntry) {
-        // Solo añadir la versión "pendiente" si no hay ya un pago normal activo para esta cuota.
-        // Y si no es la misma que acabamos de añadir como "originalPaymentNowAnnulledInSession" (evitar duplicar la base anulada vs pendiente)
-        if (!isEffectivelyPaid) { // Si no hay un pago normal ACTIVO, entonces esta es la que se puede pagar.
-          generatedInstallments.push({
-            number: installmentNumber,
-            dueDate,
-            amount: Math.ceil(planEntry.calculatedInstallmentAmount),
-            isPaid: false,
-            paymentDate: null,
-            paymentId: null,
-            isAnnulled: false, // No está anulada en sí misma, es la que queda por pagar
-            installmentVersion: null, // Pendiente normal
-            originalPaymentAmount: undefined,
-            capitalAtPeriodStart: Math.ceil(planEntry.capitalAtPeriodStart),
-            amortization: Math.ceil(planEntry.amortization),
-            interestForPeriod: Math.ceil(planEntry.interestForPeriod),
-            calculatedInstallmentAmount: Math.ceil(planEntry.calculatedInstallmentAmount),
-          });
-        }
-      }
+    if (!isEffectivelyPaid && !isUnderAnnulmentProcess) {
+      // If the installment is pending payment and not involved in an annulment process
+
+      // Use the potentially recalculated installment amount from the account record
+      const expectedInstallmentAmount = account.installmentAmount;
+
+      // Find the corresponding entry in the originally calculated amortization plan 
+      // to get an *estimate* of capital/interest breakdown.
+      // Note: This breakdown might become less accurate after recalculations, 
+      // but displaying the correct expectedInstallmentAmount is the priority.
+      const planEntry = frenchAmortizationPlan.find(entry => entry.installmentNumber === installmentNumber);
+
+      generatedInstallments.push({
+        number: installmentNumber,
+        dueDate,
+        amount: Math.ceil(expectedInstallmentAmount), // Use the value from the account record
+        isPaid: false,
+        paymentDate: null,
+        paymentId: null,
+        isAnnulled: false,
+        installmentVersion: null, // Normal pending
+        originalPaymentAmount: undefined,
+        // Use planEntry for breakdown details, acknowledging potential inaccuracies
+        capitalAtPeriodStart: planEntry ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
+        amortization: planEntry ? Math.ceil(planEntry.amortization) : undefined,
+        interestForPeriod: planEntry ? Math.ceil(planEntry.interestForPeriod) : undefined,
+        calculatedInstallmentAmount: Math.ceil(expectedInstallmentAmount), // Reflect the potentially updated amount from account
+      });
+
     }
 
     // 3. Mostrar el "Original (Anulado)" si un pago normal fue explícitamente anulado en esta sesión
@@ -573,6 +588,16 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               const currentInstallments = generateInstallments(account, annulledPaymentIdsInSession);
               // Note: The original `uiRemainingAmount` and `progressPercentage` that were here are now replaced by `uiRemainingAmountDisplay` and `uiProgressPercentage`
 
+              // DEBUG: Log generated installments for this account
+              console.log(`DEBUG (FRONTEND): Installments for account ${account.id}`, currentInstallments);
+              // DEBUG: Log account data received by the component
+              console.log(`DEBUG (FRONTEND): Account data for ${account.id}`, {
+                installmentAmount: account.installmentAmount,
+                remainingAmount: account.remainingAmount,
+                status: account.status,
+                numberOfInstallments: account.numberOfInstallments
+              });
+
               return (
                 <React.Fragment key={account.id}>
                   <TableRow
@@ -688,8 +713,8 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                       <TableCell colSpan={10} className="p-0 border-t-0">
                         <div className="p-4 bg-gray-50">
                           <h3 className="font-medium mb-3">Detalle de Cuotas</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="md:col-span-1">
                               <Card>
                                 <CardContent className="pt-4">
                                   <dl className="grid grid-cols-2 gap-y-2">
@@ -731,7 +756,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                               </Card>
                             </div>
 
-                            <div className="overflow-auto max-h-60">
+                            <div className="md:col-span-2 overflow-auto">
                               <Table>
                                 <TableHeader>
                                   <TableRow>
@@ -761,9 +786,19 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                       </TableCell>
                                       <TableCell className="text-right font-semibold">
                                         {formatCurrency(
-                                          (installment.installmentVersion === 'H' ? -1 : 1) *
-                                          (installment.calculatedInstallmentAmount !== undefined ? installment.calculatedInstallmentAmount :
-                                            (installment.originalPaymentAmount !== undefined ? installment.originalPaymentAmount : installment.amount))
+                                          (() => {
+                                            const sign = installment.installmentVersion === 'H' ? -1 : 1;
+                                            if (installment.installmentVersion === 'D' || installment.installmentVersion === 'H' || installment.installmentVersion === 'Original (Anulado)') {
+                                              // For annulment entries, show the amount associated with them
+                                              return sign * installment.amount;
+                                            } else if (installment.isPaid) {
+                                              // If paid normally, show the actual amount paid
+                                              return sign * installment.amount;
+                                            } else {
+                                              // If pending, show the calculated expected amount
+                                              return sign * (installment.calculatedInstallmentAmount ?? 0); // Fallback to 0 if undefined
+                                            }
+                                          })()
                                         )}
                                       </TableCell>
                                       <TableCell>

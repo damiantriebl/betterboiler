@@ -48,7 +48,6 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
         } else {
             calculatedOpacity = (scrollAmount - startFade) / (endFade - startFade);
         }
-        console.log("scrollAmount:", scrollAmount.toFixed(3), "=> nameOpacity:", calculatedOpacity.toFixed(3));
         return calculatedOpacity;
     }, [scrollAmount]);
 
