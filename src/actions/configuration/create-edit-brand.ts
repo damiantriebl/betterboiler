@@ -453,9 +453,14 @@ export async function addModelToOrganizationBrand(
   prevState: CreateModelState | null,
   formData: FormData,
 ): Promise<CreateModelState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
-    return { success: false, error: "Usuario no autenticado o sin organización." };
+  const sessionResult = await getOrganizationIdFromSession();
+  if (!sessionResult.organizationId) {
+    return {
+      success: false,
+      error: sessionResult.error || "Usuario no autenticado o sin organización.",
+    };
+  }
+  const organizationId = sessionResult.organizationId;
 
   const validatedFields = createModelSchema.safeParse({
     name: formData.get("name"),

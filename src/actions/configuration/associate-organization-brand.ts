@@ -13,11 +13,18 @@ export const associateOrganizationBrand = async ({
   pathToRevalidate?: string;
 }) => {
   try {
-    // Intenta crear la relación, si ya existe retorna error amigable
+    // Obtener el color global de la marca
+    const globalBrand = await prisma.brand.findUnique({
+      where: { id: Number(brandId) },
+      select: { color: true }
+    });
+    
+    // Intenta crear la relación con el color global por defecto
     await prisma.organizationBrand.create({
       data: {
         organizationId,
         brandId: Number(brandId),
+        color: globalBrand?.color || null, // Usa el color global como valor por defecto
       },
     });
     

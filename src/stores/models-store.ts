@@ -6,6 +6,9 @@ export interface ModelData {
   id: number;
   name: string;
   brandId: number;
+  imageUrl?: string;
+  specSheetUrl?: string;
+  additionalFiles?: { url: string; name: string; type: string }[];
 }
 
 interface ModelsStore {
@@ -16,7 +19,7 @@ interface ModelsStore {
 
   // Actions
   fetchModelsByBrandId: (brandId: number) => Promise<ModelData[]>;
-  addModel: (name: string, brandId: number) => Promise<{ success: boolean; model?: ModelData; error?: string }>;
+  addModel: (name: string, brandId: number, formData?: FormData) => Promise<{ success: boolean; model?: ModelData; error?: string }>;
   reset: () => void;
 }
 
@@ -44,6 +47,9 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
           id: model.id,
           name: model.name,
           brandId: model.brandId,
+          imageUrl: model.imageUrl,
+          specSheetUrl: model.specSheetUrl,
+          additionalFiles: model.additionalFiles,
         }));
 
         set((state) => ({
@@ -71,19 +77,30 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
     }
   },
 
-  addModel: async (name: string, brandId: number) => {
+  addModel: async (name: string, brandId: number, formData?: FormData) => {
     try {
-      const result = await createModel({
-        name,
-        brandId,
-        pathToRevalidate: '/configuration',
-      });
+      let result;
+      
+      if (formData) {
+        // Use FormData if provided (for file uploads)
+        result = await createModel(formData);
+      } else {
+        // Use regular object if no FormData
+        result = await createModel({
+          name,
+          brandId,
+          pathToRevalidate: '/configuration',
+        });
+      }
 
       if (result.success && result.model) {
         const newModel: ModelData = {
           id: result.model.id,
           name: result.model.name,
           brandId: result.model.brandId,
+          imageUrl: result.model.imageUrl,
+          specSheetUrl: result.model.specSheetUrl,
+          additionalFiles: result.model.additionalFiles,
         };
 
         set((state) => ({

@@ -16,7 +16,19 @@ export type MotorcycleTableRowData = {
       color: string | null;
     }[];
   } | null;
-  model: { name: string } | null;
+  model: { 
+    name: string;
+    files?: {
+      id: string;
+      name: string;
+      type: string;
+      s3Key: string;
+      s3KeySmall: string | null;
+      size: number;
+      createdAt: Date;
+      updatedAt: Date;
+    }[];
+  } | null;
   color: { name: string; colorOne: string; colorTwo: string | null } | null;
   branch: { name: string } | null;
   supplier?: { legalName: string; commercialName: string | null } | null;
@@ -40,8 +52,13 @@ export type MotorcycleTableRowData = {
   } | null;
 };
 
-// Replace empty interface with type alias, using Record<string, unknown>
-type GetMotorcyclesOptions = Record<string, unknown>;
+// Tipos para opciones de filtro
+export interface GetMotorcyclesOptions {
+  filter?: {
+    state?: MotorcycleState[];
+    // Añadir más filtros según sea necesario
+  };
+}
 
 export async function getMotorcycles(
   options: GetMotorcyclesOptions = {},
@@ -80,7 +97,23 @@ export async function getMotorcycles(
             },
           },
         },
-        model: { select: { name: true } },
+        model: { 
+          select: { 
+            name: true,
+            files: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                s3Key: true,
+                s3KeySmall: true,
+                size: true,
+                createdAt: true,
+                updatedAt: true,
+              }
+            }
+          } 
+        },
         color: { select: { name: true, colorOne: true, colorTwo: true } },
         branch: { select: { name: true } },
         supplier: { select: { legalName: true, commercialName: true } },
@@ -136,7 +169,10 @@ export async function getMotorcycles(
         engineNumber: moto.engineNumber,
         // Relaciones (asegurando null si no existen)
         brand: finalBrand,
-        model: moto.model ?? null,
+        model: moto.model ? {
+          name: moto.model.name,
+          files: moto.model.files || []
+        } : null,
         color: moto.color ?? null,
         branch: moto.branch ?? null,
         supplier: moto.supplier ?? undefined,

@@ -9,7 +9,7 @@ import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status
 import FilterSection from "./FilterSection";
 import PaginationControl from "./PaginationControl";
 import MotorcycleRow from "./MotorcycleRow";
-import { estadoVentaConfig } from "./MotorcycleStatusBadge";
+import { estadoVentaConfig } from "@/types/motorcycle";
 import DeleteConfirmationDialog from "../DeleteDialog";
 import { ReserveModal } from "../ReserveModal";
 import { MotorcycleDetailModal, type MotorcycleWithDetails } from "../MotorcycleDetailModal";
@@ -25,6 +25,8 @@ import { ColumnSelector } from "./ColumnSelector";
 import { PriceDisplay } from "@/components/ui/price-display";
 import MotorcycleStatusBadge from "./MotorcycleStatusBadge";
 import { ActionButtons, ActionMenu } from "./MotorcycleActions";
+import { type BankingPromotionDisplay } from "@/types/banking-promotions";
+import { type MotorcycleWithFullDetails, type MotorcycleWithActions, type ReservationUpdate } from "@/types/motorcycle";
 
 export type MotorcycleWithFullDetails = MotorcycleWithDetails & {
     brand?: Brand & { organizationBrands?: { color: string }[] } | null;
@@ -33,7 +35,8 @@ export type MotorcycleWithFullDetails = MotorcycleWithDetails & {
 
 interface MotorcycleTableProps {
     initialData: MotorcycleWithFullDetails[];
-    clients: ClientColumn[];
+    clients: Client[];
+    activePromotions?: BankingPromotionDisplay[];
 }
 
 type SortableKey = keyof Pick<Motorcycle, 'id' | 'year' | 'mileage' | 'retailPrice' | 'state' | 'chassisNumber' | 'createdAt' | 'updatedAt'>;
@@ -65,7 +68,7 @@ const DEFAULT_VISIBLE_COLUMNS: ManualColumnId[] = AVAILABLE_COLUMNS.map(col => c
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
-export default function MotorcycleTable({ initialData, clients }: MotorcycleTableProps) {
+export default function MotorcycleTable({ initialData, clients, activePromotions }: MotorcycleTableProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
@@ -87,18 +90,15 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
     const [showReserveModal, setShowReserveModal] = useState(false);
     const [selectedReserveMoto, setSelectedReserveMoto] = useState<MotorcycleWithFullDetails | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [selectedMotoForModal, setSelectedMotoForModal] = useState<MotorcycleWithDetails | null>(null);
+    const [selectedMotoForModal, setSelectedMotoForModal] = useState<MotorcycleWithFullDetails | null>(null);
     const [visibleColumns, setVisibleColumns] = useState<ManualColumnId[]>(DEFAULT_VISIBLE_COLUMNS);
 
     const [optimisticMotorcycles, addOptimisticUpdate] = useOptimistic(
         motorcycles,
-        (state: MotorcycleWithFullDetails[], optimisticValue: { motorcycleId: number; newStatus: MotorcycleState; reservation?: Reservation | null; clientId?: string | null }) => {
+        (state: MotorcycleWithFullDetails[], optimisticValue: { motorcycleId: number; newStatus: MotorcycleState }) => {
             return state.map((moto) =>
                 moto.id === optimisticValue.motorcycleId
-                    ? {
-                        ...moto,
-                        state: optimisticValue.newStatus,
-                    }
+                    ? { ...moto, state: optimisticValue.newStatus }
                     : moto,
             );
         },
@@ -224,14 +224,14 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         }
 
         startTransition(async () => {
-            addOptimisticUpdate({ motorcycleId: motoId, newStatus, reservation: null });
+            addOptimisticUpdate({ motorcycleId: motoId, newStatus });
             try {
                 const result = await updateMotorcycleStatus(motoId, newStatus);
 
                 if (result.success) {
                     setMotorcycles((current) =>
                         current.map((moto) =>
-                            moto.id === motoId ? { ...moto, state: newStatus, reservation: null } : moto,
+                            moto.id === motoId ? { ...moto, state: newStatus } : moto,
                         ),
                     );
 
@@ -263,13 +263,13 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
     const handleSetEliminado = (motoId: number) => {
         const newStatus = MotorcycleState.ELIMINADO;
         startTransition(async () => {
-            addOptimisticUpdate({ motorcycleId: motoId, newStatus, reservation: null });
+            addOptimisticUpdate({ motorcycleId: motoId, newStatus });
             try {
                 const result = await updateMotorcycleStatus(motoId, newStatus);
                 if (result.success) {
                     setMotorcycles((current) =>
                         current.map((moto) =>
-                            moto.id === motoId ? { ...moto, state: newStatus, reservation: null } : moto,
+                            moto.id === motoId ? { ...moto, state: newStatus } : moto,
                         ),
                     );
                     toast({ title: "Moto Eliminada", description: "La moto ha sido marcada como eliminada (lógicamente)." });
@@ -301,9 +301,9 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
         } else if (action === "vender") {
             const newStatus = MotorcycleState.PROCESANDO;
 
-            addOptimisticUpdate({ motorcycleId: moto.id, newStatus, reservation: null });
-
             startTransition(async () => {
+                addOptimisticUpdate({ motorcycleId: moto.id, newStatus });
+
                 try {
                     const result = await updateMotorcycleStatus(moto.id, newStatus);
 
@@ -375,19 +375,6 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
             addOptimisticUpdate({
                 motorcycleId: updatedMoto.motorcycleId,
                 newStatus: MotorcycleState.RESERVADO,
-                reservation: {
-                    id: updatedMoto.reservationId,
-                    amount: updatedMoto.amount,
-                    motorcycleId: updatedMoto.motorcycleId,
-                    clientId: updatedMoto.clientId,
-                    expirationDate: null,
-                    status: "active",
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    organizationId: motorcycles.find(m => m.id === updatedMoto.motorcycleId)?.organizationId || "",
-                    notes: null,
-                    paymentMethod: null
-                }
             });
 
             toast({
@@ -400,7 +387,7 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
     const handleCancelProcess = (motoId: number) => {
         const newStatus = MotorcycleState.STOCK;
         startTransition(async () => {
-            addOptimisticUpdate({ motorcycleId: motoId, newStatus: newStatus, reservation: null });
+            addOptimisticUpdate({ motorcycleId: motoId, newStatus });
             try {
                 const result = await updateMotorcycleStatus(motoId, newStatus);
                 if (result.success) {
@@ -409,7 +396,6 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                             moto.id === motoId ? {
                                 ...moto,
                                 state: newStatus,
-                                reservation: null
                             } : moto,
                         ),
                     );
@@ -436,8 +422,16 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
     };
 
     const handleOpenDetailModal = (moto: MotorcycleWithFullDetails) => {
-        console.log('handleOpenDetailModal - Moto data:', JSON.stringify(moto, null, 2));
-        setSelectedMotoForModal(moto);
+        // Asegurarnos de que el modelo incluya la propiedad imageUrl
+        const motoWithModelData = {
+            ...moto,
+            model: moto.model ? {
+                ...moto.model,
+                imageUrl: moto.model.imageUrl || null
+            } : null
+        };
+        console.log('handleOpenDetailModal - Moto data:', JSON.stringify(motoWithModelData, null, 2));
+        setSelectedMotoForModal(motoWithModelData);
         setIsDetailModalOpen(true);
     };
 
@@ -474,8 +468,24 @@ export default function MotorcycleTable({ initialData, clients }: MotorcycleTabl
                 open={showReserveModal}
                 onClose={() => setShowReserveModal(false)}
                 motorcycleId={selectedReserveMoto?.id ? Number(selectedReserveMoto.id) : 0}
+                motorcycleName={selectedReserveMoto ? `${selectedReserveMoto.brand?.name || ''} ${selectedReserveMoto.model?.name || ''}` : ''}
+                motorcyclePrice={selectedReserveMoto?.retailPrice || 0}
                 clients={clients}
-                onReserved={handleReserved}
+                onSaleProcessCompleted={(data) => {
+                    if (data.type === 'reservation') {
+                        handleReserved(data.payload);
+                    } else if (data.type === 'current_account') {
+                        // Handle current account creation
+                        // We can update the motorcycle state similar to reservation
+                        const updatedMoto = {
+                            motorcycleId: Number(selectedReserveMoto?.id || 0),
+                            reservationId: 0, // Not applicable for current account
+                            amount: selectedReserveMoto?.retailPrice || 0,
+                            clientId: data.payload.clientId
+                        };
+                        handleReserved(updatedMoto);
+                    }
+                }}
             />
             <MotorcycleDetailModal
                 isOpen={isDetailModalOpen}

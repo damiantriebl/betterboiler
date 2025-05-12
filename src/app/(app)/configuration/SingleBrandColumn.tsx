@@ -55,6 +55,7 @@ import {
   renameBrandByDuplication,
   dissociateOrganizationBrand,
   updateOrganizationModel,
+  addModelToOrganizationBrand
 } from "@/actions/configuration/create-edit-brand";
 import { getModelsByBrandId } from "@/actions/root/get-models-by-brand-id";
 import { useModelsStore, type ModelData } from "@/stores/models-store";
@@ -281,9 +282,80 @@ export default function SingleBrandColumn({
 
     setModels(prevModels => [...prevModels, newModel]);
 
-    toast({
-      title: "Modelo añadido",
-      description: `El modelo "${model.name}" ha sido añadido`
+    // Persist the model in the database
+    startModelActionTransition(async () => {
+      const formData = new FormData();
+      formData.append("name", model.name);
+      formData.append("brandId", brandId.toString());
+
+      const result = await addModelToOrganizationBrand(null, formData);
+
+      if (!result.success) {
+        // Revert the local state change if the server action fails
+        setModels(prevModels => prevModels.filter(m => m.id !== model.id));
+        toast({
+          title: "Error al guardar modelo",
+          description: result.error || "No se pudo guardar el modelo en la base de datos",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Modelo añadido",
+          description: `El modelo "${model.name}" ha sido añadido y guardado`
+        });
+      }
+    });
+  };
+
+  const handleModelsAdded = (newModels: ModelData[]) => {
+    setIsAddModelModalOpen(false);
+
+    // Add all selected models to the local state
+    const formattedModels: DisplayModelData[] = newModels.map((model, index) => ({
+      id: model.id,
+      name: model.name,
+      orgOrder: models.length + index // Place new models at the end in sequence
+    }));
+
+    setModels(prevModels => [...prevModels, ...formattedModels]);
+
+    // Persist each model in the database
+    startModelActionTransition(async () => {
+      const results = await Promise.all(
+        newModels.map(async (model) => {
+          const formData = new FormData();
+          formData.append("name", model.name);
+          formData.append("brandId", brandId.toString());
+
+          return addModelToOrganizationBrand(null, formData);
+        })
+      );
+
+      // Check if any of the models failed to save
+      const failedModels = results.filter(result => !result.success);
+
+      if (failedModels.length > 0) {
+        // Some models failed to save
+        toast({
+          title: "Error al guardar algunos modelos",
+          description: `${failedModels.length} de ${newModels.length} modelos no se pudieron guardar`,
+          variant: "destructive"
+        });
+
+        // Remove the failed models from the local state
+        // This is a simplified approach - in a real app you might want to be more precise
+        // about which specific models failed
+        setModels(prevModels => {
+          const newModelIds = new Set(newModels.map(m => m.id));
+          return prevModels.filter(m => !newModelIds.has(m.id) || results.some(r => r.success && r.modelId === m.id));
+        });
+      } else {
+        // All models saved successfully
+        toast({
+          title: "Modelos añadidos",
+          description: `Se han añadido y guardado ${newModels.length} modelos`
+        });
+      }
     });
   };
 
@@ -412,6 +484,8 @@ export default function SingleBrandColumn({
         brandId={brandId}
         brandName={brandName}
         onModelAdded={handleModelAdded}
+        onModelsAdded={handleModelsAdded}
+        existingModelIds={models.map(model => model.id)}
       />
     </>
   );

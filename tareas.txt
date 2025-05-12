@@ -34,7 +34,10 @@ ADMIN
 configuracion motos
 [x] el tirador de posicion de las motos no funciona muy bien
 [x] el ocultar moto no funciona
-[ ] late // tener la opcion de sumar los modelos que estan en todo el proyecto
+[x] tener la opcion de sumar los modelos que estan en todo el proyecto
+[x] configuracionde metodos de pagos
+[x] configuracion de promociones
+[x] configuracion de tarjetas
 
 stock
 [ ] arreglar el tema de la imagen y archivos en stock/new
@@ -52,8 +55,12 @@ sales
 [x] pagos revision
 [ ] revisar con Arca
 [x] reservado tiene que decir que cliente es con algo
-[ ] cliente rapido
+[x] cliente rapido
 [x] reserva con tipo de divisa, si peso o dolar
+[ ] agrupaciones
+[ ] notas de credito como tipo de pago
+[ ] dividir pagos en 2 tipos o mas
+[x] cuenta corriente como tipo de pago
 
 Agregar Tabla Clientes
 [x ] condicion fiscal
@@ -66,6 +73,27 @@ Reportes
 [ ] caja chica y diario
 
 usuario 
-[ ] marca de organizacion
+[x] marca de organizacion
 [ ] estilos
 [ ] colores
+[ ] mejorar la estética de los reportes 
+[ ] agregar organización al reporte
+
+dashboard:
+[ ] conectar a la db todo lo del dashboard (es lo único desconectado de la db)
+[ ] revisar los cubos con datos
+
+grupos
+
+[ ] generar el primer concepto de grupos
+
+presupuesto
+[ ] armar un pdf, 
+[ ] enviar un whatsapp
+[ ] enviar email
+
+AFIP 
+[ ] https://afipsdk.com/
+
+cuenta corriente
+[ ] agregar pagina

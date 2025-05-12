@@ -270,7 +270,6 @@ export default function ManageBrands({
                     organizationId={organizationId}
                     onAssociationUpdate={handleAssociationUpdate}
                     onAssociationDelete={handleAssociationDelete}
-                    onAddModel={handleAddModel}
                     onUpdateModel={handleUpdateModel}
                     onModelsOrderUpdate={handleModelsOrderUpdate}
                   />
@@ -295,6 +294,7 @@ export default function ManageBrands({
           onSuccess={() => {
             console.log("Modal de asociación de marca cerrado con éxito.");
           }}
+          existingBrandIds={associations.map(assoc => assoc.brand.id)}
         />
       )}
     </Card>

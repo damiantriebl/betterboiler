@@ -1,202 +1,123 @@
 "use client";
 
-import { useEffect, useState, useTransition, useOptimistic, use } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { formatPrice } from "@/lib/utils";
-import {
-  Loader2,
-  UserPlus,
-  X,
-  ChevronsUpDown,
-  ChevronDown,
-  ChevronUp,
-  MoreHorizontal,
-} from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { getClients } from "@/actions/clients/get-clients";
-import { type Client, MotorcycleState, Motorcycle as PrismaMotorcycle } from "@prisma/client";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import AddClientModal from "@/components/client/AddClientModal";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status";
-import { useToast } from "@/hooks/use-toast";
-import {
-  getMotorcycleById,
-  type MotorcycleWithRelations as ServerMotorcycleWithRelations,
-} from "@/actions/sales/get-motorcycle-by-id";
+import { type Client } from "@prisma/client";
+import { Loader2 } from "lucide-react";
+import { getMotorcycleById } from "@/actions/sales/get-motorcycle-by-id";
 import { completeSale } from "@/actions/sales/complete-sale";
-import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { type BankingPromotionDisplay } from "@/types/banking-promotions";
+import { getEnabledBankingPromotions } from "@/actions/banking-promotions/get-banking-promotions";
+import { getCurrentDayOfWeek } from "@/utils/promotion-utils";
+import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { createCurrentAccount } from "@/actions/current-accounts/create-current-account";
+import { type CreateCurrentAccountInput, type RecordPaymentInput } from "@/zod/current-account-schemas";
+import { recordCurrentAccountPayment } from "@/actions/current-accounts/record-current-account-payment";
 
-// Definir nuestro tipo local compatible con el servidor
-type MotorcycleWithRelations = ServerMotorcycleWithRelations & {
-  exchangeRate?: number;
-  soldAt?: Date | null;
+// NEW IMPORTS
+import { getOrganizationPaymentMethods } from "@/actions/payment-methods/get-payment-methods";
+import { type OrganizationPaymentMethodDisplay } from "@/types/payment-methods";
+
+// Import our components
+import Stepper from "./Stepper";
+import ConfirmMotorcycleStep from "./ConfirmMotorcycleStep";
+import PaymentMethodStep from "./PaymentMethodStep";
+import SelectClientStep from "./SelectClientStep";
+import ConfirmationStep from "./ConfirmationStep";
+import { calculateFinalPrice, arePromotionsCompatible, getAvailableInstallmentPlans, getBestRatesByInstallment } from "./utils";
+
+// Import types
+import { type SaleProcessState } from "./types";
+import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
+
+// For TypeScript with Next.js params
+type PageParams = {
+  id: string;
 };
 
-interface StepperProps {
-  currentStep: number;
-  steps: string[];
+// Helper functions for installment calculation (podrían estar en utils.ts)
+function getPeriodsPerYearCA(frequency: string): number { // Renombrado para evitar conflicto si ya existe en utils
+  const FreqMap = { 'WEEKLY': 52, 'BIWEEKLY': 26, 'MONTHLY': 12, 'QUARTERLY': 4, 'ANNUALLY': 1 };
+  return FreqMap[frequency as keyof typeof FreqMap] || 12;
 }
 
-function Stepper({ currentStep, steps }: StepperProps) {
-  return (
-    <div className="flex items-center justify-center w-full mb-8">
-      {steps.map((step, index) => (
-        <div key={step} className="flex items-center">
-          <div
-            className={`flex items-center justify-center w-8 h-8 rounded-full border-2 
-                        ${index < currentStep
-                ? "bg-green-500 border-green-500 text-white"
-                : index === currentStep
-                  ? "border-blue-500 text-blue-500"
-                  : "border-gray-300 text-gray-300"
-              }`}
-          >
-            {index < currentStep ? "✓" : index + 1}
-          </div>
-          {index < steps.length - 1 && (
-            <div
-              className={`w-20 h-1 mx-2 
-                            ${index < currentStep ? "bg-green-500" : "bg-gray-300"}`}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface BuyerFormData {
-  nombre: string;
-  apellido: string;
-  dni: string;
-  telefono: string;
-  email: string;
-  direccion: string;
-}
-
-interface PaymentFormData {
-  metodoPago: string;
-  cuotas: number;
-  banco: string;
-  exchangeRate?: number;
-  // New fields for different payment methods
-  tarjetaNumero?: string;
-  tarjetaVencimiento?: string;
-  tarjetaCVV?: string;
-  tarjetaTipo?: string;
-  transferenciaCBU?: string;
-  transferenciaTitular?: string;
-  chequeNumero?: string;
-  chequeFecha?: string;
-  chequeEmisor?: string;
-  mercadoPagoCheckout?: boolean;
-  todoPagoWidget?: boolean;
-  rapipagoCodigo?: string;
-  qrCode?: string;
-}
-
-interface SaleProcessState {
-  currentStep: number;
-  selectedClientId: string | null;
-  buyerData: BuyerFormData;
-  paymentData: PaymentFormData;
-  showClientTable: boolean;
-}
-
-function calculateRemainingAmount(
-  totalPrice: number,
-  totalCurrency: string,
-  reservationAmount: number,
-  reservationCurrency: string,
-  exchangeRate?: number
+function calculateInstallmentWithInterestCA(
+  principal: number,
+  annualRateDecimal: number, // ej: 0.30 para 30%
+  installments: number,
+  paymentFrequency: string
 ): number {
-  if (totalCurrency === reservationCurrency) {
-    return totalPrice - reservationAmount;
+  if (principal <= 0 || installments <= 0) return 0;
+  if (annualRateDecimal === 0) {
+    return parseFloat((principal / installments).toFixed(2)); // Redondear a 2 decimales
   }
 
-  if (!exchangeRate) {
-    console.warn("No se proporcionó tipo de cambio para la conversión");
-    return totalPrice;
+  const periodsPerYear = getPeriodsPerYearCA(paymentFrequency);
+  const ratePerPeriod = annualRateDecimal / periodsPerYear;
+
+  if (ratePerPeriod === 0 && annualRateDecimal !== 0) {
+    return parseFloat((principal / installments).toFixed(2));
+  }
+  if (ratePerPeriod === -1) {
+    return 0;
   }
 
-  if (totalCurrency === "USD" && reservationCurrency === "ARS") {
-    // Convertir la reserva en ARS a USD
-    const reservationInUSD = reservationAmount / exchangeRate;
-    return totalPrice - reservationInUSD;
-  } else if (totalCurrency === "ARS" && reservationCurrency === "USD") {
-    // Convertir la reserva en USD a ARS
-    const reservationInARS = reservationAmount * exchangeRate;
-    return totalPrice - reservationInARS;
-  }
+  const pmt = principal * (ratePerPeriod * Math.pow(1 + ratePerPeriod, installments)) / (Math.pow(1 + ratePerPeriod, installments) - 1);
 
-  return totalPrice;
+  if (isNaN(pmt) || !isFinite(pmt)) {
+    return parseFloat((principal / installments).toFixed(2)); // Fallback si el cálculo falla
+  }
+  return parseFloat(pmt.toFixed(2)); // Redondear a 2 decimales
 }
 
-export default function VentaPage({ params }: { params: { id: string } }) {
-  const { id } = params; // Simplified approach without use()
+export default function SalesPage({ params }: { params: Promise<PageParams> }) {
+  // Properly unwrap the params Promise with React.use()
+  const { id } = use(params);
   const searchParams = useSearchParams();
   const isReserved = searchParams.get("reserved") === "true";
   const reservationAmount = searchParams.get("amount") ? Number(searchParams.get("amount")) : 0;
-  const reservationCurrency = searchParams.get("currency") || "USD"; // Obtener la moneda de la reserva
-  const initialClientIdFromReservation = searchParams.get("clientId") || null; // Obtener ID inicial si viene de reserva
+  const reservationCurrency = searchParams.get("currency") || "USD";
+  const initialClientIdFromReservation = searchParams.get("clientId") || null;
 
-  // --- Estado Local (no persistente o cargado después) ---
+  const { toast } = useToast();
+  const router = useRouter();
+
+  // State for organization ID
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [orgIdError, setOrgIdError] = useState<string | null>(null); // For errors fetching orgId
+
+  // NEW STATE for organization payment methods
+  const [organizationPaymentMethods, setOrganizationPaymentMethods] = useState<OrganizationPaymentMethodDisplay[]>([]);
+  const [loadingOrgPaymentMethods, setLoadingOrgPaymentMethods] = useState(true);
+
+  // Local state (non-persistent)
   const [moto, setMoto] = useState<MotorcycleWithRelations | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMoto, setLoadingMoto] = useState(true);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
-  // Sort state for client table
-  const [sortConfig, setSortConfig] = useState<{
-    key: keyof Client | null;
-    direction: "asc" | "desc" | null;
-  }>({ key: null, direction: null });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
-  // --- Fin Estado Local ---
 
-  const { toast } = useToast();
-  const router = useRouter();
+  // State for banking promotions
+  const [availablePromotions, setAvailablePromotions] = useState<BankingPromotionDisplay[]>([]);
+  const [applicablePromotions, setApplicablePromotions] = useState<BankingPromotionDisplay[]>([]);
+  const [loadingPromotions, setLoadingPromotions] = useState(true);
 
-  // --- Estado Persistente con Local Storage ---
+  // Hook useTransition
+  const [isTransitionPending, startTransition] = useTransition();
+
+  const steps = ["Confirmar Moto", "Método de Pago", "Seleccionar Cliente", "Confirmación"];
+
+  // Persistent state with Local Storage
   const localStorageKey = `saleProcess-${id}`;
 
   const initialSaleState: SaleProcessState = {
     currentStep: 0,
-    // Establecer cliente inicial SOLO si viene de una reserva, sino null
     selectedClientId: isReserved ? initialClientIdFromReservation : null,
     buyerData: {
       nombre: "",
@@ -210,50 +131,128 @@ export default function VentaPage({ params }: { params: { id: string } }) {
       metodoPago: "",
       cuotas: 1,
       banco: "",
+      isMayorista: false,
+      discountType: 'none',
+      discountValue: 0,
+      selectedPromotions: [],
+      downPayment: 0,
+      currentAccountInstallments: 12,
+      currentAccountFrequency: 'MONTHLY',
+      annualInterestRate: 0,
+      currentAccountStartDate: new Date().toISOString().split('T')[0],
+      currentAccountNotes: '',
     },
-    // Mostrar tabla por defecto, excepto si viene de reserva con cliente
-    showClientTable: !(isReserved && initialClientIdFromReservation),
+    showClientTable: false,
+  };
+
+  // Use a custom initializer to ensure we merge with initialSaleState
+  const getSavedState = () => {
+    try {
+      const saved = localStorage.getItem(localStorageKey);
+      if (saved) {
+        const parsedState = JSON.parse(saved) as Partial<SaleProcessState>;
+
+        return {
+          ...initialSaleState,
+          ...parsedState,
+          paymentData: {
+            ...initialSaleState.paymentData,
+            ...(parsedState.paymentData || {}),
+            selectedPromotions: parsedState.paymentData?.selectedPromotions || [],
+          }
+        };
+      }
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
+    }
+
+    return initialSaleState;
   };
 
   const [saleState, setSaleState] = useLocalStorage<SaleProcessState>(
     localStorageKey,
     initialSaleState,
+    { initializer: getSavedState }
   );
-  // --- Fin Estado Persistente ---
 
-  // --- useOptimistic ---
-  const [optimisticMotoState, addOptimisticUpdate] = useOptimistic(
-    saleState,
-    (
-      currentState: SaleProcessState,
-      optimisticValue: { motorcycleId: number; newStatus: MotorcycleState },
-    ) => {
-      console.warn("Lógica optimista necesita implementación correcta");
-      return currentState;
-    },
-  );
-  // --- Fin useOptimistic ---
-
-  // --- Derivar selectedClient del estado persistente ---
+  // Derive selectedClient from persistent state
   const selectedClient = clients.find((c) => c.id === saleState.selectedClientId) || null;
-  // --- Fin Derivación ---
 
-  // --- Hook useTransition ---
-  const [isTransitionPending, startTransition] = useTransition();
+  // Map selected promotion ids to objects
+  const selectedPromotions = (saleState.paymentData.selectedPromotions || [])
+    .map(id => applicablePromotions.find(p => p.id === id))
+    .filter((p): p is BankingPromotionDisplay => p !== undefined);
 
-  const steps = ["Confirmar Moto", "Método de Pago", "Seleccionar Cliente", "Confirmación"];
+  // Compute union of installments with best interest
+  const availableInstallmentPlans = getAvailableInstallmentPlans(selectedPromotions);
 
-  // Efecto para cargar moto y clientes
+  // Get organization ID
+  useEffect(() => {
+    const getOrgId = async () => {
+      try {
+        const result = await getOrganizationIdFromSession();
+        if (result.organizationId) {
+          setOrganizationId(result.organizationId);
+        } else {
+          setOrgIdError(result.error || "Failed to retrieve organization ID.");
+          console.error("Failed to get organization ID:", result.error);
+          toast({ variant: "destructive", title: "Error de Configuración", description: "No se pudo obtener el ID de la organización. Algunas funcionalidades pueden no estar disponibles." });
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setOrgIdError(errorMessage);
+        console.error("Error fetching organizationId:", error);
+        toast({ variant: "destructive", title: "Error Crítico", description: `Error al obtener ID de organización: ${errorMessage}` });
+      }
+    };
+
+    getOrgId();
+  }, [toast]);
+
+  // NEW EFFECT to load organization-specific payment methods
+  useEffect(() => {
+    if (!organizationId) {
+      // If organizationId is null (still fetching or failed), don't attempt to load payment methods.
+      // We can set loading to false if we know there was an orgIdError.
+      if (orgIdError) {
+        setLoadingOrgPaymentMethods(false);
+        setOrganizationPaymentMethods([]);
+      }
+      return;
+    }
+
+    const loadOrgPaymentMethods = async () => {
+      setLoadingOrgPaymentMethods(true);
+      try {
+        const methods = await getOrganizationPaymentMethods(organizationId);
+        // Filter for enabled methods before setting state
+        const enabledMethods = methods.filter(method => method.isEnabled);
+        setOrganizationPaymentMethods(enabledMethods);
+      } catch (error) {
+        console.error("Error loading organization payment methods:", error);
+        toast({
+          variant: "destructive",
+          title: "Error de Carga",
+          description: "No se pudieron cargar los métodos de pago configurados para su organización.",
+        });
+        setOrganizationPaymentMethods([]); // Set to empty array on error to prevent issues downstream
+      } finally {
+        setLoadingOrgPaymentMethods(false);
+      }
+    };
+
+    loadOrgPaymentMethods();
+  }, [organizationId, orgIdError, toast]);
+
+  // Effect to load motorcycle and clients
   useEffect(() => {
     const loadMotorcycle = async () => {
       try {
         setLoadingMoto(true);
-        // Cargamos la moto usando la acción del servidor
         const motorcycle = await getMotorcycleById(id);
         if (motorcycle) {
           setMoto(motorcycle);
         } else {
-          // Si no se encuentra, mostrar mensaje de error
           toast({
             variant: "destructive",
             title: "Error",
@@ -261,7 +260,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
           });
         }
       } catch (error) {
-        console.error("Error al cargar la moto:", error);
+        console.error("Error loading motorcycle:", error);
         toast({
           variant: "destructive",
           title: "Error",
@@ -278,13 +277,10 @@ export default function VentaPage({ params }: { params: { id: string } }) {
         const clientsList = await getClients();
         setClients(clientsList);
 
-        // Si viene de reserva y tenemos el ID del cliente,
-        // asegurar que los datos del comprador en el estado persistente se actualicen
+        // If coming from a reservation with client ID, update buyer data
         if (isReserved && saleState.selectedClientId) {
           const reservedClientData = clientsList.find((c) => c.id === saleState.selectedClientId);
           if (reservedClientData) {
-            // Solo actualiza buyerData si está vacío, para no sobrescribir datos ya ingresados
-            // si el usuario navegó atrás y adelante.
             if (!saleState.buyerData.nombre && !saleState.buyerData.email) {
               setSaleState((prevState) => ({
                 ...prevState,
@@ -301,7 +297,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
           }
         }
       } catch (error) {
-        console.error("Error al cargar clientes:", error);
+        console.error("Error loading clients:", error);
       } finally {
         setLoadingClients(false);
       }
@@ -309,91 +305,119 @@ export default function VentaPage({ params }: { params: { id: string } }) {
 
     loadMotorcycle();
     loadClients();
-  }, [
-    id,
-    isReserved,
-    toast,
-    saleState.selectedClientId,
-    saleState.buyerData.nombre,
-    saleState.buyerData.email,
-    setSaleState,
-  ]);
+  }, [id, isReserved, toast, saleState.selectedClientId, saleState.buyerData.nombre, saleState.buyerData.email, setSaleState]);
 
-  // --- FUNCIONES RESTAURADAS/ADAPTADAS ---
+  // Load banking promotions when organizationId is available
+  useEffect(() => {
+    if (!organizationId) return;
 
-  // Función placeholder para Editar Info
+    const loadPromotions = async () => {
+      try {
+        setLoadingPromotions(true);
+        const orgId = organizationId;
+        if (orgId) {
+          const promotionsData = await getEnabledBankingPromotions(orgId);
+          const typedPromotions = promotionsData as unknown as BankingPromotionDisplay[];
+          setAvailablePromotions(typedPromotions);
+        }
+        setLoadingPromotions(false);
+      } catch (error) {
+        console.error("Error loading promotions:", error);
+        setLoadingPromotions(false);
+      }
+    };
+
+    loadPromotions();
+  }, [organizationId]);
+
+  // Filter applicable promotions when payment method changes
+  useEffect(() => {
+    if (!moto || availablePromotions.length === 0) return;
+
+    try {
+      // Filter promotions based on payment method, bank, and card
+      const filtered = availablePromotions.filter(promotion => {
+        if (!promotion) return false;
+
+        // Check if promotion is active for current day
+        const currentDay = getCurrentDayOfWeek();
+
+        // If no days specified or includes current day
+        const activeDays = promotion.activeDays as unknown as string[];
+        const activeForToday = !activeDays?.length ||
+          activeDays.includes(currentDay);
+
+        if (!activeForToday) return false;
+
+        // Check start and end dates
+        const now = new Date();
+        if (promotion.startDate && new Date(promotion.startDate) > now) return false;
+        if (promotion.endDate && new Date(promotion.endDate) < now) return false;
+
+        // Check payment method
+        if (!promotion.paymentMethod) return false;
+
+        // Map interface payment methods to database types
+        const methodMap: Record<string, string> = {
+          'efectivo': 'cash',
+          'transferencia': 'transfer',
+          'tarjeta': 'credit', // Map to both 'credit' and 'debit'
+          'mercadopago': 'mercadopago',
+          'todopago': 'todopago',
+          'qr': 'qr',
+          'cheque': 'check',
+          'rapipago': 'rapipago'
+        };
+
+        const paymentMethodType = methodMap[saleState.paymentData.metodoPago];
+
+        // If payment method is card, allow both credit and debit
+        if (saleState.paymentData.metodoPago === 'tarjeta') {
+          if (promotion.paymentMethod.type !== 'credit' && promotion.paymentMethod.type !== 'debit') {
+            return false;
+          }
+
+          // Check bank and card type for cards
+          if (promotion.bankId && saleState.paymentData.banco) {
+            return promotion.bankId.toString() === saleState.paymentData.banco;
+          }
+
+          if (promotion.cardId && saleState.paymentData.tarjetaTipo) {
+            const cardMap: Record<string, number> = {
+              'visa': 1,
+              'mastercard': 2,
+              'amex': 3
+            };
+            const cardId = cardMap[saleState.paymentData.tarjetaTipo];
+            return promotion.cardId === cardId;
+          }
+        } else {
+          // For other payment methods, check direct match with type
+          return promotion.paymentMethod.type === paymentMethodType;
+        }
+
+        // If passed all filters, it's applicable
+        return true;
+      });
+
+      setApplicablePromotions(filtered);
+    } catch (error) {
+      console.error("Error filtering promotions:", error);
+      setApplicablePromotions([]);
+    }
+  }, [availablePromotions, saleState.paymentData.metodoPago, saleState.paymentData.banco, saleState.paymentData.tarjetaTipo, moto]);
+
+  // Event handlers
   const handleEditInfo = () => {
-    console.log("Editar información de la moto");
-    // Aquí podrías, por ejemplo, navegar a una página de edición o abrir un modal
+    console.log("Edit motorcycle information");
+    // Here you could navigate to an edit page or open a modal
   };
-
-  // Funciones para ordenar la tabla de clientes
-  const handleSort = (key: keyof Client) => {
-    let direction: "asc" | "desc" | null = "asc";
-    if (sortConfig.key === key) {
-      if (sortConfig.direction === "asc") direction = "desc";
-      else if (sortConfig.direction === "desc") direction = null;
-    }
-    setSortConfig({ key: direction ? key : null, direction });
-    setCurrentPage(1); // Resetear paginación al ordenar
-  };
-
-  const getSortedClients = () => {
-    if (!sortConfig.key || !sortConfig.direction) return clients;
-    return [...clients].sort((a, b) => {
-      const aValue = a[sortConfig.key as keyof Client] || "";
-      const bValue = b[sortConfig.key as keyof Client] || "";
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortConfig.direction === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-      // Añadir comparación numérica si es necesario para otros campos
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue;
-      }
-      return 0; // Fallback
-    });
-  };
-
-  const getSortIcon = (key: keyof Client) => {
-    if (sortConfig.key !== key) {
-      return <ChevronsUpDown className="h-4 w-4 ml-1 text-muted-foreground" />;
-    }
-    return sortConfig.direction === "asc" ? (
-      <ChevronUp className="h-4 w-4 ml-1" />
-    ) : (
-      <ChevronDown className="h-4 w-4 ml-1" />
-    );
-  };
-
-  // Variables derivadas para paginación
-  const sortedClients = getSortedClients();
-  const totalPages = Math.ceil(sortedClients.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedClients = sortedClients.slice(startIndex, startIndex + pageSize);
-
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  const handlePageSizeChange = (size: string) => {
-    setPageSize(Number(size));
-    setCurrentPage(1); // Resetear a la primera página
-  };
-
-  // --- FIN FUNCIONES RESTAURADAS/ADAPTADAS ---
-
-  // --- Actualizar funciones para usar saleState y setSaleState ---
 
   const handleSelectClient = (client: Client) => {
     setSaleState((prevState) => ({
       ...prevState,
       selectedClientId: client.id,
-      showClientTable: false, // Ocultar tabla al seleccionar
-      // Actualizar buyerData al seleccionar
+      showClientTable: false,
       buyerData: {
         nombre: client.firstName,
         apellido: client.lastName || "",
@@ -409,77 +433,436 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     setSaleState((prevState) => ({
       ...prevState,
       selectedClientId: null,
-      showClientTable: true, // Mostrar tabla de nuevo
-      // Limpiar buyerData al cancelar selección
+      showClientTable: true,
       buyerData: initialSaleState.buyerData,
     }));
   };
 
-  const handleBuyerDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePaymentDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setSaleState((prevState) => ({
-      ...prevState,
-      buyerData: { ...prevState.buyerData, [name]: value },
+
+    // Process value based on field type
+    let processedValue: string | number | boolean = value;
+
+    // Convert numeric values
+    if (
+      name === "cuotas" ||
+      name === "exchangeRate" ||
+      name === "discountValue"
+    ) {
+      processedValue = value === "" ? 0 : parseFloat(value);
+    }
+
+    setSaleState((prev) => ({
+      ...prev,
+      paymentData: {
+        ...prev.paymentData,
+        [name]: processedValue,
+      },
     }));
+
+    // Reset bank and cuotas if payment method changed, but keep selected promotions
+    if (name === "metodoPago" && value !== "tarjeta") {
+      setSaleState((prev) => ({
+        ...prev,
+        paymentData: {
+          ...prev.paymentData,
+          banco: "",
+          tarjetaTipo: "",
+          cuotas: 1,
+          // Keep selected promotions
+          selectedPromotions: prev.paymentData.selectedPromotions || [],
+        },
+      }));
+    }
   };
 
-  const handlePaymentDataChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setSaleState((prevState) => ({
-      ...prevState,
+  const handleCheckboxChange = (name: string, checked: boolean) => {
+    setSaleState((prev) => ({
+      ...prev,
       paymentData: {
-        ...prevState.paymentData,
-        [name]: name === "cuotas" || name === "exchangeRate" ? Number(value) : value,
+        ...prev.paymentData,
+        [name]: checked,
       },
     }));
   };
 
-  const handleNext = async () => {
-    if (saleState.currentStep === steps.length - 1) return;
+  // NEW: Handler for date changes
+  const handleDateChange = (name: string, date: Date | undefined) => {
+    setSaleState((prev) => ({
+      ...prev,
+      paymentData: {
+        ...prev.paymentData,
+        [name]: date ? date.toISOString() : null, // Store as ISO string or null
+      },
+    }));
+  };
 
-    // Validación específica para el paso de selección de cliente (paso 2)
-    if (saleState.currentStep === 2) {
-      if (!saleState.selectedClientId) {
+  const handlePromotionSelection = (promotionId: number) => {
+    setSaleState(prev => {
+      const prevIds = prev.paymentData.selectedPromotions || [];
+      const isSelected = prevIds.includes(promotionId);
+
+      if (isSelected) {
+        return {
+          ...prev,
+          paymentData: {
+            ...prev.paymentData,
+            selectedPromotions: prevIds.filter(id => id !== promotionId)
+          }
+        };
+      }
+
+      // Adding new promotion
+      const newPromo = applicablePromotions.find(p => p.id === promotionId);
+      if (!newPromo) return prev;
+      const existingPromos = applicablePromotions.filter(p => prevIds.includes(p.id));
+      let newIds = [...prevIds, promotionId];
+
+      // If tarjeta, auto-adjust conflicting promos for the selected cuotas
+      if (prev.paymentData.metodoPago === 'tarjeta') {
+        const cuotas = prev.paymentData.cuotas;
+        const allPromos = [...existingPromos, newPromo];
+
+        // Promotions that support this cuota and those that don't
+        const promosWithCuotas = allPromos.filter(p => p.installmentPlans?.some(pl => pl.isEnabled && pl.installments === cuotas));
+        const promosWithoutCuotas = allPromos.filter(p => !p.installmentPlans?.some(pl => pl.isEnabled && pl.installments === cuotas));
+
+        // Determine best interest rate among promos that support this cuota
+        const rates = promosWithCuotas.map(p => p.installmentPlans!.find(pl => pl.installments === cuotas)!.interestRate);
+        const bestRate = Math.min(...rates);
+
+        // Keep promos without this cuota, and among those with it only the best-rate ones
+        newIds = [
+          ...promosWithoutCuotas.map(p => p.id),
+          ...promosWithCuotas
+            .filter(p => p.installmentPlans!.find(pl => pl.installments === cuotas)!.interestRate === bestRate)
+            .map(p => p.id)
+        ];
+
         toast({
-          title: "Error",
-          description: "Debe seleccionar un cliente para continuar",
+          title: 'Promociones ajustadas',
+          description: 'Solo se mantienen las promos con mejor tasa para las cuotas seleccionadas.',
+          variant: 'default'
+        });
+      }
+
+      return {
+        ...prev,
+        paymentData: {
+          ...prev.paymentData,
+          selectedPromotions: newIds
+        }
+      };
+    });
+  };
+
+  const handleNext = async () => {
+    // Validate current step
+    if (saleState.currentStep === 0) {
+      // Step 0: Confirm motorcycle - nothing to validate
+      setSaleState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }));
+    } else if (saleState.currentStep === 1) {
+      // Step 1: Payment Method
+      if (!saleState.paymentData.metodoPago) {
+        toast({
+          title: "Método de Pago Requerido",
+          description: "Por favor, seleccione un método de pago para continuar.",
           variant: "destructive",
         });
         return;
       }
 
-      setLoading(true);
-      try {
-        await completeSale(id, saleState.selectedClientId);
-
-        if (moto) {
-          setMoto({
-            ...moto,
-            state: MotorcycleState.VENDIDO,
-            soldAt: new Date(),
+      // Basic validation for payment data
+      if (saleState.paymentData.metodoPago === "tarjeta") {
+        // Validate card details
+        if (!saleState.paymentData.tarjetaNumero) {
+          toast({
+            title: "Datos de Tarjeta Incompletos",
+            description: "Por favor, ingrese el número de tarjeta.",
+            variant: "destructive",
           });
+          return;
+        }
+        if (!saleState.paymentData.tarjetaVencimiento) {
+          toast({
+            title: "Datos de Tarjeta Incompletos",
+            description: "Por favor, ingrese la fecha de vencimiento.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!saleState.paymentData.tarjetaCVV) {
+          toast({
+            title: "Datos de Tarjeta Incompletos",
+            description: "Por favor, ingrese el código de seguridad (CVV).",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!saleState.paymentData.tarjetaTipo) {
+          toast({
+            title: "Datos de Tarjeta Incompletos",
+            description: "Por favor, seleccione el tipo de tarjeta.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (saleState.paymentData.metodoPago === "transferencia") {
+        // Validate bank transfer
+        if (!saleState.paymentData.transferenciaCBU) {
+          toast({
+            title: "Datos de Transferencia Incompletos",
+            description: "Por favor, ingrese el CBU/CVU.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!saleState.paymentData.transferenciaTitular) {
+          toast({
+            title: "Datos de Transferencia Incompletos",
+            description: "Por favor, ingrese el nombre del titular.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (saleState.paymentData.metodoPago === "cheque") {
+        // Validate check details
+        if (!saleState.paymentData.chequeNumero) {
+          toast({
+            title: "Datos de Cheque Incompletos",
+            description: "Por favor, ingrese el número de cheque.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!saleState.paymentData.chequeFecha) {
+          toast({
+            title: "Datos de Cheque Incompletos",
+            description: "Por favor, ingrese la fecha del cheque.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!saleState.paymentData.chequeEmisor) {
+          toast({
+            title: "Datos de Cheque Incompletos",
+            description: "Por favor, ingrese el nombre del emisor.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (saleState.paymentData.metodoPago === "cuenta_corriente") {
+        // Validate current account data
+        if (!saleState.paymentData.currentAccountInstallments || saleState.paymentData.currentAccountInstallments < 1) {
+          toast({
+            title: "Datos de Cuenta Corriente Incompletos",
+            description: "Por favor, ingrese la cantidad de cuotas (mínimo 1).",
+            variant: "destructive",
+          });
+          return;
         }
 
-        toast({
-          title: "Venta Completada",
-          description: "La venta se ha registrado exitosamente.",
-        });
+        if (!saleState.paymentData.currentAccountFrequency) {
+          toast({
+            title: "Datos de Cuenta Corriente Incompletos",
+            description: "Por favor, seleccione la frecuencia de pago.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-        setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep + 1 }));
-      } catch (error) {
-        console.error("Error al completar la venta:", error);
+        if (!saleState.paymentData.currentAccountStartDate) {
+          toast({
+            title: "Datos de Cuenta Corriente Incompletos",
+            description: "Por favor, seleccione la fecha de inicio.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Validar que el pago inicial no sea mayor al precio total
+        if (saleState.paymentData.downPayment !== undefined &&
+          saleState.paymentData.downPayment > (moto?.retailPrice || 0)) {
+          toast({
+            title: "Error en Pago Inicial",
+            description: "El pago inicial no puede ser mayor al precio total de la moto.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // All validations passed
+      setSaleState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }));
+    } else if (saleState.currentStep === 2) {
+      // Step 2: Select Client
+      if (!saleState.selectedClientId) {
         toast({
+          title: "Cliente Requerido",
+          description: "Por favor, seleccione un cliente para continuar.",
           variant: "destructive",
+        });
+        return;
+      }
+
+      setSaleState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }));
+    } else if (saleState.currentStep === 3) {
+      // Step 3: Confirmation - Complete sale
+      try {
+        setLoading(true);
+
+        const finalPrice = calculateFinalPrice(
+          moto?.retailPrice || 0,
+          saleState.paymentData.discountType,
+          saleState.paymentData.discountValue,
+          selectedPromotions
+        );
+
+        const result = await completeSale(id, saleState.selectedClientId ?? "");
+
+        if (result) {
+          if (saleState.paymentData.metodoPago === "cuenta_corriente") {
+            try {
+              console.log("🔍 [sales/page] Iniciando proceso de creación de cuenta corriente");
+              // El organizationId es necesario para la cuenta corriente
+              const sessionResult = await getOrganizationIdFromSession(); // Get the SessionResult object
+              console.log("🔍 [sales/page] OrganizationID session result obtenido:", sessionResult);
+
+              if (!sessionResult.organizationId) { // Check the property
+                console.error("❌ [sales/page] Error: No se pudo obtener el ID de la organización para la cuenta corriente");
+                throw new Error("No se pudo obtener el ID de la organización para la cuenta corriente.");
+              }
+              const currentOrganizationId = sessionResult.organizationId; // Extract the string ID
+
+              const principalAmount = finalPrice - (Number(saleState.paymentData.downPayment) || 0);
+              const calculatedInstallmentAmt = calculateInstallmentWithInterestCA(
+                principalAmount,
+                Number(saleState.paymentData.annualInterestRate || 0) / 100, // Convertir % a decimal
+                Number(saleState.paymentData.currentAccountInstallments || 12),
+                saleState.paymentData.currentAccountFrequency || "MONTHLY"
+              );
+
+              const currentAccountData: CreateCurrentAccountInput = {
+                clientId: saleState.selectedClientId ?? "",
+                motorcycleId: moto?.id || 0,
+                totalAmount: finalPrice,
+                downPayment: Number(saleState.paymentData.downPayment || 0),
+                numberOfInstallments: Number(saleState.paymentData.currentAccountInstallments || 12),
+                installmentAmount: calculatedInstallmentAmt,
+                paymentFrequency: saleState.paymentData.currentAccountFrequency || "MONTHLY",
+                startDate: saleState.paymentData.currentAccountStartDate
+                  ? new Date(saleState.paymentData.currentAccountStartDate).toISOString()
+                  : new Date().toISOString(),
+                status: "ACTIVE",
+                interestRate: Number(saleState.paymentData.annualInterestRate || 0),
+                reminderLeadTimeDays: 3,
+                notes: saleState.paymentData.currentAccountNotes || `Cuenta corriente creada para la moto ${moto?.brand?.name} ${moto?.model?.name} (${moto?.year})`,
+                organizationId: currentOrganizationId,
+              };
+
+              console.log("🔍 [sales/page] Datos preparados para crear la cuenta corriente:", {
+                clientId: currentAccountData.clientId,
+                motorcycleId: currentAccountData.motorcycleId,
+                totalAmount: currentAccountData.totalAmount,
+                paymentFrequency: currentAccountData.paymentFrequency,
+                organizationId: currentAccountData.organizationId
+              });
+
+              // Create the current account
+              console.log("🔍 [sales/page] Llamando a createCurrentAccount...");
+              const currentAccountResult = await createCurrentAccount(currentAccountData);
+              console.log("🔍 [sales/page] Resultado de createCurrentAccount:", currentAccountResult);
+
+              if (currentAccountResult.success && currentAccountResult.data) {
+                console.log("✅ [sales/page] Cuenta corriente creada con éxito:", currentAccountResult.data.id);
+
+                // Si hay un pago inicial (downPayment), registrarlo como un pago en el historial
+                if (saleState.paymentData.downPayment && saleState.paymentData.downPayment > 0) {
+                  try {
+                    console.log("🔍 [sales/page] Registrando pago inicial:", saleState.paymentData.downPayment);
+                    const paymentDataInput: RecordPaymentInput = {
+                      currentAccountId: currentAccountResult.data.id,
+                      amountPaid: Number(saleState.paymentData.downPayment || 0),
+                      paymentDate: new Date().toISOString(),
+                      paymentMethod: "efectivo", // Por defecto asumimos efectivo para el adelanto
+                      transactionReference: `Pago inicial (Venta ID: ${id})`,
+                      notes: "Pago inicial al momento de la venta (Cuota 0)",
+                      isDownPayment: true, // Mark this as a down payment
+                    };
+
+                    const paymentResult = await recordCurrentAccountPayment(paymentDataInput);
+
+                    if (paymentResult.success) {
+                      console.log("✅ [sales/page] Pago inicial registrado correctamente", paymentResult.data);
+                    } else {
+                      console.error("❌ [sales/page] Error al registrar el pago inicial:", paymentResult.error);
+                    }
+                  } catch (paymentError) {
+                    console.error("❌ [sales/page] Error al registrar el pago inicial:", paymentError);
+                  }
+                }
+
+                toast({
+                  title: "Cuenta Corriente Creada",
+                  description: "Se ha creado correctamente la cuenta corriente para esta venta.",
+                });
+
+                // Redirect to current accounts page after successful current account creation
+                console.log("🔍 [sales/page] Redirigiendo a /current-accounts después de crear la cuenta corriente");
+                setTimeout(() => {
+                  router.push("/current-accounts");
+                }, 1500); // Small delay to allow the user to see the success toast
+                return; // Skip the default navigation
+              } else {
+                console.error("❌ [sales/page] Error al crear cuenta corriente:", currentAccountResult.error);
+                toast({
+                  title: "Advertencia",
+                  description: "Venta completada, pero hubo un problema al crear la cuenta corriente: " + (currentAccountResult.error || "Error desconocido"),
+                  variant: "destructive",
+                });
+              }
+            } catch (error) {
+              console.error("❌ [sales/page] Error al crear cuenta corriente:", error);
+              toast({
+                title: "Advertencia",
+                description: "Venta completada, pero hubo un problema al crear la cuenta corriente.",
+                variant: "destructive",
+              });
+            }
+          }
+
+          // Success
+          toast({
+            title: "Venta Completada",
+            description: "La venta se ha completado con éxito.",
+          });
+
+          // Navigate based on reservation status
+          if (isReserved) {
+            router.push("/reservations");
+          } else {
+            router.push("/sales");
+          }
+        } else {
+          // Error
+          toast({
+            title: "Error",
+            description: "No se pudo completar la venta. Intente nuevamente.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error completing sale:", error);
+        toast({
           title: "Error",
-          description: "Ocurrió un error al procesar la venta.",
+          description: "Ocurrió un error al completar la venta. Por favor, intente nuevamente.",
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
       }
-      return;
     }
-
-    setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep + 1 }));
   };
 
   const handleBack = () => {
@@ -487,659 +870,62 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     setSaleState((prevState) => ({ ...prevState, currentStep: prevState.currentStep - 1 }));
   };
 
-  // --- Actualizar renderStepContent para mostrar datos reales de la moto ---
+  // Render step content
   const renderStepContent = () => {
     switch (saleState.currentStep) {
-      case 0: // Confirmar Moto
+      case 0: // Confirm Motorcycle
         return (
-          <div className="space-y-6">
-            {isReserved && (
-              <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mb-4">
-                <h3 className="text-lg font-semibold text-blue-700 mb-2">Moto Reservada</h3>
-                <p>
-                  Esta moto tiene una reserva de{" "}
-                  <span className="font-bold">{formatPrice(reservationAmount)}</span>.
-                </p>
-                <p className="text-sm text-blue-600">
-                  El monto de la reserva será descontado del precio final.
-                </p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Detalles de la Moto</h3>
-                <div className="space-y-2">
-                  <p>
-                    <span className="font-medium">Marca:</span>{" "}
-                    {moto?.brand?.name || "No disponible"}
-                  </p>
-                  <p>
-                    <span className="font-medium">Modelo:</span>{" "}
-                    {moto?.model?.name || "No disponible"}
-                  </p>
-                  <p>
-                    <span className="font-medium">Año:</span> {moto?.year || "No disponible"}
-                  </p>
-                  <p>
-                    <span className="font-medium">Cilindrada:</span>{" "}
-                    {moto?.displacement || "No disponible"}cc
-                  </p>
-                  <p>
-                    <span className="font-medium">Número de Chasis:</span>{" "}
-                    {moto?.chassisNumber || "No disponible"}
-                  </p>
-                  <p>
-                    <span className="font-medium">Color:</span>{" "}
-                    {moto?.color?.name || "No disponible"}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Estado y Ubicación</h3>
-                <div className="space-y-2">
-                  <p>
-                    <span className="font-medium">Estado:</span>{" "}
-                    {moto?.state === MotorcycleState.STOCK ? "Disponible" : moto?.state}
-                  </p>
-                  <p>
-                    <span className="font-medium">Kilometraje:</span> {moto?.mileage || 0}km
-                  </p>
-                  <p>
-                    <span className="font-medium">Estado de Venta:</span>{" "}
-                    {moto?.state || "No disponible"}
-                  </p>
-                  <p>
-                    <span className="font-medium">Ubicación:</span>{" "}
-                    {moto?.branch?.name || "No disponible"}
-                  </p>
-                  <p>
-                    <span className="font-medium">Precio:</span>{" "}
-                    {formatPrice(moto?.retailPrice ?? 0)}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <Button onClick={handleEditInfo} variant="outline" className="mt-4">
-              Editar Información
-            </Button>
-          </div>
+          <ConfirmMotorcycleStep
+            moto={moto!}
+            isReserved={isReserved}
+            reservationAmount={reservationAmount}
+            reservationCurrency={reservationCurrency}
+            onEditInfo={handleEditInfo}
+          />
         );
 
-      case 1: // Método de Pago
+      case 1: // Payment Method
         return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Método de Pago</h3>
-
-            {isReserved && (
-              <div className="p-4 bg-blue-50 rounded-lg mb-4">
-                <p className="font-medium">
-                  Monto de reserva:{" "}
-                  <span className="text-blue-700 font-bold">
-                    {formatPrice(reservationAmount, reservationCurrency)}
-                  </span>
-                </p>
-                {moto?.currency !== reservationCurrency && (
-                  <div className="flex flex-row gap-10">
-                    <div className="mt-2 p-2 bg-yellow-50 rounded">
-                      <p className="text-base px-8 py-4 text-yellow-700">
-                        Nota: La moto está en {moto?.currency} y la reserva en {reservationCurrency}
-                      </p>
-                    </div>
-                    <div className="mt-2">
-                      <label htmlFor="exchangeRate" className="block text-sm font-medium text-gray-700">
-                        Tipo de Cambio (ARS/USD)
-                      </label>
-                      <input
-                        id="exchangeRate"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        name="exchangeRate"
-                        value={saleState.paymentData.exchangeRate || ""}
-                        onChange={handlePaymentDataChange}
-                        className="mt-1 w-full p-2 border rounded bg-white"
-                        placeholder="Ej: 1000"
-                      />
-                    </div>
-                  </div>
-                )}
-                <p className="font-medium mt-2">
-                  Monto restante:{" "}
-                  <span className="text-green-700 font-bold">
-                    {formatPrice(
-                      calculateRemainingAmount(
-                        moto?.retailPrice ?? 0,
-                        moto?.currency || "USD",
-                        reservationAmount,
-                        reservationCurrency,
-                        saleState.paymentData.exchangeRate
-                      ),
-                      moto?.currency || "USD"
-                    )}
-                  </span>
-                </p>
-              </div>
-            )}
-
-            <div className="p-4 bg-gray-50 rounded-lg mb-4">
-              <h4 className="font-medium text-gray-700 mb-2">Resumen de la moto:</h4>
-              <p>
-                <span className="font-medium">Moto:</span> {moto?.brand?.name} {moto?.model?.name} (
-                {moto?.year})
-              </p>
-              <p>
-                <span className="font-medium">Precio Total:</span>{" "}
-                {formatPrice(moto?.retailPrice ?? 0, moto?.currency || "USD")}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="metodoPago" className="block" id="metodo-pago-label">
-                  Método de Pago
-                </label>
-                <select
-                  id="metodoPago"
-                  name="metodoPago"
-                  value={saleState.paymentData.metodoPago}
-                  onChange={handlePaymentDataChange}
-                  className="w-full p-2 border rounded"
-                  aria-labelledby="metodo-pago-label"
-                >
-                  <option value="">Seleccionar método</option>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia bancaria</option>
-                  <option value="tarjeta">Tarjeta - Crédito/Débito</option>
-                  <option value="mercadopago">MercadoPago</option>
-                  <option value="todopago">TodoPago</option>
-                  <option value="rapipago">Rapipago/PagoFácil</option>
-                  <option value="qr">QR - Cuenta DNI/Link</option>
-                  <option value="cheque">Cheque</option>
-                </select>
-              </div>
-
-              {/* Dynamic payment method fields */}
-              {saleState.paymentData.metodoPago === "transferencia" && (
-                <>
-                  <div className="space-y-2">
-                    <label htmlFor="transferenciaCBU" className="block">
-                      CBU/CVU
-                    </label>
-                    <input
-                      id="transferenciaCBU"
-                      type="text"
-                      name="transferenciaCBU"
-                      value={saleState.paymentData.transferenciaCBU || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="Ingrese CBU/CVU"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="transferenciaTitular" className="block">
-                      Titular
-                    </label>
-                    <input
-                      id="transferenciaTitular"
-                      type="text"
-                      name="transferenciaTitular"
-                      value={saleState.paymentData.transferenciaTitular || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="Nombre del titular"
-                    />
-                  </div>
-                </>
-              )}
-
-              {saleState.paymentData.metodoPago === "tarjeta" && (
-                <>
-                  <div className="space-y-2">
-                    <label htmlFor="tarjetaNumero" className="block">
-                      Número de Tarjeta
-                    </label>
-                    <input
-                      id="tarjetaNumero"
-                      type="text"
-                      name="tarjetaNumero"
-                      value={saleState.paymentData.tarjetaNumero || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="1234 5678 9012 3456"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="tarjetaVencimiento" className="block">
-                      Vencimiento
-                    </label>
-                    <input
-                      id="tarjetaVencimiento"
-                      type="text"
-                      name="tarjetaVencimiento"
-                      value={saleState.paymentData.tarjetaVencimiento || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="MM/AA"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="tarjetaCVV" className="block">
-                      CVV
-                    </label>
-                    <input
-                      id="tarjetaCVV"
-                      type="text"
-                      name="tarjetaCVV"
-                      value={saleState.paymentData.tarjetaCVV || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="123"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="tarjetaTipo" className="block">
-                      Tipo de Tarjeta
-                    </label>
-                    <select
-                      id="tarjetaTipo"
-                      name="tarjetaTipo"
-                      value={saleState.paymentData.tarjetaTipo || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                    >
-                      <option value="">Seleccionar tipo</option>
-                      <option value="visa">Visa</option>
-                      <option value="mastercard">Mastercard</option>
-                      <option value="amex">American Express</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="cuotas" className="block">
-                      Cuotas
-                    </label>
-                    <select
-                      id="cuotas"
-                      name="cuotas"
-                      value={saleState.paymentData.cuotas.toString()}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                    >
-                      <option value="1">1 cuota</option>
-                      <option value="3">3 cuotas</option>
-                      <option value="6">6 cuotas</option>
-                      <option value="12">12 cuotas</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {saleState.paymentData.metodoPago === "cheque" && (
-                <>
-                  <div className="space-y-2">
-                    <label htmlFor="chequeNumero" className="block">
-                      Número de Cheque
-                    </label>
-                    <input
-                      id="chequeNumero"
-                      type="text"
-                      name="chequeNumero"
-                      value={saleState.paymentData.chequeNumero || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="Número de cheque"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="chequeFecha" className="block">
-                      Fecha
-                    </label>
-                    <input
-                      id="chequeFecha"
-                      type="date"
-                      name="chequeFecha"
-                      value={saleState.paymentData.chequeFecha || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="chequeEmisor" className="block">
-                      Emisor
-                    </label>
-                    <input
-                      id="chequeEmisor"
-                      type="text"
-                      name="chequeEmisor"
-                      value={saleState.paymentData.chequeEmisor || ""}
-                      onChange={handlePaymentDataChange}
-                      className="w-full p-2 border rounded"
-                      placeholder="Nombre del emisor"
-                    />
-                  </div>
-                </>
-              )}
-
-              {saleState.paymentData.metodoPago === "rapipago" && (
-                <div className="space-y-2">
-                  <label htmlFor="rapipagoCodigo" className="block">
-                    Código de Pago
-                  </label>
-                  <input
-                    id="rapipagoCodigo"
-                    type="text"
-                    name="rapipagoCodigo"
-                    value={saleState.paymentData.rapipagoCodigo || ""}
-                    onChange={handlePaymentDataChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Código generado"
-                    readOnly
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      // Aquí iría la lógica para generar el código
-                      const codigo = Math.random().toString(36).substring(2, 10).toUpperCase();
-                      setSaleState((prev) => ({
-                        ...prev,
-                        paymentData: { ...prev.paymentData, rapipagoCodigo: codigo },
-                      }));
-                    }}
-                  >
-                    Generar Código
-                  </Button>
-                </div>
-              )}
-
-              {saleState.paymentData.metodoPago === "qr" && (
-                <div className="space-y-2">
-                  <label className="block">Código QR</label>
-                  <div className="p-4 border rounded flex justify-center">
-                    {/* Aquí iría el componente QR */}
-                    <div className="w-48 h-48 bg-gray-100 flex items-center justify-center">
-                      QR Code Placeholder
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {saleState.paymentData.metodoPago === "mercadopago" && (
-                <div className="space-y-2">
-                  <label className="block">MercadoPago Checkout</label>
-                  <div className="p-4 border rounded">
-                    <Button
-                      type="button"
-                      className="w-full"
-                      onClick={() => {
-                        setSaleState((prev) => ({
-                          ...prev,
-                          paymentData: { ...prev.paymentData, mercadoPagoCheckout: true },
-                        }));
-                      }}
-                    >
-                      Iniciar Checkout
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {saleState.paymentData.metodoPago === "todopago" && (
-                <div className="space-y-2">
-                  <label className="block">TodoPago Widget</label>
-                  <div className="p-4 border rounded">
-                    <Button
-                      type="button"
-                      className="w-full"
-                      onClick={() => {
-                        setSaleState((prev) => ({
-                          ...prev,
-                          paymentData: { ...prev.paymentData, todoPagoWidget: true },
-                        }));
-                      }}
-                    >
-                      Iniciar Widget
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <PaymentMethodStep
+            moto={moto!}
+            isReserved={isReserved}
+            reservationAmount={reservationAmount}
+            reservationCurrency={reservationCurrency}
+            paymentData={saleState.paymentData}
+            organizationPaymentMethods={organizationPaymentMethods}
+            loadingOrgPaymentMethods={loadingOrgPaymentMethods}
+            applicablePromotions={applicablePromotions}
+            loadingPromotions={loadingPromotions}
+            availableInstallmentPlans={availableInstallmentPlans}
+            onPaymentDataChange={handlePaymentDataChange}
+            onPromotionSelection={handlePromotionSelection}
+            onCheckboxChange={handleCheckboxChange}
+            onDateChange={handleDateChange}
+          />
         );
 
-      case 2: // Seleccionar Cliente
+      case 2: // Select Client
         return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Selección de Cliente</h3>
-
-            {/* Cliente seleccionado */}
-            {selectedClient && (
-              <div className="bg-blue-50 p-4 rounded-lg mb-4 flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-blue-700">Cliente seleccionado:</p>
-                  <p className="text-lg font-bold">
-                    {selectedClient.firstName} {selectedClient.lastName}
-                  </p>
-                  <p>{selectedClient.email}</p>
-                </div>
-                {!isReserved && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancelClientSelection}
-                    className="text-red-600 border-red-600 hover:bg-red-50"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Cambiar cliente
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Tabla de selección de cliente */}
-            {!isReserved && !selectedClient && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-md font-medium">Seleccionar un cliente existente</h4>
-                  <AddClientModal
-                    onClientAdded={handleSelectClient}
-                    triggerButton={
-                      <Button variant="outline" size="sm">
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Nuevo cliente
-                      </Button>
-                    }
-                  />
-                </div>
-
-                {loadingClients ? (
-                  <div className="flex justify-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div>
-                    <div className="border rounded-md overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>
-                              <Button
-                                variant="ghost"
-                                onClick={() => handleSort("firstName")}
-                                className="p-0 font-medium"
-                              >
-                                Nombre
-                                {getSortIcon("firstName")}
-                              </Button>
-                            </TableHead>
-                            <TableHead>
-                              <Button
-                                variant="ghost"
-                                onClick={() => handleSort("email")}
-                                className="p-0 font-medium"
-                              >
-                                Email
-                                {getSortIcon("email")}
-                              </Button>
-                            </TableHead>
-                            <TableHead className="hidden md:table-cell">Teléfono</TableHead>
-                            <TableHead className="hidden md:table-cell">CUIT/CUIL</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {paginatedClients.length === 0 ? (
-                            <TableRow>
-                              <TableCell
-                                colSpan={5}
-                                className="h-24 text-center text-muted-foreground"
-                              >
-                                No hay clientes disponibles.
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            paginatedClients.map((client) => (
-                              <TableRow key={client.id}>
-                                <TableCell className="font-medium">
-                                  {client.firstName} {client.lastName}
-                                </TableCell>
-                                <TableCell>{client.email}</TableCell>
-                                <TableCell className="hidden md:table-cell">
-                                  {client.phone || client.mobile || "-"}
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell">
-                                  {client.taxId || "-"}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleSelectClient(client)}
-                                  >
-                                    Seleccionar
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    {/* Paginación */}
-                    {paginatedClients.length > 0 && (
-                      <div className="flex items-center justify-between py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            Clientes por página:
-                          </span>
-                          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-                            <SelectTrigger className="w-[70px] h-8">
-                              <SelectValue placeholder={pageSize.toString()} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[5, 10, 20].map((size) => (
-                                <SelectItem key={size} value={size.toString()}>
-                                  {size}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                                className={cn(
-                                  currentPage === 1 && "pointer-events-none opacity-50",
-                                )}
-                              />
-                            </PaginationItem>
-                            {Array.from({ length: totalPages }).map((_, i) => (
-                              <PaginationItem key={`page-${i + 1}`}>
-                                <PaginationLink
-                                  isActive={currentPage === i + 1}
-                                  onClick={() => handlePageChange(i + 1)}
-                                >
-                                  {i + 1}
-                                </PaginationLink>
-                              </PaginationItem>
-                            ))}
-                            <PaginationItem>
-                              <PaginationNext
-                                onClick={() =>
-                                  currentPage < totalPages && handlePageChange(currentPage + 1)
-                                }
-                                className={cn(
-                                  currentPage === totalPages && "pointer-events-none opacity-50",
-                                )}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <SelectClientStep
+            clients={clients}
+            selectedClient={selectedClient}
+            loadingClients={loadingClients}
+            isReserved={isReserved}
+            onSelectClient={handleSelectClient}
+            onCancelClientSelection={handleCancelClientSelection}
+          />
         );
 
-      case 3: // Confirmación
+      case 3: // Confirmation
         return (
-          <div className="text-center space-y-4">
-            {loading ? (
-              <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p>Procesando la venta con la API del gobierno...</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h3 className="text-2xl font-bold text-green-600">¡Felicitaciones!</h3>
-                <p className="text-lg">
-                  La moto {moto?.brand?.name} {moto?.model?.name} fue vendida exitosamente.
-                </p>
-                {isReserved && (
-                  <div className="p-4 bg-blue-50 rounded-lg mb-4">
-                    <p>
-                      Se aplicó un monto de reserva de{" "}
-                      <span className="font-bold">{formatPrice(reservationAmount)}</span>.
-                    </p>
-                  </div>
-                )}
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="font-medium mb-2">Resumen de la venta:</p>
-                  <p>
-                    <span className="font-medium">Cliente:</span> {saleState.buyerData.nombre}{" "}
-                    {saleState.buyerData.apellido}
-                  </p>
-                  <p>
-                    <span className="font-medium">Moto:</span> {moto?.brand?.name}{" "}
-                    {moto?.model?.name} ({moto?.year})
-                  </p>
-                  <p>
-                    <span className="font-medium">Precio:</span>{" "}
-                    {formatPrice(moto?.retailPrice ?? 0)}
-                  </p>
-                  <p>
-                    <span className="font-medium">Método de pago:</span>{" "}
-                    {saleState.paymentData.metodoPago}
-                  </p>
-                  {saleState.paymentData.metodoPago === "financiacion" && (
-                    <p>
-                      <span className="font-medium">Cuotas:</span> {saleState.paymentData.cuotas}
-                    </p>
-                  )}
-                  <p className="mt-2">
-                    Los documentos de la venta serán enviados al email registrado.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          <ConfirmationStep
+            loading={loading}
+            moto={moto!}
+            isReserved={isReserved}
+            reservationAmount={reservationAmount}
+            buyerData={saleState.buyerData}
+            paymentData={saleState.paymentData}
+          />
         );
 
       default:
@@ -1147,28 +933,8 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     }
   };
 
-  // Para guardar temporalmente valores modificados localmente
-  const saveReservationToLocalStorage = (motorcycleId: number, amount: number) => {
-    const key = `reservation-${motorcycleId}`;
-    localStorage.setItem(key, amount.toString());
-  };
-
-  // Para recuperar valores
-  const getReservationFromLocalStorage = (motorcycleId: number) => {
-    const key = `reservation-${motorcycleId}`;
-    return Number.parseFloat(localStorage.getItem(key) || "0");
-  };
-
-  // Al cambiar el valor de reserva
-  const handleReservationChange = (motorcycleId: number, amount: number) => {
-    startTransition(() => {
-      // Actualiza el estado optimista
-      // Guarda en localStorage si es necesario
-      // Envía la actualización a la base de datos
-    });
-  };
-
-  if (!moto) {
+  // Loading state for motorcycle
+  if (loadingMoto) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -1176,6 +942,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
     );
   }
 
+  // Main component return
   return (
     <div className="container mx-auto py-8">
       <Card>
@@ -1191,7 +958,7 @@ export default function VentaPage({ params }: { params: { id: string } }) {
             </Button>
             <Button
               onClick={handleNext}
-              disabled={saleState.currentStep === steps.length - 1}
+              disabled={saleState.currentStep === steps.length - 1 && loading}
               className={saleState.currentStep === 2 ? "bg-red-600 hover:bg-red-700" : ""}
             >
               {saleState.currentStep === 2 ? "Confirmar Venta" : "Siguiente"}

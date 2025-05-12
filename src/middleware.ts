@@ -13,9 +13,9 @@ export default async function authMiddleware(request: NextRequest) {
 
   const isAuth = authRoutes.includes(pathName);
   const isPassword = passwordRoutes.includes(pathName);
-  const isAdmin = adminRoutes.includes(pathName);
+  const isAdmin = adminRoutes.includes(pathName) || pathName.startsWith('/admin');
   const isProtected = protectedRoutes.includes(pathName);
-  const isRoot = rootRoutes.includes(pathName);
+  const isRoot = rootRoutes.includes(pathName) || pathName.startsWith('/root');
 
   const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
     baseURL: process.env.BETTER_AUTH_URL,

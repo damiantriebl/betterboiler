@@ -18,6 +18,7 @@ import {
   type Sucursal,
   type MotoColor,
   type Reservation,
+  type ModelFile,
 } from "@prisma/client";
 import {
   X,
@@ -29,37 +30,16 @@ import {
   BookmarkPlus,
   Pencil,
   Info,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePriceDisplayStore } from "@/stores/price-display-store";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ClientDetail } from "./ClientDetail";
-
-export interface MotorcycleWithDetails extends Motorcycle {
-  brand?: Brand | null;
-  model?: Model | null;
-  branch?: Sucursal | null;
-  color?: MotoColor | null;
-  reservations?: (Reservation & {
-    clientId: string;
-    amount?: number;
-    createdAt?: Date | string;
-    status: string;
-    paymentMethod?: string | null;
-    notes?: string | null
-  })[];
-  reservation?: {
-    id: number;
-    clientId: string;
-    amount?: number;
-    createdAt?: Date | string;
-    status: string;
-    paymentMethod?: string | null;
-    notes?: string | null
-  } | null;
-}
+import { type ModelFileWithUrl, type MotorcycleWithDetails } from "@/types/motorcycle";
 
 interface Props {
   isOpen: boolean;
@@ -93,9 +73,53 @@ export function MotorcycleDetailModal({
   onEdit,
   estadoVentaConfig,
 }: Props) {
-  if (!isOpen || !motorcycle) return null;
+  const [modelImages, setModelImages] = useState<ModelFileWithUrl[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const shouldShowWholesale = usePriceDisplayStore(s => s.showWholesale());
+  const shouldShowCost = usePriceDisplayStore(s => s.showCost());
 
-  console.log('MotorcycleDetailModal - Full motorcycle data:', JSON.stringify(motorcycle, null, 2));
+  const { clientId, rawReservationData } = useMemo(() => {
+    if (!motorcycle) return { clientId: null, rawReservationData: null };
+
+    if (motorcycle.state === MotorcycleState.PROCESANDO) {
+      return {
+        clientId: motorcycle.clientId ?? null,
+        rawReservationData: null
+      };
+    }
+
+    if (motorcycle.state === MotorcycleState.RESERVADO) {
+      const active = motorcycle.reservations?.find(r => r.status === 'active') ?? motorcycle.reservation;
+      return {
+        clientId: active?.clientId ?? null,
+        rawReservationData: active ?? null
+      };
+    }
+
+    return { clientId: null, rawReservationData: null };
+  }, [motorcycle]);
+
+  useEffect(() => {
+    if (isOpen && motorcycle?.model?.files) {
+      // Filter only image files
+      const imageFiles = motorcycle.model.files
+        .filter(file => file.type === "image" || file.type.startsWith('image/'))
+        .map(file => ({
+          ...file,
+          url: file.s3Key ? `https://${process.env.NEXT_PUBLIC_AWS_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_BUCKET_REGION}.amazonaws.com/${file.s3Key}` : "",
+        } as ModelFileWithUrl));
+
+      setModelImages(imageFiles);
+      setIsLoadingImages(false);
+    } else {
+      // If there are no model files or the modal is closed, reset the state
+      setModelImages([]);
+      setCurrentImageIndex(0);
+    }
+  }, [isOpen, motorcycle?.model?.files]);
+
+  if (!isOpen || !motorcycle) return null;
 
   const { id, state, currency } = motorcycle;
   const isStock = state === MotorcycleState.STOCK;
@@ -106,21 +130,13 @@ export function MotorcycleDetailModal({
   const canSell = isStock;
   const canPause = isStock || isPausado;
 
-  const { clientId, rawReservationData } = useMemo(() => {
-    let derivedClientId: string | null = null;
-    let derivedReservationData = null;
-    if (isProcesando) {
-      derivedClientId = motorcycle.clientId ?? null;
-    } else if (isReservado) {
-      const active = motorcycle.reservations?.find(r => r.status === 'active') ?? motorcycle.reservation;
-      derivedClientId = active?.clientId ?? null;
-      derivedReservationData = active ?? null;
-    }
-    return { clientId: derivedClientId, rawReservationData: derivedReservationData };
-  }, [isProcesando, isReservado, motorcycle]);
+  const handlePrevImage = () => {
+    setCurrentImageIndex(prev => (prev > 0 ? prev - 1 : modelImages.length - 1));
+  };
 
-  const shouldShowWholesale = usePriceDisplayStore(s => s.showWholesale());
-  const shouldShowCost = usePriceDisplayStore(s => s.showCost());
+  const handleNextImage = () => {
+    setCurrentImageIndex(prev => (prev < modelImages.length - 1 ? prev + 1 : 0));
+  };
 
   const renderActions = () => {
     if (isEliminado) return (
@@ -214,45 +230,79 @@ export function MotorcycleDetailModal({
                 <DetailItem label="Año" value={motorcycle.year} />
                 <DetailItem label="Kilometraje" value={`${motorcycle.mileage} km`} />
                 <DetailItem label="Cilindrada" value={`${motorcycle.displacement ?? '-'} cc`} />
-                <DetailItem label="Color" value={motorcycle.color?.name} />
-                <DetailItem label="Ubicación" value={motorcycle.branch?.name} />
-              </div>
-            </div>
-            <div>
-              <h3 className="text-base font-semibold mb-2 border-b pb-1">Precios ({currency})</h3>
-              <div className="space-y-1">
-                <DetailItem label="Precio Venta" value={formatPrice(motorcycle.retailPrice, currency)} />
-                {shouldShowWholesale && motorcycle.wholesalePrice && <DetailItem label="Precio Mayorista" value={formatPrice(motorcycle.wholesalePrice)} />}
-                {shouldShowCost && motorcycle.costPrice && <DetailItem label="Precio Costo" value={formatPrice(motorcycle.costPrice)} />}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-base font-semibold mb-2 border-b pb-1">Identificación</h3>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <DetailItem label="Nro. Chasis" value={motorcycle.chassisNumber} />
+                <DetailItem label="Color" value={motorcycle.color?.name ?? 'N/A'} />
+                <DetailItem label="Sucursal" value={motorcycle.branch?.name ?? 'N/A'} />
+                <DetailItem label="Nro. Chasis" value={motorcycle.chassisNumber ?? 'N/A'} />
                 <DetailItem label="Nro. Motor" value={motorcycle.engineNumber ?? 'N/A'} />
-                <DetailItem label="Patente" value={motorcycle.licensePlate} />
+                <DetailItem label="Patente" value={motorcycle.licensePlate ?? 'N/A'} />
+                <DetailItem label="Precio" value={formatPrice(motorcycle.retailPrice, currency)} />
+                {shouldShowWholesale && motorcycle.wholesalePrice && (
+                  <DetailItem label="Precio Mayorista" value={formatPrice(motorcycle.wholesalePrice, currency)} />
+                )}
+                {shouldShowCost && motorcycle.costPrice && (
+                  <DetailItem label="Precio Costo" value={formatPrice(motorcycle.costPrice, currency)} />
+                )}
               </div>
             </div>
-            {(isReservado || isProcesando) && renderClientSection()}
-            {motorcycle.observations && (
-              <div>
-                <h3 className="text-base font-semibold mb-2 border-b pb-1">Observaciones</h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{motorcycle.observations}</p>
-              </div>
-            )}
+            {renderClientSection()}
           </div>
           <div className="md:col-span-1 flex flex-col">
-            {motorcycle.imageUrl ? (
-              <div className="mb-4 rounded-lg overflow-hidden border aspect-video">
-                <img src={motorcycle.imageUrl} alt={`Moto ID ${id}`} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="mb-4 rounded-lg border aspect-video bg-muted flex items-center justify-center text-muted-foreground">Sin imagen</div>
-            )}
-            <div className="mt-auto pt-4 border-t">
-              <h4 className="mb-3 text-base font-semibold">Acciones Rápidas</h4>
-              <div className="flex flex-col gap-2">{renderActions()}</div>
+            <div className="relative mb-4 rounded-lg overflow-hidden border aspect-video bg-gray-100">
+              {isLoadingImages ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : modelImages.length > 0 ? (
+                <>
+                  <img
+                    src={modelImages[currentImageIndex].url}
+                    alt={`${motorcycle.brand?.name} ${motorcycle.model?.name}`}
+                    className="w-full h-full object-cover"
+                  />
+                  {modelImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={handlePrevImage}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
+                        title="Imagen anterior"
+                        aria-label="Ver imagen anterior"
+                      >
+                        <ChevronLeft className="h-6 w-6" />
+                      </button>
+                      <button
+                        onClick={handleNextImage}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
+                        title="Siguiente imagen"
+                        aria-label="Ver siguiente imagen"
+                      >
+                        <ChevronRight className="h-6 w-6" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                        {currentImageIndex + 1} / {modelImages.length}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : motorcycle.model?.imageUrl ? (
+                <img
+                  src={motorcycle.model.imageUrl}
+                  alt={`${motorcycle.brand?.name} ${motorcycle.model?.name}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : motorcycle.imageUrl ? (
+                <img
+                  src={motorcycle.imageUrl}
+                  alt={`Moto ID ${id}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  Sin imagen
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {renderActions()}
             </div>
           </div>
         </div>
@@ -264,3 +314,4 @@ export function MotorcycleDetailModal({
     </Dialog>
   );
 }
+

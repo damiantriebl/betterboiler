@@ -18,3 +18,11 @@ export const formatCurrency = (amount: number) => {
     currency: 'ARS'
   }).format(amount);
 };
+
+export const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+};

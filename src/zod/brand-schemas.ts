@@ -4,11 +4,19 @@ export const brandNameSchema = z.string().min(1, "El nombre de la marca no puede
 
 export const createBrandSchema = z.object({
     name: brandNameSchema,
+    color: z.string()
+        .regex(/^#[0-9a-fA-F]{6}$/, "Formato de color inválido (#RRGGBB)")
+        .optional()
+        .nullable(),
 });
 
 export const updateBrandSchema = z.object({
     id: z.number().int().positive("ID de marca inválido"),
     name: brandNameSchema,
+    color: z.string()
+        .regex(/^#[0-9a-fA-F]{6}$/, "Formato de color inválido (#RRGGBB)")
+        .optional()
+        .nullable(),
 });
 
 export const brandOrderSchema = z.object({

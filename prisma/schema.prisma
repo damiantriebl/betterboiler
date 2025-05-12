@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,19 +8,17 @@ datasource db {
 }
 
 model Session {
-  id             String   @id @default(cuid()) @map("_id")
-  token          String   @unique
-  userId         String
-  expiresAt      DateTime
-  ipAddress      String?
-  userAgent      String?
-  impersonatedBy String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id                   String   @id @default(cuid()) @map("_id")
+  token                String   @unique
+  userId               String
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  impersonatedBy       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
   activeOrganizationId String?
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("session")
 }
@@ -44,9 +36,8 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  idToken String?
+  idToken               String?
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account")
 }
@@ -72,33 +63,27 @@ model Jwks {
 }
 
 model Organization {
-  id         String      @id @default(cuid()) @map("_id")
-  name       String
-  slug       String?     @unique
-  logo       String?
-  thumbnail  String?     // Nuevo campo para la miniatura
-  createdAt  DateTime    @default(now())
-  metadata   String?
-  users      User[]
-  motoColors MotoColor[]
-
-  // --- Relación con OrganizationBrand (Tabla Intermedia) ---
-  organizationBrands OrganizationBrand[]
-
-  // --- Relación con Configuración de Modelos ---
-  organizationModelConfigs OrganizationModelConfig[]
-
-  // --- Relación con Sucursales (Branches) ---
-  sucursales Sucursal[]
-
-  // Añadir relación inversa con Motorcycle
-  motorcycles Motorcycle[]
-
-  // Añadir relación inversa con Supplier
-  suppliers Supplier[]
-
-  // Añadir relación inversa con Reservation
-  reservations Reservation[]
+  id                         String                      @id @default(cuid()) @map("_id")
+  name                       String
+  slug                       String?                     @unique
+  logo                       String?
+  createdAt                  DateTime                    @default(now())
+  metadata                   String?
+  thumbnail                  String?
+  bankCards                  BankCard[]
+  bankingPromotions          BankingPromotion[]
+  currentAccounts            CurrentAccount[]
+  motoColors                 MotoColor[]
+  organizationBrands         OrganizationBrand[]
+  organizationModelConfigs   OrganizationModelConfig[]
+  organizationPaymentCards   OrganizationPaymentCard[]
+  organizationPaymentMethods OrganizationPaymentMethod[]
+  payments                   Payment[]
+  reservations               Reservation[]
+  sucursales                 Sucursal[]
+  suppliers                  Supplier[]
+  motorcycles                Motorcycle[]
+  users                      User[]
 
   @@map("organization")
 }
@@ -119,291 +104,230 @@ model User {
   banExpires              Int?
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
-  sessions                Session[]
-  accounts                Account[]
   organizationId          String?
+  accounts                Account[]
+  sales                   Motorcycle[]  @relation("MotorcycleSales")
+  sessions                Session[]
   organization            Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  sales                   Motorcycle[] @relation("MotorcycleSales") // Relación inversa con las ventas
 
   @@map("user")
 }
 
 model Brand {
-  id     Int     @id @default(autoincrement())
-  name   String  @unique // Vuelve a ser único globalmente
-  color  String? // Add optional color field for default brand color
-  models Model[]
-
-  // --- Relación con OrganizationBrand (Tabla Intermedia) ---
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  color              String?
+  models             Model[]
   organizationBrands OrganizationBrand[]
-
-  // Añadir relación inversa con Motorcycle
-  motorcycles Motorcycle[]
+  motorcycles        Motorcycle[]
 }
 
 model Model {
-  id      Int    @id @default(autoincrement())
-  name    String
-  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  brandId Int
-
-  // --- Relación con Configuración de Modelos ---
+  id                       Int                       @id @default(autoincrement())
+  name                     String
+  brandId                  Int
+  additionalFilesJson      String?
+  imageUrl                 String?
+  specSheetUrl             String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @default(now()) @updatedAt
+  brand                    Brand                     @relation(fields: [brandId], references: [id])
+  files                    ModelFile[]
   organizationModelConfigs OrganizationModelConfig[]
+  motorcycles              Motorcycle[]
 
-  // Añadir relación inversa con Motorcycle
-  motorcycles Motorcycle[]
+  @@unique([name, brandId])
+  @@index([brandId])
+}
 
-  @@unique([name, brandId]) // Nombre único por marca
-  @@index([brandId]) // Mantener índice por marca para búsquedas
+model ModelFile {
+  id         String   @id @default(cuid())
+  name       String
+  url        String
+  type       String
+  modelId    Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  s3Key      String
+  s3KeySmall String?
+  size       Int
+  model      Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@index([modelId])
 }
 
 model MotoColor {
-  id        Int      @id @default(autoincrement())
-  name      String // nombre
-  type      String // tipo ('unico', 'bitono', 'patron')
-  colorOne  String // color1 (#RRGGBB)
-  colorTwo  String? // color2 (#RRGGBB), opcional
-  order     Int      @default(0) // Orden para DND (por organización)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // --- Relación con Organización ---
-  organizationId String // Clave foránea para la organización
+  id             Int          @id @default(autoincrement())
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organizationId String
+  colorOne       String
+  colorTwo       String?
+  name           String
+  type           String
+  isGlobal       Boolean      @default(false)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  motorcycles    Motorcycle[]
 
-  // Añadir relación inversa con Motorcycle
-  motorcycles Motorcycle[] // Inverse relation with Motorcycle
-
-  // Asegurar que el nombre del color sea único para cada organización
   @@unique([organizationId, name])
-
-  // Indexar para búsquedas rápidas por organización y orden
   @@index([organizationId, order])
+  @@index([organizationId, isGlobal])
 }
 
-// --- NUEVO MODELO: Tabla Intermedia OrganizationBrand ---
 model OrganizationBrand {
-  id Int @id @default(autoincrement())
-
+  id             Int          @id @default(autoincrement())
   organizationId String
+  brandId        Int
+  order          Int          @default(0)
+  color          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  brand          Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  brandId Int
-  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
-
-  // --- Campos específicos de la relación ---
-  order Int     @default(0) // Orden de esta marca DENTRO de esta organización
-  color String? // Color personalizado para esta marca EN esta organización
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // --- Constraints e Índices ---
-  @@unique([organizationId, brandId]) // Una organización solo puede tener una marca asociada una vez
-  @@index([organizationId, order]) // Para ordenar marcas por organización
-  @@index([brandId]) // Para buscar rápido qué organizaciones usan una marca
+  @@unique([organizationId, brandId])
+  @@index([organizationId, order])
+  @@index([brandId])
 }
 
-// --- NUEVO MODELO: Configuración de Modelos por Organización ---
 model OrganizationModelConfig {
-  id Int @id @default(autoincrement())
-
+  id             Int          @id @default(autoincrement())
   organizationId String
+  modelId        Int
+  order          Int          @default(0)
+  isVisible      Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  model          Model        @relation(fields: [modelId], references: [id], onDelete: Cascade)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  modelId Int
-  model   Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
-
-  // --- Campos específicos de la relación ---
-  order     Int     @default(0) // Orden de este modelo DENTRO de esta organización (y marca)
-  isVisible Boolean @default(true) // Si este modelo es visible para esta organización
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // --- Constraints e Índices ---
-  @@unique([organizationId, modelId]) // Una organización solo configura un modelo una vez
-  // Índice para buscar/ordenar modelos por organización y su orden específico
-  // Podríamos necesitar filtrar por brandId indirectamente a través de modelId si hacemos queries complejas aquí
+  @@unique([organizationId, modelId])
   @@index([organizationId, modelId, order])
-  @@index([modelId]) // Para buscar rápido qué organizaciones configuran un modelo
+  @@index([modelId])
 }
 
-// Modelo para Sucursales (Branches)
 model Sucursal {
-  id        Int      @id @default(autoincrement())
-  name      String // Name of the branch
-  order     Int // Orden dentro de la organización
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relación 1:N con Organization
+  id             Int          @id @default(autoincrement())
+  name           String
+  order          Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  motorcycles    Motorcycle[]
 
-  // Añadir relación inversa con Motorcycle
-  motorcycles Motorcycle[] // Inverse relation with Motorcycle
-
-  // Restricción única por organización y nombre
   @@unique([organizationId, name])
-  // Índice para ordenar por organización
   @@index([organizationId, order])
 }
 
-// --- ACTUALIZAR MODELO Supplier --- 
 model Supplier {
-  id Int @id @default(autoincrement())
-
-  // Identificación y Fiscal
-  legalName            String // Razón Social
-  commercialName       String? // Nombre Comercial (opcional)
-  taxIdentification    String  @unique // Identificación Tributaria (CUIT/CUIL) - Debe ser único por Org
-  vatCondition         String // Condición frente al IVA
-  voucherType          String // Tipo de Comprobante Emitido
-  grossIncome          String? // Ingresos Brutos (Nro./Convenio)
-  localTaxRegistration String? // Inscripción Tributaria Local
-
-  // Contacto
-  contactName     String?
-  contactPosition String?
-  landlineNumber  String?
-  mobileNumber    String?
-  email           String? // Podría ser único por Org si se requiere
-  website         String?
-
-  // Direcciones
-  legalAddress      String?
-  commercialAddress String?
-  deliveryAddress   String?
-
-  // Bancaria
-  bank              String?
-  accountTypeNumber String?
-  cbu               String? // Podría ser único por Org
-  bankAlias         String?
-  swiftBic          String?
-
-  // Comercial
-  paymentCurrency     String? // Moneda de Pago Preferida
-  paymentMethods      String[] // Formas de Pago Aceptadas (puede ser un array de strings)
-  paymentTermDays     Int? // Plazo de Pago (días)
-  discountsConditions String? // Descuentos o Condiciones Especiales
-  creditLimit         Float? // Límite de Crédito ($)
-  returnPolicy        String? // Política de Devoluciones y Garantías
-
-  // Logística
-  shippingMethods     String? // Métodos de Envío
-  shippingCosts       String? // Costos de Envío
-  deliveryTimes       String? // Tiempos de Entrega Promedio
-  transportConditions String? // Condiciones de Transporte
-
-  // Adicional
-  itemsCategories      String? // Rubros / Categorías
+  id                   Int          @id @default(autoincrement())
+  legalName            String
+  commercialName       String?
+  taxIdentification    String       @unique
+  vatCondition         String
+  voucherType          String
+  grossIncome          String?
+  localTaxRegistration String?
+  contactName          String?
+  contactPosition      String?
+  landlineNumber       String?
+  mobileNumber         String?
+  email                String?
+  website              String?
+  legalAddress         String?
+  commercialAddress    String?
+  deliveryAddress      String?
+  bank                 String?
+  accountTypeNumber    String?
+  cbu                  String?
+  bankAlias            String?
+  swiftBic             String?
+  paymentCurrency      String?
+  paymentMethods       String[]
+  paymentTermDays      Int?
+  discountsConditions  String?
+  creditLimit          Float?
+  returnPolicy         String?
+  shippingMethods      String?
+  shippingCosts        String?
+  deliveryTimes        String?
+  transportConditions  String?
+  itemsCategories      String?
   certifications       String?
   commercialReferences String?
-  status               String  @default("activo") // Estado (activo/inactivo)
-  notesObservations    String? // Notas / Observaciones Internas
+  status               String       @default("activo")
+  notesObservations    String?
+  organizationId       String
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  motorcycles          Motorcycle[]
 
-  // Relación con Organización
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  // Relación inversa con Motorcycle (si un proveedor puede estar asociado a una moto)
-  motorcycles Motorcycle[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Índices y Restricciones
-  @@unique([organizationId, taxIdentification]) // CUIT único por organización
-  // @@unique([organizationId, email]) // Email único por organización (opcional)
-  // @@unique([organizationId, cbu]) // CBU único por organización (opcional)
-  @@index([organizationId]) // Índice para buscar proveedores por organización
-  @@index([organizationId, status]) // Índice para filtrar por estado
+  @@unique([organizationId, taxIdentification])
+  @@index([organizationId])
+  @@index([organizationId, status])
 }
 
 model Client {
-  id          String   @id @default(cuid())
-  type        String   // 'Individual' | 'LegalEntity'
-  firstName   String
-  lastName    String?
-  companyName String?
-  taxId       String
-  email       String
-  phone       String?
-  mobile      String?
-  address     String?
-  vatStatus   String?
-  status      String   @default("activo")
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  motorcycles Motorcycle[] // Relación inversa: motos compradas por el cliente
-  reservations Reservation[] // Relación inversa: reservas hechas por el cliente
+  id              String           @id @default(cuid())
+  type            String
+  firstName       String
+  lastName        String?
+  companyName     String?
+  taxId           String
+  email           String
+  phone           String?
+  mobile          String?
+  address         String?
+  vatStatus       String?
+  status          String           @default("activo")
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  currentAccounts CurrentAccount[]
+  reservations    Reservation[]
+  motorcycles     Motorcycle[]
 }
 
-enum MotorcycleState {
-  STOCK
-  VENDIDO
-  PAUSADO
-  RESERVADO
-  PROCESANDO
-  ELIMINADO
-}
-
-// --- MODELO Motorcycle (Modificar para incluir relación con Supplier) ---
 model Motorcycle {
-  id             Int      @id @default(autoincrement())
-  chassisNumber  String   @unique
-  engineNumber   String?  @unique
-  year           Int
-  displacement   Int?
-  mileage        Int      @default(0)
-  costPrice      Float?
-  retailPrice    Float
-  wholesalePrice Float?
-  licensePlate   String?
-  currency       String   @default("ARS")
-  observations   String?
-  imageUrl       String?
-  state          MotorcycleState @default(STOCK)
-  soldAt         DateTime?
-  sellerId       String? // ID del vendedor que realizó la venta
-  seller         User?    @relation("MotorcycleSales", fields: [sellerId], references: [id]) // Relación con el vendedor
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              Int              @id @default(autoincrement())
+  chassisNumber   String           @unique
+  engineNumber    String?          @unique
+  year            Int
+  mileage         Int              @default(0)
+  costPrice       Float?
+  retailPrice     Float
+  wholesalePrice  Float?
+  licensePlate    String?
+  observations    String?
+  imageUrl        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  brandId         Int
+  modelId         Int
+  colorId         Int
+  branchId        Int
+  supplierId      Int?
+  organizationId  String
+  displacement    Int?
+  currency        String           @default("ARS")
+  clientId        String?
+  state           MotorcycleState  @default(STOCK)
+  sellerId        String?
+  soldAt          DateTime?
+  currentAccounts CurrentAccount[]
+  reservations    Reservation[]
+  branch          Sucursal         @relation(fields: [branchId], references: [id])
+  brand           Brand            @relation(fields: [brandId], references: [id])
+  client          Client?          @relation(fields: [clientId], references: [id])
+  color           MotoColor        @relation(fields: [colorId], references: [id])
+  model           Model            @relation(fields: [modelId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  seller          User?            @relation("MotorcycleSales", fields: [sellerId], references: [id])
+  supplier        Supplier?        @relation(fields: [supplierId], references: [id])
 
-  // --- Relaciones (Claves Foráneas) ---
-  brandId Int // FK para Marca
-  brand   Brand @relation(fields: [brandId], references: [id])
-
-  modelId Int // FK para Modelo
-  model   Model @relation(fields: [modelId], references: [id])
-
-  // --- Relación con MotoColor (usa el ID de MotoColor) ---
-  colorId Int // FK para MotoColor
-  color   MotoColor @relation(fields: [colorId], references: [id]) // Relation uses ID
-
-  // --- Relación con Sucursal (usa el ID de Sucursal) ---
-  branchId Int // Reverted to branchId
-  branch   Sucursal @relation(fields: [branchId], references: [id]) // Reverted relation name
-
-  // --- Relación con Proveedor (Opcional) ---
-  supplierId Int? // Hacer el ID opcional
-  supplier   Supplier? @relation(fields: [supplierId], references: [id]) // Relación con el nuevo modelo Supplier
-
-  // --- Relación con Organización ---
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-
-  // --- Relación con Client
-  clientId String? // FK opcional
-  client   Client? @relation(fields: [clientId], references: [id])
-  
-  // --- Relación con Reservation (una moto puede tener múltiples reservas)
-  reservations Reservation[]
-
-  // --- Índices para búsquedas eficientes ---
   @@index([brandId])
   @@index([modelId])
   @@index([colorId])
@@ -415,34 +339,243 @@ model Motorcycle {
   @@map("motorcycle")
 }
 
-// --- NUEVO MODELO: Reservas ---
 model Reservation {
-  id               Int      @id @default(autoincrement())
-  amount           Float    // Monto de la reserva
-  currency         String   @default("USD") // Moneda de la reserva (USD o ARS)
-  expirationDate   DateTime?    // Fecha de vencimiento de la reserva (opcional)
-  notes            String?  // Notas o comentarios sobre la reserva
-  paymentMethod    String?  // Método de pago usado para la reserva
-  status           String   @default("active") // active, completed, cancelled, expired
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id             Int          @id @default(autoincrement())
+  amount         Float
+  expirationDate DateTime?
+  notes          String?
+  paymentMethod  String?
+  status         String       @default("active")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  motorcycleId   Int
+  clientId       String
+  organizationId String
+  currency       String       @default("USD")
+  client         Client       @relation(fields: [clientId], references: [id])
+  motorcycle     Motorcycle   @relation(fields: [motorcycleId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  // --- Relación con Motorcycle (una reserva pertenece a una moto) ---
-  motorcycleId     Int      // Una moto puede tener múltiples reservas
-  motorcycle       Motorcycle @relation(fields: [motorcycleId], references: [id])
-
-  // --- Relación con Client (una reserva es hecha por un cliente) ---
-  clientId         String
-  client           Client   @relation(fields: [clientId], references: [id])
-
-  // --- Relación con Organization ---
-  organizationId   String
-  organization     Organization @relation(fields: [organizationId], references: [id])
-
-  // --- Índices para búsquedas eficientes ---
   @@index([motorcycleId])
   @@index([clientId])
   @@index([organizationId])
   @@index([status])
   @@index([expirationDate])
+}
+
+model PaymentCard {
+  id                       Int                       @id @default(autoincrement())
+  name                     String                    @unique
+  type                     String
+  issuer                   String
+  logoUrl                  String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  bankingPromotions        BankingPromotion[]
+  organizationPaymentCards OrganizationPaymentCard[]
+}
+
+model OrganizationPaymentCard {
+  id             Int          @id @default(autoincrement())
+  organizationId String
+  cardId         Int
+  isEnabled      Boolean      @default(true)
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  card           PaymentCard  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, cardId])
+  @@index([organizationId, order])
+  @@index([cardId])
+}
+
+model PaymentMethod {
+  id                         Int                         @id @default(autoincrement())
+  name                       String
+  type                       String                      @unique
+  description                String
+  iconUrl                    String?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  bankingPromotions          BankingPromotion[]
+  organizationPaymentMethods OrganizationPaymentMethod[]
+}
+
+model OrganizationPaymentMethod {
+  id             Int           @id @default(autoincrement())
+  organizationId String
+  methodId       Int
+  isEnabled      Boolean       @default(true)
+  order          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  method         PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, methodId])
+}
+
+model Bank {
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  logoUrl           String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  bankCards         BankCard[]
+  bankingPromotions BankingPromotion[]
+}
+
+model CardType {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  type      String
+  logoUrl   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  bankCards BankCard[]
+}
+
+model BankingPromotion {
+  id               Int               @id @default(autoincrement())
+  name             String
+  description      String?
+  organizationId   String
+  paymentMethodId  Int
+  cardId           Int?
+  bankId           Int?
+  bankCardId       Int?
+  discountRate     Float?
+  surchargeRate    Float?
+  minAmount        Float?
+  maxAmount        Float?
+  isEnabled        Boolean           @default(true)
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  activeDays       String[]
+  bankCard         BankCard?         @relation(fields: [bankCardId], references: [id])
+  bank             Bank?             @relation(fields: [bankId], references: [id])
+  card             PaymentCard?      @relation(fields: [cardId], references: [id])
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  paymentMethod    PaymentMethod     @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
+  installmentPlans InstallmentPlan[]
+
+  @@index([organizationId])
+  @@index([paymentMethodId])
+  @@index([bankCardId])
+  @@index([cardId])
+  @@index([bankId])
+}
+
+model InstallmentPlan {
+  id                 Int              @id @default(autoincrement())
+  bankingPromotionId Int
+  installments       Int
+  interestRate       Float
+  isEnabled          Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  bankingPromotion   BankingPromotion @relation(fields: [bankingPromotionId], references: [id], onDelete: Cascade)
+
+  @@unique([bankingPromotionId, installments])
+}
+
+model BankCard {
+  id                Int                @id @default(autoincrement())
+  bankId            Int
+  cardTypeId        Int
+  organizationId    String
+  isEnabled         Boolean            @default(true)
+  order             Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  bank              Bank               @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  cardType          CardType           @relation(fields: [cardTypeId], references: [id], onDelete: Cascade)
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bankingPromotions BankingPromotion[]
+
+  @@unique([bankId, cardTypeId, organizationId])
+  @@index([organizationId])
+  @@index([bankId])
+  @@index([cardTypeId])
+}
+
+model CurrentAccount {
+  id                   String               @id @default(cuid())
+  clientId             String
+  totalAmount          Float
+  downPayment          Float
+  numberOfInstallments Int
+  installmentAmount    Float
+  paymentFrequency     PaymentFrequency
+  startDate            DateTime
+  endDate              DateTime?
+  status               CurrentAccountStatus @default(ACTIVE)
+  reminderLeadTimeDays Int?                 @default(3)
+  notes                String?
+  organizationId       String
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  motorcycleId         Int
+  nextDueDate          DateTime?
+  remainingAmount      Float
+  interestRate         Float?
+  currency             String?              @default("ARS")
+  client               Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  motorcycle           Motorcycle           @relation(fields: [motorcycleId], references: [id])
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payments             Payment[]
+
+  @@index([clientId])
+  @@index([motorcycleId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Payment {
+  id                   String          @id @default(cuid())
+  currentAccountId     String?
+  paymentDate          DateTime?
+  paymentMethod        String?
+  notes                String?
+  organizationId       String
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  amountPaid           Float
+  transactionReference String?
+  installmentNumber    Int?   
+  installmentVersion   String?
+  currentAccount       CurrentAccount? @relation(fields: [currentAccountId], references: [id])
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([currentAccountId])
+  @@index([organizationId])
+}
+
+enum MotorcycleState {
+  STOCK
+  VENDIDO
+  PAUSADO
+  RESERVADO
+  PROCESANDO
+  ELIMINADO
+}
+
+enum PaymentFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
+enum CurrentAccountStatus {
+  ACTIVE
+  PAID_OFF
+  OVERDUE
+  DEFAULTED
+  CANCELLED
 }

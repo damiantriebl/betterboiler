@@ -50,15 +50,39 @@ export async function getRootBrands() {
             include: {
                 models: {
                     orderBy: { name: 'asc' }, // Order by name as default
+                    include: {
+                        files: true, // Include model files
+                    },
                 },
             },
         });
-        return brands;
+
+        // Transform the data to include file status for each brand
+        const brandsWithFileStatus = brands.map(brand => {
+            const hasPhoto = brand.models.some(model => 
+                model.imageUrl || model.files.some(file => file.type === 'image')
+            );
+            const hasTechnicalSheet = brand.models.some(model => 
+                model.specSheetUrl || model.files.some(file => file.type === 'spec_sheet')
+            );
+            const hasOtherFiles = brand.models.some(model => 
+                model.files.some(file => !['image', 'spec_sheet'].includes(file.type))
+            );
+
+            return {
+                ...brand,
+                files: {
+                    hasPhoto,
+                    hasTechnicalSheet,
+                    hasOtherFiles
+                }
+            };
+        });
+
+        return brandsWithFileStatus;
     } catch (error) {
         console.error("Error fetching root brands:", error);
-        // Depending on requirements, you might return an empty array or throw
         return [];
-        // Or: throw new Error("Failed to fetch global brands.");
     }
 }
 
@@ -71,6 +95,7 @@ export async function createRootBrand(
 ): Promise<CreateBrandState> {
     const rawFormData = {
         name: formData.get("name"),
+        color: formData.get("color")?.toString() || null,
     };
 
     // Validate form data
@@ -83,7 +108,7 @@ export async function createRootBrand(
         };
     }
 
-    const { name } = validatedFields.data;
+    const { name, color } = validatedFields.data;
 
     try {
         // Check for existing brand with the same name (case-insensitive)
@@ -99,6 +124,7 @@ export async function createRootBrand(
         const newBrand = await db.brand.create({
             data: {
                 name: name,
+                color: color,
                 // isGlobal: true, // Set flag if applicable
                 // order: await getNextBrandOrder(), // Optional: logic to set next order
             },
