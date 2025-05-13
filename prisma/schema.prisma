@@ -19,6 +19,7 @@ model Session {
   updatedAt            DateTime @updatedAt
   activeOrganizationId String?
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentStatus        String?
 
   @@map("session")
 }
@@ -548,6 +549,7 @@ model Payment {
   transactionReference String?
   installmentNumber    Int?   
   installmentVersion   String?
+  status               PaymentStatus   @default(PENDING)
   currentAccount       CurrentAccount? @relation(fields: [currentAccountId], references: [id])
   organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -578,4 +580,13 @@ enum CurrentAccountStatus {
   OVERDUE
   DEFAULTED
   CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  PROCESSING
+  FAILED
+  PARTIAL
 }

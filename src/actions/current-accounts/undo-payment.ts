@@ -2,12 +2,45 @@
 
 import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import prisma from "@/lib/prisma";
-import { Prisma, type PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient, type PaymentFrequency } from "@prisma/client";
 import { z } from "zod";
 
 const undoPaymentSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required."),
 });
+
+// Función para calcular el número de períodos por año según la frecuencia de pago
+function getPeriodsPerYear(frequency: PaymentFrequency): number {
+  switch (frequency) {
+    case 'WEEKLY': return 52;
+    case 'BIWEEKLY': return 26;
+    case 'MONTHLY': return 12;
+    case 'QUARTERLY': return 4;
+    case 'ANNUALLY': return 1;
+    default: return 12; // Default a mensual
+  }
+}
+
+// Función para calcular el nuevo monto de cuota en base al saldo restante
+function calculateNewInstallment(
+  remainingAmount: number,
+  annualInterestRatePercent: number,
+  remainingInstallments: number,
+  paymentFrequency: PaymentFrequency
+): number {
+  const periodsPerYear = getPeriodsPerYear(paymentFrequency);
+  const tnaDecimal = annualInterestRatePercent / 100;
+  const periodicRate = annualInterestRatePercent > 0
+    ? Math.pow(1 + tnaDecimal, 1 / periodsPerYear) - 1
+    : 0;
+
+  if (remainingAmount <= 0 || remainingInstallments <= 0) return 0;
+  if (periodicRate === 0) return Math.ceil(remainingAmount / remainingInstallments);
+
+  const factor = Math.pow(1 + periodicRate, remainingInstallments);
+  const raw = remainingAmount * (periodicRate * factor) / (factor - 1);
+  return Math.ceil(raw);
+}
 
 export interface UndoPaymentFormState {
   message: string;
@@ -99,6 +132,22 @@ export async function undoPayment(
           // createdAt will be new, updatedAt will be new by default
         },
       });
+      
+      // Create a new pending payment entry for the same installment
+      await tx.payment.create({
+        data: {
+          currentAccountId: paymentToAnnul.currentAccountId,
+          organizationId: paymentToAnnul.organizationId,
+          amountPaid: paymentToAnnul.amountPaid,
+          paymentDate: null, // No payment date since it's pending
+          paymentMethod: null, // No payment method yet
+          notes: `Cuota pendiente tras anulación de pago ID: ${paymentId}.`,
+          transactionReference: null,
+          installmentNumber: paymentToAnnul.installmentNumber,
+          installmentVersion: null, // Normal payment, no special version
+          createdAt: new Date(),
+        },
+      });
 
       // 3. Update the CurrentAccount's remainingAmount
       // The net effect of D and H on the balance for THIS specific payment is neutral for accounting display of the payment itself,
@@ -106,21 +155,45 @@ export async function undoPayment(
       const currentAccount = paymentToAnnul.currentAccount;
       const newRemainingAmount = currentAccount.remainingAmount + amountPaidOriginal;
 
+      // 4. Calcular cuántas cuotas se han pagado realmente (excluyendo D/H y anuladas)
+      const validPaymentsCount = await tx.payment.count({
+        where: {
+          currentAccountId: currentAccountIdFromPayment,
+          installmentVersion: null, // Solo pagos normales y activos
+        }
+      });
+      
+      // 5. Determinar cuántas cuotas quedan pendientes
+      const remainingInstallments = Math.max(0, currentAccount.numberOfInstallments - validPaymentsCount);
+
+      // 6. Calcular nuevo monto de cuota basado en el saldo restante actualizado
+      let updateData: Prisma.CurrentAccountUpdateInput = {
+        remainingAmount: newRemainingAmount,
+        updatedAt: new Date(),
+      };
+
+      if (remainingInstallments > 0) {
+        // Calcular nuevo valor para installmentAmount
+        const newInstallmentAmount = calculateNewInstallment(
+          newRemainingAmount, // El saldo actualizado tras anular el pago
+          currentAccount.interestRate ?? 0,
+          remainingInstallments,
+          currentAccount.paymentFrequency
+        );
+        
+        updateData.installmentAmount = newInstallmentAmount;
+      }
+
+      // Actualizar la cuenta corriente con los nuevos valores
       await tx.currentAccount.update({
         where: { id: currentAccountIdFromPayment },
-        data: {
-          remainingAmount: newRemainingAmount,
-          // Optionally, adjust status if it had become PAID_OFF due to this payment
-          // status: currentAccount.status === "PAID_OFF" && newRemainingAmount > 0 ? "ACTIVE" : currentAccount.status,
-          // For now, let's keep status update simple or handle it in a more sophisticated way elsewhere if needed.
-          updatedAt: new Date(), 
-        },
+        data: updateData
       });
 
-      console.log(`Payment ${paymentId} processed for D/H annulment. Payment D: ${paymentD.id}, Payment H: ${paymentH.id}. Current account ${currentAccountIdFromPayment} updated.`);
+      console.log(`Payment ${paymentId} processed for D/H annulment. Payment D: ${paymentD.id}, Payment H: ${paymentH.id}. Current account ${currentAccountIdFromPayment} updated with new installment amount.`);
 
       return {
-        message: `Anulación procesada para pago ${paymentId} (Asientos D/H generados). Saldo de cuenta corriente actualizado.`,
+        message: `Anulación procesada para pago ${paymentId} (Asientos D/H generados). Saldo y cuota recalculados.`,
         success: true,
       };
     });

@@ -1,13 +1,46 @@
 "use server";
 
 import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
-import { db } from "@/lib/db"; // Assuming this is your Prisma client instance
+import prisma from "@/lib/prisma"; // Importación correcta del cliente Prisma
 import { z } from "zod";
-import { PrismaClient } from '@prisma/client'; // O el tipo correcto para tu instancia de Prisma tx
+import { Prisma, type PaymentFrequency } from '@prisma/client';
 
 const cancelPaymentSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required."),
 });
+
+// Función para calcular el número de períodos por año según la frecuencia de pago
+function getPeriodsPerYear(frequency: PaymentFrequency): number {
+  switch (frequency) {
+    case 'WEEKLY': return 52;
+    case 'BIWEEKLY': return 26;
+    case 'MONTHLY': return 12;
+    case 'QUARTERLY': return 4;
+    case 'ANNUALLY': return 1;
+    default: return 12; // Default a mensual
+  }
+}
+
+// Función para calcular el nuevo monto de cuota en base al saldo restante
+function calculateNewInstallment(
+  remainingAmount: number,
+  annualInterestRatePercent: number,
+  remainingInstallments: number,
+  paymentFrequency: PaymentFrequency
+): number {
+  const periodsPerYear = getPeriodsPerYear(paymentFrequency);
+  const tnaDecimal = annualInterestRatePercent / 100;
+  const periodicRate = annualInterestRatePercent > 0
+    ? Math.pow(1 + tnaDecimal, 1 / periodsPerYear) - 1
+    : 0;
+
+  if (remainingAmount <= 0 || remainingInstallments <= 0) return 0;
+  if (periodicRate === 0) return Math.ceil(remainingAmount / remainingInstallments);
+
+  const factor = Math.pow(1 + periodicRate, remainingInstallments);
+  const raw = remainingAmount * (periodicRate * factor) / (factor - 1);
+  return Math.ceil(raw);
+}
 
 export interface CancelPaymentFormState {
   message: string;
@@ -22,13 +55,16 @@ export async function cancelPayment(
   prevState: CancelPaymentFormState,
   formData: FormData,
 ): Promise<CancelPaymentFormState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId) {
+  const session = await getOrganizationIdFromSession();
+  
+  if (!session?.organizationId) {
     return {
       message: "Error: User not authenticated or organization not found.",
       success: false,
     };
   }
+  
+  const organizationId = session.organizationId;
 
   const validatedFields = cancelPaymentSchema.safeParse({
     paymentId: formData.get("paymentId"),
@@ -45,11 +81,14 @@ export async function cancelPayment(
   const { paymentId } = validatedFields.data;
 
   try {
-    const originalPayment = await db.payment.findUnique({
+    const originalPayment = await prisma.payment.findUnique({
       where: {
         id: paymentId,
         organizationId: organizationId,
       },
+      include: {
+        currentAccount: true // Incluir la cuenta corriente para tener acceso a sus datos
+      }
     });
 
     if (!originalPayment) {
@@ -74,7 +113,7 @@ export async function cancelPayment(
       };
     }
 
-    await db.$transaction(async (tx: PrismaClient) => {
+    await prisma.$transaction(async (tx) => {
       // 1. Mark the original payment with version "D" (Debe)
       await tx.payment.update({
         where: { id: originalPayment.id },
@@ -96,10 +135,66 @@ export async function cancelPayment(
           createdAt: new Date(), // Explicitly set creation for the new record
         },
       });
+       
+      // 3. Create a new pending payment entry
+      await tx.payment.create({
+        data: {
+          currentAccountId: originalPayment.currentAccountId,
+          paymentDate: null, // No payment date since it's pending
+          paymentMethod: null, // No payment method yet
+          notes: `Cuota pendiente tras anulación de pago ID: ${originalPayment.id}.`,
+          organizationId: originalPayment.organizationId,
+          amountPaid: originalPayment.amountPaid,
+          transactionReference: null, // No transaction reference yet
+          installmentNumber: originalPayment.installmentNumber, 
+          installmentVersion: null, // Normal payment, no special version
+          createdAt: new Date(),
+        },
+      });
+      
+      // 4. Obtener la cuenta corriente actualizada para recalcular el monto de cuota
+      const currentAccount = await tx.currentAccount.findUnique({
+        where: { id: originalPayment.currentAccountId! }
+      });
+      
+      if (!currentAccount) {
+        throw new Error("Current account not found after anulment");
+      }
+      
+      // 5. Calcular cuántas cuotas se han pagado realmente (excluyendo D/H y anuladas)
+      const validPaymentsCount = await tx.payment.count({
+        where: {
+          currentAccountId: currentAccount.id,
+          installmentVersion: null, // Solo pagos normales
+        }
+      });
+      
+      // 6. Determinar cuántas cuotas quedan pendientes
+      const remainingInstallments = Math.max(0, currentAccount.numberOfInstallments - validPaymentsCount);
+      
+      if (remainingInstallments > 0) {
+        // 7. Calcular nuevo monto de cuota basado en el saldo restante
+        const newInstallmentAmount = calculateNewInstallment(
+          currentAccount.remainingAmount, // Ya incluye el importe anulado porque lo actualiza automáticamente al crear D/H
+          currentAccount.interestRate ?? 0,
+          remainingInstallments,
+          currentAccount.paymentFrequency
+        );
+        
+        // 8. Actualizar la cuenta corriente con el nuevo monto de cuota
+        await tx.currentAccount.update({
+          where: { id: currentAccount.id },
+          data: { 
+            installmentAmount: newInstallmentAmount,
+            // Opcional: actualizar nextDueDate si el pago anulado afecta la fecha de próximo vencimiento
+            updatedAt: new Date()
+          }
+        });
+      }
     });
 
     return {
-      message: `Payment ID: ${paymentId} (Installment: ${originalPayment.installmentNumber}) has been successfully cancelled (D/H entries created).`,
+      message: `Payment ID: ${paymentId} (Installment: ${originalPayment.installmentNumber}) has been successfully cancelled (D/H entries created). The installment amount has been recalculated.`,
       success: true,
     };
   } catch (error) {
