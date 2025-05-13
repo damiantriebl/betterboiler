@@ -114,76 +114,59 @@ function calculateFrenchAmortizationSchedule(
   numberOfInstallments: number,
   paymentFrequency: PaymentFrequency
 ): AmortizationScheduleEntry[] {
-  if (principal <= 0 || numberOfInstallments <= 0) return [];
-  if (annualInterestRatePercent < 0) return []; // No permitir tasas negativas aquí
+  if (principal <= 0 || numberOfInstallments <= 0 || annualInterestRatePercent < 0) return [];
 
-  const schedule: AmortizationScheduleEntry[] = [];
   const periodsPerYear = getPeriodsPerYear(paymentFrequency);
-  const periodicInterestRate = annualInterestRatePercent / 100 / periodsPerYear;
+  const i = annualInterestRatePercent / 100 / periodsPerYear;
+  let cap = principal;
+  const schedule: AmortizationScheduleEntry[] = [];
 
-  let currentCapital = principal;
-
-  if (annualInterestRatePercent === 0 || periodicInterestRate === 0) {
-    // Préstamo sin interés
-    const installmentAmt = Math.ceil(principal / numberOfInstallments);
-    for (let i = 1; i <= numberOfInstallments; i++) {
-      const capitalToAmortize = (i === numberOfInstallments) ? currentCapital : installmentAmt;
+  if (i <= 0) {
+    const c = Math.ceil(principal / numberOfInstallments);
+    for (let k = 1; k <= numberOfInstallments; k++) {
+      const amort = k === numberOfInstallments ? cap : c;
       schedule.push({
-        installmentNumber: i,
-        capitalAtPeriodStart: currentCapital,
+        installmentNumber: k,
+        capitalAtPeriodStart: cap,
         interestForPeriod: 0,
-        amortization: Math.ceil(capitalToAmortize), // Redondeo hacia arriba
-        calculatedInstallmentAmount: Math.ceil(capitalToAmortize), // Redondeo hacia arriba
-        capitalAtPeriodEnd: Math.max(0, currentCapital - capitalToAmortize),
+        amortization: amort,
+        calculatedInstallmentAmount: amort,
+        capitalAtPeriodEnd: Math.max(0, cap - amort)
       });
-      currentCapital -= capitalToAmortize;
-      if (currentCapital < 0) currentCapital = 0;
+      cap = Math.max(0, cap - amort);
     }
     return schedule;
   }
 
-  // Fórmula PMT para cuota fija
-  const pmtNumerator = periodicInterestRate * Math.pow(1 + periodicInterestRate, numberOfInstallments);
-  const pmtDenominator = Math.pow(1 + periodicInterestRate, numberOfInstallments) - 1;
-  const rawPmt = principal * (pmtNumerator / pmtDenominator);
-  const fixedInstallment = Math.ceil(rawPmt); // Redondeo hacia arriba de la cuota fija
+  const factor = Math.pow(1 + i, numberOfInstallments);
+  const raw = principal * (i * factor) / (factor - 1);
+  const fixed = Math.ceil(raw);
 
-  for (let i = 1; i <= numberOfInstallments; i++) {
-    const interest = Math.ceil(currentCapital * periodicInterestRate);
-    let amortizationAmount = fixedInstallment - interest;
+  for (let k = 1; k <= numberOfInstallments; k++) {
+    const interest = Math.ceil(cap * i);
+    let amort = fixed - interest;
+    let instAmt = fixed;
 
-    if (i === numberOfInstallments) {
-      // Ajustar última cuota para saldar exactamente
-      amortizationAmount = currentCapital + interest > fixedInstallment ? currentCapital : amortizationAmount; // Asegurar que la amortización no sea negativa si el interés es alto
-      if (currentCapital + interest > fixedInstallment && currentCapital < fixedInstallment - interest) {
-        amortizationAmount = currentCapital;
-      }
-      const finalInstallmentAmount = Math.ceil(currentCapital + interest);
-      schedule.push({
-        installmentNumber: i,
-        capitalAtPeriodStart: currentCapital,
-        interestForPeriod: interest, // Ya redondeado
-        amortization: Math.ceil(currentCapital), // Amortizar lo que queda
-        calculatedInstallmentAmount: finalInstallmentAmount,
-        capitalAtPeriodEnd: 0,
-      });
-      currentCapital = 0;
-    } else {
-      if (amortizationAmount > currentCapital) { // Si la amortización calculada excede el capital restante (por redondeos)
-        amortizationAmount = currentCapital;
-      }
-      schedule.push({
-        installmentNumber: i,
-        capitalAtPeriodStart: currentCapital,
-        interestForPeriod: interest, // Ya redondeado
-        amortization: Math.ceil(amortizationAmount), // Redondeo hacia arriba
-        calculatedInstallmentAmount: fixedInstallment,
-        capitalAtPeriodEnd: Math.max(0, currentCapital - Math.ceil(amortizationAmount)),
-      });
-      currentCapital -= Math.ceil(amortizationAmount);
-      if (currentCapital < 0) currentCapital = 0;
+    if (k === numberOfInstallments) {
+      instAmt = Math.ceil(cap + interest);
+      amort = cap;
     }
+
+    amort = Math.min(Math.max(0, amort), cap);
+    const capEnd = Math.max(0, cap - amort);
+
+    schedule.push({
+      installmentNumber: k,
+      capitalAtPeriodStart: cap,
+      interestForPeriod: interest,
+      amortization: amort,
+      calculatedInstallmentAmount: instAmt,
+      capitalAtPeriodEnd: capEnd
+    });
+
+    cap = capEnd;
   }
+
   return schedule;
 }
 
@@ -191,27 +174,36 @@ const generateInstallments = (
   account: CurrentAccountWithDetails,
   annulledPaymentIds: Set<string>
 ): InstallmentInfo[] => {
-  const generatedInstallments: InstallmentInfo[] = [];
-  const startDate = new Date(account.startDate);
+  // Calculamos fecha de vencimiento según frecuencia de pago y número de cuota
+  const calculateDueDate = (startDate: Date, frequency: PaymentFrequency, installmentNumber: number): Date => {
+    const dueDate = new Date(startDate);
+    const idx = installmentNumber - 1; // Ajustar índice (las cuotas empiezan en 1)
+
+    switch (frequency) {
+      case 'WEEKLY': dueDate.setDate(dueDate.getDate() + 7 * idx); break;
+      case 'BIWEEKLY': dueDate.setDate(dueDate.getDate() + 14 * idx); break;
+      case 'MONTHLY': dueDate.setMonth(dueDate.getMonth() + idx); break;
+      case 'QUARTERLY': dueDate.setMonth(dueDate.getMonth() + 3 * idx); break;
+      case 'ANNUALLY': dueDate.setFullYear(dueDate.getFullYear() + idx); break;
+    }
+
+    return dueDate;
+  };
+
   const financialPrincipal = account.totalAmount - account.downPayment;
+  const startDate = new Date(account.startDate);
 
-  // Calculate amortization schedule if interest rate is applicable
-  const frenchAmortizationPlan = (account.interestRate ?? 0) > 0 && financialPrincipal > 0
-    ? calculateFrenchAmortizationSchedule(
-      financialPrincipal,
-      account.interestRate ?? 0,
-      account.numberOfInstallments,
-      account.paymentFrequency as PaymentFrequency
-    )
-    : calculateFrenchAmortizationSchedule( // Plan sin interés si no hay tasa o principal
-      financialPrincipal,
-      0,
-      account.numberOfInstallments,
-      account.paymentFrequency as PaymentFrequency
-    );
+  // 1. Crear plan original con todas las cuotas
+  const originalPlan = calculateFrenchAmortizationSchedule(
+    financialPrincipal,
+    account.interestRate ?? 0,
+    account.numberOfInstallments,
+    account.paymentFrequency as PaymentFrequency
+  );
 
-  // paymentsByInstallmentNumber and annulled logic as before
+  // 2. Organizar pagos y encontrar cuántos están activos
   const paymentsByInstallmentNumber: Record<number, Payment[]> = {};
+
   if (account.payments) {
     for (const payment of account.payments) {
       if (payment.installmentNumber !== null && payment.installmentNumber !== undefined) {
@@ -223,48 +215,90 @@ const generateInstallments = (
     }
   }
 
-  let runningCapital = financialPrincipal;
-  const periodsPerYear = getPeriodsPerYear(account.paymentFrequency as PaymentFrequency);
-  const periodicInterestRate = (account.interestRate ?? 0) / 100 / periodsPerYear;
+  // Encontrar pagos activos (no anulados y sin versiones D/H)
+  const activePayments = account.payments.filter(p =>
+    p.installmentVersion === null &&
+    (p.id ? !annulledPaymentIds.has(p.id) : true)
+  );
 
-  for (let i = 0; i < account.numberOfInstallments; i++) {
-    const installmentNumber = i + 1;
-    const dueDate = new Date(startDate);
-    const planEntry = frenchAmortizationPlan.find(entry => entry.installmentNumber === installmentNumber);
+  // 3. Generar resultados finales
+  const generatedInstallments: InstallmentInfo[] = [];
 
-    // Calculate dueDate (as in your existing code)
-    switch (account.paymentFrequency as PaymentFrequency) {
-      case "WEEKLY": dueDate.setDate(new Date(startDate).getDate() + 7 * i); break;
-      case "BIWEEKLY": dueDate.setDate(new Date(startDate).getDate() + 14 * i); break;
-      case "MONTHLY": { const mDate = new Date(startDate); mDate.setMonth(mDate.getMonth() + i); dueDate.setTime(mDate.getTime()); break; }
-      case "QUARTERLY": { const qDate = new Date(startDate); qDate.setMonth(qDate.getMonth() + 3 * i); dueDate.setTime(qDate.getTime()); break; }
-      case "ANNUALLY": { const aDate = new Date(startDate); aDate.setFullYear(aDate.getFullYear() + i); dueDate.setTime(aDate.getTime()); break; }
+  // 4. Verificar si hay información de última cuota parcial
+  let lastInstallmentInfo: any = null;
+  if (account.notes) {
+    const match = account.notes.match(/\[INFO_ULTIMA_CUOTA\]\s*([\s\S]*?\})/);
+    if (match && match[1]) {
+      try {
+        lastInstallmentInfo = JSON.parse(match[1]);
+        console.log("📝 [DEBUG] Encontrada información de última cuota en notas:", lastInstallmentInfo);
+      } catch (e) {
+        console.error("❌ Error al parsear información de última cuota:", e);
+      }
     }
+  }
 
-    const paymentsForThisInstallment = paymentsByInstallmentNumber[installmentNumber] || [];
-    const normalPayment = paymentsForThisInstallment.find(p =>
+  // 5. Procesar cada número de cuota
+  for (let i = 1; i <= account.numberOfInstallments; i++) {
+    const dueDate = calculateDueDate(startDate, account.paymentFrequency as PaymentFrequency, i);
+    const planEntry = originalPlan.find(entry => entry.installmentNumber === i);
+    const paymentsForInstallment = paymentsByInstallmentNumber[i] || [];
+
+    // Buscar pagos específicos para esta cuota
+    const normalPayment = paymentsForInstallment.find(p =>
       p.installmentVersion !== 'D' &&
       p.installmentVersion !== 'H' &&
       (p.id ? !annulledPaymentIds.has(p.id) : true)
     );
-    const dPayment = paymentsForThisInstallment.find(p => p.installmentVersion === 'D');
-    const hPayment = paymentsForThisInstallment.find(p => p.installmentVersion === 'H');
 
-    // Encontrar si hubo un pago original que ahora está anulado en sesión
-    const originalPaymentNowAnnulledInSession = paymentsForThisInstallment.find(p =>
+    const dPayment = paymentsForInstallment.find(p => p.installmentVersion === 'D');
+    const hPayment = paymentsForInstallment.find(p => p.installmentVersion === 'H');
+
+    const originalPaymentNowAnnulled = paymentsForInstallment.find(p =>
       p.installmentVersion !== 'D' &&
       p.installmentVersion !== 'H' &&
       (p.id ? annulledPaymentIds.has(p.id) : false)
     );
 
     const isEffectivelyPaid = !!normalPayment;
-    // Una cuota se considera "en proceso de anulación" si tiene D o H, o si su pago normal original está en la lista de anulados en sesión.
-    const isUnderAnnulmentProcess = !!dPayment || !!hPayment || !!originalPaymentNowAnnulledInSession;
+    const isUnderAnnulmentProcess = !!dPayment || !!hPayment || !!originalPaymentNowAnnulled;
 
-    // 1. Mostrar el pago normal activo (si existe y no está siendo anulado)
-    if (isEffectivelyPaid) { // normalPayment ya está filtrado para no estar en annulledPaymentIdsInSession
+    // Verificar si es la última cuota con información especial
+    let expectedInstallmentAmount = account.installmentAmount;
+    let isSpecialLastInstallment = false;
+
+    if (i === account.numberOfInstallments && lastInstallmentInfo) {
+      if (lastInstallmentInfo.type === "LAST_INSTALLMENT_INFO" &&
+        lastInstallmentInfo.lastInstallmentNumber === account.numberOfInstallments &&
+        typeof lastInstallmentInfo.lastInstallmentAmount === 'number' &&
+        lastInstallmentInfo.lastInstallmentAmount > 0) {
+
+        expectedInstallmentAmount = lastInstallmentInfo.lastInstallmentAmount;
+        isSpecialLastInstallment = true;
+        console.log(`📊 [DEBUG] Usando monto especial para última cuota #${i}: ${expectedInstallmentAmount}`);
+      }
+    }
+
+    // Ajustar desglose para cuota especial si es necesario
+    let adjustedInterestForPeriod = planEntry ? planEntry.interestForPeriod : undefined;
+    let adjustedAmortization = planEntry ? planEntry.amortization : undefined;
+
+    if (isSpecialLastInstallment && planEntry && planEntry.capitalAtPeriodStart) {
+      const periodsPerYear = getPeriodsPerYear(account.paymentFrequency as PaymentFrequency);
+      const periodicRate = (account.interestRate ?? 0) / 100 / periodsPerYear;
+      const calculatedInterest = Math.ceil(planEntry.capitalAtPeriodStart * periodicRate);
+
+      // Respetamos el valor especial de lastInstallmentAmount sin forzar que sea al menos capital+interés
+      console.log(`📊 [DEBUG] Última cuota especial #${i}: ${expectedInstallmentAmount} (capital pendiente: ${planEntry.capitalAtPeriodStart}, interés: ${calculatedInterest})`);
+
+      adjustedInterestForPeriod = calculatedInterest;
+      adjustedAmortization = Math.min(planEntry.capitalAtPeriodStart, expectedInstallmentAmount - calculatedInterest);
+    }
+
+    // 1. Añadir pagos efectivos
+    if (isEffectivelyPaid) {
       generatedInstallments.push({
-        number: installmentNumber,
+        number: i,
         dueDate,
         amount: Math.ceil(normalPayment.amountPaid),
         isPaid: true,
@@ -274,59 +308,44 @@ const generateInstallments = (
         installmentVersion: normalPayment.installmentVersion || null,
         originalPaymentAmount: Math.ceil(normalPayment.amountPaid),
         capitalAtPeriodStart: planEntry?.capitalAtPeriodStart ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
-        amortization: undefined,
-        interestForPeriod: undefined,
+        amortization: planEntry?.amortization ? Math.ceil(planEntry.amortization) : undefined,
+        interestForPeriod: planEntry?.interestForPeriod ? Math.ceil(planEntry.interestForPeriod) : undefined,
         calculatedInstallmentAmount: planEntry?.calculatedInstallmentAmount ? Math.ceil(planEntry.calculatedInstallmentAmount) : Math.ceil(normalPayment.amountPaid),
       });
     }
 
-    // 2. Si la cuota está en proceso de anulación (D/H existen o el pago original fue anulado en sesión)
-    // Y/O si no está efectivamente pagada (es decir, está pendiente o su pago fue anulado)
-    // Entonces, mostrar la cuota "Pendiente" según el plan francés, si aplica.
+    // 2. Añadir cuotas pendientes
     if (!isEffectivelyPaid && !isUnderAnnulmentProcess) {
-      // If the installment is pending payment and not involved in an annulment process
-
-      // Use the potentially recalculated installment amount from the account record
-      const expectedInstallmentAmount = account.installmentAmount;
-
-      // Find the corresponding entry in the originally calculated amortization plan 
-      // to get an *estimate* of capital/interest breakdown.
-      // Note: This breakdown might become less accurate after recalculations, 
-      // but displaying the correct expectedInstallmentAmount is the priority.
-      const planEntry = frenchAmortizationPlan.find(entry => entry.installmentNumber === installmentNumber);
-
       generatedInstallments.push({
-        number: installmentNumber,
+        number: i,
         dueDate,
-        amount: Math.ceil(expectedInstallmentAmount), // Use the value from the account record
+        amount: Math.ceil(expectedInstallmentAmount),
         isPaid: false,
         paymentDate: null,
         paymentId: null,
         isAnnulled: false,
-        installmentVersion: null, // Normal pending
+        installmentVersion: null,
         originalPaymentAmount: undefined,
-        // Use planEntry for breakdown details, acknowledging potential inaccuracies
         capitalAtPeriodStart: planEntry ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
-        amortization: planEntry ? Math.ceil(planEntry.amortization) : undefined,
-        interestForPeriod: planEntry ? Math.ceil(planEntry.interestForPeriod) : undefined,
-        calculatedInstallmentAmount: Math.ceil(expectedInstallmentAmount), // Reflect the potentially updated amount from account
+        amortization: isSpecialLastInstallment ? adjustedAmortization : (planEntry ? Math.ceil(planEntry.amortization) : undefined),
+        interestForPeriod: isSpecialLastInstallment ? adjustedInterestForPeriod : (planEntry ? Math.ceil(planEntry.interestForPeriod) : undefined),
+        calculatedInstallmentAmount: Math.ceil(expectedInstallmentAmount),
       });
-
     }
 
-    // 3. Mostrar el "Original (Anulado)" si un pago normal fue explícitamente anulado en esta sesión
-    if (originalPaymentNowAnnulledInSession) {
+    // 3. Añadir pagos anulados en esta sesión
+    if (originalPaymentNowAnnulled) {
       generatedInstallments.push({
-        number: installmentNumber,
+        number: i,
         dueDate,
-        amount: Math.ceil(originalPaymentNowAnnulledInSession.amountPaid),
+        amount: Math.ceil(originalPaymentNowAnnulled.amountPaid),
         isPaid: false,
-        paymentDate: originalPaymentNowAnnulledInSession.paymentDate ? new Date(originalPaymentNowAnnulledInSession.paymentDate) : null,
-        paymentId: originalPaymentNowAnnulledInSession.id,
+        paymentDate: originalPaymentNowAnnulled.paymentDate ? new Date(originalPaymentNowAnnulled.paymentDate) : null,
+        paymentId: originalPaymentNowAnnulled.id,
         isAnnulled: true,
         annulledDate: new Date(),
         installmentVersion: 'Original (Anulado)',
-        originalPaymentAmount: Math.ceil(originalPaymentNowAnnulledInSession.amountPaid),
+        originalPaymentAmount: Math.ceil(originalPaymentNowAnnulled.amountPaid),
         capitalAtPeriodStart: planEntry?.capitalAtPeriodStart ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
         amortization: planEntry?.amortization ? Math.ceil(planEntry.amortization) : undefined,
         interestForPeriod: planEntry?.interestForPeriod ? Math.ceil(planEntry.interestForPeriod) : undefined,
@@ -334,11 +353,11 @@ const generateInstallments = (
       });
     }
 
-    // 4. Añadir asientos D y H explícitamente si existen para esta cuota
+    // 4. Añadir asientos D y H
     if (dPayment) {
       generatedInstallments.push({
-        number: installmentNumber,
-        dueDate: dPayment.paymentDate || dueDate,
+        number: i,
+        dueDate: dPayment.paymentDate ? new Date(dPayment.paymentDate) : dueDate,
         amount: Math.ceil(dPayment.amountPaid),
         isPaid: false,
         paymentDate: dPayment.paymentDate ? new Date(dPayment.paymentDate) : null,
@@ -347,13 +366,14 @@ const generateInstallments = (
         annulledDate: dPayment.updatedAt,
         installmentVersion: 'D',
         originalPaymentAmount: Math.ceil(dPayment.amountPaid),
-        capitalAtPeriodStart: undefined, amortization: undefined, interestForPeriod: undefined, calculatedInstallmentAmount: Math.ceil(dPayment.amountPaid)
+        calculatedInstallmentAmount: Math.ceil(dPayment.amountPaid)
       });
     }
+
     if (hPayment) {
       generatedInstallments.push({
-        number: installmentNumber,
-        dueDate: hPayment.paymentDate || dueDate,
+        number: i,
+        dueDate: hPayment.paymentDate ? new Date(hPayment.paymentDate) : dueDate,
         amount: Math.ceil(hPayment.amountPaid),
         isPaid: false,
         paymentDate: hPayment.paymentDate ? new Date(hPayment.paymentDate) : null,
@@ -362,35 +382,34 @@ const generateInstallments = (
         annulledDate: hPayment.updatedAt,
         installmentVersion: 'H',
         originalPaymentAmount: Math.ceil(hPayment.amountPaid),
-        capitalAtPeriodStart: undefined, amortization: undefined, interestForPeriod: undefined, calculatedInstallmentAmount: Math.ceil(hPayment.amountPaid)
+        calculatedInstallmentAmount: Math.ceil(hPayment.amountPaid)
       });
     }
   }
 
-  // ... (lógica de ordenamiento y filtrado de duplicados al final de generateInstallments)
-  // La lógica de filtrado de duplicados puede necesitar un ajuste para asegurar que la "pendiente pagable"
-  // no sea eliminada si existen D/H o "Original (Anulado)"
-
-  const finalInstallments: InstallmentInfo[] = [];
-  const processedKeysForSorting = new Set<string>();
-
-  // Prioridad de visualización: Pagado normal -> Original (Anulado) -> D -> H -> Pendiente pagable
+  // Ordenamiento final según prioridades
   generatedInstallments.sort((a, b) => {
     if (a.number !== b.number) return a.number - b.number;
+
     const getOrder = (inst: InstallmentInfo) => {
-      if (inst.isPaid && !inst.isAnnulled && inst.installmentVersion !== 'Original (Anulado)' && inst.installmentVersion !== 'D' && inst.installmentVersion !== 'H') return 0; // Pagado normal activo
+      if (inst.isPaid && !inst.isAnnulled && inst.installmentVersion !== 'Original (Anulado)' &&
+        inst.installmentVersion !== 'D' && inst.installmentVersion !== 'H') return 0; // Pagado normal activo
       if (inst.installmentVersion === 'Original (Anulado)') return 1;
       if (inst.installmentVersion === 'D') return 2;
       if (inst.installmentVersion === 'H') return 3;
       if (!inst.isPaid && !inst.installmentVersion) return 4; // Pendiente pagable
-      return 5; // Otros casos / Fallback
+      return 5; // Otros casos
     };
+
     return getOrder(a) - getOrder(b);
   });
 
+  // Eliminar duplicados manteniendo un solo tipo por número de cuota
+  const finalInstallments: InstallmentInfo[] = [];
+  const processedKeys = new Set<string>();
+
   for (const inst of generatedInstallments) {
-    // Crear una clave única para cada tipo de entrada por número de cuota
-    let keySuffix = 'pending-payable'; // Default para la cuota base pagable
+    let keySuffix = 'pending-payable';
     if (inst.isPaid && !inst.isAnnulled && !inst.installmentVersion) keySuffix = 'paid-normal';
     else if (inst.installmentVersion === 'Original (Anulado)') keySuffix = 'original-annulled';
     else if (inst.installmentVersion === 'D') keySuffix = 'd-entry';
@@ -398,24 +417,26 @@ const generateInstallments = (
 
     const uniqueKey = `${inst.number}-${keySuffix}`;
 
-    if (!processedKeysForSorting.has(uniqueKey)) {
+    if (!processedKeys.has(uniqueKey)) {
       finalInstallments.push(inst);
-      processedKeysForSorting.add(uniqueKey);
+      processedKeys.add(uniqueKey);
     }
   }
 
-  // Re-ordenar una última vez solo por número de cuota después de asegurar la unicidad de tipos por cuota
-  // y luego por la prioridad definida en getOrder para la visualización final.
+  // Reordenar de nuevo para asegurar el orden correcto
   finalInstallments.sort((a, b) => {
     if (a.number !== b.number) return a.number - b.number;
+
     const getOrder = (inst: InstallmentInfo) => {
-      if (inst.isPaid && !inst.isAnnulled && inst.installmentVersion !== 'Original (Anulado)' && inst.installmentVersion !== 'D' && inst.installmentVersion !== 'H') return 0;
+      if (inst.isPaid && !inst.isAnnulled && inst.installmentVersion !== 'Original (Anulado)' &&
+        inst.installmentVersion !== 'D' && inst.installmentVersion !== 'H') return 0;
       if (inst.installmentVersion === 'Original (Anulado)') return 1;
       if (inst.installmentVersion === 'D') return 2;
       if (inst.installmentVersion === 'H') return 3;
-      if (!inst.isPaid && !inst.installmentVersion && !inst.isAnnulled) return 4; // Pendiente pagable
+      if (!inst.isPaid && !inst.installmentVersion && !inst.isAnnulled) return 4;
       return 5;
     };
+
     return getOrder(a) - getOrder(b);
   });
 
@@ -554,14 +575,40 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                   account.paymentFrequency as PaymentFrequency
                 );
 
-              const totalAmountOfAllCalculatedInstallments = amortizationPlanForTotals.reduce((sum, entry) => sum + Math.ceil(entry.calculatedInstallmentAmount), 0);
-              const grandTotalObligation = account.downPayment + totalAmountOfAllCalculatedInstallments;
+              // Obtener las cuotas generadas incluyendo pagos realizados
+              const currentInstallments = generateInstallments(account, annulledPaymentIdsInSession);
+
+              // Calcular el saldo pendiente real sumando solo las cuotas pendientes (no pagadas)
+              const remainingInstallments = currentInstallments.filter(installment =>
+                !installment.isPaid &&
+                !installment.isAnnulled &&
+                installment.installmentVersion !== 'D' &&
+                installment.installmentVersion !== 'H'
+              );
+
+              const pendingCapitalAndInterest = remainingInstallments.reduce((sum, installment) => {
+                // Para cada cuota pendiente, sumar su valor calculado
+                const installmentAmount = installment.calculatedInstallmentAmount ?? 0;
+                return sum + installmentAmount;
+              }, 0);
+
+              // Usar el valor calculado como saldo pendiente real
+              let uiRemainingAmountDisplay = Math.max(0, pendingCapitalAndInterest);
+
+              // Calcular el porcentaje de progreso basado en cuánto se ha pagado versus el total
+              const grandTotalObligation = account.downPayment +
+                currentInstallments.reduce((sum, installment) => {
+                  if (installment.isPaid) {
+                    return sum + installment.amount;
+                  } else {
+                    return sum + (installment.calculatedInstallmentAmount ?? 0);
+                  }
+                }, 0);
 
               let uiProgressPercentage = 0;
               if (grandTotalObligation > 0) {
                 uiProgressPercentage = Math.min(100, Math.round((totalEffectivelyPaid / grandTotalObligation) * 100));
               } else {
-                // If grandTotalObligation is 0 (e.g. price 0, or fully paid by downpayment with no financing)
                 if (account.totalAmount <= account.downPayment && account.totalAmount >= 0) {
                   uiProgressPercentage = 100;
                 } else {
@@ -569,24 +616,11 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                 }
               }
 
-              let uiRemainingAmountDisplay = Math.max(0, grandTotalObligation - totalEffectivelyPaid);
-
               // If the account is marked as PAID_OFF in the database, ensure UI reflects this perfectly.
               if (account.status === "PAID_OFF") {
                 uiProgressPercentage = 100;
                 uiRemainingAmountDisplay = 0;
-              } else {
-                // If not PAID_OFF in DB, but our calculation shows it should be (e.g. paid exactly or overpaid slightly)
-                // Adjust UI for consistency for progress and remaining amount.
-                // The status badge will still reflect the actual DB status.
-                if (uiRemainingAmountDisplay <= 0 && totalEffectivelyPaid >= grandTotalObligation) {
-                  uiProgressPercentage = 100;
-                  uiRemainingAmountDisplay = 0;
-                }
               }
-
-              const currentInstallments = generateInstallments(account, annulledPaymentIdsInSession);
-              // Note: The original `uiRemainingAmount` and `progressPercentage` that were here are now replaced by `uiRemainingAmountDisplay` and `uiProgressPercentage`
 
               // DEBUG: Log generated installments for this account
               console.log(`DEBUG (FRONTEND): Installments for account ${account.id}`, currentInstallments);
@@ -595,7 +629,10 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                 installmentAmount: account.installmentAmount,
                 remainingAmount: account.remainingAmount,
                 status: account.status,
-                numberOfInstallments: account.numberOfInstallments
+                numberOfInstallments: account.numberOfInstallments,
+                // Agregar cálculos para depuración
+                calculatedRemainingAmount: uiRemainingAmountDisplay,
+                pendingInstallments: remainingInstallments.length
               });
 
               return (

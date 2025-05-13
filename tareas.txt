@@ -96,4 +96,5 @@ AFIP
 [ ] https://afipsdk.com/
 
 cuenta corriente
-[ ] agregar pagina
+[x] agregar pagina
+[ ] enviar un mail con un pdf con lo remanente

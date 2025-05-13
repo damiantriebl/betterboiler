@@ -81,9 +81,10 @@ export default function PaymentModal({
     useEffect(() => {
         if (form.watch('amountPaid') > defaultAmount) {
             setShowSurplusOptions(true);
-            form.setValue('surplusAction', undefined);
+            form.setValue('surplusAction', 'RECALCULATE');
         } else {
             setShowSurplusOptions(false);
+            form.setValue('surplusAction', undefined);
         }
     }, [form.watch('amountPaid'), defaultAmount, form]);
 
