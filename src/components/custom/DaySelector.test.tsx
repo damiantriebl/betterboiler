@@ -18,7 +18,7 @@ describe("DaySelector", () => {
 
     // Check that all days are rendered
     expect(screen.getByText("L")).toBeInTheDocument();
-    expect(screen.getByText("M")).toBeInTheDocument(); // Martes
+    expect(screen.getAllByText("M")).toHaveLength(2); // Martes y Miércoles
     expect(screen.getByText("J")).toBeInTheDocument();
     expect(screen.getByText("V")).toBeInTheDocument();
     expect(screen.getByText("S")).toBeInTheDocument();
