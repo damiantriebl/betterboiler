@@ -1,170 +1,190 @@
 // src/components/custom/UploadCropperButton.tsx
 "use client";
 import type React from "react";
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import ReactCrop, { type Crop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 export interface UploadResult {
   originalFile: File;
-  croppedBlob?: Blob;
+  croppedFile?: File;
 }
 
-interface UploadButtonProps {
-  onChange: (result: UploadResult) => void;
+export interface UploadButtonProps {
   placeholder?: string;
-  crop?: boolean;
-  maxSize?: number; // en MB
+  onChange: (result: UploadResult) => void;
   accept?: string;
-  aspect?: number; // Opcional: Relación de aspecto
+  crop?: boolean;
+  aspect?: number;
+  disabled?: boolean;
 }
 
-const UploadButton: React.FC<UploadButtonProps> = ({
+export default function UploadButton({
+  placeholder = "Subir archivo",
   onChange,
-  placeholder,
-  crop = true,
-  maxSize,
   accept = "image/jpeg, image/png, image/webp, image/gif",
+  crop = false,
   aspect,
-}) => {
+  disabled = false,
+}: UploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const [file, setFile] = useState<File | undefined>();
-  const [fileUrl, setFileUrl] = useState("");
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [cropConfig, setCropConfig] = useState<Crop>({
-    unit: "%", // Explícitamente establece la unidad
-    x: 25,
-    y: 25,
-    width: 50,
-    height: 50,
+    unit: "%",
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5,
   });
-  const imageRef = useRef<HTMLImageElement>(null);
-
   const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-
-    // Validar tamaño
-    if (maxSize && f.size / 1024 / 1024 > maxSize) {
-      setStatusMessage(`El archivo supera el tamaño máximo de ${maxSize} MB.`);
-      return;
-    }
-
-    // Limpia la URL anterior *antes* de crear la nueva
-    if (fileUrl) {
-      URL.revokeObjectURL(fileUrl);
-    }
-
-    setFile(f);
-    const url = URL.createObjectURL(f);
-    setFileUrl(url);
-
-    if (!crop) {
-      onChange({ originalFile: f });
+  const resetUploadState = () => {
+    setFileUrl(null);
+    setFile(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
     }
   };
 
-  const handleCrop = async () => {
-    if (!imageRef.current || !cropConfig.width || !cropConfig.height || !file) {
-      setStatusMessage("Error: Faltan datos para el recorte.");
-      return;
+  const handleClick = () => {
+    if (!disabled && inputRef.current) {
+      inputRef.current.click();
     }
-    setStatusMessage("Procesando...");
-    setLoading(true);
+  };
 
-    const canvas = document.createElement("canvas");
-    const scaleX = imageRef.current.naturalWidth / imageRef.current.width;
-    const scaleY = imageRef.current.naturalHeight / imageRef.current.height;
-    canvas.width = cropConfig.width;
-    canvas.height = cropConfig.height;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      setLoading(false);
-      setStatusMessage("Error al procesar imagen: No se pudo obtener el contexto 2D."); // Mejor mensaje
-      return;
-    }
-
-    ctx.drawImage(
-      imageRef.current,
-      cropConfig.x * scaleX,
-      cropConfig.y * scaleY,
-      cropConfig.width * scaleX,
-      cropConfig.height * scaleY,
-      0,
-      0,
-      cropConfig.width,
-      cropConfig.height,
-    );
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
 
     try {
-      const croppedBlob = await new Promise<Blob | null>((resolve, reject) => {
-        // Añade reject
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error("Error al crear el blob.")); // Rechaza si toBlob falla
-          }
-        }, "image/jpeg");
-      });
+      setLoading(true);
+      setFile(selectedFile);
 
-      if (croppedBlob) {
-        onChange({ originalFile: file, croppedBlob });
-        setStatusMessage("Procesado");
+      if (crop && selectedFile.type.startsWith("image/")) {
+        const url = URL.createObjectURL(selectedFile);
+        setFileUrl(url);
+      } else {
+        onChange({ originalFile: selectedFile });
+        resetUploadState();
       }
     } catch (error) {
-      setStatusMessage(
-        `Error al procesar imagen: ${error instanceof Error ? error.message : "Desconocido"}`,
-      ); // Captura el error
-      console.error("Error cropping image:", error); // Log del error
+      console.error("Error processing file:", error);
+      resetUploadState();
     } finally {
-      setLoading(false); // Asegura que loading se establece a false
+      setLoading(false);
+    }
+  };
+
+  const getCroppedImg = async (image: HTMLImageElement, crop: Crop): Promise<Blob> => {
+    const canvas = document.createElement("canvas");
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("No 2d context");
+    }
+
+    const pixelRatio = window.devicePixelRatio;
+    canvas.width = Math.floor(crop.width * scaleX * pixelRatio);
+    canvas.height = Math.floor(crop.height * scaleY * pixelRatio);
+
+    ctx.scale(pixelRatio, pixelRatio);
+    ctx.imageSmoothingQuality = "high";
+
+    const cropX = crop.x * scaleX;
+    const cropY = crop.y * scaleY;
+
+    ctx.drawImage(
+      image,
+      cropX,
+      cropY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width * scaleX,
+      crop.height * scaleY,
+    );
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Canvas is empty"));
+            return;
+          }
+          resolve(blob);
+        },
+        "image/jpeg",
+        1,
+      );
+    });
+  };
+
+  const handleCropComplete = async () => {
+    if (!file || !imgRef.current) return;
+
+    try {
+      setLoading(true);
+      const croppedBlob = await getCroppedImg(imgRef.current, cropConfig);
+      const croppedFile = new File([croppedBlob], file.name, {
+        type: "image/jpeg",
+      });
+
+      onChange({
+        originalFile: file,
+        croppedFile,
+      });
+
+      resetUploadState();
+    } catch (error) {
+      console.error("Error cropping image:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      {statusMessage && <p className="text-red-500">{statusMessage}</p>}{" "}
-      {/* Estilo para mensajes de error */}
+    <div>
       <input
-        ref={inputRef}
         type="file"
+        ref={inputRef}
+        onChange={handleFileChange}
         accept={accept}
-        onChange={handleChange}
         className="hidden"
+        disabled={disabled}
         aria-label={placeholder}
       />
-      <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
-        {placeholder}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClick}
+        disabled={disabled || loading}
+        className="w-full"
+      >
+        <Upload className="h-4 w-4 mr-2" />
+        {loading ? "Procesando..." : placeholder}
       </Button>
       {fileUrl && file && crop && (
-        <div className="flex flex-col gap-4 items-center">
-          <ReactCrop
-            crop={cropConfig}
-            onChange={(newCrop) => setCropConfig(newCrop)}
-            onComplete={(c) => {
-              if (c.width && c.height) {
-                handleCrop();
-              }
-            }}
-            aspect={aspect} // Pasa la relación de aspecto
-          >
-            <img ref={imageRef} src={fileUrl} alt="preview" className="max-h-72" />
+        <div className="mt-4">
+          <ReactCrop crop={cropConfig} onChange={(c) => setCropConfig(c)} aspect={aspect}>
+            <img ref={imgRef} src={fileUrl} alt="Preview" />
           </ReactCrop>
-        </div>
-      )}
-      {fileUrl && file && !crop && (
-        <div className="flex flex-col items-center">
-          <img src={fileUrl} alt="preview" className="max-h-72" />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={resetUploadState} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleCropComplete} disabled={loading}>
+              Recortar y subir
+            </Button>
+          </div>
         </div>
       )}
     </div>
   );
-};
-
-export default UploadButton;
+}

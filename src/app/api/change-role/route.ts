@@ -1,6 +1,6 @@
+import prisma from "@/lib/prisma";
 // app/api/toggle-status/route.ts
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   const { userId, banned } = await req.json();

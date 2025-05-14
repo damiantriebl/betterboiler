@@ -1,16 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { notFound, useParams } from "next/navigation";
 import { getSupplierById } from "@/actions/suppliers/manage-suppliers";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit } from "lucide-react";
-import type { Supplier } from "@prisma/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,8 +11,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import SupplierForm from "../SupplierForm";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import type { Supplier } from "@prisma/client";
+import { ArrowLeft, Edit } from "lucide-react";
+import Link from "next/link";
+import { notFound, useParams } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import SupplierForm from "../SupplierForm";
 
 // Helper para mostrar datos opcionales o un placeholder
 const DisplayData = ({

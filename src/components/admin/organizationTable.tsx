@@ -1,6 +1,6 @@
-import CreateOrEditOrganization from "@/app/root/CreateOrEditOrganization";
-import DeleteOrganizationButton from "@/app/root/DeleteOrganizationButton";
-
+import CreateOrEditOrganization from "@/app/(app)/root/CreateOrEditOrganization";
+import DeleteOrganizationButton from "@/app/(app)/root/DeleteOrganizationButton";
+import OrganizationLogo from "@/components/custom/OrganizationLogo";
 import {
   Table,
   TableBody,
@@ -10,10 +10,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import prisma from "@/lib/prisma";
-import ImageZoom from "../custom/ImageZoom";
 
 export default async function OrganizationTable() {
-  const organizations = await prisma.organization.findMany();
+  const organizations = await prisma.organization.findMany({
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logo: true,
+      thumbnail: true,
+    },
+  });
   return (
     <Table>
       <TableHeader>
@@ -21,6 +28,7 @@ export default async function OrganizationTable() {
           <TableHead>Nombre</TableHead>
           <TableHead>Slug</TableHead>
           <TableHead>Logo</TableHead>
+          <TableHead>Miniatura</TableHead>
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
@@ -30,10 +38,17 @@ export default async function OrganizationTable() {
             <TableCell>{org.name}</TableCell>
             <TableCell>{org.slug}</TableCell>
             <TableCell>
-              {org.logo?.startsWith("/") || org?.logo?.startsWith("http") ? (
-                <ImageZoom organization={org.name} imgLow={org.logo} imgHd={org.logo} alt="Logo" />
+              {org.logo ? (
+                <OrganizationLogo logo={org.logo} name={org.name} />
               ) : (
                 <span className="text-xs text-muted-foreground">Sin logo</span>
+              )}
+            </TableCell>
+            <TableCell>
+              {org.thumbnail ? (
+                <OrganizationLogo logo={org.thumbnail} name={`${org.name} thumbnail`} size="sm" />
+              ) : (
+                <span className="text-xs text-muted-foreground">Sin miniatura</span>
               )}
             </TableCell>
             <TableCell className="flex gap-2">

@@ -1,11 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { clientSchema, type ClientFormData } from "@/zod/ClientsZod";
 import { createClient, updateClient } from "@/actions/clients/manage-clients";
-import type { Client } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -15,8 +11,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -24,9 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { type ClientFormData, clientSchema } from "@/zod/ClientsZod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { Client } from "@prisma/client";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 interface ClientFormProps {
   client?: Partial<ClientFormData & { id?: string }>;

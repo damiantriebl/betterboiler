@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useTransition } from "react";
-import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { NewMotoForm } from "./NewMotoForm";
-import { motorcycleBatchSchema } from "@/zod/NewBikeZod";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createMotorcycleBatch } from "@/actions/stock/create-motorcycle-batch";
-import type { ColorConfig } from "@/types/ColorType";
 import type { BranchData } from "@/actions/stock/get-branch";
-import type { Supplier } from "@prisma/client";
-import type { BrandForCombobox } from "./page";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import type { ColorConfig } from "@/types/ColorType";
+import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
+import { motorcycleBatchSchema } from "@/zod/MotorcycleBatchSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { Supplier } from "@prisma/client";
+import React, { useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { BatchPreview } from "./BatchPreview";
+import { NewMotoForm } from "./NewMotoForm";
+import type { BrandForCombobox } from "./page";
 
 interface NewStockClientContainerProps {
   availableColors: ColorConfig[];

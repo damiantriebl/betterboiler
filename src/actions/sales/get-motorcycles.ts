@@ -1,10 +1,10 @@
 "use server";
 
-import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Prisma, type MotorcycleState } from "@prisma/client";
-import { headers } from "next/headers";
+import prisma from "@/lib/prisma";
+import { type MotorcycleState, Prisma } from "@prisma/client";
 import { unstable_noStore as noStore } from "next/cache";
+import { headers } from "next/headers";
 
 // Actualizar el tipo para incluir costPrice y wholesalePrice
 export type MotorcycleTableRowData = {
@@ -16,7 +16,19 @@ export type MotorcycleTableRowData = {
       color: string | null;
     }[];
   } | null;
-  model: { name: string } | null;
+  model: {
+    name: string;
+    files?: {
+      id: string;
+      name: string;
+      type: string;
+      s3Key: string;
+      s3KeySmall: string | null;
+      size: number;
+      createdAt: Date;
+      updatedAt: Date;
+    }[];
+  } | null;
   color: { name: string; colorOne: string; colorTwo: string | null } | null;
   branch: { name: string } | null;
   supplier?: { legalName: string; commercialName: string | null } | null;
@@ -29,16 +41,24 @@ export type MotorcycleTableRowData = {
   currency: string;
   state: MotorcycleState;
   chassisNumber: string;
+  engineNumber: string | null;
   reservation?: {
     id: number;
     amount: number;
     clientId: string;
     status: string;
+    paymentMethod?: string | null;
+    notes?: string | null;
   } | null;
 };
 
-// Replace empty interface with type alias, using Record<string, unknown>
-type GetMotorcyclesOptions = Record<string, unknown>;
+// Tipos para opciones de filtro
+export interface GetMotorcyclesOptions {
+  filter?: {
+    state?: MotorcycleState[];
+    // Añadir más filtros según sea necesario
+  };
+}
 
 export async function getMotorcycles(
   options: GetMotorcyclesOptions = {},
@@ -67,19 +87,33 @@ export async function getMotorcycles(
         currency: true,
         state: true,
         chassisNumber: true,
+        engineNumber: true,
         brand: {
-          // Incluir marca y su relación OrganizationBrand
           select: {
             name: true,
             organizationBrands: {
-              // Incluir explícitamente la relación
               where: { organizationId: organizationId },
               select: { color: true },
-              // No usar take: 1 aquí, traer el array (aunque debería ser de 1)
             },
           },
         },
-        model: { select: { name: true } },
+        model: {
+          select: {
+            name: true,
+            files: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                s3Key: true,
+                s3KeySmall: true,
+                size: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+          },
+        },
         color: { select: { name: true, colorOne: true, colorTwo: true } },
         branch: { select: { name: true } },
         supplier: { select: { legalName: true, commercialName: true } },
@@ -90,6 +124,8 @@ export async function getMotorcycles(
             amount: true,
             clientId: true,
             status: true,
+            paymentMethod: true,
+            notes: true,
           },
           where: {
             status: "active",
@@ -130,9 +166,15 @@ export async function getMotorcycles(
         currency: moto.currency,
         state: moto.state,
         chassisNumber: moto.chassisNumber,
+        engineNumber: moto.engineNumber,
         // Relaciones (asegurando null si no existen)
         brand: finalBrand,
-        model: moto.model ?? null,
+        model: moto.model
+          ? {
+              name: moto.model.name,
+              files: moto.model.files || [],
+            }
+          : null,
         color: moto.color ?? null,
         branch: moto.branch ?? null,
         supplier: moto.supplier ?? undefined,

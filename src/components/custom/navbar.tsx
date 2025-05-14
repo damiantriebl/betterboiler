@@ -1,11 +1,11 @@
 import Link from "next/link";
 import LogoutButton from "./LogoutButton";
 
-import SessionButtons from "./SessionButtons";
-import { Button } from "../ui/button";
 import type { Session } from "@/auth";
 import { headers } from "next/headers";
+import { Button } from "../ui/button";
 import AvatarUser from "./AvatarUser";
+import SessionButtons from "./SessionButtons";
 
 interface NavbarProps {
   session: Session | null;

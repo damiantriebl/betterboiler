@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/auth-client";
-import { toast } from "@/hooks/use-toast";
 import UploadButton from "@/components/custom/UploadButton";
+import { toast } from "@/hooks/use-toast";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const router = useRouter();

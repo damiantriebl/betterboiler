@@ -1,24 +1,24 @@
 "use client";
 
-import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
-import { Icon, PanelLeft, User } from "lucide-react";
+import { FilePlus2, FileSpreadsheet, Icon, PanelLeft, User } from "lucide-react";
+import * as React from "react";
 
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
-import { HelpCircle, Home, Package, Settings, ShoppingCart, Truck, Building } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { authClient } from "@/auth-client";
 import { UserButton } from "@/components/custom/UserButton";
+import { Building, HelpCircle, Home, Package, Settings, ShoppingCart, Truck } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -26,6 +26,10 @@ const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+
+type ActionState<T = unknown, E = unknown> =
+  | { success: true; message?: string; data?: T }
+  | { success: false; error: string; errors?: E[] };
 
 type SidebarContext = {
   state: "expanded" | "collapsed";
@@ -401,9 +405,13 @@ const SidebarContent = React.forwardRef<
     name: string;
   }
 
+  function hasOrganization(user: unknown): user is { organization: OrganizationInfo } {
+    return typeof user === "object" && user !== null && "organization" in user;
+  }
+
   const organizationName =
-    session?.user && "organization" in (session.user as any)
-      ? (session.user as unknown as { organization: OrganizationInfo }).organization?.name
+    session?.user && hasOrganization(session.user)
+      ? session.user.organization?.name
       : "Organización";
   const userName = session?.user?.name || "Usuario";
 
@@ -417,6 +425,8 @@ const SidebarContent = React.forwardRef<
     { href: "/sales", icon: ShoppingCart, label: "Ventas" },
     { href: "/suppliers", icon: Truck, label: "Proveedores" },
     { href: "/clients", icon: User, label: "Clientes" },
+    { href: "/current-accounts", icon: FilePlus2, label: "Cuentas corrientes" },
+    { href: "/reports", icon: FileSpreadsheet, label: "Reportes" },
     { href: "/configuration", icon: Settings, label: "Configuración" },
   ];
 
@@ -459,19 +469,20 @@ const SidebarContent = React.forwardRef<
         <div className="flex-grow">
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
+              <Link
+                href={item.href}
+                className={cn(
+                  "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
+                  state === "expanded" ? "delay-200" : "delay-0",
+                )}
+              >
                 <SidebarMenuButton
                   variant="black"
                   asChild
                   isActive={isActive(item.href)}
                   tooltip={state === "collapsed" ? item.label : undefined}
                 >
-                  <a
-                    className={cn(
-                      "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
-                      state === "expanded" ? "delay-200" : "delay-0",
-                    )}
-                  >
+                  <div className="flex items-center">
                     <item.icon className="size-12 shrink-0" />
                     <span
                       className={cn(
@@ -481,7 +492,7 @@ const SidebarContent = React.forwardRef<
                     >
                       {item.label}
                     </span>
-                  </a>
+                  </div>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -491,19 +502,20 @@ const SidebarContent = React.forwardRef<
         <div className="mt-auto pb-4">
           <Separator className="my-2 bg-black" />
           <SidebarMenuItem>
-            <Link href="/ayuda" passHref legacyBehavior>
+            <Link
+              href="/ayuda"
+              className={cn(
+                "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
+                state === "expanded" ? "delay-200" : "delay-0",
+              )}
+            >
               <SidebarMenuButton
                 variant="black"
                 asChild
                 isActive={isActive("/ayuda")}
                 tooltip={state === "collapsed" ? "Ayuda" : undefined}
               >
-                <a
-                  className={cn(
-                    "duration-200 group-data-[state=collapsed]:invisible group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0",
-                    state === "expanded" ? "delay-200" : "delay-0",
-                  )}
-                >
+                <div className="flex items-center">
                   <HelpCircle className="size-4 shrink-0" />
                   <span
                     className={cn(
@@ -513,7 +525,7 @@ const SidebarContent = React.forwardRef<
                   >
                     Ayuda
                   </span>
-                </a>
+                </div>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>

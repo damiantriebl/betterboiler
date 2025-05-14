@@ -4,8 +4,8 @@ globs:
 alwaysApply: true
 ---
 
-# Your rule content
-
+# Reglas
+- toda la charla con el prompt se habla y se responde en español
 - las variables siempre en camelcase y los nombres de los archivos  que son componentes visuales en PascalCase y tienen que ser en ingles
 
 - los esquemas ts tanto como type y interface siempre tiene que estar en la carpeta /types
@@ -19,6 +19,17 @@ alwaysApply: true
 - la carpeta components tiene hasta ahora admin para los componentes que son propios de la autentificacion, custom para todo el resto que son comunes, y UI los que son puros de shadcn
 - si un componente no se va a reutilizar y va a estar dentro de una sola page, va en la misma carpeta que la page.
 - en los actions, si necesitamos sacar la session actual de el usuario esta la funcion getOrganizationIdFromSession dentro del archivo [getOrganizationIdFromSession.ts](mdc:src/actions/getOrganizationIdFromSession.ts)
+
+# MUY IMPORTANTE (STACK)
+
+- el manejador de paquetes es siempre PNPM, (no se usa ni npm, ni yarn, ni bun)
+- se trata siempre de mantener el stack
+- Next 15 priorizando server components cuando se pueda
+- React 19, no se usa useCallback ni useMemo, se usa useActionState y useOptimistic donde se pueda utilizar
+- en seguridad y autentificacion se usa better-auth
+- en estilo tailwind 3.4
+- en estado zustand
+- en pdf se usa @react-pdf/renderer siempre trantando de que sea siempre del lado de el servidor
 
 # Test
 

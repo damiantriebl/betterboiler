@@ -1,8 +1,8 @@
 "use client";
+import { getSignedURL } from "@/actions/S3/get-signed-url";
+import Image from "next/image";
 import { useState } from "react";
 import { Input } from "../ui/input";
-import Image from "next/image";
-import { getSignedURL } from "@/actions/S3/get-signed-url";
 
 const UploadButton = () => {
   const [file, setFile] = useState<File>();

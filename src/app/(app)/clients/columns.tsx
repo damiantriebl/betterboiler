@@ -1,8 +1,7 @@
 "use client";
 
-import type { ColumnDef, Row, Column } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,12 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import type { ClientFormData } from "@/zod/ClientsZod";
 import type { MotorcycleState } from "@prisma/client";
+import type { Column, ColumnDef, Row } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 
 // Definición del tipo Cliente para las columnas
-// Asegurarse que los tipos opcionales usen 'null' en lugar de 'undefined' 
+// Asegurarse que los tipos opcionales usen 'null' en lugar de 'undefined'
 // para coincidir con Prisma
 export type Client = {
   id: string;
@@ -35,12 +35,14 @@ export type Client = {
   createdAt: Date;
   updatedAt: Date;
   // Asegúrate que la relación con motorcycles también coincida con la estructura real
-  motorcycles?: {
-    id: string;
-    brand: string;
-    model: string;
-    state: MotorcycleState; // Importa MotorcycleState si no está ya
-  }[] | null; // Puede ser un array o null
+  motorcycles?:
+    | {
+        id: string;
+        brand: string;
+        model: string;
+        state: MotorcycleState; // Importa MotorcycleState si no está ya
+      }[]
+    | null; // Puede ser un array o null
 };
 
 export const columns: ColumnDef<Client>[] = [

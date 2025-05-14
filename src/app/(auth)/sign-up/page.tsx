@@ -1,5 +1,6 @@
 "use client";
 
+import LoadingButton from "@/components/custom/LoadingButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -10,17 +11,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/LoadingButton";
 
 import Link from "next/link";
 
-import { signUpSchema } from "@/zod/AuthZod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { z } from "zod";
 import { authClient } from "@/auth-client";
-import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { signUpSchema } from "@/zod/AuthZod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 
 export default function SignUp() {
   const [pending, setPending] = useState(false);

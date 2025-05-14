@@ -1,12 +1,12 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import type { MotorcycleWithDetails } from "@/actions/sales/get-motorcycles";
 import { auth } from "@/auth"; // Ajusta la ruta si es diferente
-import { supplierSchema, type SupplierFormData } from "@/zod/SuppliersZod";
+import prisma from "@/lib/prisma";
+import { type SupplierFormData, supplierSchema } from "@/zod/SuppliersZod";
 import { Prisma, type Supplier } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers"; // Importar headers
-import type { MotorcycleWithDetails } from "@/actions/sales/get-motorcycles";
 
 // Tipo de resultado estándar para acciones
 export type SupplierActionResult = {

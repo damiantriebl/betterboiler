@@ -1,37 +1,37 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import {
+  type CreateSucursalState,
+  type DeleteSucursalState,
+  type UpdateOrderState,
+  type UpdateSucursalState,
+  createSucursal,
+  deleteSucursal,
+  updateSucursal,
+  updateSucursalesOrder,
+} from "@/actions/configuration/manage-sucursales";
+import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
   type DragEndEvent,
-  PointerSensor,
   KeyboardSensor,
+  PointerSensor,
   closestCorners,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import SucursalItem from "./BranchItem";
-import AddBranchItem from "./AddBranchItem";
-import { useToast } from "@/hooks/use-toast";
 import type { Sucursal } from "@prisma/client";
-import {
-  createSucursal,
-  updateSucursal,
-  deleteSucursal,
-  updateSucursalesOrder,
-  type CreateSucursalState,
-  type UpdateSucursalState,
-  type DeleteSucursalState,
-  type UpdateOrderState,
-} from "@/actions/configuration/manage-sucursales";
 import { Loader2 } from "lucide-react";
+import React, { useState, useEffect, useTransition } from "react";
+import AddBranchItem from "./AddBranchItem";
+import SucursalItem from "./BranchItem";
 
 interface ManageBranchesProps {
   initialSucursalesData: Sucursal[];

@@ -1,6 +1,6 @@
+import prisma from "@/lib/prisma";
 // app/api/delete-user/route.ts
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   const { userId } = await req.json();

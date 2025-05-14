@@ -1,12 +1,12 @@
 "use client";
 
-import type React from "react";
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
 
 interface AddModelItemProps {
   onAdd: (modelName: string) => void;

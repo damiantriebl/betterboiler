@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  AreaChart,
   Area,
+  AreaChart,
   CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 import { mockSales } from "./mockSale";
 

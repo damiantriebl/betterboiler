@@ -1,10 +1,10 @@
-import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import prisma from "./lib/prisma";
-import { sendEmail } from "./actions/auth/email";
-import { openAPI, admin, organization } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
+import { admin, openAPI, organization } from "better-auth/plugins";
 import { jwt } from "better-auth/plugins";
+import { sendEmail } from "./actions/auth/email";
+import prisma from "./lib/prisma";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {

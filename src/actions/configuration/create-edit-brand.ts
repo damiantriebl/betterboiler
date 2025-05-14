@@ -1,17 +1,18 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import prisma from "@/lib/prisma";
-import { z } from "zod";
 import { auth } from "@/auth";
-import { headers } from "next/headers";
-import { Prisma } from "@prisma/client";
+import prisma from "@/lib/prisma";
+import type { ActionState, BatchActionState } from "@/types/action-states";
 import {
   associateBrandSchema,
-  updateBrandAssociationSchema,
   dissociateBrandSchema,
+  updateBrandAssociationSchema,
   updateOrgBrandOrderSchema,
 } from "@/zod/BrandZod";
+import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { z } from "zod";
 import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
 
 // Helper para obtener organizationId de la sesión
@@ -452,9 +453,14 @@ export async function addModelToOrganizationBrand(
   prevState: CreateModelState | null,
   formData: FormData,
 ): Promise<CreateModelState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
-    return { success: false, error: "Usuario no autenticado o sin organización." };
+  const sessionResult = await getOrganizationIdFromSession();
+  if (!sessionResult.organizationId) {
+    return {
+      success: false,
+      error: sessionResult.error || "Usuario no autenticado o sin organización.",
+    };
+  }
+  const organizationId = sessionResult.organizationId;
 
   const validatedFields = createModelSchema.safeParse({
     name: formData.get("name"),
@@ -678,347 +684,86 @@ export async function updateOrganizationModel(
       );
 
       // 3. Buscar o Crear el NUEVO modelo global
-      let newModel = await tx.model.findUnique({
-        where: { name_brandId: { name: normalizedNewName, brandId } },
-      });
-      let newModelCreated = false;
-      if (!newModel) {
-        newModel = await tx.model.create({
-          data: { name: normalizedNewName, brandId: brandId },
-        });
-        newModelCreated = true;
-        console.log(`[replaceModel N:M] Nuevo modelo global CREADO: ID ${newModel.id}`);
-      } else {
-        console.log(`[replaceModel N:M] Nuevo modelo global ENCONTRADO: ID ${newModel.id}`);
-      }
-      const newModelId = newModel.id;
+      const newModel = await tx.model.findUnique({ where: { id: oldModelId } });
+      if (!newModel) throw new Error("Modelo original no encontrado para esta organización.");
 
-      // 4. Verificar que no se esté renombrando a sí mismo
-      if (newModelId === oldModelId) {
-        throw new Error("El nuevo nombre es igual al nombre actual.");
-      }
-
-      // 5. Gestionar la configuración del NUEVO modelo para esta organización (Upsert-like manual)
-      let newOrgModelConfigId: number;
-      const existingNewConfig = await tx.organizationModelConfig.findUnique({
-        where: { organizationId_modelId: { organizationId, modelId: newModelId } },
+      // 4. Crear nueva configuración
+      const newOrgModelConfig = await tx.organizationModelConfig.create({
+        data: {
+          organizationId: organizationId,
+          modelId: oldModelId,
+          order: originalOrder,
+          isVisible: true,
+        },
       });
 
-      if (existingNewConfig) {
-        console.log(
-          `[replaceModel N:M] Config para NUEVO modelo encontrada: ID ${existingNewConfig.id}, Visible ${existingNewConfig.isVisible}`,
-        );
-        if (existingNewConfig.isVisible) {
-          throw new Error(
-            `El modelo "${normalizedNewName}" ya está activo para esta marca en tu organización.`,
-          );
-        }
-        // Reactivar la config existente del nuevo modelo
-        const updatedConfig = await tx.organizationModelConfig.update({
-          where: { id: existingNewConfig.id },
-          data: { isVisible: true, order: originalOrder }, // Establecer visibilidad y orden
-        });
-        newOrgModelConfigId = updatedConfig.id;
-        console.log(
-          `[replaceModel N:M] Config para NUEVO modelo REACTIVADA: ID ${newOrgModelConfigId}`,
-        );
-      } else {
-        // Crear la config para el nuevo modelo
-        const createdConfig = await tx.organizationModelConfig.create({
-          data: {
-            organizationId: organizationId,
-            modelId: newModelId,
-            isVisible: true,
-            order: originalOrder, // Usar el orden del modelo antiguo
-          },
-        });
-        newOrgModelConfigId = createdConfig.id;
-        console.log(
-          `[replaceModel N:M] Config para NUEVO modelo CREADA: ID ${newOrgModelConfigId}`,
-        );
-      }
-
-      // 6. Ocultar la configuración ANTIGUA
-      console.log(`[replaceModel N:M] Ocultando config ANTIGUA: ID ${oldConfig.id}`);
-      await tx.organizationModelConfig.update({
-        where: { id: oldConfig.id },
-        data: { isVisible: false },
+      // 5. Actualizar nombre del modelo
+      const updatedModel = await tx.model.update({
+        where: { id: oldModelId },
+        data: { name: normalizedNewName },
       });
-      console.log("[replaceModel N:M] Config ANTIGUA oculta.");
 
-      return { newOrgModelConfigId, oldModelName, newModelCreated };
-    }); // Fin transacción
+      return {
+        newOrgModelConfigId: newOrgModelConfig.id,
+        message: `Modelo "${oldModelName}" renombrado a "${normalizedNewName}" en tu organización.`,
+      };
+    });
 
-    console.log("[replaceModel N:M] Transacción completada. Revalidando path...");
     revalidatePath("/configuracion");
-
-    const message = `Modelo "${result.oldModelName}" reemplazado por "${normalizedNewName}"${result.newModelCreated ? " (nuevo modelo global creado)" : ""} en tu organización.`;
     return {
       success: true,
       newOrgModelConfigId: result.newOrgModelConfigId,
-      message: message,
+      message: result.message,
     };
   } catch (error) {
-    console.error("🔥 ERROR SERVER ACTION (replaceModel N:M):", error);
+    console.error("🔥 ERROR SERVER ACTION (updateOrganizationModel):", error);
     const message = error instanceof Error ? error.message : "Error inesperado.";
-    // Devolver mensajes de error específicos de la transacción
-    if (
-      message.includes("ya está activo") ||
-      message.includes("igual al nombre actual") ||
-      message.includes("modelo que ya está oculto")
-    ) {
-      return { success: false, error: message };
-    }
-    return { success: false, error: `Error al reemplazar el modelo: ${message}` };
+    return { success: false, error: `Error al actualizar el modelo: ${message}` };
   }
 }
 
-// --- (NUEVA ACCIÓN) Acción para establecer visibilidad de un Modelo para una Organización ---
-export interface SetModelVisibilityState {
-  success: boolean;
-  error?: string | null;
-}
-
-const setModelVisibilitySchema = z.object({
-  modelId: z.coerce.number().int(),
-  isVisible: z.boolean(),
-  // organizationId se obtiene de sesión
-});
-
-export async function setOrganizationModelVisibility(
-  prevState: SetModelVisibilityState | null,
-  formData: FormData,
-): Promise<SetModelVisibilityState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
-    return { success: false, error: "Usuario no autenticado o sin organización." };
-
-  const validatedFields = setModelVisibilitySchema.safeParse({
-    modelId: formData.get("modelId"),
-    // Convertir string 'true' a boolean. Cualquier otra cosa (incluyendo null o 'false') será false.
-    isVisible: formData.get("isVisible") === "true",
-  });
-
-  if (!validatedFields.success) {
-    const errors = Object.entries(validatedFields.error.flatten().fieldErrors)
-      .map(([f, m]) => `${f}: ${(m ?? []).join(",")}`)
-      .join("; ");
-    return { success: false, error: `Datos inválidos: ${errors}` };
-  }
-
-  const { modelId, isVisible } = validatedFields.data;
-
-  console.log(`[setVisibility] Org: ${organizationId}, Model: ${modelId}, Visible: ${isVisible}`); // LOG
-
-  try {
-    // 1. Verificar que el modelo existe (y obtener brandId para permiso)
-    const model = await prisma.model.findUnique({
-      where: { id: modelId },
-      select: { brandId: true },
-    });
-    if (!model) return { success: false, error: "Modelo no encontrado." };
-
-    // 2. Verificar permiso de la org sobre la marca del modelo
-    const hasPermission = await checkBrandPermission(organizationId, model.brandId);
-    if (!hasPermission)
-      return { success: false, error: "No tienes permiso para modificar modelos de esta marca." };
-
-    // 3. Usar upsert: si existe la config, actualiza isVisible; si no, la crea.
-    await prisma.organizationModelConfig.upsert({
-      where: {
-        organizationId_modelId: { organizationId, modelId },
-      },
-      update: {
-        // Qué actualizar si existe
-        isVisible: isVisible,
-      },
-      create: {
-        // Qué crear si no existe
-        organizationId: organizationId,
-        modelId: modelId,
-        isVisible: isVisible,
-        // Calcular orden si se crea? Podría ser complejo, mejor dejar en 0 o max+1
-        // Por ahora, dejaremos el order por defecto (0) si se crea aquí.
-        // Idealmente, la config se crea cuando se añade el modelo.
-        order: 0,
-      },
-    });
-
-    revalidatePath("/configuracion");
-    return { success: true };
-  } catch (error) {
-    console.error("🔥 ERROR SERVER ACTION (setVisibility):", error);
-    return { success: false, error: "Error al actualizar la visibilidad del modelo." };
-  }
-}
-
-// --- Acción: updateOrganizationModelsOrder (Actualiza orden en OrganizationModelConfig) ---
-export interface UpdateModelOrderState {
+export interface UpdateModelsOrderState {
   success: boolean;
   error?: string | null;
 }
 
 export async function updateOrganizationModelsOrder(
-  prevState: UpdateModelOrderState | null,
-  data: { modelOrders: { modelId: number; order: number }[]; brandId: number },
-): Promise<UpdateModelOrderState> {
+  prevState: UpdateModelsOrderState | null,
+  payload: { brandId: number; modelOrders: { modelId: number; order: number }[] },
+): Promise<UpdateModelsOrderState> {
   const organizationId = await getOrganizationIdFromSession();
   if (!organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
 
-  console.log("[updateOrgModelsOrder] Received data:", JSON.stringify(data)); // LOG DATOS RECIBIDOS
-
-  // Validar payload
-  const validatedData = updateModelOrgOrderSchema.safeParse(data);
-  if (!validatedData.success) {
-    const errors =
-      validatedData.error.flatten().formErrors.join("; ") || "Invalid order data provided.";
-    console.error("[updateOrgModelsOrder] Validation Error:", errors); // LOG ERROR VALIDACIÓN
-    return { success: false, error: `Datos de orden inválidos: ${errors}` };
-  }
-
-  const { modelOrders, brandId } = validatedData.data;
-  console.log(
-    `[updateOrgModelsOrder] Validated - OrgId: ${organizationId}, BrandId: ${brandId}, ModelOrders:`,
-    modelOrders,
-  ); // LOG DATOS VALIDADOS
+  const { brandId, modelOrders } = payload;
 
   try {
-    // 1. Verificar permiso de la org sobre la marca
-    const hasPermission = await checkBrandPermission(organizationId, brandId);
-    if (!hasPermission) {
-      console.error(
-        `[updateOrgModelsOrder] Permission Denied: Org ${organizationId} for Brand ${brandId}`,
-      ); // LOG ERROR PERMISO
-      return { success: false, error: "No tienes permiso para reordenar modelos de esta marca." };
-    }
-
-    // 2. Verificar que todos los modelos pertenezcan a esta marca global
-    const modelIds = modelOrders.map((m) => m.modelId);
-    const existingModels = await prisma.model.findMany({
-      where: { id: { in: modelIds }, brandId: brandId },
-      select: { id: true },
+    // Verificar que la marca esté asociada a la organización
+    const orgBrand = await prisma.organizationBrand.findUnique({
+      where: { organizationId_brandId: { organizationId, brandId } },
     });
-    if (existingModels.length !== modelIds.length) {
-      console.error(
-        `[updateOrgModelsOrder] Model Mismatch: Found ${existingModels.length}/${modelIds.length} models for Brand ${brandId}`,
-      ); // LOG ERROR MODELOS
-      return {
-        success: false,
-        error: "Error: Uno o más modelos no pertenecen a la marca especificada.",
-      };
+    if (!orgBrand) {
+      return { success: false, error: "Marca no asociada a tu organización." };
     }
 
-    // 3. Ejecutar actualizaciones en transacción sobre OrganizationModelConfig
-    console.log("[updateOrgModelsOrder] Preparing updates..."); // LOG ANTES DE MAP
-    const updates = modelOrders.map((item) => {
-      console.log(
-        ` -> Updating OrgModelConfig: OrgId=${organizationId}, ModelId=${item.modelId} to Order=${item.order}`,
-      ); // LOG CADA UPDATE
-      return prisma.organizationModelConfig.updateMany({
-        where: {
-          organizationId: organizationId,
-          modelId: item.modelId,
-        },
-        data: { order: item.order },
-      });
-    });
+    // Actualizar el orden de los modelos en OrganizationModelConfig
+    await prisma.$transaction(
+      modelOrders.map((item) =>
+        prisma.organizationModelConfig.updateMany({
+          where: {
+            organizationId,
+            modelId: item.modelId,
+            model: { brandId },
+          },
+          data: { order: item.order },
+        }),
+      ),
+    );
 
-    console.log("[updateOrgModelsOrder] Executing transaction..."); // LOG ANTES DE TRANSACCIÓN
-    const transactionResult = await prisma.$transaction(updates);
-    console.log("[updateOrgModelsOrder] Transaction Result:", transactionResult); // LOG RESULTADO TRANSACCIÓN
-
-    const updatedCount = transactionResult.reduce((sum, result) => sum + result.count, 0);
-    console.log(
-      `[updateOrgModelsOrder] Total records updated: ${updatedCount} (Expected: ${modelOrders.length})`,
-    ); // LOG CONTEO
-    if (updatedCount !== modelOrders.length) {
-      console.warn("[updateOrgModelsOrder] Update count mismatch!");
-    }
-
-    console.log("[updateOrgModelsOrder] Revalidating path..."); // LOG REVALIDATE
     revalidatePath("/configuracion");
     return { success: true };
   } catch (error) {
-    console.error("🔥 ERROR SERVER ACTION (updateModelOrder OrgConfig):", error); // LOG ERROR GENERAL
+    console.error("🔥 ERROR SERVER ACTION (updateOrganizationModelsOrder):", error);
     return { success: false, error: "Error al actualizar el orden de los modelos." };
-  }
-}
-
-// --- (NUEVA ACCIÓN) Acción para desasociar (ocultar) un Modelo para una Organización ---
-export interface DissociateModelState {
-  success: boolean;
-  error?: string | null;
-  message?: string | null;
-}
-
-const dissociateModelSchema = z.object({
-  modelId: z.coerce.number().int("ID de modelo inválido."),
-  // organizationId se obtiene de sesión
-});
-
-export async function dissociateOrganizationModel(
-  prevState: DissociateModelState | null,
-  formData: FormData,
-): Promise<DissociateModelState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
-    return { success: false, error: "Usuario no autenticado o sin organización." };
-
-  const validatedFields = dissociateModelSchema.safeParse({
-    modelId: formData.get("modelId"),
-  });
-
-  if (!validatedFields.success) {
-    const errors = Object.entries(validatedFields.error.flatten().fieldErrors)
-      .map(([f, m]) => `${f}: ${(m ?? []).join(",")}`)
-      .join("; ");
-    return { success: false, error: `Datos inválidos: ${errors}` };
-  }
-
-  const { modelId } = validatedFields.data;
-
-  console.log(`[dissociateModel] Org: ${organizationId}, Model: ${modelId}`); // LOG
-
-  try {
-    // 1. Verificar que el modelo existe y obtener brandId
-    const model = await prisma.model.findUnique({
-      where: { id: modelId },
-      select: { brandId: true, name: true },
-    });
-    if (!model) return { success: false, error: "Modelo no encontrado." };
-
-    // 2. Verificar permiso de la org sobre la marca del modelo
-    const hasPermission = await checkBrandPermission(organizationId, model.brandId);
-    if (!hasPermission)
-      return { success: false, error: "No tienes permiso para modificar modelos de esta marca." };
-
-    // 3. Actualizar la config existente para marcar como no visible
-    const updateResult = await prisma.organizationModelConfig.updateMany({
-      where: {
-        organizationId: organizationId,
-        modelId: modelId,
-        // Opcional: asegurar que solo se oculte si estaba visible
-        // isVisible: true
-      },
-      data: {
-        isVisible: false,
-      },
-    });
-
-    if (updateResult.count === 0) {
-      console.warn(
-        `[dissociateModel] No config found or already invisible for Org: ${organizationId}, Model: ${modelId}`,
-      );
-      // Considerar si esto es un error o un éxito silencioso
-      // Por ahora, lo trataremos como éxito ya que el estado deseado (invisible) se cumple
-      // return { success: false, error: "Configuración del modelo no encontrada o ya estaba oculta." };
-    }
-
-    revalidatePath("/configuracion");
-    return { success: true, message: `Modelo "${model.name}" ocultado para tu organización.` };
-  } catch (error) {
-    console.error("🔥 ERROR SERVER ACTION (dissociateModel):", error);
-    return { success: false, error: "Error al ocultar el modelo." };
   }
 }

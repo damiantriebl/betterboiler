@@ -1,12 +1,12 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import type { ColorConfig } from "@/types/ColorType";
+import { Loader2, Plus } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
-import type { ColorConfig } from "@/types/ColorType";
-import { cn } from "@/lib/utils";
 
 interface AddColorItemProps {
   onAdd: (newColor: Omit<ColorConfig, "id" | "dbId">) => void;

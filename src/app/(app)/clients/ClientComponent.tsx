@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +8,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { PlusCircle } from "lucide-react";
+import React, { useState } from "react";
 import ClientForm from "./ClientForm";
 import ClientTable from "./ClientTable";
 import type { Client } from "./columns";
-import { toast } from "@/hooks/use-toast";
 
 interface Props {
   initialData: Client[];

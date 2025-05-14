@@ -1,10 +1,9 @@
 "use client"; // Asegurarse de que es un Client Component por los hooks
 
-import React, { useTransition, useEffect, useCallback } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { supplierSchema, type SupplierFormData } from "@/zod/SuppliersZod";
+import { createSupplier, updateSupplier } from "@/actions/suppliers/manage-suppliers"; // Importar ambas acciones
+import LoadingButton from "@/components/custom/LoadingButton"; // Asumo que tienes este componente
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -22,13 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importar Tabs
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import LoadingButton from "@/components/custom/LoadingButton"; // Asumo que tienes este componente
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast"; // Añadir import para toast
-import { createSupplier, updateSupplier } from "@/actions/suppliers/manage-suppliers"; // Importar ambas acciones
+import { type SupplierFormData, supplierSchema } from "@/zod/SuppliersZod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { Supplier } from "@prisma/client"; // Importar tipo Supplier
+import React, { useTransition, useEffect, useCallback } from "react";
+import { useForm } from "react-hook-form";
 
 interface SupplierFormProps {
   onSuccess?: (data: SupplierFormData) => void; // Use imported type

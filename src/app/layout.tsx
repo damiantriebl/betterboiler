@@ -1,17 +1,15 @@
-import type { Metadata } from "next";
-import { Toaster } from "@/components/ui/toaster";
 import { auth } from "@/auth";
+import { Toaster } from "@/components/ui/toaster";
+import type { Metadata } from "next";
 import "./globals.css";
-import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
-import { Lato } from 'next/font/google'
+import { Lato } from "next/font/google";
+import { headers } from "next/headers";
 
 const WorkSans = Lato({
-  subsets: ['latin'],
-  weight: ['400', '700'],
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
-
-
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -29,9 +27,9 @@ export default async function RootLayout({
   });
   const organization = session?.user.organizationId
     ? await prisma.organization.findUnique({
-      where: { id: session.user.organizationId },
-      select: { name: true },
-    })
+        where: { id: session.user.organizationId },
+        select: { name: true },
+      })
     : null;
 
   return (

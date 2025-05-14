@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useActionState } from "react"; // Importar useActionState
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import {
+  type State as BrandActionState,
+  createOrEditBrand,
+} from "@/actions/configuration/create-edit-brand"; // Importar la acción y el tipo State
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -25,11 +24,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import {
-  createOrEditBrand,
-  type State as BrandActionState,
-} from "@/actions/configuration/create-edit-brand"; // Importar la acción y el tipo State
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useActionState } from "react"; // Importar useActionState
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 // Esquema Zod para validación del lado del cliente
 const brandFormSchema = z.object({

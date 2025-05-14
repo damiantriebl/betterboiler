@@ -1,7 +1,7 @@
-import { getMotorcycles, type MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
 import { getClients } from "@/actions/clients/get-clients";
-import SalesClientComponent from "./SalesClientComponent";
+import { type MotorcycleTableRowData, getMotorcycles } from "@/actions/sales/get-motorcycles";
 import type { Client } from "@prisma/client";
+import SalesClientComponent from "./SalesClientComponent";
 
 export default async function VentasPage() {
   // Usar el tipo específico en lugar de any
@@ -9,31 +9,22 @@ export default async function VentasPage() {
   let clients: Client[] = [];
 
   try {
-    const result = await getMotorcycles();
-    // Asegurarse de que todas las relaciones, incluida reservation, estén presentes
-    initialData = result.map((moto) => ({
-      ...moto,
-      // No necesitamos asignar estado nuevamente, ya que viene en moto
-      // Asegurarse de que se incluya la reserva con su monto
-      reservation: moto.reservation,
-    }));
+    // Obtener datos en paralelo para mejorar rendimiento
+    const [motorcyclesData, clientsData] = await Promise.all([
+      getMotorcycles({}), // Pasamos un objeto vacío como opciones
+      getClients(), // No necesita parámetros
+    ]);
 
-    // Obtener clientes
-    clients = await getClients();
+    // Asignar resultados
+    initialData = motorcyclesData;
+    clients = clientsData;
+
+    // Renderizar componente cliente con datos iniciales
+    return <SalesClientComponent initialData={initialData} clients={clients} />;
   } catch (error) {
-    console.error("Error fetching initial data in page.tsx:", error);
+    console.error("Error cargando datos para la página de ventas:", error);
   }
 
-  return (
-    <main className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">Catálogo de Motos</h1>
-        <p className="text-muted-foreground">
-          Explora nuestra amplia selección de motocicletas disponibles
-        </p>
-      </div>
-      {/* Renderizar SÓLO el Client Component, pasándole los datos completos */}
-      <SalesClientComponent initialData={initialData} clients={clients} />
-    </main>
-  );
+  // Fallback en caso de error o sin datos
+  return <SalesClientComponent initialData={initialData} clients={clients} />;
 }

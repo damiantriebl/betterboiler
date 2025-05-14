@@ -1,26 +1,14 @@
 "use server";
 
-import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { type CreateReservationInput, createReservationSchema } from "@/zod/ReservationZod";
 import { MotorcycleState } from "@prisma/client";
 import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
 
-// Esquema de validación para la creación de reservas
-const reservationSchema = z.object({
-  motorcycleId: z.number().positive(),
-  clientId: z.string().min(1),
-  amount: z.number().positive(),
-  expirationDate: z.date().optional().nullable(),
-  paymentMethod: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
-
-type ReservationInput = z.infer<typeof reservationSchema>;
-
-export async function createReservation(data: ReservationInput) {
+export async function createReservation(data: CreateReservationInput) {
   try {
     // Validar los datos de entrada
-    const validatedData = reservationSchema.parse(data);
+    const validatedData = createReservationSchema.parse(data);
 
     // Obtener el ID de la organización del usuario actual
     const organizationId = await getOrganizationIdFromSession();
@@ -84,6 +72,7 @@ export async function createReservation(data: ReservationInput) {
       const reservation = await tx.reservation.create({
         data: {
           amount: validatedData.amount,
+          currency: validatedData.currency,
           expirationDate: validatedData.expirationDate || null,
           notes: validatedData.notes,
           paymentMethod: validatedData.paymentMethod,

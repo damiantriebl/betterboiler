@@ -1,10 +1,22 @@
-import { useState, useEffect } from "react";
-import AddClientModal from "@/components/client/AddClientModal";
-import type { Client } from "@prisma/client"; // O el tipo que uses
+import { useEffect, useState } from "react";
 
-export function useLocalStorage<T>(key: string, initialValue: T) {
+type UseLocalStorageOptions<T> = {
+  initializer?: () => T;
+};
+
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  options?: UseLocalStorageOptions<T>,
+) {
   const [value, setValue] = useState<T>(() => {
     if (typeof window === "undefined") return initialValue;
+
+    // If initializer is provided, use it instead of default logic
+    if (options?.initializer) {
+      return options.initializer();
+    }
+
     try {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
@@ -16,7 +28,9 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch {}
+    } catch (error) {
+      console.error(`Error saving to localStorage for key "${key}":`, error);
+    }
   }, [key, value]);
 
   return [value, setValue] as const;

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import SalesSection from "./SalesSection";
 import { CardSection } from "./CardsSection";
 import ChartSection from "./ChartSection";
+import SalesSection from "./SalesSection";
 
 export default async function AdminDashboard() {
   return (

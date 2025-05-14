@@ -8,4 +8,5 @@ export interface ColorConfig {
   colorOne?: string;
   colorTwo?: string;
   order?: number; // ¿Es opcional aquí?
+  isGlobal?: boolean; // Indica si es un color global predefinido
 }

@@ -1,11 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useTransition, useCallback } from "react";
+import {
+  addModelToOrganizationBrand,
+  dissociateOrganizationBrand,
+  updateOrganizationBrandAssociation,
+  updateOrganizationBrandsOrder,
+  updateOrganizationModel,
+  updateOrganizationModelsOrder,
+} from "@/actions/configuration/create-edit-brand";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
   type DragEndEvent,
-  PointerSensor,
   KeyboardSensor,
+  PointerSensor,
   closestCorners,
   useSensor,
   useSensors,
@@ -16,22 +26,12 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import SingleBrandColumn from "./SingleBrandColumn";
-import CreateBrandModal from "./CreateBrandModal";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import {
-  updateOrganizationBrandAssociation,
-  dissociateOrganizationBrand,
-  updateOrganizationBrandsOrder,
-  addModelToOrganizationBrand,
-  updateOrganizationModel,
-  updateOrganizationModelsOrder,
-} from "@/actions/configuration/create-edit-brand";
-import type { OrganizationBrandDisplayData, DisplayModelData } from "./Interfaces";
 import type { Model } from "@prisma/client"; // Assuming Model type is available
+import { Plus } from "lucide-react";
+import React, { useState, useEffect, useTransition, useCallback } from "react";
+import CreateBrandModal from "./CreateBrandModal";
+import type { DisplayModelData, OrganizationBrandDisplayData } from "./Interfaces";
+import SingleBrandColumn from "./SingleBrandColumn";
 
 interface ManageBrandsProps {
   initialOrganizationBrands: OrganizationBrandDisplayData[];
@@ -270,7 +270,6 @@ export default function ManageBrands({
                     organizationId={organizationId}
                     onAssociationUpdate={handleAssociationUpdate}
                     onAssociationDelete={handleAssociationDelete}
-                    onAddModel={handleAddModel}
                     onUpdateModel={handleUpdateModel}
                     onModelsOrderUpdate={handleModelsOrderUpdate}
                   />
@@ -295,6 +294,7 @@ export default function ManageBrands({
           onSuccess={() => {
             console.log("Modal de asociación de marca cerrado con éxito.");
           }}
+          existingBrandIds={associations.map((assoc) => assoc.brand.id)}
         />
       )}
     </Card>

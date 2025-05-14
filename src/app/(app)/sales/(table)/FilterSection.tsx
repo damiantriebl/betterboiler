@@ -1,14 +1,5 @@
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MotorcycleState } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -16,10 +7,19 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { MotorcycleState } from "@prisma/client";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface FilterSectionProps {
   filters: {
@@ -45,7 +45,7 @@ export default function FilterSection({
   availableYears = [],
   availableBrands = [],
   availableModels = [],
-  availableBranches = []
+  availableBranches = [],
 }: FilterSectionProps) {
   const formatEstadoVenta = (estado: MotorcycleState) => {
     return estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase();
@@ -171,8 +171,7 @@ export default function FilterSection({
               role="combobox"
               className={cn("justify-between", filters.years.length > 0 && "text-primary")}
             >
-              {filters.years.length === availableYears.length ||
-                filters.years.length === 0
+              {filters.years.length === availableYears.length || filters.years.length === 0
                 ? "Todos los años"
                 : filters.years.length === 1
                   ? formatYear(filters.years[0])
@@ -189,8 +188,7 @@ export default function FilterSection({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      filters.years.length === availableYears.length ||
-                        filters.years.length === 0
+                      filters.years.length === availableYears.length || filters.years.length === 0
                         ? "opacity-100"
                         : "opacity-0",
                     )}
@@ -216,25 +214,24 @@ export default function FilterSection({
             </Command>
           </PopoverContent>
         </Popover>
-        {filters.years.length > 0 &&
-          filters.years.length < availableYears.length && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {filters.years.map((year) => (
-                <Badge
-                  key={year}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={() => {
-                    const newYears = filters.years.filter((y) => y !== year);
-                    onFilterChange("years", newYears.length > 0 ? newYears : []);
-                  }}
-                >
-                  {formatYear(year)}
-                  <span className="ml-1">×</span>
-                </Badge>
-              ))}
-            </div>
-          )}
+        {filters.years.length > 0 && filters.years.length < availableYears.length && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {filters.years.map((year) => (
+              <Badge
+                key={year}
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => {
+                  const newYears = filters.years.filter((y) => y !== year);
+                  onFilterChange("years", newYears.length > 0 ? newYears : []);
+                }}
+              >
+                {formatYear(year)}
+                <span className="ml-1">×</span>
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -247,7 +244,7 @@ export default function FilterSection({
               className={cn("justify-between", filters.estadosVenta.length > 0 && "text-primary")}
             >
               {filters.estadosVenta.length === estadosVentaPrisma.length ||
-                filters.estadosVenta.length === 0
+              filters.estadosVenta.length === 0
                 ? "Ver todo"
                 : filters.estadosVenta.length === 1
                   ? formatEstadoVenta(filters.estadosVenta[0])

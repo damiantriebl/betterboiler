@@ -1,38 +1,40 @@
 "use client";
 
-import React, { useState, useEffect, useActionState, useTransition, useOptimistic } from "react";
+import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
   type DragEndEvent,
-  PointerSensor,
   KeyboardSensor,
+  PointerSensor,
   closestCorners,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useEffect, useActionState, useTransition, useOptimistic } from "react";
 
 import AddColorItem from "./AddColorItem";
 
 import {
-  createMotoColor,
-  updateMotoColor,
-  deleteMotoColor,
-  updateMotoColorsOrder,
   type CreateColorState,
-  type UpdateColorActionState,
   type DeleteColorState,
+  type UpdateColorActionState,
   type UpdateColorsOrderState,
+  createMotoColor,
+  deleteMotoColor,
+  updateMotoColor,
+  updateMotoColorsOrder,
 } from "@/actions/configuration/manage-colors";
 import ColorItem from "@/components/custom/ColorItem";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ColorConfig, ColorType } from "@/types/ColorType";
+import { Info, Palette } from "lucide-react";
 
 interface OptimisticColorConfig extends ColorConfig {
   isPending?: boolean;
@@ -53,10 +55,14 @@ export default function ManageColors({
   const [updatingColorId, setUpdatingColorId] = useState<number | null>(null);
   const [deletingColorId, setDeletingColorId] = useState<number | null>(null);
 
+  // Separar colores globales y personalizados
+  const globalColors = actualColors.filter((color) => color.isGlobal);
+  const customColors = actualColors.filter((color) => !color.isGlobal);
+
   const [optimisticColors, addOptimisticColor] = useOptimistic<
     OptimisticColorConfig[],
     Omit<ColorConfig, "id" | "dbId">
-  >(actualColors, (currentState, optimisticNewColorData) => {
+  >(customColors, (currentState, optimisticNewColorData) => {
     const newOptimisticColor: OptimisticColorConfig = {
       id: `optimistic-${crypto.randomUUID()}`,
       name: optimisticNewColorData.name,
@@ -65,6 +71,7 @@ export default function ManageColors({
       colorTwo: optimisticNewColorData.colorTwo,
       order: Math.max(0, ...currentState.map((c) => c.order ?? 0)) + 1,
       isPending: true,
+      isGlobal: false,
     };
     return [...currentState, newOptimisticColor];
   });
@@ -107,6 +114,7 @@ export default function ManageColors({
           colorOne: addState.newColor.colorOne,
           colorTwo: addState.newColor.colorTwo ?? undefined,
           order: addState.newColor.order,
+          isGlobal: false,
         };
 
         const filteredColors = currentActualColors.filter((c) => !c.id.startsWith("optimistic-"));
@@ -198,34 +206,22 @@ export default function ManageColors({
     addAction(formData);
   };
 
-  const handleDeleteColor = (idToDelete: string) => {
-    const colorToDelete = actualColors.find((c) => c.id === idToDelete);
-    if (!colorToDelete || !colorToDelete.dbId) return;
-    if (!organizationId) {
+  const handleUpdateColor = (updatedColorData: ColorConfig) => {
+    if (!organizationId || !updatedColorData.dbId) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "ID de organización no disponible.",
+        description: "Faltan datos para actualizar el color.",
       });
       return;
     }
 
-    setDeletingColorId(colorToDelete.dbId);
-
-    const formData = new FormData();
-    formData.append("id", colorToDelete.dbId?.toString());
-    formData.append("organizationId", organizationId);
-
-    deleteAction(formData);
-  };
-
-  const handleUpdateColor = (updatedColorData: ColorConfig) => {
-    if (!updatedColorData.dbId) return;
-    if (!organizationId) {
+    // No permitir actualizar colores globales
+    if (updatedColorData.isGlobal) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "ID de organización no disponible.",
+        title: "Operación no permitida",
+        description: "Los colores globales no pueden ser modificados.",
       });
       return;
     }
@@ -233,7 +229,7 @@ export default function ManageColors({
     setUpdatingColorId(updatedColorData.dbId);
 
     const formData = new FormData();
-    formData.append("id", updatedColorData.dbId?.toString());
+    formData.append("id", updatedColorData.dbId.toString());
     formData.append("name", updatedColorData.name);
     formData.append("type", updatedColorData.type);
     formData.append("colorOne", updatedColorData.colorOne || "#ffffff");
@@ -243,69 +239,166 @@ export default function ManageColors({
     updateAction(formData);
   };
 
+  const handleDeleteColor = (colorId?: number) => {
+    if (!colorId || !organizationId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "ID inválido.",
+      });
+      return;
+    }
+
+    // No permitir eliminar colores globales
+    const colorToDelete = actualColors.find((c) => c.dbId === colorId);
+    if (colorToDelete?.isGlobal) {
+      toast({
+        variant: "destructive",
+        title: "Operación no permitida",
+        description: "Los colores globales no pueden ser eliminados.",
+      });
+      return;
+    }
+
+    setDeletingColorId(colorId);
+
+    const formData = new FormData();
+    formData.append("id", colorId.toString());
+    formData.append("organizationId", organizationId);
+
+    deleteAction(formData);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = actualColors.findIndex((item) => item.id === active.id);
-      const newIndex = actualColors.findIndex((item) => item.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
+    if (!over) return;
 
-      const newArray = arrayMove(actualColors, oldIndex, newIndex);
-      setActualColors(newArray);
+    const oldIndex = optimisticColors.findIndex((item) => item.id === active.id);
+    const newIndex = optimisticColors.findIndex((item) => item.id === over.id);
 
-      const colorOrders = newArray
-        .filter((color): color is ColorConfig & { dbId: number } => color.dbId !== undefined)
-        .map((color, index) => ({ id: color.dbId, order: index }));
+    if (oldIndex !== newIndex) {
+      const newOrder = arrayMove(optimisticColors, oldIndex, newIndex);
+      const newOrderWithIndices = newOrder.map((item, index) => ({
+        ...item,
+        order: index,
+      }));
 
-      orderAction({ colors: colorOrders, organizationId });
+      // Actualizar localmente
+      setActualColors((prev) => {
+        const withoutOptimistic = prev.filter(
+          (c) => c.isGlobal || !optimisticColors.some((oc) => oc.id === c.id),
+        );
+        return [...withoutOptimistic, ...newOrderWithIndices].sort((a, b) => {
+          // Colores globales siempre al inicio
+          if (a.isGlobal && !b.isGlobal) return -1;
+          if (!a.isGlobal && b.isGlobal) return 1;
+          // Si ambos son globales o ambos son personalizados, ordenar por order
+          return (a.order ?? 0) - (b.order ?? 0);
+        });
+      });
+
+      // Enviar al servidor solo los colores no optimistas
+      const serverItems = newOrderWithIndices
+        .filter((item) => !item.id.startsWith("optimistic-") && item.dbId)
+        .map((item) => ({
+          id: item.dbId as number,
+          order: item.order as number,
+        }));
+
+      if (serverItems.length > 0) {
+        startOrderTransition(() => {
+          orderAction({ colors: serverItems, organizationId });
+        });
+      }
     }
   };
 
   return (
-    <div className="w-full space-y-4 my-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold">Gestionar Colores</h2>
+    <div className="space-y-4">
+      {/* Sección de colores globales */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Palette className="w-5 h-5" /> Colores Globales
+          </CardTitle>
+          <CardDescription>
+            Colores estándar predefinidos disponibles para todas las organizaciones.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {globalColors.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              No hay colores globales configurados.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {globalColors.map((color) => (
+                <div key={color.id} className="p-3 border rounded-md bg-muted/20 flex items-center">
+                  <ColorItem colorConfig={color} displayMode={true} />
+                  <div className="ml-2 text-xs text-muted-foreground flex items-center">
+                    <Info className="h-3 w-3 mr-1" />
+                    Global
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {!organizationId ? (
-        <div className="p-4 text-center text-orange-700 bg-orange-50 rounded-md">
-          Para gestionar colores, debes pertenecer a una organización.
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis]}
-        >
-          <div className="flex flex-col gap-3">
-            <SortableContext
-              items={optimisticColors.map((c) => c.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {optimisticColors.map((color) => {
-                const isUpdatingThisItem = isUpdating && updatingColorId === color.dbId;
-                const isDeletingThisItem = isDeleting && deletingColorId === color.dbId;
-                return (
-                  <ColorItem
-                    key={color.id}
-                    colorConfig={color}
-                    onUpdate={handleUpdateColor}
-                    onDelete={handleDeleteColor}
-                    isUpdatingThisItem={isUpdatingThisItem}
-                    isDeletingThisItem={isDeletingThisItem}
-                    isPending={color.isPending}
-                  />
-                );
-              })}
-            </SortableContext>
-
-            <AddColorItem onAdd={handleAddColor} isAdding={isAdding} className="mt-2" />
-
-            {optimisticColors.length === 0 && (
-              <p className="text-center text-muted-foreground mt-4">No hay colores añadidos.</p>
-            )}
+      {/* Sección de colores personalizados */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Palette className="w-5 h-5" /> Colores Personalizados
+          </CardTitle>
+          <CardDescription>
+            Colores específicos de su organización. Puede agregar, editar y ordenar estos colores.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <AddColorItem onAdd={handleAddColor} isAdding={isAdding} />
           </div>
-        </DndContext>
-      )}
+
+          {optimisticColors.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              No hay colores personalizados. Añada uno nuevo usando el formulario de arriba.
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              onDragEnd={handleDragEnd}
+              modifiers={[restrictToVerticalAxis]}
+            >
+              <SortableContext
+                items={optimisticColors.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {optimisticColors.map((color) => (
+                    <ColorItem
+                      key={color.id}
+                      colorConfig={color}
+                      onUpdate={handleUpdateColor}
+                      onDelete={() => handleDeleteColor(color.dbId)}
+                      isUpdatingThisItem={updatingColorId === color.dbId}
+                      isDeletingThisItem={deletingColorId === color.dbId}
+                      isPending={color.isPending}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+
+          {(isAdding || isUpdating || isDeleting || isPendingOrder) && (
+            <div className="fixed bottom-4 right-4 z-50">
+              <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

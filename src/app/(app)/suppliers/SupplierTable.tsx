@@ -1,22 +1,16 @@
 "use client"; // Necesario por los hooks
 
-import React, { useState, useTransition } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { deleteSupplier } from "@/actions/suppliers/manage-suppliers";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Pagination,
   PaginationContent,
@@ -26,21 +20,27 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, ArrowUpDown, ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { Supplier } from "@prisma/client";
-import { deleteSupplier } from "@/actions/suppliers/manage-suppliers";
-import { toast } from "@/hooks/use-toast";
+import { ArrowUpDown, ChevronDown, ChevronUp, ChevronsUpDown, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
+import React, { useState, useTransition } from "react";
 
 interface SupplierTableProps {
   initialData: Supplier[];
