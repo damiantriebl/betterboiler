@@ -98,3 +98,4 @@ AFIP
 cuenta corriente
 [x] agregar pagina
 [ ] enviar un mail con un pdf con lo remanente
+[ ] anular con pagos previos (el modal para generar una nueva cuenta corriente)

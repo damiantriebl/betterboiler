@@ -210,4 +210,14 @@ export async function undoPayment(
       success: false,
     };
   }
+}
+
+export async function fetchImageAsBase64(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('No se pudo obtener la imagen');
+  const buffer = await res.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString('base64');
+  // Intenta deducir el mime-type, por ejemplo 'image/png'
+  const mimeType = url.endsWith('.png') ? 'image/png' : url.endsWith('.jpg') || url.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
+  return `data:${mimeType};base64,${base64}`;
 } 

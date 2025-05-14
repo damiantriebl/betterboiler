@@ -4,8 +4,8 @@ globs:
 alwaysApply: true
 ---
 
-# Your rule content
-
+# Reglas
+- toda la charla con el prompt se habla y se responde en español
 - las variables siempre en camelcase y los nombres de los archivos  que son componentes visuales en PascalCase y tienen que ser en ingles
 
 - los esquemas ts tanto como type y interface siempre tiene que estar en la carpeta /types

@@ -17,7 +17,7 @@ interface OrganizationLogoProps {
 // cache de URLs
 const urlCache = new Map<string, string>();
 
-async function getLogoUrl(input: string): Promise<string> {
+export async function getLogoUrl(input: string): Promise<string> {
     if (!input) throw new Error('No logo provided');
     if (urlCache.has(input)) return urlCache.get(input)!;
     if (input.startsWith('http://') || input.startsWith('https://')) {
@@ -155,12 +155,12 @@ export default function OrganizationLogo({
     );
 
     useEffect(() => {
-        if (!logo) {
+        if (typeof logo === 'string' && logo.length > 0) {
+            fetchLogoUrl(logo);
+        } else {
             setHasError(true);
             setImageUrl(null);
-            return;
         }
-        fetchLogoUrl(logo);
     }, [logo]);
 
     const renderFallback = () => (
