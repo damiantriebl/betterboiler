@@ -1,8 +1,8 @@
 "use server";
-import { headers } from "next/headers";
 import { auth } from "@/auth";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { headers } from "next/headers";
 
 const s3 = new S3Client({
   region: process.env.AWS_BUCKET_REGION ?? "",
@@ -17,11 +17,12 @@ type SignedUrlParams = {
   operation: "put" | "get";
 };
 
-type SignedUrlResult = 
-  | { success: { url: string } }
-  | { failure: string };
+type SignedUrlResult = { success: { url: string } } | { failure: string };
 
-export async function getSignedS3Url({ name, operation }: SignedUrlParams): Promise<SignedUrlResult> {
+export async function getSignedS3Url({
+  name,
+  operation,
+}: SignedUrlParams): Promise<SignedUrlResult> {
   try {
     // Verificar autenticación
     const session = await auth.api.getSession({ headers: await headers() });
@@ -45,17 +46,17 @@ export async function getSignedS3Url({ name, operation }: SignedUrlParams): Prom
     }
 
     // Generar URL firmada según la operación
-    const command = operation === "get"
-      ? new GetObjectCommand({ Bucket: bucket, Key: key })
-      : new PutObjectCommand({
-          Bucket: bucket,
-          Key: key,
-          ContentType: "image/webp",
-        });
+    const command =
+      operation === "get"
+        ? new GetObjectCommand({ Bucket: bucket, Key: key })
+        : new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            ContentType: "image/webp",
+          });
 
     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 60 }); // 1 hora
     return { success: { url: signedUrl } };
-
   } catch (error) {
     console.error("Error generating signed URL:", error);
     return { failure: "Error interno al generar URL firmada" };

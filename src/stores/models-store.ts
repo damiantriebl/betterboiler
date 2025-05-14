@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { getModelsByBrandId } from '@/actions/root/get-models-by-brand-id';
-import { createModel } from '@/actions/root/create-model';
+import { createModel } from "@/actions/root/create-model";
+import { getModelsByBrandId } from "@/actions/root/get-models-by-brand-id";
+import { create } from "zustand";
 
 export interface ModelData {
   id: number;
@@ -19,7 +19,11 @@ interface ModelsStore {
 
   // Actions
   fetchModelsByBrandId: (brandId: number) => Promise<ModelData[]>;
-  addModel: (name: string, brandId: number, formData?: FormData) => Promise<{ success: boolean; model?: ModelData; error?: string }>;
+  addModel: (
+    name: string,
+    brandId: number,
+    formData?: FormData,
+  ) => Promise<{ success: boolean; model?: ModelData; error?: string }>;
   reset: () => void;
 }
 
@@ -43,7 +47,7 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
       const result = await getModelsByBrandId(brandId);
 
       if (result.success && Array.isArray(result.models)) {
-        const brandModels = result.models.map(model => ({
+        const brandModels = result.models.map((model) => ({
           id: model.id,
           name: model.name,
           brandId: model.brandId,
@@ -57,21 +61,21 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
             ...state.models,
             [brandId]: brandModels,
           },
-          loadingBrandIds: state.loadingBrandIds.filter(id => id !== brandId),
+          loadingBrandIds: state.loadingBrandIds.filter((id) => id !== brandId),
         }));
 
         return brandModels;
       } else {
         set((state) => ({
-          error: result.error || 'Error al obtener modelos',
-          loadingBrandIds: state.loadingBrandIds.filter(id => id !== brandId),
+          error: result.error || "Error al obtener modelos",
+          loadingBrandIds: state.loadingBrandIds.filter((id) => id !== brandId),
         }));
         return [];
       }
     } catch (error) {
       set((state) => ({
-        error: error instanceof Error ? error.message : 'Error al obtener modelos',
-        loadingBrandIds: state.loadingBrandIds.filter(id => id !== brandId),
+        error: error instanceof Error ? error.message : "Error al obtener modelos",
+        loadingBrandIds: state.loadingBrandIds.filter((id) => id !== brandId),
       }));
       return [];
     }
@@ -80,7 +84,7 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
   addModel: async (name: string, brandId: number, formData?: FormData) => {
     try {
       let result;
-      
+
       if (formData) {
         // Use FormData if provided (for file uploads)
         result = await createModel(formData);
@@ -89,7 +93,7 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
         result = await createModel({
           name,
           brandId,
-          pathToRevalidate: '/configuration',
+          pathToRevalidate: "/configuration",
         });
       }
 
@@ -112,12 +116,12 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
 
         return { success: true, model: newModel };
       } else {
-        return { success: false, error: result.error || 'Error al crear modelo' };
+        return { success: false, error: result.error || "Error al crear modelo" };
       }
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Error al crear modelo' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Error al crear modelo",
       };
     }
   },
@@ -129,4 +133,4 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
       error: null,
     });
   },
-})); 
+}));

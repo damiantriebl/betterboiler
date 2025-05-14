@@ -1,10 +1,10 @@
 // /actions/forgotPasswordAction.ts
 "use server";
 
-import { z } from "zod";
-import { forgotPasswordSchema } from "@/zod/AuthZod";
 import { authClient } from "@/auth-client";
 import type { serverMessage } from "@/types/ServerMessageType";
+import { forgotPasswordSchema } from "@/zod/AuthZod";
+import { z } from "zod";
 
 export async function forgotPasswordAction(
   prevState: { success: string | false; error: string | false },

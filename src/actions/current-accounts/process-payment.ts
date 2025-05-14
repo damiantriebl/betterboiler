@@ -6,8 +6,14 @@ import { z } from "zod";
 
 const processPaymentSchema = z.object({
   accountId: z.string().min(1, "Account ID is required."),
-  paymentAmount: z.number().positive("El monto del pago debe ser positivo.").int("El monto del pago debe ser un número entero."),
-  installmentNumber: z.number().int().positive("Installment number is required and must be a positive integer."),
+  paymentAmount: z
+    .number()
+    .positive("El monto del pago debe ser positivo.")
+    .int("El monto del pago debe ser un número entero."),
+  installmentNumber: z
+    .number()
+    .int()
+    .positive("Installment number is required and must be a positive integer."),
   // We'll add a check for currentBalance in the component or action logic directly
 });
 
@@ -68,7 +74,7 @@ export async function processPayment(
       `Processing payment of ${paymentAmount} for account ${accountId}, installment ${installmentNumber} in organization ${organizationId}`,
     );
     // Simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     return {
       message: `Payment of ${paymentAmount} for installment ${installmentNumber} processed successfully for account ${accountId}.`,
@@ -77,7 +83,7 @@ export async function processPayment(
   } catch (error) {
     console.error("Error processing payment:", error);
     // Check if error is a Prisma specific error for more detailed messages if needed
-    let errorMessage = "Error: An unexpected error occurred while processing the payment.";
+    const errorMessage = "Error: An unexpected error occurred while processing the payment.";
     if (error instanceof Error) {
       // Potentially more specific error handling here
     }
@@ -86,4 +92,4 @@ export async function processPayment(
       success: false,
     };
   }
-} 
+}

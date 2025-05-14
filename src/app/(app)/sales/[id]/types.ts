@@ -17,7 +17,7 @@ export interface PaymentFormData {
   exchangeRate?: number;
   // Discount fields
   isMayorista: boolean;
-  discountType: 'percentage' | 'fixed' | 'none';
+  discountType: "percentage" | "fixed" | "none";
   discountValue: number;
   selectedPromotions: number[];
   // Card payment fields
@@ -42,7 +42,7 @@ export interface PaymentFormData {
   // Current Account (Cuenta Corriente) fields
   downPayment?: number;
   currentAccountInstallments?: number;
-  currentAccountFrequency?: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+  currentAccountFrequency?: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "ANNUALLY";
   annualInterestRate?: number;
   currentAccountStartDate?: string;
   currentAccountNotes?: string;
@@ -75,4 +75,4 @@ export interface MotorcycleWithRelations {
   organizationId?: string;
   exchangeRate?: number;
   soldAt?: Date | null;
-} 
+}

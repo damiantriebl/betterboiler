@@ -1,11 +1,11 @@
-import { type BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 
 /**
  * Format price with currency symbol
  * @param price - The price to format
  * @param currency - The currency (default: "USD")
  */
-export const formatPrice = (price: number, currency: string = "USD"): string => {
+export const formatPrice = (price: number, currency = "USD"): string => {
   // This would normally be imported from @/lib/utils but we're extracting it here
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -27,7 +27,7 @@ export const calculateRemainingAmount = (
   totalCurrency: string,
   reservationAmount: number,
   reservationCurrency: string,
-  exchangeRate?: number
+  exchangeRate?: number,
 ): number => {
   if (totalCurrency === reservationCurrency) {
     return totalPrice - reservationAmount;
@@ -57,8 +57,8 @@ export const calculateRemainingAmount = (
  * @param promotion2 - Second promotion
  */
 export const arePromotionsCompatible = (
-  promotion1: BankingPromotionDisplay, 
-  promotion2: BankingPromotionDisplay
+  promotion1: BankingPromotionDisplay,
+  promotion2: BankingPromotionDisplay,
 ): boolean => {
   // Si alguna promoción no tiene planes de cuotas, son compatibles
   if (!promotion1.installmentPlans?.length || !promotion2.installmentPlans?.length) {
@@ -66,8 +66,8 @@ export const arePromotionsCompatible = (
   }
 
   // Obtener los planes habilitados
-  const enabledPlans1 = promotion1.installmentPlans.filter(plan => plan && plan.isEnabled);
-  const enabledPlans2 = promotion2.installmentPlans.filter(plan => plan && plan.isEnabled);
+  const enabledPlans1 = promotion1.installmentPlans.filter((plan) => plan && plan.isEnabled);
+  const enabledPlans2 = promotion2.installmentPlans.filter((plan) => plan && plan.isEnabled);
 
   // Si alguna promoción no tiene planes habilitados, son compatibles
   if (!enabledPlans1.length || !enabledPlans2.length) {
@@ -75,8 +75,8 @@ export const arePromotionsCompatible = (
   }
 
   // Verificar si hay al menos un plan con el mismo número de cuotas
-  return enabledPlans1.some(plan1 =>
-    enabledPlans2.some(plan2 => plan1.installments === plan2.installments)
+  return enabledPlans1.some((plan1) =>
+    enabledPlans2.some((plan2) => plan1.installments === plan2.installments),
   );
 };
 
@@ -88,20 +88,21 @@ export const getCommonInstallmentPlans = (promotions: BankingPromotionDisplay[])
   if (!promotions.length) return [];
 
   // Obtener planes habilitados de la primera promoción
-  const firstPromoPlans = promotions[0].installmentPlans
-    ?.filter(plan => plan && plan.isEnabled)
-    ?.map(plan => plan.installments) || [];
+  const firstPromoPlans =
+    promotions[0].installmentPlans
+      ?.filter((plan) => plan && plan.isEnabled)
+      ?.map((plan) => plan.installments) || [];
 
   // Si solo hay una promoción, devolver sus planes
   if (promotions.length === 1) return firstPromoPlans;
 
   // Comparar con el resto de promociones
-  return firstPromoPlans.filter(installments =>
-    promotions.every(promo =>
+  return firstPromoPlans.filter((installments) =>
+    promotions.every((promo) =>
       promo.installmentPlans
-        ?.filter(plan => plan && plan.isEnabled)
-        ?.some(plan => plan.installments === installments)
-    )
+        ?.filter((plan) => plan && plan.isEnabled)
+        ?.some((plan) => plan.installments === installments),
+    ),
   );
 };
 
@@ -114,22 +115,22 @@ export const getCommonInstallmentPlans = (promotions: BankingPromotionDisplay[])
  */
 export const calculateFinalPrice = (
   originalPrice: number,
-  discountType: 'percentage' | 'fixed' | 'none',
+  discountType: "percentage" | "fixed" | "none",
   discountValue: number,
-  promotions: BankingPromotionDisplay[] = []
+  promotions: BankingPromotionDisplay[] = [],
 ): number => {
   let price = originalPrice;
 
   // Apply manual discount
-  if (discountType === 'percentage' && discountValue > 0) {
+  if (discountType === "percentage" && discountValue > 0) {
     price = price * (1 - discountValue / 100);
-  } else if (discountType === 'fixed' && discountValue > 0) {
+  } else if (discountType === "fixed" && discountValue > 0) {
     price = price - discountValue;
   }
 
   // Apply banking promotions
   if (promotions && promotions.length > 0) {
-    promotions.forEach(promotion => {
+    promotions.forEach((promotion) => {
       if (!promotion) return;
 
       if (promotion.discountRate) {
@@ -147,7 +148,7 @@ export const calculateFinalPrice = (
  * Get merged installment plans across promotions: union of installment counts with lowest interest per count
  */
 export const getAvailableInstallmentPlans = (
-  promotions: BankingPromotionDisplay[]
+  promotions: BankingPromotionDisplay[],
 ): { installments: number; interestRate: number }[] => {
   const planMap: Record<number, number[]> = {};
   promotions.forEach((promo) => {
@@ -170,7 +171,7 @@ export const getAvailableInstallmentPlans = (
  * Get best interest rate per installment count from selected promotions
  */
 export const getBestRatesByInstallment = (
-  promotions: BankingPromotionDisplay[]
+  promotions: BankingPromotionDisplay[],
 ): Record<number, number> => {
   const ratesMap: Record<number, number[]> = {};
   promotions.forEach((promo) => {
@@ -186,4 +187,4 @@ export const getBestRatesByInstallment = (
     bestRates[Number(inst)] = Math.min(...rates);
   }
   return bestRates;
-}; 
+};

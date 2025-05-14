@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { getPaymentMethodsAction } from "@/actions/get-payment-methods-action";
+import { createReservation } from "@/actions/sales/create-reservation"; // Will be used for non-current-account for now
+import type { Client } from "@/app/(app)/clients/columns"; // Assuming this is Client from Prisma or a compatible type
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,11 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Client } from "@/app/(app)/clients/columns"; // Assuming this is Client from Prisma or a compatible type
-import { createReservation } from "@/actions/sales/create-reservation"; // Will be used for non-current-account for now
-import { getPaymentMethodsAction } from "@/actions/get-payment-methods-action";
+import type { CurrentAccount, PaymentMethod } from "@prisma/client";
+import { useEffect, useState } from "react";
 import { CurrentAccountPaymentForm } from "./components/CurrentAccountPaymentForm";
-import type { PaymentMethod, CurrentAccount } from "@prisma/client";
 
 interface SaleModalProps {
   open: boolean;
@@ -34,7 +34,7 @@ interface SaleModalProps {
   clients: Client[];
   // Callback after any sale process (reservation, current account creation) is done
   onSaleProcessCompleted: (data: {
-    type: 'reservation' | 'current_account' | 'other_payment';
+    type: "reservation" | "current_account" | "other_payment";
     payload: any;
   }) => void;
 }
@@ -62,7 +62,9 @@ export function ReserveModal({
   const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
   const [paymentMethodError, setPaymentMethodError] = useState<string | null>(null);
 
-  const selectedPaymentMethod = paymentMethods.find(pm => pm.id.toString() === selectedPaymentMethodId);
+  const selectedPaymentMethod = paymentMethods.find(
+    (pm) => pm.id.toString() === selectedPaymentMethodId,
+  );
   const isCurrentAccountSelected = selectedPaymentMethod?.type === "current_account";
 
   useEffect(() => {
@@ -98,7 +100,6 @@ export function ReserveModal({
     }
   }, [selectedPaymentMethod, isCurrentAccountSelected, motorcyclePrice]);
 
-
   const handleGeneralSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isCurrentAccountSelected) {
@@ -127,7 +128,7 @@ export function ReserveModal({
       });
 
       if (result.success && result.data) {
-        onSaleProcessCompleted({ type: 'reservation', payload: result.data }); // 'reservation' as placeholder
+        onSaleProcessCompleted({ type: "reservation", payload: result.data }); // 'reservation' as placeholder
         onCloseClean();
       } else {
         alert(`Error al procesar el pago: ${result.error}`);
@@ -140,7 +141,7 @@ export function ReserveModal({
   };
 
   const handleCurrentAccountSuccess = (createdAccount: CurrentAccount) => {
-    onSaleProcessCompleted({ type: 'current_account', payload: createdAccount });
+    onSaleProcessCompleted({ type: "current_account", payload: createdAccount });
     onCloseClean();
   };
 
@@ -159,7 +160,12 @@ export function ReserveModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCloseClean(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onCloseClean();
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Registrar Venta: {motorcycleName}</DialogTitle>
@@ -178,7 +184,8 @@ export function ReserveModal({
             <SelectContent>
               {clients.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
-                  {client.firstName} {client.lastName} {client.companyName ? `(${client.companyName})` : ''}
+                  {client.firstName} {client.lastName}{" "}
+                  {client.companyName ? `(${client.companyName})` : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -193,7 +200,11 @@ export function ReserveModal({
           ) : paymentMethodError ? (
             <p className="text-destructive">{paymentMethodError}</p>
           ) : (
-            <Select value={selectedPaymentMethodId} onValueChange={setSelectedPaymentMethodId} required>
+            <Select
+              value={selectedPaymentMethodId}
+              onValueChange={setSelectedPaymentMethodId}
+              required
+            >
               <SelectTrigger id="paymentMethod">
                 <SelectValue placeholder="Seleccionar método de pago" />
               </SelectTrigger>
@@ -259,7 +270,12 @@ export function ReserveModal({
               />
             </div>
             <DialogFooter className="pt-4">
-              <Button type="button" variant="secondary" onClick={onCloseClean} disabled={processing}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onCloseClean}
+                disabled={processing}
+              >
                 Cancelar
               </Button>
               <Button type="submit" disabled={processing || !selectedClientId || !amount}>

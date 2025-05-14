@@ -1,4 +1,4 @@
-import { Organization } from "@prisma/client";
+import type { Organization } from "@prisma/client";
 
 export interface SessionUser {
   id: string;
@@ -12,4 +12,4 @@ export interface SessionUser {
 export interface Session {
   user: SessionUser;
   expires: string;
-} 
+}

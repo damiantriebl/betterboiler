@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-import { headers as nextHeaders } from 'next/headers'; // Renombrar para evitar colisión
-import { auth } from '@/auth'; // Asegúrate que esta ruta a tu config de better-auth sea correcta
+import { auth } from "@/auth"; // Asegúrate que esta ruta a tu config de better-auth sea correcta
+import { headers as nextHeaders } from "next/headers"; // Renombrar para evitar colisión
+import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
@@ -18,22 +18,24 @@ export async function GET() {
 
     // Devuelve la información relevante del usuario.
     // ¡Ten cuidado de no exponer información sensible que el cliente no necesite!
-    return NextResponse.json({
-      isAuthenticated: true,
-      user: {
-        id: session.user.id,
-        email: session.user.email, // Ejemplo
-        name: session.user.name,   // Ejemplo
-        organizationId: session.user.organizationId, // Ejemplo
-        // Añade otros campos del usuario que sean seguros y necesarios para el cliente
-      },
-    }, { status: 200 });
-
-  } catch (error) {
-    console.error('[API getSession] Error getting session:', error);
     return NextResponse.json(
-      { isAuthenticated: false, user: null, error: 'Error al obtener la sesión' },
-      { status: 500 }
+      {
+        isAuthenticated: true,
+        user: {
+          id: session.user.id,
+          email: session.user.email, // Ejemplo
+          name: session.user.name, // Ejemplo
+          organizationId: session.user.organizationId, // Ejemplo
+          // Añade otros campos del usuario que sean seguros y necesarios para el cliente
+        },
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("[API getSession] Error getting session:", error);
+    return NextResponse.json(
+      { isAuthenticated: false, user: null, error: "Error al obtener la sesión" },
+      { status: 500 },
     );
   }
-} 
+}

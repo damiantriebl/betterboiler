@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+// Importar el tipo BranchData definido en la acción
+import type { BranchData } from "@/actions/stock/get-branch";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -13,8 +12,9 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-// Importar el tipo BranchData definido en la acción
-import type { BranchData } from "@/actions/stock/get-branch";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
+import * as React from "react";
 
 interface SucursalSelectorProps {
   sucursales: BranchData[];

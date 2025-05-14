@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Organization } from "@prisma/client";
 import { getOrganization } from "@/actions/get-organization";
+import type { Organization } from "@prisma/client";
+import { useEffect, useState } from "react";
 
 interface UseOrganizationReturn {
   organization: Organization | null;
@@ -23,13 +23,13 @@ export function useOrganization(): UseOrganizationReturn {
         setLoading(true);
         setError(null);
         const data = await getOrganization();
-        
+
         if (!mounted) return;
 
         if (!data) {
           throw new Error("No organization found");
         }
-        
+
         setOrganization(data);
       } catch (err) {
         if (!mounted) return;
@@ -50,4 +50,4 @@ export function useOrganization(): UseOrganizationReturn {
   }, []);
 
   return { organization, loading, error };
-} 
+}

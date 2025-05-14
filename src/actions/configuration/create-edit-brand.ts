@@ -1,19 +1,19 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import prisma from "@/lib/prisma";
-import { z } from "zod";
 import { auth } from "@/auth";
-import { headers } from "next/headers";
-import { Prisma } from "@prisma/client";
+import prisma from "@/lib/prisma";
+import type { ActionState, BatchActionState } from "@/types/action-states";
 import {
   associateBrandSchema,
-  updateBrandAssociationSchema,
   dissociateBrandSchema,
+  updateBrandAssociationSchema,
   updateOrgBrandOrderSchema,
 } from "@/zod/BrandZod";
+import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { z } from "zod";
 import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
-import type { ActionState, BatchActionState } from "@/types/action-states";
 
 // Helper para obtener organizationId de la sesión
 
@@ -680,13 +680,12 @@ export async function updateOrganizationModel(
       const oldModelName = oldConfig.model.name;
       const originalOrder = oldConfig.order;
       console.log(
-        `[replaceModel N:M] Config antigua encontrada: ID ${oldConfig.id}, Order ${originalOrder}, Visible ${oldConfig.isVisible}`
+        `[replaceModel N:M] Config antigua encontrada: ID ${oldConfig.id}, Order ${originalOrder}, Visible ${oldConfig.isVisible}`,
       );
 
       // 3. Buscar o Crear el NUEVO modelo global
       const newModel = await tx.model.findUnique({ where: { id: oldModelId } });
-      if (!newModel)
-        throw new Error("Modelo original no encontrado para esta organización.");
+      if (!newModel) throw new Error("Modelo original no encontrado para esta organización.");
 
       // 4. Crear nueva configuración
       const newOrgModelConfig = await tx.organizationModelConfig.create({
@@ -730,7 +729,7 @@ export interface UpdateModelsOrderState {
 
 export async function updateOrganizationModelsOrder(
   prevState: UpdateModelsOrderState | null,
-  payload: { brandId: number; modelOrders: { modelId: number; order: number }[] }
+  payload: { brandId: number; modelOrders: { modelId: number; order: number }[] },
 ): Promise<UpdateModelsOrderState> {
   const organizationId = await getOrganizationIdFromSession();
   if (!organizationId)
@@ -757,8 +756,8 @@ export async function updateOrganizationModelsOrder(
             model: { brandId },
           },
           data: { order: item.order },
-        })
-      )
+        }),
+      ),
     );
 
     revalidatePath("/configuracion");

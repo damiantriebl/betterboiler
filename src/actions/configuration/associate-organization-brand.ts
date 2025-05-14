@@ -16,9 +16,9 @@ export const associateOrganizationBrand = async ({
     // Obtener el color global de la marca
     const globalBrand = await prisma.brand.findUnique({
       where: { id: Number(brandId) },
-      select: { color: true }
+      select: { color: true },
     });
-    
+
     // Intenta crear la relación con el color global por defecto
     await prisma.organizationBrand.create({
       data: {
@@ -27,11 +27,11 @@ export const associateOrganizationBrand = async ({
         color: globalBrand?.color || null, // Usa el color global como valor por defecto
       },
     });
-    
+
     if (pathToRevalidate) {
       revalidatePath(pathToRevalidate);
     }
-    
+
     return { success: true, message: "Marca asociada correctamente." };
   } catch (error: any) {
     if (
@@ -48,4 +48,4 @@ export const associateOrganizationBrand = async ({
       error: error.message || "Error al asociar la marca.",
     };
   }
-}; 
+};

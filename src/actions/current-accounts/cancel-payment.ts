@@ -2,8 +2,8 @@
 
 import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import prisma from "@/lib/prisma"; // Importación correcta del cliente Prisma
+import { type PaymentFrequency, Prisma } from "@prisma/client";
 import { z } from "zod";
-import { Prisma, type PaymentFrequency } from '@prisma/client';
 
 const cancelPaymentSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required."),
@@ -12,12 +12,18 @@ const cancelPaymentSchema = z.object({
 // Función para calcular el número de períodos por año según la frecuencia de pago
 function getPeriodsPerYear(frequency: PaymentFrequency): number {
   switch (frequency) {
-    case 'WEEKLY': return 52;
-    case 'BIWEEKLY': return 26;
-    case 'MONTHLY': return 12;
-    case 'QUARTERLY': return 4;
-    case 'ANNUALLY': return 1;
-    default: return 12; // Default a mensual
+    case "WEEKLY":
+      return 52;
+    case "BIWEEKLY":
+      return 26;
+    case "MONTHLY":
+      return 12;
+    case "QUARTERLY":
+      return 4;
+    case "ANNUALLY":
+      return 1;
+    default:
+      return 12; // Default a mensual
   }
 }
 
@@ -26,19 +32,18 @@ function calculateNewInstallment(
   remainingAmount: number,
   annualInterestRatePercent: number,
   remainingInstallments: number,
-  paymentFrequency: PaymentFrequency
+  paymentFrequency: PaymentFrequency,
 ): number {
   const periodsPerYear = getPeriodsPerYear(paymentFrequency);
   const tnaDecimal = annualInterestRatePercent / 100;
-  const periodicRate = annualInterestRatePercent > 0
-    ? Math.pow(1 + tnaDecimal, 1 / periodsPerYear) - 1
-    : 0;
+  const periodicRate =
+    annualInterestRatePercent > 0 ? Math.pow(1 + tnaDecimal, 1 / periodsPerYear) - 1 : 0;
 
   if (remainingAmount <= 0 || remainingInstallments <= 0) return 0;
   if (periodicRate === 0) return Math.ceil(remainingAmount / remainingInstallments);
 
   const factor = Math.pow(1 + periodicRate, remainingInstallments);
-  const raw = remainingAmount * (periodicRate * factor) / (factor - 1);
+  const raw = (remainingAmount * (periodicRate * factor)) / (factor - 1);
   return Math.ceil(raw);
 }
 
@@ -56,14 +61,14 @@ export async function cancelPayment(
   formData: FormData,
 ): Promise<CancelPaymentFormState> {
   const session = await getOrganizationIdFromSession();
-  
+
   if (!session?.organizationId) {
     return {
       message: "Error: User not authenticated or organization not found.",
       success: false,
     };
   }
-  
+
   const organizationId = session.organizationId;
 
   const validatedFields = cancelPaymentSchema.safeParse({
@@ -87,8 +92,8 @@ export async function cancelPayment(
         organizationId: organizationId,
       },
       include: {
-        currentAccount: true // Incluir la cuenta corriente para tener acceso a sus datos
-      }
+        currentAccount: true, // Incluir la cuenta corriente para tener acceso a sus datos
+      },
     });
 
     if (!originalPayment) {
@@ -99,16 +104,17 @@ export async function cancelPayment(
     }
 
     if (originalPayment.installmentVersion === "D" || originalPayment.installmentVersion === "H") {
-        return {
-            message: "Error: This payment has already been processed for cancellation (D/H).",
-            success: false,
-        };
-    }
-    
-    // Ensure there's an installment number to make sense for D/H logic
-    if (typeof originalPayment.installmentNumber !== 'number') {
       return {
-        message: "Error: Payment is not associated with a specific installment and cannot be cancelled in this manner.",
+        message: "Error: This payment has already been processed for cancellation (D/H).",
+        success: false,
+      };
+    }
+
+    // Ensure there's an installment number to make sense for D/H logic
+    if (typeof originalPayment.installmentNumber !== "number") {
+      return {
+        message:
+          "Error: Payment is not associated with a specific installment and cannot be cancelled in this manner.",
         success: false,
       };
     }
@@ -130,12 +136,12 @@ export async function cancelPayment(
           organizationId: originalPayment.organizationId,
           amountPaid: originalPayment.amountPaid,
           transactionReference: originalPayment.transactionReference,
-          installmentNumber: originalPayment.installmentNumber, 
-          installmentVersion: "H", 
+          installmentNumber: originalPayment.installmentNumber,
+          installmentVersion: "H",
           createdAt: new Date(), // Explicitly set creation for the new record
         },
       });
-       
+
       // 3. Create a new pending payment entry
       await tx.payment.create({
         data: {
@@ -146,49 +152,52 @@ export async function cancelPayment(
           organizationId: originalPayment.organizationId,
           amountPaid: originalPayment.amountPaid,
           transactionReference: null, // No transaction reference yet
-          installmentNumber: originalPayment.installmentNumber, 
+          installmentNumber: originalPayment.installmentNumber,
           installmentVersion: null, // Normal payment, no special version
           createdAt: new Date(),
         },
       });
-      
+
       // 4. Obtener la cuenta corriente actualizada para recalcular el monto de cuota
       const currentAccount = await tx.currentAccount.findUnique({
-        where: { id: originalPayment.currentAccountId! }
+        where: { id: originalPayment.currentAccountId! },
       });
-      
+
       if (!currentAccount) {
         throw new Error("Current account not found after anulment");
       }
-      
+
       // 5. Calcular cuántas cuotas se han pagado realmente (excluyendo D/H y anuladas)
       const validPaymentsCount = await tx.payment.count({
         where: {
           currentAccountId: currentAccount.id,
           installmentVersion: null, // Solo pagos normales
-        }
+        },
       });
-      
+
       // 6. Determinar cuántas cuotas quedan pendientes
-      const remainingInstallments = Math.max(0, currentAccount.numberOfInstallments - validPaymentsCount);
-      
+      const remainingInstallments = Math.max(
+        0,
+        currentAccount.numberOfInstallments - validPaymentsCount,
+      );
+
       if (remainingInstallments > 0) {
         // 7. Calcular nuevo monto de cuota basado en el saldo restante
         const newInstallmentAmount = calculateNewInstallment(
           currentAccount.remainingAmount, // Ya incluye el importe anulado porque lo actualiza automáticamente al crear D/H
           currentAccount.interestRate ?? 0,
           remainingInstallments,
-          currentAccount.paymentFrequency
+          currentAccount.paymentFrequency,
         );
-        
+
         // 8. Actualizar la cuenta corriente con el nuevo monto de cuota
         await tx.currentAccount.update({
           where: { id: currentAccount.id },
-          data: { 
+          data: {
             installmentAmount: newInstallmentAmount,
             // Opcional: actualizar nextDueDate si el pago anulado afecta la fecha de próximo vencimiento
-            updatedAt: new Date()
-          }
+            updatedAt: new Date(),
+          },
         });
       }
     });
@@ -205,4 +214,4 @@ export async function cancelPayment(
       success: false,
     };
   }
-} 
+}

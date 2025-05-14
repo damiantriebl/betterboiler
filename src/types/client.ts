@@ -16,4 +16,4 @@ export interface Client {
   status: string;
   notes: string | null;
   vatStatus: string | null;
-} 
+}

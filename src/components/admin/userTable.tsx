@@ -1,9 +1,5 @@
 // UsersTable.tsx (Server Component)
 import { auth } from "@/auth";
-import { headers } from "next/headers";
-import prisma from "@/lib/prisma";
-import OrganizationSelect from "./OrganizationSelect";
-import UserActions from "./useActions";
 import {
   Table,
   TableBody,
@@ -12,7 +8,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { User, Organization } from "@prisma/client";
+import prisma from "@/lib/prisma";
+import type { Organization, User } from "@prisma/client";
+import { headers } from "next/headers";
+import OrganizationSelect from "./OrganizationSelect";
+import UserActions from "./useActions";
 
 export default async function UsersTable() {
   const h = await headers();

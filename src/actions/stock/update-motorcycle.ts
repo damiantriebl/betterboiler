@@ -1,10 +1,10 @@
 "use server";
 
-import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
 import { motorcycleBatchSchema } from "@/zod/MotorcycleBatchSchema"; // Corregir ruta y nombre schema
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession"; // Helper para obtener orgId
 
 export async function updateMotorcycle(
@@ -12,9 +12,7 @@ export async function updateMotorcycle(
   currentState: unknown, // Requerido por useActionState
   formData: FormData,
 ) {
-  const validation = motorcycleBatchSchema.safeParse(
-    Object.fromEntries(formData.entries()),
-  );
+  const validation = motorcycleBatchSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validation.success) {
     console.error("Error de validación:", validation.error.flatten());
@@ -85,4 +83,4 @@ export async function updateMotorcycle(
       message: "Error interno al actualizar la motocicleta.",
     };
   }
-} 
+}

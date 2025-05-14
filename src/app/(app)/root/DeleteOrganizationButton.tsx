@@ -1,5 +1,6 @@
 "use client";
-import { useTransition, useState } from "react";
+import { deleteOrganization } from "@/actions/auth/delete-organization";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,8 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { deleteOrganization } from "@/actions/auth/delete-organization";
+import { useState, useTransition } from "react";
 
 export default function DeleteOrganizationButton({ id, name }: { id: string; name: string }) {
   const [open, setOpen] = useState(false);

@@ -1,17 +1,17 @@
 "use client";
 
-import { type Day } from "@/zod/banking-promotion-schemas";
-import { type BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { Day } from "@/zod/banking-promotion-schemas";
 
 // Days of the week in Spanish (matches the schema definition)
 const DAYS_OF_WEEK: Day[] = [
   "lunes",
-  "martes", 
-  "miércoles", 
-  "jueves", 
-  "viernes", 
-  "sábado", 
-  "domingo"
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábado",
+  "domingo",
 ];
 
 // Get the current day of the week in Spanish
@@ -28,7 +28,7 @@ export function isPromotionActiveOnDay(promotion: BankingPromotionDisplay, day: 
   if (!promotion.activeDays || promotion.activeDays.length === 0) {
     return true;
   }
-  
+
   // Check if the day is in the activeDays array
   return promotion.activeDays.includes(day);
 }
@@ -42,7 +42,7 @@ export function isPromotionActiveToday(promotion: BankingPromotionDisplay): bool
 // Filter promotions by active day
 export function filterPromotionsByDay(
   promotions: BankingPromotionDisplay[],
-  day: Day = getCurrentDayOfWeek()
+  day: Day = getCurrentDayOfWeek(),
 ): BankingPromotionDisplay[] {
-  return promotions.filter(promotion => isPromotionActiveOnDay(promotion, day));
-} 
+  return promotions.filter((promotion) => isPromotionActiveOnDay(promotion, day));
+}

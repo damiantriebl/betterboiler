@@ -1,10 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import ClientTable from "./ClientTable";
-import type { Client } from "./columns";
-import { vi } from "vitest";
 import { deleteClient } from "@/actions/clients/manage-clients";
 import { MotorcycleState } from "@prisma/client";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
+import ClientTable from "./ClientTable";
+import type { Client } from "./columns";
 
 // Mockear la función deleteClient que se usa internamente
 vi.mock("@/actions/clients/manage-clients", () => ({

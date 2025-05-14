@@ -3,7 +3,7 @@
 export interface CardType {
   id: number;
   name: string;
-  type: 'credit' | 'debit';
+  type: "credit" | "debit";
   logoUrl?: string | null;
 }
 
@@ -40,4 +40,4 @@ export interface BankWithCards {
     isEnabled: boolean;
     order: number;
   }[];
-} 
+}

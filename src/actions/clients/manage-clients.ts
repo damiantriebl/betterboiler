@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { clientSchema, type ClientFormData } from "@/zod/ClientsZod";
+import { type ClientFormData, clientSchema } from "@/zod/ClientsZod";
 import { revalidatePath } from "next/cache";
 
 // Create a new client

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useTransition } from "react";
+import { createOrUpdateOrganization } from "@/actions/auth/create-edit-organizations";
+import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,17 +9,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { Label } from "@radix-ui/react-label";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { createOrUpdateOrganization } from "@/actions/auth/create-edit-organizations";
-import type { serverMessage } from "@/types/ServerMessageType";
-import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { organizationSchema, type OrganizationFormData } from "@/zod/OrganizationZod";
+import { cn } from "@/lib/utils";
+import type { serverMessage } from "@/types/ServerMessageType";
+import { type OrganizationFormData, organizationSchema } from "@/zod/OrganizationZod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Label } from "@radix-ui/react-label";
+import { useEffect, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 
 interface Props {
   organization?: {
@@ -129,7 +129,11 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
 
             <FormItem>
               <Label>Miniatura (Max 200x200)</Label>
-              <UploadButton placeholder="Subir miniatura" crop={false} onChange={handleThumbnailUploadChange} />
+              <UploadButton
+                placeholder="Subir miniatura"
+                crop={false}
+                onChange={handleThumbnailUploadChange}
+              />
               <FormMessage />
             </FormItem>
 

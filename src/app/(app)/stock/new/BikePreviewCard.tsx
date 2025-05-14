@@ -1,10 +1,10 @@
 "use client";
 
-import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { BrandForCombobox } from "./page"; // Importar tipo desde page
-import type { ColorConfig } from "@/types/ColorType";
 import { cn } from "@/lib/utils";
+import type { ColorConfig } from "@/types/ColorType";
+import * as React from "react";
+import type { BrandForCombobox } from "./page"; // Importar tipo desde page
 
 interface MotoPreviewCardProps {
   formData: {

@@ -1,12 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useActionState, startTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { resetPasswordAction } from "@/actions/auth/reset-password";
+import LoadingButton from "@/components/custom/LoadingButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { z } from "zod";
 import {
   Form,
   FormControl,
@@ -15,12 +11,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { resetPasswordSchema } from "@/zod/authZod";
-import LoadingButton from "@/components/custom/LoadingButton";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { resetPasswordAction } from "@/actions/auth/reset-password";
 import type { serverMessage } from "@/types/ServerMessageType";
+import { resetPasswordSchema } from "@/zod/authZod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { Suspense, startTransition, useActionState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 
 function ResetPasswordContent() {
   const router = useRouter();

@@ -1,7 +1,7 @@
 "use server";
 
-import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
 
 // Helper para obtener organizationId (reutilizado)
@@ -12,7 +12,7 @@ async function getOrganizationIdFromSession(): Promise<string | null> {
       sessionExists: !!session,
       userId: session?.user?.id,
       userEmail: session?.user?.email,
-      organizationId: session?.user?.organizationId
+      organizationId: session?.user?.organizationId,
     });
     return session?.user?.organizationId ?? null;
   } catch (error) {
@@ -24,7 +24,7 @@ async function getOrganizationIdFromSession(): Promise<string | null> {
 export async function getOrganization() {
   try {
     const organizationId = await getOrganizationIdFromSession();
-    
+
     if (!organizationId) {
       console.log("❌ No organizationId found in session");
       return null;
@@ -42,4 +42,4 @@ export async function getOrganization() {
     console.error("🔥 ERROR SERVER ACTION (getOrganization):", error);
     return null;
   }
-} 
+}

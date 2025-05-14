@@ -1,15 +1,15 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { unstable_noStore as noStore } from "next/cache";
 import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
 import { getBranchesForOrg } from "./get-branch";
-import { unstable_noStore as noStore } from "next/cache";
 
 // Tipos
 import type { BrandForCombobox } from "@/app/(app)/stock/new/page";
-import { type ColorConfig, ColorType } from "@/types/ColorType"; // Importar ColorType enum
+import type { ColorConfig, ColorType } from "@/types/ColorType"; // Importar ColorType enum
+import type { Brand, Model, MotoColor, Supplier } from "@prisma/client";
 import type { BranchData } from "./get-branch";
-import type { Supplier, Brand, Model, MotoColor } from "@prisma/client";
 
 export async function getFormData() {
   noStore();
@@ -20,32 +20,27 @@ export async function getFormData() {
   }
 
   try {
-    const [
-      brandsData,
-      colorsData,
-      branchesResult,
-      suppliers,
-    ] = await Promise.all([
+    const [brandsData, colorsData, branchesResult, suppliers] = await Promise.all([
       prisma.brand.findMany({
         where: { organizationBrands: { some: { organizationId } } },
         // Seleccionar solo id y name para modelos
-        select: { id: true, name: true, models: { select: { id: true, name: true } } }, 
-        orderBy: { name: 'asc' },
+        select: { id: true, name: true, models: { select: { id: true, name: true } } },
+        orderBy: { name: "asc" },
       }),
       prisma.motoColor.findMany({
         where: { organizationId },
         // Seleccionar los campos necesarios para ColorConfig
-        select: { id: true, name: true, colorOne: true, colorTwo: true, type: true }, 
-        orderBy: { name: 'asc' },
+        select: { id: true, name: true, colorOne: true, colorTwo: true, type: true },
+        orderBy: { name: "asc" },
       }),
       getBranchesForOrg(),
       prisma.supplier.findMany({
         where: { organizationId },
-        orderBy: { legalName: 'asc' },
+        orderBy: { legalName: "asc" },
       }),
     ]);
 
-    // Formatear marcas 
+    // Formatear marcas
     // Usar tipo inferido por Prisma para brand en map
     const availableBrands: BrandForCombobox[] = brandsData.map((brand) => ({
       id: brand.id,
@@ -64,7 +59,7 @@ export async function getFormData() {
 
     // Mapear datos de Prisma a ColorConfig
     const availableColors: ColorConfig[] = colorsData.map((color) => ({
-      id: color.id.toString(), 
+      id: color.id.toString(),
       name: color.name,
       // Convertir string de Prisma a enum ColorType
       type: color.type as ColorType, // Asumir que el string es un valor válido del enum
@@ -78,7 +73,6 @@ export async function getFormData() {
       availableBranches,
       suppliers,
     };
-
   } catch (error) {
     console.error("Error fetching form data:", error);
     throw new Error("No se pudieron cargar los datos necesarios para el formulario.");

@@ -11,4 +11,4 @@ export async function getOrganizationBrands(organizationId: string) {
     where: { organizationId },
     include: { brand: true },
   });
-} 
+}

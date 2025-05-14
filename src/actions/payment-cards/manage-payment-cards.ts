@@ -1,14 +1,14 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import type { ActionState } from "@/types/action-states";
 import { toggleCardSchema } from "@/zod/payment-card-schemas";
 import { revalidatePath } from "next/cache";
-import { type ActionState } from "@/types/action-states";
 
 // Toggle a payment card's enabled status for an organization
 export async function togglePaymentCard(
   organizationId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionState> {
   const rawFormData = {
     cardId: Number(formData.get("cardId")),
@@ -17,9 +17,11 @@ export async function togglePaymentCard(
 
   const validatedFields = toggleCardSchema.safeParse(rawFormData);
   if (!validatedFields.success) {
-    return { 
-      success: false, 
-      error: "Error de validación: " + Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ") 
+    return {
+      success: false,
+      error:
+        "Error de validación: " +
+        Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", "),
     };
   }
 
@@ -27,27 +29,33 @@ export async function togglePaymentCard(
 
   try {
     await prisma.organizationPaymentCard.update({
-      where: { 
+      where: {
         organizationId_cardId: {
           organizationId,
-          cardId
-        }
+          cardId,
+        },
       },
-      data: { isEnabled }
+      data: { isEnabled },
     });
 
     revalidatePath("/configuration");
-    return { success: true, message: `Tarjeta ${isEnabled ? "habilitada" : "deshabilitada"} correctamente.` };
+    return {
+      success: true,
+      message: `Tarjeta ${isEnabled ? "habilitada" : "deshabilitada"} correctamente.`,
+    };
   } catch (error: any) {
     console.error("Error updating payment card status:", error);
-    return { success: false, error: error.message || "Error al actualizar el estado de la tarjeta." };
+    return {
+      success: false,
+      error: error.message || "Error al actualizar el estado de la tarjeta.",
+    };
   }
 }
 
 // Associate a payment card with an organization
 export async function associatePaymentCard(
   organizationId: string,
-  cardId: number
+  cardId: number,
 ): Promise<ActionState> {
   try {
     // Check if association already exists
@@ -55,9 +63,9 @@ export async function associatePaymentCard(
       where: {
         organizationId_cardId: {
           organizationId,
-          cardId
-        }
-      }
+          cardId,
+        },
+      },
     });
 
     if (existingAssociation) {
@@ -68,7 +76,7 @@ export async function associatePaymentCard(
     const highestOrder = await prisma.organizationPaymentCard.findFirst({
       where: { organizationId },
       orderBy: { order: "desc" },
-      select: { order: true }
+      select: { order: true },
     });
 
     // Create the association
@@ -77,8 +85,8 @@ export async function associatePaymentCard(
         organizationId,
         cardId,
         isEnabled: true,
-        order: (highestOrder?.order || -1) + 1
-      }
+        order: (highestOrder?.order || -1) + 1,
+      },
     });
 
     revalidatePath("/configuration");
@@ -92,11 +100,11 @@ export async function associatePaymentCard(
 // Remove a payment card from an organization
 export async function removePaymentCard(
   organizationId: string,
-  organizationCardId: number
+  organizationCardId: number,
 ): Promise<ActionState> {
   try {
     await prisma.organizationPaymentCard.delete({
-      where: { id: organizationCardId }
+      where: { id: organizationCardId },
     });
 
     revalidatePath("/configuration");
@@ -110,22 +118,25 @@ export async function removePaymentCard(
 // Update the order of payment cards for an organization
 export async function updatePaymentCardsOrder(
   organizationId: string,
-  orderData: { id: number; order: number }[]
+  orderData: { id: number; order: number }[],
 ): Promise<ActionState> {
   try {
     await prisma.$transaction(
-      orderData.map(card => 
+      orderData.map((card) =>
         prisma.organizationPaymentCard.update({
           where: { id: card.id },
-          data: { order: card.order }
-        })
-      )
+          data: { order: card.order },
+        }),
+      ),
     );
 
     revalidatePath("/configuration");
     return { success: true, message: "Orden de tarjetas actualizado correctamente." };
   } catch (error: any) {
     console.error("Error updating payment cards order:", error);
-    return { success: false, error: error.message || "Error al actualizar el orden de las tarjetas." };
+    return {
+      success: false,
+      error: error.message || "Error al actualizar el orden de las tarjetas.",
+    };
   }
-} 
+}

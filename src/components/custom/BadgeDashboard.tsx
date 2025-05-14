@@ -1,7 +1,7 @@
-// BadgeDashboard.tsx
-import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+// BadgeDashboard.tsx
+import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 
 export interface BadgeDashboardProps {
   description: string;

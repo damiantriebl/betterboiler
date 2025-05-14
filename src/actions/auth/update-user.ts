@@ -1,9 +1,9 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 import type { serverMessage } from "@/types/ServerMessageType";
-import { getSignedURL } from "../S3/get-signed-url";
+import { revalidatePath } from "next/cache";
 import sharp from "sharp";
+import { getSignedURL } from "../S3/get-signed-url";
 
 export async function updateUserAction(
   prevState: serverMessage,

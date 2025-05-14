@@ -1,6 +1,7 @@
 // src/components/custom/UploadCropperButton.tsx
 "use client";
-import React, { useRef, useState } from "react";
+import type React from "react";
+import { useRef, useState } from "react";
 import ReactCrop, { type Crop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Button } from "@/components/ui/button";
@@ -78,10 +79,7 @@ export default function UploadButton({
     }
   };
 
-  const getCroppedImg = async (
-    image: HTMLImageElement,
-    crop: Crop
-  ): Promise<Blob> => {
+  const getCroppedImg = async (image: HTMLImageElement, crop: Crop): Promise<Blob> => {
     const canvas = document.createElement("canvas");
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
@@ -110,7 +108,7 @@ export default function UploadButton({
       0,
       0,
       crop.width * scaleX,
-      crop.height * scaleY
+      crop.height * scaleY,
     );
 
     return new Promise((resolve, reject) => {
@@ -123,7 +121,7 @@ export default function UploadButton({
           resolve(blob);
         },
         "image/jpeg",
-        1
+        1,
       );
     });
   };
@@ -174,27 +172,14 @@ export default function UploadButton({
       </Button>
       {fileUrl && file && crop && (
         <div className="mt-4">
-          <ReactCrop
-            crop={cropConfig}
-            onChange={(c) => setCropConfig(c)}
-            aspect={aspect}
-          >
+          <ReactCrop crop={cropConfig} onChange={(c) => setCropConfig(c)} aspect={aspect}>
             <img ref={imgRef} src={fileUrl} alt="Preview" />
           </ReactCrop>
           <div className="mt-2 flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={resetUploadState}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" onClick={resetUploadState} disabled={loading}>
               Cancelar
             </Button>
-            <Button
-              type="button"
-              onClick={handleCropComplete}
-              disabled={loading}
-            >
+            <Button type="button" onClick={handleCropComplete} disabled={loading}>
               Recortar y subir
             </Button>
           </div>

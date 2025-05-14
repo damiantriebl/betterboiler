@@ -4,16 +4,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   images: {
     unoptimized: true, // Desactivar la optimización de imágenes completamente
-    domains: ['uknapex.s3.us-east-1.amazonaws.com'], // Mantener por compatibilidad
+    domains: ["uknapex.s3.us-east-1.amazonaws.com"], // Mantener por compatibilidad
   },
   async headers() {
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: '*', // Permitir cualquier origen para las imágenes
+            key: "Access-Control-Allow-Origin",
+            value: "*", // Permitir cualquier origen para las imágenes
           },
         ],
       },

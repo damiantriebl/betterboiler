@@ -1,9 +1,9 @@
 "use server";
-import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import type { serverMessage } from "@/types/ServerMessageType";
-import { v4 as uuidv4 } from "uuid";
+import { revalidatePath } from "next/cache";
 import sharp from "sharp";
+import { v4 as uuidv4 } from "uuid";
 import { uploadBufferToS3 } from "../S3/upload-buffer-to-s3";
 
 export async function createOrUpdateOrganization(formData: FormData): Promise<serverMessage> {
@@ -41,7 +41,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
             .toBuffer();
           const path = `organization/${organizationId}/logo_${size}`;
           return uploadBufferToS3({ buffer: resizedBuffer, path });
-        })
+        }),
       );
       // Use the result of the 400px upload (first in sizes array)
       const result400 = uploadResults[0];
@@ -49,7 +49,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
         // Store the S3 key in the database
         logoUrl = result400.path;
       } else {
-        console.error('Error uploading 400px logo:', result400);
+        console.error("Error uploading 400px logo:", result400);
       }
     }
 
@@ -57,15 +57,18 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
     if (thumbnailFile && organizationId) {
       const thumbnailBuffer = Buffer.from(await thumbnailFile.arrayBuffer());
       const resizedThumbnailBuffer = await sharp(thumbnailBuffer)
-          .resize({ width: 200, height: 200, fit: 'inside', withoutEnlargement: true }) // Redimensionar a max 200x200
-          .webp({ quality: 75 })
-          .toBuffer();
+        .resize({ width: 200, height: 200, fit: "inside", withoutEnlargement: true }) // Redimensionar a max 200x200
+        .webp({ quality: 75 })
+        .toBuffer();
       const thumbnailPath = `organization/${organizationId}/thumbnail_200`;
-      const thumbnailUploadResult = await uploadBufferToS3({ buffer: resizedThumbnailBuffer, path: thumbnailPath });
+      const thumbnailUploadResult = await uploadBufferToS3({
+        buffer: resizedThumbnailBuffer,
+        path: thumbnailPath,
+      });
       if (thumbnailUploadResult.success && thumbnailUploadResult.path) {
         thumbnailUrl = thumbnailUploadResult.path; // Guardar KEY del thumbnail
       } else {
-        console.error('Error uploading 200px thumbnail:', thumbnailUploadResult);
+        console.error("Error uploading 200px thumbnail:", thumbnailUploadResult);
       }
     }
 
@@ -75,11 +78,17 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
       data: {
         name,
         ...(logoUrl && { logo: logoUrl }),
-        ...(thumbnailUrl && { thumbnail: thumbnailUrl })
+        ...(thumbnailUrl && { thumbnail: thumbnailUrl }),
       },
     });
     revalidatePath("/root");
-    return { success: organizationId === id ? "Organización actualizada con éxito." : "Organización creada con éxito.", error: false };
+    return {
+      success:
+        organizationId === id
+          ? "Organización actualizada con éxito."
+          : "Organización creada con éxito.",
+      error: false,
+    };
   } catch (error) {
     console.error("🔥 ERROR SERVER ACTION:", error);
     return { error: (error as Error).message || "Ocurrió un error inesperado.", success: false };

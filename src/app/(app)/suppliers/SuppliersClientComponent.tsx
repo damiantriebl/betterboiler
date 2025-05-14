@@ -1,19 +1,19 @@
 "use client"; // Este es ahora el componente cliente
 
-import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
+import type { Supplier } from "@prisma/client"; // Usar el tipo Supplier de Prisma
+import { PlusCircle } from "lucide-react";
+import React, { useState } from "react";
 import SupplierForm from "./SupplierForm";
 import SupplierTable from "./SupplierTable"; // Necesitamos importar SupplierTable aquí
-import type { Supplier } from "@prisma/client"; // Usar el tipo Supplier de Prisma
 // import { SupplierFormData } from '@/zod/SuppliersZod'; // Ya no necesitamos SupplierFormData aquí
 
 interface SuppliersClientComponentProps {

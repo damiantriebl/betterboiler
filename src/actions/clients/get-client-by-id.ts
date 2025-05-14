@@ -1,7 +1,7 @@
 "use server";
 
-import { cache } from 'react';
 import prisma from "@/lib/prisma";
+import { cache } from "react";
 
 /**
  * Obtiene los detalles de un cliente por su ID.

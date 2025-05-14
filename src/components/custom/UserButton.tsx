@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
 import { LogOut, User as UserIcon } from "lucide-react"; // Iconos
+import Link from "next/link";
+import React from "react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button"; // Para el trigger si prefieres un botón
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,12 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button"; // Para el trigger si prefieres un botón
 import { Skeleton } from "@/components/ui/skeleton"; // Para el estado de carga
 
-import { createAuthClient } from "better-auth/react";
 import { authClient } from "@/auth-client";
+import { createAuthClient } from "better-auth/react";
 import { useRouter } from "next/navigation";
 const { useSession } = createAuthClient();
 

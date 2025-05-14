@@ -1,18 +1,31 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect, useTransition, useCallback, useRef } from "react";
 import {
-  DndContext as ModelDndContext,
-  type DragEndEvent as ModelDragEndEvent,
+  addModelToOrganizationBrand,
+  dissociateOrganizationBrand,
+  renameBrandByDuplication,
+  updateOrganizationModel,
+} from "@/actions/configuration/create-edit-brand";
+import { getModelsByBrandId } from "@/actions/root/get-models-by-brand-id";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { type ModelData, useModelsStore } from "@/stores/models-store";
+import {
   DragOverlay,
   type DragStartEvent,
-  PointerSensor as ModelPointerSensor,
+  DndContext as ModelDndContext,
+  type DragEndEvent as ModelDragEndEvent,
   KeyboardSensor as ModelKeyboardSensor,
+  PointerSensor as ModelPointerSensor,
   closestCorners as modelClosestCorners,
   useSensor as useModelSensor,
   useSensors as useModelSensors,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import {
   SortableContext as ModelSortableContext,
   arrayMove as modelArrayMove,
@@ -20,49 +33,24 @@ import {
   verticalListSortingStrategy as modelVerticalListSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
-import BrandContainer from "./BrandContainer";
-import ModelItem from "./ModelItem";
-import { AddOrSelectModelModal } from "./AddOrSelectModelModal";
 import {
-  Check,
   X as CancelIcon,
-  Palette,
+  Check,
+  Copy,
   GripVertical,
   Loader2,
-  Trash2,
-  Copy,
+  Palette,
   Plus,
+  Trash2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { HexColorPicker } from "react-colorful";
-import {
-  renameBrandByDuplication,
-  dissociateOrganizationBrand,
-  updateOrganizationModel,
-  addModelToOrganizationBrand
-} from "@/actions/configuration/create-edit-brand";
-import { getModelsByBrandId } from "@/actions/root/get-models-by-brand-id";
-import { useModelsStore, type ModelData } from "@/stores/models-store";
-import type {
-  BrandWithDisplayModelsData,
-  DisplayModelData,
-} from "./Interfaces";
+import { AddOrSelectModelModal } from "./AddOrSelectModelModal";
+import BrandContainer from "./BrandContainer";
+import type { BrandWithDisplayModelsData, DisplayModelData } from "./Interfaces";
+import ModelItem from "./ModelItem";
 
 interface SingleBrandColumnProps {
   id: number;
@@ -277,10 +265,10 @@ export default function SingleBrandColumn({
     const newModel: DisplayModelData = {
       id: model.id,
       name: model.name,
-      orgOrder: models.length // Place new model at the end
+      orgOrder: models.length, // Place new model at the end
     };
 
-    setModels(prevModels => [...prevModels, newModel]);
+    setModels((prevModels) => [...prevModels, newModel]);
 
     // Persist the model in the database
     startModelActionTransition(async () => {
@@ -292,16 +280,16 @@ export default function SingleBrandColumn({
 
       if (!result.success) {
         // Revert the local state change if the server action fails
-        setModels(prevModels => prevModels.filter(m => m.id !== model.id));
+        setModels((prevModels) => prevModels.filter((m) => m.id !== model.id));
         toast({
           title: "Error al guardar modelo",
           description: result.error || "No se pudo guardar el modelo en la base de datos",
-          variant: "destructive"
+          variant: "destructive",
         });
       } else {
         toast({
           title: "Modelo añadido",
-          description: `El modelo "${model.name}" ha sido añadido y guardado`
+          description: `El modelo "${model.name}" ha sido añadido y guardado`,
         });
       }
     });
@@ -314,10 +302,10 @@ export default function SingleBrandColumn({
     const formattedModels: DisplayModelData[] = newModels.map((model, index) => ({
       id: model.id,
       name: model.name,
-      orgOrder: models.length + index // Place new models at the end in sequence
+      orgOrder: models.length + index, // Place new models at the end in sequence
     }));
 
-    setModels(prevModels => [...prevModels, ...formattedModels]);
+    setModels((prevModels) => [...prevModels, ...formattedModels]);
 
     // Persist each model in the database
     startModelActionTransition(async () => {
@@ -328,32 +316,34 @@ export default function SingleBrandColumn({
           formData.append("brandId", brandId.toString());
 
           return addModelToOrganizationBrand(null, formData);
-        })
+        }),
       );
 
       // Check if any of the models failed to save
-      const failedModels = results.filter(result => !result.success);
+      const failedModels = results.filter((result) => !result.success);
 
       if (failedModels.length > 0) {
         // Some models failed to save
         toast({
           title: "Error al guardar algunos modelos",
           description: `${failedModels.length} de ${newModels.length} modelos no se pudieron guardar`,
-          variant: "destructive"
+          variant: "destructive",
         });
 
         // Remove the failed models from the local state
         // This is a simplified approach - in a real app you might want to be more precise
         // about which specific models failed
-        setModels(prevModels => {
-          const newModelIds = new Set(newModels.map(m => m.id));
-          return prevModels.filter(m => !newModelIds.has(m.id) || results.some(r => r.success && r.modelId === m.id));
+        setModels((prevModels) => {
+          const newModelIds = new Set(newModels.map((m) => m.id));
+          return prevModels.filter(
+            (m) => !newModelIds.has(m.id) || results.some((r) => r.success && r.modelId === m.id),
+          );
         });
       } else {
         // All models saved successfully
         toast({
           title: "Modelos añadidos",
-          description: `Se han añadido y guardado ${newModels.length} modelos`
+          description: `Se han añadido y guardado ${newModels.length} modelos`,
         });
       }
     });
@@ -362,10 +352,7 @@ export default function SingleBrandColumn({
   const isPending = isPendingAssociationAct || isPendingModelAction || isPendingRenameDup;
 
   const renderColorButton = () => (
-    <Popover
-      open={isColorPickerOpen}
-      onOpenChange={setIsColorPickerOpen}
-    >
+    <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
       <TooltipProvider delayDuration={100}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -387,16 +374,9 @@ export default function SingleBrandColumn({
         </Tooltip>
       </TooltipProvider>
       <PopoverContent className="w-auto p-0" align="end">
-        <HexColorPicker
-          color={tempAssociationColor}
-          onChange={setTempAssociationColor}
-        />
+        <HexColorPicker color={tempAssociationColor} onChange={setTempAssociationColor} />
         <div className="flex justify-end p-2 space-x-2 bg-muted">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancelColor}
-          >
+          <Button variant="ghost" size="sm" onClick={handleCancelColor}>
             Cancelar
           </Button>
           <Button size="sm" onClick={handleApplyColor}>
@@ -455,8 +435,8 @@ export default function SingleBrandColumn({
                   <ModelItem
                     model={activeModel}
                     isOverlay
-                    onUpdate={() => { }}
-                    onDissociate={() => { }}
+                    onUpdate={() => {}}
+                    onDissociate={() => {}}
                   />
                 ) : null}
               </DragOverlay>
@@ -485,7 +465,7 @@ export default function SingleBrandColumn({
         brandName={brandName}
         onModelAdded={handleModelAdded}
         onModelsAdded={handleModelsAdded}
-        existingModelIds={models.map(model => model.id)}
+        existingModelIds={models.map((model) => model.id)}
       />
     </>
   );

@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 async function addCurrentAccountPaymentMethod() {
@@ -6,7 +6,7 @@ async function addCurrentAccountPaymentMethod() {
     // Check if the method already exists
     const existingMethod = await prisma.paymentMethod.findFirst({
       where: {
-        type: 'current_account',
+        type: "current_account",
       },
     });
 
@@ -21,19 +21,18 @@ async function addCurrentAccountPaymentMethod() {
         name: "Cuenta Corriente",
         type: "current_account",
         description: "Pago con cuenta corriente financiada",
-        iconUrl: "/icons/payment-methods/current-account.svg"
+        iconUrl: "/icons/payment-methods/current-account.svg",
       },
     });
 
     console.log('Método de pago "Cuenta Corriente" creado:', newMethod);
     return newMethod;
   } catch (error) {
-    console.error('Error al crear método de pago:', error);
+    console.error("Error al crear método de pago:", error);
     throw error;
   } finally {
     await prisma.$disconnect();
   }
 }
 
-addCurrentAccountPaymentMethod()
-  .catch(console.error); 
+addCurrentAccountPaymentMethod().catch(console.error);

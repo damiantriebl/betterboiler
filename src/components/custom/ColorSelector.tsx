@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+// Asegúrate que la ruta a types.ts sea correcta
+import { Badge } from "@/components/ui/badge"; // <-- Importar Badge
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -13,9 +12,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-// Asegúrate que la ruta a types.ts sea correcta
-import { Badge } from "@/components/ui/badge"; // <-- Importar Badge
+import { cn } from "@/lib/utils";
 import type { ColorConfig } from "@/types/ColorType";
+import { Check, ChevronsUpDown } from "lucide-react";
+import * as React from "react";
 // Importar ColorItem
 import ColorItem from "./ColorItem";
 

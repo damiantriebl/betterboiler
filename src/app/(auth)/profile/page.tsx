@@ -1,7 +1,7 @@
+import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
 import { headers } from "next/headers";
 import ProfileForm from "./profileForm";
-import prisma from "@/lib/prisma";
-import { auth } from "@/auth";
 
 export default async function ProfilePage() {
   const session = await auth.api.getSession({

@@ -7,4 +7,4 @@ export interface ReservationReport {
   }[];
   totalReservations: number;
   totalAmount: number;
-} 
+}

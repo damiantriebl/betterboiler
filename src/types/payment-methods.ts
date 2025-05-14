@@ -3,7 +3,16 @@
 export interface PaymentMethod {
   id: number;
   name: string;
-  type: 'cash' | 'credit' | 'debit' | 'transfer' | 'check' | 'deposit' | 'mercadopago' | 'qr' | string;
+  type:
+    | "cash"
+    | "credit"
+    | "debit"
+    | "transfer"
+    | "check"
+    | "deposit"
+    | "mercadopago"
+    | "qr"
+    | string;
   description: string;
   iconUrl?: string | null;
 }
@@ -22,4 +31,4 @@ export interface OrganizationPaymentMethodDisplay {
   order: number;
   isEnabled: boolean;
   card: PaymentMethod;
-} 
+}

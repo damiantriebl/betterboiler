@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import type { BranchData } from "@/actions/stock/get-branch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -11,12 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ColorConfig } from "@/types/ColorType";
-import type { BranchData } from "@/actions/stock/get-branch";
-import type { Supplier } from "@prisma/client";
-import type { BrandForCombobox } from "./page"; // Asume que este tipo está en page.tsx
-import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Importar componentes de Tooltip
+import type { ColorConfig } from "@/types/ColorType";
+import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
+import type { Supplier } from "@prisma/client";
+import React from "react";
+import type { BrandForCombobox } from "./page"; // Asume que este tipo está en page.tsx
 
 // Interfaz para las props del Preview
 interface BatchPreviewProps {

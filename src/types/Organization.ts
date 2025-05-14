@@ -4,4 +4,4 @@ export type Organization = {
   logo?: string | null;
   createdAt: Date;
   updatedAt: Date;
-}; 
+};

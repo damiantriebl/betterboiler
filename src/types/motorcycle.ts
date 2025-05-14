@@ -1,4 +1,13 @@
-import { type Motorcycle, type Brand, type Model, type Sucursal, type MotoColor, type Reservation, type ModelFile, MotorcycleState } from "@prisma/client";
+import {
+  type Brand,
+  type Model,
+  type ModelFile,
+  type MotoColor,
+  type Motorcycle,
+  MotorcycleState,
+  type Reservation,
+  type Sucursal,
+} from "@prisma/client";
 
 export interface ModelFileWithUrl {
   id: string;
@@ -28,10 +37,12 @@ export interface ReservationWithDetails extends Reservation {
 
 export interface MotorcycleWithDetails extends Motorcycle {
   brand?: Brand | null;
-  model?: (Model & {
-    imageUrl?: string | null;
-    files?: ModelFileWithUrl[];
-  }) | null;
+  model?:
+    | (Model & {
+        imageUrl?: string | null;
+        files?: ModelFileWithUrl[];
+      })
+    | null;
   branch?: Sucursal | null;
   color?: MotoColor | null;
   reservations?: ReservationWithDetails[];
@@ -39,7 +50,7 @@ export interface MotorcycleWithDetails extends Motorcycle {
 }
 
 export interface MotorcycleWithFullDetails extends MotorcycleWithDetails {
-  brand?: Brand & { organizationBrands?: { color: string }[] } | null;
+  brand?: (Brand & { organizationBrands?: { color: string }[] }) | null;
 }
 
 export interface MotorcycleWithActions extends MotorcycleWithDetails {
@@ -60,4 +71,4 @@ export const estadoVentaConfig: Record<MotorcycleState, { label: string; classNa
   [MotorcycleState.PROCESANDO]: { label: "En Proceso", className: "text-purple-600" },
   [MotorcycleState.VENDIDO]: { label: "Vendido", className: "text-gray-600" },
   [MotorcycleState.ELIMINADO]: { label: "Eliminado", className: "text-red-600" },
-}; 
+};

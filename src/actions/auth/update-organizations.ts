@@ -1,7 +1,7 @@
 "use server";
-import { revalidatePath } from "next/cache";
-import type { serverMessage } from "@/types/ServerMessageType";
 import prisma from "@/lib/prisma";
+import type { serverMessage } from "@/types/ServerMessageType";
+import { revalidatePath } from "next/cache";
 
 export async function updateOrganization(
   prevState: { success: string | false; error: string | false },

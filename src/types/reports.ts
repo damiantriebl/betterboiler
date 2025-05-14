@@ -1,4 +1,4 @@
-import { Motorcycle, MotorcycleState } from "@prisma/client";
+import type { Motorcycle, MotorcycleState } from "@prisma/client";
 import type { DateRange as DayPickerDateRange } from "react-day-picker";
 
 export type DateRange = DayPickerDateRange;
@@ -188,4 +188,4 @@ export interface MotorcycleWithRelations extends Motorcycle {
     name: string;
   } | null;
   soldAt?: Date | null;
-} 
+}

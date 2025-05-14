@@ -1,12 +1,12 @@
 "use server";
 
 import { auth } from "@/auth";
-import { PrismaClient } from "@prisma/client";
-import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
-import sharp from "sharp";
-import { uploadToS3, deleteFromS3 } from "@/lib/s3";
+import { deleteFromS3, uploadToS3 } from "@/lib/s3";
 import type { ActionState } from "@/types/action-states";
+import { PrismaClient } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import sharp from "sharp";
 
 const prisma = new PrismaClient();
 
@@ -23,12 +23,17 @@ interface FileUploadResult {
 async function _getAuthenticatedSession() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
-    return { success: false, error: "No autorizado. Debe iniciar sesión para realizar esta acción." };
+    return {
+      success: false,
+      error: "No autorizado. Debe iniciar sesión para realizar esta acción.",
+    };
   }
   return { success: true, session };
 }
 
-export async function uploadModelFiles(formData: FormData): Promise<ActionState & { files?: FileUploadResult[] }> {
+export async function uploadModelFiles(
+  formData: FormData,
+): Promise<ActionState & { files?: FileUploadResult[] }> {
   try {
     const authResult = await _getAuthenticatedSession();
     if (!authResult.success) {
@@ -41,7 +46,7 @@ export async function uploadModelFiles(formData: FormData): Promise<ActionState 
     }
 
     const model = await prisma.model.findUnique({
-      where: { id: parseInt(modelId) },
+      where: { id: Number.parseInt(modelId) },
       include: { brand: true },
     });
 
@@ -52,7 +57,7 @@ export async function uploadModelFiles(formData: FormData): Promise<ActionState 
     const brandNameSanitized = model.brand.name.toLowerCase().replace(/[^a-z0-9-]/g, "-");
     const modelNameSanitized = model.name.toLowerCase().replace(/[^a-z0-9-]/g, "-");
     const basePath = `models/${brandNameSanitized}/${modelNameSanitized}`;
-    
+
     const uploadedFiles: FileUploadResult[] = [];
     const uploadPromises: Promise<void>[] = [];
 
@@ -61,19 +66,20 @@ export async function uploadModelFiles(formData: FormData): Promise<ActionState 
 
       const file = value;
       const isImage = file.type.startsWith("image/");
-      const isPDF = file.type === "application/pdf" || 
-                    (file.name.toLowerCase().endsWith('.pdf') && file.type === "application/octet-stream");
-      
+      const isPDF =
+        file.type === "application/pdf" ||
+        (file.name.toLowerCase().endsWith(".pdf") && file.type === "application/octet-stream");
+
       if (isImage) {
         const buffer = Buffer.from(await file.arrayBuffer());
         const fileName = file.name.split(".")[0];
-        
+
         // Crear versión grande (800px)
         const largeBuffer = await sharp(buffer)
           .resize(800, null, { withoutEnlargement: true })
           .webp({ quality: 80 })
           .toBuffer();
-        
+
         // Crear versión pequeña (400px)
         const smallBuffer = await sharp(buffer)
           .resize(400, null, { withoutEnlargement: true })
@@ -82,19 +88,19 @@ export async function uploadModelFiles(formData: FormData): Promise<ActionState 
 
         const uploadPromise = Promise.all([
           uploadToS3(largeBuffer, `${basePath}/images/${fileName}_800.webp`, "image/webp"),
-          uploadToS3(smallBuffer, `${basePath}/images/${fileName}_400.webp`, "image/webp")
+          uploadToS3(smallBuffer, `${basePath}/images/${fileName}_400.webp`, "image/webp"),
         ]).then(async ([largeResult, smallResult]) => {
           if (largeResult.success) {
             const createdFile = await prisma.modelFile.create({
               data: {
-                modelId: parseInt(modelId),
+                modelId: Number.parseInt(modelId),
                 name: file.name,
                 type: "image",
                 url: largeResult.url,
                 size: largeBuffer.length,
                 s3Key: largeResult.key,
                 s3KeySmall: smallResult.success ? smallResult.key : null,
-              }
+              },
             });
 
             uploadedFiles.push({
@@ -111,26 +117,32 @@ export async function uploadModelFiles(formData: FormData): Promise<ActionState 
         uploadPromises.push(uploadPromise);
       } else if (isPDF) {
         const buffer = Buffer.from(await file.arrayBuffer());
-        
+
         // Verificación adicional del tipo MIME para PDF
         if (file.type !== "application/pdf") {
           if (file.type === "application/octet-stream") {
             throw new Error(`MIME desconocido para archivo: ${file.name}`);
           }
-          throw new Error(`Tipo de archivo no válido para PDF: ${file.type}. Solo se aceptan archivos PDF.`);
+          throw new Error(
+            `Tipo de archivo no válido para PDF: ${file.type}. Solo se aceptan archivos PDF.`,
+          );
         }
-        
-        const uploadPromise = uploadToS3(buffer, `${basePath}/specs/${file.name}`, "application/pdf").then(async (result) => {
+
+        const uploadPromise = uploadToS3(
+          buffer,
+          `${basePath}/specs/${file.name}`,
+          "application/pdf",
+        ).then(async (result) => {
           if (result.success) {
             const createdFile = await prisma.modelFile.create({
               data: {
-                modelId: parseInt(modelId),
+                modelId: Number.parseInt(modelId),
                 name: file.name,
                 type: "spec",
                 url: result.url,
                 size: file.size,
                 s3Key: result.key,
-              }
+              },
             });
 
             uploadedFiles.push({
@@ -156,7 +168,6 @@ export async function uploadModelFiles(formData: FormData): Promise<ActionState 
       message: `${uploadedFiles.length} archivo(s) subido(s) correctamente`,
       files: uploadedFiles,
     };
-
   } catch (error) {
     console.error("Error en uploadModelFiles:", error);
     return {
@@ -166,7 +177,9 @@ export async function uploadModelFiles(formData: FormData): Promise<ActionState 
   }
 }
 
-export async function getModelFiles(modelId: number): Promise<ActionState & { files?: FileUploadResult[] }> {
+export async function getModelFiles(
+  modelId: number,
+): Promise<ActionState & { files?: FileUploadResult[] }> {
   try {
     const authResult = await _getAuthenticatedSession();
     if (!authResult.success) {
@@ -180,7 +193,7 @@ export async function getModelFiles(modelId: number): Promise<ActionState & { fi
 
     return {
       success: true,
-      files: files.map(file => ({
+      files: files.map((file) => ({
         id: file.id,
         url: file.url,
         name: file.name,
@@ -189,7 +202,6 @@ export async function getModelFiles(modelId: number): Promise<ActionState & { fi
         createdAt: file.createdAt,
       })),
     };
-
   } catch (error) {
     console.error("Error en getModelFiles:", error);
     return {
@@ -232,7 +244,6 @@ export async function deleteModelFile(fileId: string): Promise<ActionState> {
       success: true,
       message: "Archivo eliminado correctamente",
     };
-
   } catch (error) {
     console.error("Error en deleteModelFile:", error);
     return {
@@ -240,4 +251,4 @@ export async function deleteModelFile(fileId: string): Promise<ActionState> {
       error: error instanceof Error ? error.message : "Error desconocido al eliminar archivo",
     };
   }
-} 
+}

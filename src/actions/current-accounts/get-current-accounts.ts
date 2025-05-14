@@ -1,15 +1,25 @@
-'use server';
+"use server";
 
-import db from '@/lib/prisma';
-import type { ActionState } from '@/types/action-states';
+import db from "@/lib/prisma";
+import type { ActionState } from "@/types/action-states";
 // Import Prisma namespace along with types
-import { Prisma, type CurrentAccount, type Client, type Motorcycle, type Model, type Payment, type PaymentFrequency as PrismaPaymentFrequency, type CurrentAccountStatus as PrismaCurrentAccountStatus } from '@prisma/client';
+import {
+  type Client,
+  type CurrentAccount,
+  type Model,
+  type Motorcycle,
+  type Payment,
+  Prisma,
+  type CurrentAccountStatus as PrismaCurrentAccountStatus,
+  type PaymentFrequency as PrismaPaymentFrequency,
+} from "@prisma/client";
 
 // Define a more specific type for the returned accounts, including relations
 export type CurrentAccountWithDetails = CurrentAccount & {
-  client: Pick<Client, 'id' | 'firstName' | 'lastName'>;
-  motorcycle?: Motorcycle & { // Motorcycle is now optional if relation can be null
-    model: Pick<Model, 'id' | 'name'>; // Model is nested within Motorcycle
+  client: Pick<Client, "id" | "firstName" | "lastName">;
+  motorcycle?: Motorcycle & {
+    // Motorcycle is now optional if relation can be null
+    model: Pick<Model, "id" | "name">; // Model is nested within Motorcycle
   };
   // Include payments to show paid installments
   payments: Payment[];
@@ -60,9 +70,11 @@ export async function getCurrentAccounts(
         client: {
           select: { id: true, firstName: true, lastName: true },
         },
-        motorcycle: { // Changed from model to motorcycle
+        motorcycle: {
+          // Changed from model to motorcycle
           include: {
-            model: { // Include the model related to the motorcycle
+            model: {
+              // Include the model related to the motorcycle
               select: { id: true, name: true },
             },
           },
@@ -71,7 +83,7 @@ export async function getCurrentAccounts(
         // organization: true, // Optionally include organization if needed
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -85,19 +97,19 @@ export async function getCurrentAccounts(
   } catch (error) {
     console.error("Error fetching current accounts:", error);
     if (error instanceof Prisma.PrismaClientValidationError) {
-        return {
-            success: false,
-            error: "Error de validación de Prisma al obtener cuentas corrientes: " + error.message,
-        };
+      return {
+        success: false,
+        error: "Error de validación de Prisma al obtener cuentas corrientes: " + error.message,
+      };
     }
     // Handle generic errors
     let errorMessage = "Error desconocido al obtener las cuentas corrientes.";
     if (error instanceof Error) {
-        errorMessage = error.message;
+      errorMessage = error.message;
     }
     return {
       success: false,
       error: errorMessage,
     };
   }
-} 
+}

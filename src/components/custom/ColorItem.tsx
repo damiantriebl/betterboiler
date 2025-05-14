@@ -1,29 +1,29 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful"; // Asegúrate de que la importación sea correcta
 
-import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Importar Popover
-import {
-  GripVertical,
-  Edit,
-  Trash2,
-  Palette,
-  Copy,
-  Replace,
-  Check,
-  X as CancelIcon,
-  Loader2,
-  Clock,
-} from "lucide-react"; // Añadir iconos y Clock
 import { cn } from "@/lib/utils";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
+import {
+  X as CancelIcon,
+  Check,
+  Clock,
+  Copy,
+  Edit,
+  GripVertical,
+  Loader2,
+  Palette,
+  Replace,
+  Trash2,
+} from "lucide-react"; // Añadir iconos y Clock
 
 interface ColorItemProps {
   colorConfig: ColorConfig;

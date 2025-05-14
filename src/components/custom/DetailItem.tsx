@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface DetailItemProps {
   label: string;
@@ -7,7 +7,7 @@ interface DetailItemProps {
 
 export const DetailItem: React.FC<DetailItemProps> = ({ label, value }) => (
   <div>
-    <span className="text-sm font-medium text-muted-foreground">{label}:</span>{' '}
-    <span className="text-sm">{value ?? 'N/A'}</span>
+    <span className="text-sm font-medium text-muted-foreground">{label}:</span>{" "}
+    <span className="text-sm">{value ?? "N/A"}</span>
   </div>
 );

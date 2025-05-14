@@ -1,40 +1,40 @@
 "use client";
 
-import React, { useState, useEffect, useActionState, useTransition, useOptimistic } from "react";
+import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
   type DragEndEvent,
-  PointerSensor,
   KeyboardSensor,
+  PointerSensor,
   closestCorners,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useEffect, useActionState, useTransition, useOptimistic } from "react";
 
 import AddColorItem from "./AddColorItem";
 
 import {
-  createMotoColor,
-  updateMotoColor,
-  deleteMotoColor,
-  updateMotoColorsOrder,
   type CreateColorState,
-  type UpdateColorActionState,
   type DeleteColorState,
+  type UpdateColorActionState,
   type UpdateColorsOrderState,
+  createMotoColor,
+  deleteMotoColor,
+  updateMotoColor,
+  updateMotoColorsOrder,
 } from "@/actions/configuration/manage-colors";
 import ColorItem from "@/components/custom/ColorItem";
-import { type ColorConfig, ColorType } from "@/types/ColorType";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Palette, Info } from "lucide-react";
+import { type ColorConfig, ColorType } from "@/types/ColorType";
+import { Info, Palette } from "lucide-react";
 
 interface OptimisticColorConfig extends ColorConfig {
   isPending?: boolean;
@@ -56,8 +56,8 @@ export default function ManageColors({
   const [deletingColorId, setDeletingColorId] = useState<number | null>(null);
 
   // Separar colores globales y personalizados
-  const globalColors = actualColors.filter(color => color.isGlobal);
-  const customColors = actualColors.filter(color => !color.isGlobal);
+  const globalColors = actualColors.filter((color) => color.isGlobal);
+  const customColors = actualColors.filter((color) => !color.isGlobal);
 
   const [optimisticColors, addOptimisticColor] = useOptimistic<
     OptimisticColorConfig[],
@@ -233,8 +233,7 @@ export default function ManageColors({
     formData.append("name", updatedColorData.name);
     formData.append("type", updatedColorData.type);
     formData.append("colorOne", updatedColorData.colorOne || "#ffffff");
-    if (updatedColorData.colorTwo)
-      formData.append("colorTwo", updatedColorData.colorTwo);
+    if (updatedColorData.colorTwo) formData.append("colorTwo", updatedColorData.colorTwo);
     formData.append("organizationId", organizationId);
 
     updateAction(formData);
@@ -251,7 +250,7 @@ export default function ManageColors({
     }
 
     // No permitir eliminar colores globales
-    const colorToDelete = actualColors.find(c => c.dbId === colorId);
+    const colorToDelete = actualColors.find((c) => c.dbId === colorId);
     if (colorToDelete?.isGlobal) {
       toast({
         variant: "destructive",
@@ -334,14 +333,8 @@ export default function ManageColors({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {globalColors.map((color) => (
-                <div
-                  key={color.id}
-                  className="p-3 border rounded-md bg-muted/20 flex items-center"
-                >
-                  <ColorItem
-                    colorConfig={color}
-                    displayMode={true}
-                  />
+                <div key={color.id} className="p-3 border rounded-md bg-muted/20 flex items-center">
+                  <ColorItem colorConfig={color} displayMode={true} />
                   <div className="ml-2 text-xs text-muted-foreground flex items-center">
                     <Info className="h-3 w-3 mr-1" />
                     Global

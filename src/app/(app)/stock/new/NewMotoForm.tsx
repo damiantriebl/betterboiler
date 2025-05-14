@@ -1,19 +1,21 @@
 "use client";
 
-import React, { useCallback } from "react";
+import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
+import type { BranchData } from "@/actions/stock/get-branch";
+import { BrandModelCombobox } from "@/components/custom/BrandModelCombobox";
+import { ColorSelector } from "@/components/custom/ColorSelector";
+import { SucursalSelector } from "@/components/custom/SucursalSelector";
+import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  type Control,
-  type UseFormSetValue,
-  type UseFormClearErrors,
-  type UseFormGetValues,
-  type FormState,
-  type FieldValues,
-  type FieldErrors,
-  type UseFormStateReturn,
-  useFieldArray,
-  type UseFormReturn,
-  type ControllerRenderProps,
-} from "react-hook-form";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -31,36 +33,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import UploadButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
-import { Loader2, Plus, Trash2, Info, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { BrandModelCombobox } from "@/components/custom/BrandModelCombobox";
-import { ColorSelector } from "@/components/custom/ColorSelector";
-import type { BranchData } from "@/actions/stock/get-branch";
-import { SucursalSelector } from "@/components/custom/SucursalSelector";
-import type { BrandForCombobox, ModelInfo } from "./page";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import type { ColorConfig } from "@/types/ColorType";
 import type {
   UnitIdentificationFormData as IdentificacionData,
   MotorcycleBatchFormData,
 } from "@/zod/NewBikeZod";
-import { z } from "zod";
 import type { Supplier } from "@prisma/client";
 import { MotorcycleState } from "@prisma/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, Info, Loader2, Plus, Trash2 } from "lucide-react";
+import React, { useCallback } from "react";
 import { useActionState } from "react";
-import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
+import {
+  type Control,
+  type ControllerRenderProps,
+  type FieldErrors,
+  type FieldValues,
+  type FormState,
+  type UseFormClearErrors,
+  type UseFormGetValues,
+  type UseFormReturn,
+  type UseFormSetValue,
+  type UseFormStateReturn,
+  useFieldArray,
+} from "react-hook-form";
+import { z } from "zod";
+import type { BrandForCombobox, ModelInfo } from "./page";
 
 // Tipos inferidos de react-hook-form para los field arrays
 type UnitField = IdentificacionData & { id: string }; // react-hook-form añade un 'id' propio
@@ -76,9 +76,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-      value === undefined ||
-      (Array.isArray(value) && value.length === 0) ||
-      value === "" ? (
+    value === undefined ||
+    (Array.isArray(value) && value.length === 0) ||
+    value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -173,17 +173,21 @@ export function NewMotoForm({
         modelId: initialData.modelId,
         year: initialData.year,
         displacement: initialData.displacement,
-        units: initialData.id ? [{
-          idTemporal: initialData.id,
-          chassisNumber: initialData.chassisNumber,
-          engineNumber: initialData.engineNumber ?? "",
-          colorId: initialData.colorId,
-          mileage: initialData.mileage,
-          branchId: initialData.branchId,
-          state: initialData.state,
-          licensePlate: initialData.licensePlate ?? "",
-          observations: initialData.observations ?? "",
-        }] : [],
+        units: initialData.id
+          ? [
+              {
+                idTemporal: initialData.id,
+                chassisNumber: initialData.chassisNumber,
+                engineNumber: initialData.engineNumber ?? "",
+                colorId: initialData.colorId,
+                mileage: initialData.mileage,
+                branchId: initialData.branchId,
+                state: initialData.state,
+                licensePlate: initialData.licensePlate ?? "",
+                observations: initialData.observations ?? "",
+              },
+            ]
+          : [],
         currency: initialData.currency,
         costPrice: initialData.costPrice,
         wholesalePrice: initialData.wholesalePrice,
@@ -191,12 +195,20 @@ export function NewMotoForm({
         imageUrl: initialData.imageUrl,
         supplierId: initialData.supplierId ?? null,
       });
-      const initialBrand = availableBrands.find(b => b.id === initialData.brandId);
-      if (initialBrand) setValue('brandId', initialBrand.id);
+      const initialBrand = availableBrands.find((b) => b.id === initialData.brandId);
+      if (initialBrand) setValue("brandId", initialBrand.id);
     } else if (unitFields.length === 0) {
       addIdentificacion();
     }
-  }, [isEditing, initialData, form, addIdentificacion, unitFields.length, availableBrands, setValue]);
+  }, [
+    isEditing,
+    initialData,
+    form,
+    addIdentificacion,
+    unitFields.length,
+    availableBrands,
+    setValue,
+  ]);
 
   const handleNextTab = () => {
     const currentIndex = TABS_ORDER.indexOf(activeTab);

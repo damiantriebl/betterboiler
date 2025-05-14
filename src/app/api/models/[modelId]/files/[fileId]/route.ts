@@ -1,19 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { deleteFromS3 } from "@/lib/s3";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { modelId: string; fileId: string } }
+  context: { params: { modelId: string; fileId: string } },
 ) {
   try {
-    const modelId = parseInt(context.params.modelId);
+    const modelId = Number.parseInt(context.params.modelId);
 
     if (isNaN(modelId)) {
-      return NextResponse.json(
-        { error: "ID inválido" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
     // Get file info before deleting
@@ -22,10 +19,7 @@ export async function DELETE(
     });
 
     if (!file) {
-      return NextResponse.json(
-        { error: "Archivo no encontrado" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
     }
 
     // Delete from S3
@@ -44,9 +38,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting model file:", error);
-    return NextResponse.json(
-      { error: "Error al eliminar archivo" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error al eliminar archivo" }, { status: 500 });
   }
-} 
+}

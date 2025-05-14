@@ -24,4 +24,4 @@ export const updateReservationStatusSchema = z.object({
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
 
 // Tipo para la actualización del estado de la reserva
-export type UpdateReservationStatusInput = z.infer<typeof updateReservationStatusSchema>; 
+export type UpdateReservationStatusInput = z.infer<typeof updateReservationStatusSchema>;

@@ -1,4 +1,6 @@
-
+import CreateOrEditOrganization from "@/app/(app)/root/CreateOrEditOrganization";
+import DeleteOrganizationButton from "@/app/(app)/root/DeleteOrganizationButton";
+import OrganizationLogo from "@/components/custom/OrganizationLogo";
 import {
   Table,
   TableBody,
@@ -8,9 +10,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import prisma from "@/lib/prisma";
-import OrganizationLogo from "@/components/custom/OrganizationLogo";
-import CreateOrEditOrganization from "@/app/(app)/root/CreateOrEditOrganization";
-import DeleteOrganizationButton from "@/app/(app)/root/DeleteOrganizationButton";
 
 export default async function OrganizationTable() {
   const organizations = await prisma.organization.findMany({
@@ -19,8 +18,8 @@ export default async function OrganizationTable() {
       name: true,
       slug: true,
       logo: true,
-      thumbnail: true
-    }
+      thumbnail: true,
+    },
   });
   return (
     <Table>

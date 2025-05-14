@@ -1,7 +1,6 @@
 // app/current-accounts/components/CurrentAccountsTable.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
 import type { CurrentAccountWithDetails } from "@/actions/current-accounts/get-current-accounts";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,14 +16,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { CurrentAccountStatus, Payment, PaymentFrequency } from "@prisma/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertCircle, Calendar, Car, Clock, CreditCard, DollarSign, RefreshCw, User, FileText } from "lucide-react";
-import PaymentModal from "./PaymentModal";
-import AnnulPaymentButton from "./AnnulPaymentButton";
+import {
+  AlertCircle,
+  Calendar,
+  Car,
+  Clock,
+  CreditCard,
+  DollarSign,
+  FileText,
+  RefreshCw,
+  User,
+} from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type Payment, type CurrentAccountStatus, type PaymentFrequency } from "@prisma/client";
-import Link from 'next/link';
+import React, { useState, useEffect } from "react";
+import AnnulPaymentButton from "./AnnulPaymentButton";
+import PaymentModal from "./PaymentModal";
 
 // Función para formatear montos como pesos argentinos (redondeado hacia arriba)
 const formatCurrency = (amount: number) => {
@@ -96,19 +106,25 @@ interface InstallmentInfo {
 
   // Campos del sistema francés
   capitalAtPeriodStart?: number;
-  amortization?: number;         // Capital pagado en esta cuota
-  interestForPeriod?: number;    // Interés pagado en esta cuota
+  amortization?: number; // Capital pagado en esta cuota
+  interestForPeriod?: number; // Interés pagado en esta cuota
   calculatedInstallmentAmount?: number; // Cuota fija según sistema francés
 }
 
 function getPeriodsPerYear(frequency: PaymentFrequency): number {
   switch (frequency) {
-    case 'WEEKLY': return 52;
-    case 'BIWEEKLY': return 26;
-    case 'MONTHLY': return 12;
-    case 'QUARTERLY': return 4;
-    case 'ANNUALLY': return 1;
-    default: return 12; // Default a mensual
+    case "WEEKLY":
+      return 52;
+    case "BIWEEKLY":
+      return 26;
+    case "MONTHLY":
+      return 12;
+    case "QUARTERLY":
+      return 4;
+    case "ANNUALLY":
+      return 1;
+    default:
+      return 12; // Default a mensual
   }
 }
 
@@ -116,7 +132,7 @@ function calculateFrenchAmortizationSchedule(
   principal: number,
   annualInterestRatePercent: number,
   numberOfInstallments: number,
-  paymentFrequency: PaymentFrequency
+  paymentFrequency: PaymentFrequency,
 ): AmortizationScheduleEntry[] {
   if (principal <= 0 || numberOfInstallments <= 0 || annualInterestRatePercent < 0) return [];
 
@@ -135,7 +151,7 @@ function calculateFrenchAmortizationSchedule(
         interestForPeriod: 0,
         amortization: amort,
         calculatedInstallmentAmount: amort,
-        capitalAtPeriodEnd: Math.max(0, cap - amort)
+        capitalAtPeriodEnd: Math.max(0, cap - amort),
       });
       cap = Math.max(0, cap - amort);
     }
@@ -143,7 +159,7 @@ function calculateFrenchAmortizationSchedule(
   }
 
   const factor = Math.pow(1 + i, numberOfInstallments);
-  const raw = principal * (i * factor) / (factor - 1);
+  const raw = (principal * (i * factor)) / (factor - 1);
   const fixed = Math.ceil(raw);
 
   for (let k = 1; k <= numberOfInstallments; k++) {
@@ -165,7 +181,7 @@ function calculateFrenchAmortizationSchedule(
       interestForPeriod: interest,
       amortization: amort,
       calculatedInstallmentAmount: instAmt,
-      capitalAtPeriodEnd: capEnd
+      capitalAtPeriodEnd: capEnd,
     });
 
     cap = capEnd;
@@ -176,19 +192,33 @@ function calculateFrenchAmortizationSchedule(
 
 const generateInstallments = (
   account: CurrentAccountWithDetails,
-  annulledPaymentIds: Set<string>
+  annulledPaymentIds: Set<string>,
 ): InstallmentInfo[] => {
   // Calculamos fecha de vencimiento según frecuencia de pago y número de cuota
-  const calculateDueDate = (startDate: Date, frequency: PaymentFrequency, installmentNumber: number): Date => {
+  const calculateDueDate = (
+    startDate: Date,
+    frequency: PaymentFrequency,
+    installmentNumber: number,
+  ): Date => {
     const dueDate = new Date(startDate);
     const idx = installmentNumber - 1; // Ajustar índice (las cuotas empiezan en 1)
 
     switch (frequency) {
-      case 'WEEKLY': dueDate.setDate(dueDate.getDate() + 7 * idx); break;
-      case 'BIWEEKLY': dueDate.setDate(dueDate.getDate() + 14 * idx); break;
-      case 'MONTHLY': dueDate.setMonth(dueDate.getMonth() + idx); break;
-      case 'QUARTERLY': dueDate.setMonth(dueDate.getMonth() + 3 * idx); break;
-      case 'ANNUALLY': dueDate.setFullYear(dueDate.getFullYear() + idx); break;
+      case "WEEKLY":
+        dueDate.setDate(dueDate.getDate() + 7 * idx);
+        break;
+      case "BIWEEKLY":
+        dueDate.setDate(dueDate.getDate() + 14 * idx);
+        break;
+      case "MONTHLY":
+        dueDate.setMonth(dueDate.getMonth() + idx);
+        break;
+      case "QUARTERLY":
+        dueDate.setMonth(dueDate.getMonth() + 3 * idx);
+        break;
+      case "ANNUALLY":
+        dueDate.setFullYear(dueDate.getFullYear() + idx);
+        break;
     }
 
     return dueDate;
@@ -198,11 +228,12 @@ const generateInstallments = (
   const startDate = new Date(account.startDate);
 
   // CAMBIO: Filtrar pagos válidos (no anulados, no D/H, no pendientes)
-  const validPayments = account.payments.filter(p =>
-    p.installmentVersion !== 'D' &&
-    p.installmentVersion !== 'H' &&
-    !annulledPaymentIds.has(p.id || '') &&
-    !p.notes?.includes("Cuota pendiente tras anulación")
+  const validPayments = account.payments.filter(
+    (p) =>
+      p.installmentVersion !== "D" &&
+      p.installmentVersion !== "H" &&
+      !annulledPaymentIds.has(p.id || "") &&
+      !p.notes?.includes("Cuota pendiente tras anulación"),
   );
 
   // Obtener pagos por número de cuota (solo los válidos)
@@ -217,14 +248,19 @@ const generateInstallments = (
   }
 
   // Calcular cuánto se ha pagado efectivamente
-  const paidInstallments = Object.keys(validPaymentsByInstallment).map(Number).sort((a, b) => a - b);
+  const paidInstallments = Object.keys(validPaymentsByInstallment)
+    .map(Number)
+    .sort((a, b) => a - b);
   const lastPaidInstallment = paidInstallments.length > 0 ? Math.max(...paidInstallments) : 0;
 
   // Crear plan de amortización considerando solo los pagos válidos
   let originalPlan: AmortizationScheduleEntry[];
 
   // Calcular monto total efectivamente pagado (excluyendo pagos anulados y asientos D/H)
-  const totalValidPaymentAmount = validPayments.reduce((sum, payment) => sum + payment.amountPaid, 0);
+  const totalValidPaymentAmount = validPayments.reduce(
+    (sum, payment) => sum + payment.amountPaid,
+    0,
+  );
 
   // Si no hay pagos válidos (todos fueron anulados) o no hay pagos
   if (totalValidPaymentAmount === 0) {
@@ -233,7 +269,7 @@ const generateInstallments = (
       financialPrincipal,
       account.interestRate ?? 0,
       account.numberOfInstallments,
-      account.paymentFrequency as PaymentFrequency
+      account.paymentFrequency as PaymentFrequency,
     );
   } else {
     // 1. Calcular el plan original para obtener interés/amortización para cuotas ya pagadas
@@ -241,7 +277,7 @@ const generateInstallments = (
       financialPrincipal,
       account.interestRate ?? 0,
       account.numberOfInstallments,
-      account.paymentFrequency as PaymentFrequency
+      account.paymentFrequency as PaymentFrequency,
     );
 
     // 2. Calcular cuántas cuotas se han pagado y cuánto capital se ha amortizado
@@ -252,7 +288,7 @@ const generateInstallments = (
       if (p.installmentNumber === null) return sum;
 
       // Obtener el entry del plan original para esta cuota
-      const planEntry = originalPlan.find(e => e.installmentNumber === p.installmentNumber);
+      const planEntry = originalPlan.find((e) => e.installmentNumber === p.installmentNumber);
       if (!planEntry) return sum;
 
       // Calcular el interés que se cargó en ese pago
@@ -277,7 +313,7 @@ const generateInstallments = (
         nuevoCapitalPendiente,
         account.interestRate ?? 0,
         cuotasRestantes,
-        account.paymentFrequency as PaymentFrequency
+        account.paymentFrequency as PaymentFrequency,
       );
 
       // 6. Reemplazar las entradas futuras en originalPlan con el nuevo cálculo
@@ -285,12 +321,12 @@ const generateInstallments = (
         const idx = i - paidCount - 1;
         if (idx >= 0 && idx < planRestante.length) {
           // Reemplazar la entrada en originalPlan con la del nuevo plan
-          const originalIdx = originalPlan.findIndex(entry => entry.installmentNumber === i);
+          const originalIdx = originalPlan.findIndex((entry) => entry.installmentNumber === i);
           if (originalIdx !== -1) {
             // Preservar el número de cuota pero usar los nuevos montos
             originalPlan[originalIdx] = {
               ...planRestante[idx],
-              installmentNumber: i
+              installmentNumber: i,
             };
           }
         }
@@ -313,27 +349,25 @@ const generateInstallments = (
   }
 
   // Definir funciones auxiliares para verificar tipos de pagos
-  const isDHVersion = (p: any) => p?.installmentVersion === 'D' || p?.installmentVersion === 'H';
+  const isDHVersion = (p: any) => p?.installmentVersion === "D" || p?.installmentVersion === "H";
   const isPendingByAnnul = (p: any) => p?.notes?.includes("Cuota pendiente tras anulación");
 
   // Encontrar pagos activos (no anulados y sin versiones D/H)
-  const activePayments = account.payments.filter(p =>
-    p.installmentVersion === null &&
-    !isPendingByAnnul(p) &&
-    (p.id ? !annulledPaymentIds.has(p.id) : true)
+  const activePayments = account.payments.filter(
+    (p) =>
+      p.installmentVersion === null &&
+      !isPendingByAnnul(p) &&
+      (p.id ? !annulledPaymentIds.has(p.id) : true),
   );
 
   // Identificar pagos pendientes (con notas que indican que son por anulación)
-  const pendingPayments = account.payments.filter(p =>
-    p.installmentVersion === null &&
-    p.notes?.includes("Cuota pendiente tras anulación")
+  const pendingPayments = account.payments.filter(
+    (p) => p.installmentVersion === null && p.notes?.includes("Cuota pendiente tras anulación"),
   );
 
   // Mapear números de cuota con pagos pendientes para fácil búsqueda
   const pendingInstallmentNumbers = new Set(
-    pendingPayments
-      .filter(p => p.installmentNumber !== null)
-      .map(p => p.installmentNumber)
+    pendingPayments.filter((p) => p.installmentNumber !== null).map((p) => p.installmentNumber),
   );
 
   // 3. Generar resultados finales
@@ -346,7 +380,10 @@ const generateInstallments = (
     if (match && match[1]) {
       try {
         lastInstallmentInfo = JSON.parse(match[1]);
-        console.log("📝 [DEBUG] Encontrada información de última cuota en notas:", lastInstallmentInfo);
+        console.log(
+          "📝 [DEBUG] Encontrada información de última cuota en notas:",
+          lastInstallmentInfo,
+        );
       } catch (e) {
         console.error("❌ Error al parsear información de última cuota:", e);
       }
@@ -356,31 +393,32 @@ const generateInstallments = (
   // 5. Procesar cada número de cuota
   for (let i = 1; i <= account.numberOfInstallments; i++) {
     const dueDate = calculateDueDate(startDate, account.paymentFrequency as PaymentFrequency, i);
-    const planEntry = originalPlan.find(entry => entry.installmentNumber === i);
+    const planEntry = originalPlan.find((entry) => entry.installmentNumber === i);
     const paymentsForInstallment = paymentsByInstallmentNumber[i] || [];
 
     // Verificar si hay un pago pendiente para esta cuota
     const isPendingInstallment = pendingInstallmentNumbers.has(i);
-    const pendingPayment = paymentsForInstallment.find(p =>
-      p.installmentVersion === null &&
-      p.notes?.includes("Cuota pendiente tras anulación")
+    const pendingPayment = paymentsForInstallment.find(
+      (p) => p.installmentVersion === null && p.notes?.includes("Cuota pendiente tras anulación"),
     );
 
     // Buscar pagos específicos para esta cuota
-    const normalPayment = paymentsForInstallment.find(p =>
-      p.installmentVersion !== 'D' &&
-      p.installmentVersion !== 'H' &&
-      !p.notes?.includes("Cuota pendiente tras anulación") &&
-      (p.id ? !annulledPaymentIds.has(p.id) : true)
+    const normalPayment = paymentsForInstallment.find(
+      (p) =>
+        p.installmentVersion !== "D" &&
+        p.installmentVersion !== "H" &&
+        !p.notes?.includes("Cuota pendiente tras anulación") &&
+        (p.id ? !annulledPaymentIds.has(p.id) : true),
     );
 
-    const dPayment = paymentsForInstallment.find(p => p.installmentVersion === 'D');
-    const hPayment = paymentsForInstallment.find(p => p.installmentVersion === 'H');
+    const dPayment = paymentsForInstallment.find((p) => p.installmentVersion === "D");
+    const hPayment = paymentsForInstallment.find((p) => p.installmentVersion === "H");
 
-    const originalPaymentNowAnnulled = paymentsForInstallment.find(p =>
-      p.installmentVersion !== 'D' &&
-      p.installmentVersion !== 'H' &&
-      (p.id ? annulledPaymentIds.has(p.id) : false)
+    const originalPaymentNowAnnulled = paymentsForInstallment.find(
+      (p) =>
+        p.installmentVersion !== "D" &&
+        p.installmentVersion !== "H" &&
+        (p.id ? annulledPaymentIds.has(p.id) : false),
     );
 
     const isEffectivelyPaid = !!normalPayment;
@@ -389,18 +427,22 @@ const generateInstallments = (
     const isUnderAnnulmentProcess = !!dPayment || !!hPayment || !!originalPaymentNowAnnulled;
 
     // Verificar si es la última cuota con información especial
-    let expectedInstallmentAmount = planEntry?.calculatedInstallmentAmount ?? account.installmentAmount;
+    let expectedInstallmentAmount =
+      planEntry?.calculatedInstallmentAmount ?? account.installmentAmount;
     let isSpecialLastInstallment = false;
 
     if (i === account.numberOfInstallments && lastInstallmentInfo) {
-      if (lastInstallmentInfo.type === "LAST_INSTALLMENT_INFO" &&
+      if (
+        lastInstallmentInfo.type === "LAST_INSTALLMENT_INFO" &&
         lastInstallmentInfo.lastInstallmentNumber === account.numberOfInstallments &&
-        typeof lastInstallmentInfo.lastInstallmentAmount === 'number' &&
-        lastInstallmentInfo.lastInstallmentAmount > 0) {
-
+        typeof lastInstallmentInfo.lastInstallmentAmount === "number" &&
+        lastInstallmentInfo.lastInstallmentAmount > 0
+      ) {
         expectedInstallmentAmount = lastInstallmentInfo.lastInstallmentAmount;
         isSpecialLastInstallment = true;
-        console.log(`📊 [DEBUG] Usando monto especial para última cuota #${i}: ${expectedInstallmentAmount}`);
+        console.log(
+          `📊 [DEBUG] Usando monto especial para última cuota #${i}: ${expectedInstallmentAmount}`,
+        );
       }
     }
 
@@ -414,10 +456,15 @@ const generateInstallments = (
       const calculatedInterest = Math.ceil(planEntry.capitalAtPeriodStart * periodicRate);
 
       // Respetamos el valor especial de lastInstallmentAmount sin forzar que sea al menos capital+interés
-      console.log(`📊 [DEBUG] Última cuota especial #${i}: ${expectedInstallmentAmount} (capital pendiente: ${planEntry.capitalAtPeriodStart}, interés: ${calculatedInterest})`);
+      console.log(
+        `📊 [DEBUG] Última cuota especial #${i}: ${expectedInstallmentAmount} (capital pendiente: ${planEntry.capitalAtPeriodStart}, interés: ${calculatedInterest})`,
+      );
 
       adjustedInterestForPeriod = calculatedInterest;
-      adjustedAmortization = Math.min(planEntry.capitalAtPeriodStart, expectedInstallmentAmount - calculatedInterest);
+      adjustedAmortization = Math.min(
+        planEntry.capitalAtPeriodStart,
+        expectedInstallmentAmount - calculatedInterest,
+      );
     }
 
     // 1. Añadir pagos efectivos
@@ -433,10 +480,16 @@ const generateInstallments = (
         isAnnulled: false,
         installmentVersion: normalPayment.installmentVersion || null,
         originalPaymentAmount: Math.ceil(normalPayment.amountPaid),
-        capitalAtPeriodStart: planEntry?.capitalAtPeriodStart ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
+        capitalAtPeriodStart: planEntry?.capitalAtPeriodStart
+          ? Math.ceil(planEntry.capitalAtPeriodStart)
+          : undefined,
         amortization: planEntry?.amortization ? Math.ceil(planEntry.amortization) : undefined,
-        interestForPeriod: planEntry?.interestForPeriod ? Math.ceil(planEntry.interestForPeriod) : undefined,
-        calculatedInstallmentAmount: planEntry?.calculatedInstallmentAmount ? Math.ceil(planEntry.calculatedInstallmentAmount) : Math.ceil(normalPayment.amountPaid),
+        interestForPeriod: planEntry?.interestForPeriod
+          ? Math.ceil(planEntry.interestForPeriod)
+          : undefined,
+        calculatedInstallmentAmount: planEntry?.calculatedInstallmentAmount
+          ? Math.ceil(planEntry.calculatedInstallmentAmount)
+          : Math.ceil(normalPayment.amountPaid),
       });
     }
 
@@ -445,7 +498,9 @@ const generateInstallments = (
       generatedInstallments.push({
         number: i,
         dueDate,
-        amount: planEntry ? Math.ceil(planEntry.calculatedInstallmentAmount) : Math.ceil(pendingPayment.amountPaid),
+        amount: planEntry
+          ? Math.ceil(planEntry.calculatedInstallmentAmount)
+          : Math.ceil(pendingPayment.amountPaid),
         isPaid: false,
         isPending: true,
         paymentDate: null,
@@ -454,9 +509,19 @@ const generateInstallments = (
         installmentVersion: null,
         originalPaymentAmount: undefined,
         capitalAtPeriodStart: planEntry ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
-        amortization: isSpecialLastInstallment ? adjustedAmortization : (planEntry ? Math.ceil(planEntry.amortization) : undefined),
-        interestForPeriod: isSpecialLastInstallment ? adjustedInterestForPeriod : (planEntry ? Math.ceil(planEntry.interestForPeriod) : undefined),
-        calculatedInstallmentAmount: planEntry ? Math.ceil(planEntry.calculatedInstallmentAmount) : Math.ceil(pendingPayment.amountPaid),
+        amortization: isSpecialLastInstallment
+          ? adjustedAmortization
+          : planEntry
+            ? Math.ceil(planEntry.amortization)
+            : undefined,
+        interestForPeriod: isSpecialLastInstallment
+          ? adjustedInterestForPeriod
+          : planEntry
+            ? Math.ceil(planEntry.interestForPeriod)
+            : undefined,
+        calculatedInstallmentAmount: planEntry
+          ? Math.ceil(planEntry.calculatedInstallmentAmount)
+          : Math.ceil(pendingPayment.amountPaid),
       });
     }
     // 3. Añadir cuotas nunca pagadas (y que no están en proceso de anulación)
@@ -464,7 +529,9 @@ const generateInstallments = (
       generatedInstallments.push({
         number: i,
         dueDate,
-        amount: planEntry ? Math.ceil(planEntry.calculatedInstallmentAmount) : Math.ceil(expectedInstallmentAmount),
+        amount: planEntry
+          ? Math.ceil(planEntry.calculatedInstallmentAmount)
+          : Math.ceil(expectedInstallmentAmount),
         isPaid: false,
         isPending: false,
         paymentDate: null,
@@ -473,9 +540,19 @@ const generateInstallments = (
         installmentVersion: null,
         originalPaymentAmount: undefined,
         capitalAtPeriodStart: planEntry ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
-        amortization: isSpecialLastInstallment ? adjustedAmortization : (planEntry ? Math.ceil(planEntry.amortization) : undefined),
-        interestForPeriod: isSpecialLastInstallment ? adjustedInterestForPeriod : (planEntry ? Math.ceil(planEntry.interestForPeriod) : undefined),
-        calculatedInstallmentAmount: planEntry ? Math.ceil(planEntry.calculatedInstallmentAmount) : Math.ceil(expectedInstallmentAmount),
+        amortization: isSpecialLastInstallment
+          ? adjustedAmortization
+          : planEntry
+            ? Math.ceil(planEntry.amortization)
+            : undefined,
+        interestForPeriod: isSpecialLastInstallment
+          ? adjustedInterestForPeriod
+          : planEntry
+            ? Math.ceil(planEntry.interestForPeriod)
+            : undefined,
+        calculatedInstallmentAmount: planEntry
+          ? Math.ceil(planEntry.calculatedInstallmentAmount)
+          : Math.ceil(expectedInstallmentAmount),
       });
     }
 
@@ -486,16 +563,24 @@ const generateInstallments = (
         dueDate,
         amount: Math.ceil(originalPaymentNowAnnulled.amountPaid),
         isPaid: false,
-        paymentDate: originalPaymentNowAnnulled.paymentDate ? new Date(originalPaymentNowAnnulled.paymentDate) : null,
+        paymentDate: originalPaymentNowAnnulled.paymentDate
+          ? new Date(originalPaymentNowAnnulled.paymentDate)
+          : null,
         paymentId: originalPaymentNowAnnulled.id,
         isAnnulled: true,
         annulledDate: new Date(),
-        installmentVersion: 'Original (Anulado)',
+        installmentVersion: "Original (Anulado)",
         originalPaymentAmount: Math.ceil(originalPaymentNowAnnulled.amountPaid),
-        capitalAtPeriodStart: planEntry?.capitalAtPeriodStart ? Math.ceil(planEntry.capitalAtPeriodStart) : undefined,
+        capitalAtPeriodStart: planEntry?.capitalAtPeriodStart
+          ? Math.ceil(planEntry.capitalAtPeriodStart)
+          : undefined,
         amortization: planEntry?.amortization ? Math.ceil(planEntry.amortization) : undefined,
-        interestForPeriod: planEntry?.interestForPeriod ? Math.ceil(planEntry.interestForPeriod) : undefined,
-        calculatedInstallmentAmount: planEntry?.calculatedInstallmentAmount ? Math.ceil(planEntry.calculatedInstallmentAmount) : undefined,
+        interestForPeriod: planEntry?.interestForPeriod
+          ? Math.ceil(planEntry.interestForPeriod)
+          : undefined,
+        calculatedInstallmentAmount: planEntry?.calculatedInstallmentAmount
+          ? Math.ceil(planEntry.calculatedInstallmentAmount)
+          : undefined,
       });
     }
 
@@ -510,9 +595,9 @@ const generateInstallments = (
         paymentId: dPayment.id,
         isAnnulled: true,
         annulledDate: dPayment.updatedAt,
-        installmentVersion: 'D',
+        installmentVersion: "D",
         originalPaymentAmount: Math.ceil(dPayment.amountPaid),
-        calculatedInstallmentAmount: Math.ceil(dPayment.amountPaid)
+        calculatedInstallmentAmount: Math.ceil(dPayment.amountPaid),
       });
     }
 
@@ -526,9 +611,9 @@ const generateInstallments = (
         paymentId: hPayment.id,
         isAnnulled: true,
         annulledDate: hPayment.updatedAt,
-        installmentVersion: 'H',
+        installmentVersion: "H",
         originalPaymentAmount: Math.ceil(hPayment.amountPaid),
-        calculatedInstallmentAmount: Math.ceil(hPayment.amountPaid)
+        calculatedInstallmentAmount: Math.ceil(hPayment.amountPaid),
       });
     }
   }
@@ -538,11 +623,17 @@ const generateInstallments = (
     if (a.number !== b.number) return a.number - b.number;
 
     const getOrder = (inst: InstallmentInfo) => {
-      if (inst.isPaid && !inst.isAnnulled && inst.installmentVersion !== 'Original (Anulado)' &&
-        inst.installmentVersion !== 'D' && inst.installmentVersion !== 'H') return 0; // Pagado normal activo
-      if (inst.installmentVersion === 'Original (Anulado)') return 1;
-      if (inst.installmentVersion === 'D') return 2;
-      if (inst.installmentVersion === 'H') return 3;
+      if (
+        inst.isPaid &&
+        !inst.isAnnulled &&
+        inst.installmentVersion !== "Original (Anulado)" &&
+        inst.installmentVersion !== "D" &&
+        inst.installmentVersion !== "H"
+      )
+        return 0; // Pagado normal activo
+      if (inst.installmentVersion === "Original (Anulado)") return 1;
+      if (inst.installmentVersion === "D") return 2;
+      if (inst.installmentVersion === "H") return 3;
       if (!inst.isPaid && !inst.installmentVersion) return 4; // Pendiente pagable
       return 5; // Otros casos
     };
@@ -555,11 +646,11 @@ const generateInstallments = (
   const processedKeys = new Set<string>();
 
   for (const inst of generatedInstallments) {
-    let keySuffix = 'pending-payable';
-    if (inst.isPaid && !inst.isAnnulled && !inst.installmentVersion) keySuffix = 'paid-normal';
-    else if (inst.installmentVersion === 'Original (Anulado)') keySuffix = 'original-annulled';
-    else if (inst.installmentVersion === 'D') keySuffix = 'd-entry';
-    else if (inst.installmentVersion === 'H') keySuffix = 'h-entry';
+    let keySuffix = "pending-payable";
+    if (inst.isPaid && !inst.isAnnulled && !inst.installmentVersion) keySuffix = "paid-normal";
+    else if (inst.installmentVersion === "Original (Anulado)") keySuffix = "original-annulled";
+    else if (inst.installmentVersion === "D") keySuffix = "d-entry";
+    else if (inst.installmentVersion === "H") keySuffix = "h-entry";
 
     const uniqueKey = `${inst.number}-${keySuffix}`;
 
@@ -574,11 +665,17 @@ const generateInstallments = (
     if (a.number !== b.number) return a.number - b.number;
 
     const getOrder = (inst: InstallmentInfo) => {
-      if (inst.isPaid && !inst.isAnnulled && inst.installmentVersion !== 'Original (Anulado)' &&
-        inst.installmentVersion !== 'D' && inst.installmentVersion !== 'H') return 0;
-      if (inst.installmentVersion === 'Original (Anulado)') return 1;
-      if (inst.installmentVersion === 'D') return 2;
-      if (inst.installmentVersion === 'H') return 3;
+      if (
+        inst.isPaid &&
+        !inst.isAnnulled &&
+        inst.installmentVersion !== "Original (Anulado)" &&
+        inst.installmentVersion !== "D" &&
+        inst.installmentVersion !== "H"
+      )
+        return 0;
+      if (inst.installmentVersion === "Original (Anulado)") return 1;
+      if (inst.installmentVersion === "D") return 2;
+      if (inst.installmentVersion === "H") return 3;
       if (!inst.isPaid && !inst.installmentVersion && !inst.isAnnulled) return 4;
       return 5;
     };
@@ -611,10 +708,12 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
     isOpen: false,
     accountId: "",
     installmentNumber: 0,
-    amount: 0
+    amount: 0,
   });
 
-  const [annulledPaymentIdsInSession, setAnnulledPaymentIdsInSession] = useState<Set<string>>(new Set());
+  const [annulledPaymentIdsInSession, setAnnulledPaymentIdsInSession] = useState<Set<string>>(
+    new Set(),
+  );
 
   const toggleAccordion = (accountId: string) => {
     setExpandedAccounts((prev) => {
@@ -629,24 +728,29 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
   };
 
   // Función para abrir el modal de pago
-  const handlePaymentClick = (e: React.MouseEvent, accountId: string, installmentNumber: number, amount: number) => {
+  const handlePaymentClick = (
+    e: React.MouseEvent,
+    accountId: string,
+    installmentNumber: number,
+    amount: number,
+  ) => {
     e.stopPropagation(); // Evitar que se propague al acordeón
     setPaymentModal({
       isOpen: true,
       accountId,
       installmentNumber,
-      amount
+      amount,
     });
   };
 
   // Función para cerrar el modal de pago
   const closePaymentModal = () => {
-    setPaymentModal(prev => ({ ...prev, isOpen: false }));
+    setPaymentModal((prev) => ({ ...prev, isOpen: false }));
     handleDataRefresh();
   };
 
   const handleAnnulmentSuccess = (paymentIdToAnnul: string) => {
-    setAnnulledPaymentIdsInSession(prev => new Set(prev).add(paymentIdToAnnul));
+    setAnnulledPaymentIdsInSession((prev) => new Set(prev).add(paymentIdToAnnul));
     handleDataRefresh();
   };
 
@@ -670,8 +774,8 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
             disabled={refreshing}
             className="flex gap-1 items-center"
           >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Actualizando...' : 'Actualizar'}
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Actualizando..." : "Actualizar"}
           </Button>
         </div>
         <Table>
@@ -694,12 +798,14 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               const payments = account.payments || [];
 
               const actualInstallmentPaymentsAmount = payments
-                .filter(p =>
-                  p.installmentVersion !== 'D' &&
-                  p.installmentVersion !== 'H' &&
-                  !(p as any).isDownPayment &&
-                  (p.id ? !annulledPaymentIdsInSession.has(p.id) : true) &&
-                  p.installmentNumber !== null && p.installmentNumber > 0
+                .filter(
+                  (p) =>
+                    p.installmentVersion !== "D" &&
+                    p.installmentVersion !== "H" &&
+                    !(p as any).isDownPayment &&
+                    (p.id ? !annulledPaymentIdsInSession.has(p.id) : true) &&
+                    p.installmentNumber !== null &&
+                    p.installmentNumber > 0,
                 )
                 .reduce((sum, payment) => sum + payment.amountPaid, 0);
 
@@ -707,29 +813,34 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
 
               // Calculate total obligation including interest from French Amortization
               const financialPrincipalForSchedule = account.totalAmount - account.downPayment;
-              const amortizationPlanForTotals = (account.interestRate ?? 0) > 0 && financialPrincipalForSchedule > 0
-                ? calculateFrenchAmortizationSchedule(
-                  financialPrincipalForSchedule,
-                  account.interestRate ?? 0,
-                  account.numberOfInstallments,
-                  account.paymentFrequency as PaymentFrequency
-                )
-                : calculateFrenchAmortizationSchedule(
-                  financialPrincipalForSchedule,
-                  0, // No interest
-                  account.numberOfInstallments,
-                  account.paymentFrequency as PaymentFrequency
-                );
+              const amortizationPlanForTotals =
+                (account.interestRate ?? 0) > 0 && financialPrincipalForSchedule > 0
+                  ? calculateFrenchAmortizationSchedule(
+                      financialPrincipalForSchedule,
+                      account.interestRate ?? 0,
+                      account.numberOfInstallments,
+                      account.paymentFrequency as PaymentFrequency,
+                    )
+                  : calculateFrenchAmortizationSchedule(
+                      financialPrincipalForSchedule,
+                      0, // No interest
+                      account.numberOfInstallments,
+                      account.paymentFrequency as PaymentFrequency,
+                    );
 
               // Obtener las cuotas generadas incluyendo pagos realizados
-              const currentInstallments = generateInstallments(account, annulledPaymentIdsInSession);
+              const currentInstallments = generateInstallments(
+                account,
+                annulledPaymentIdsInSession,
+              );
 
               // Calcular el saldo pendiente real sumando solo las cuotas pendientes (no pagadas)
-              const remainingInstallments = currentInstallments.filter(installment =>
-                !installment.isPaid &&
-                !installment.isAnnulled &&
-                installment.installmentVersion !== 'D' &&
-                installment.installmentVersion !== 'H'
+              const remainingInstallments = currentInstallments.filter(
+                (installment) =>
+                  !installment.isPaid &&
+                  !installment.isAnnulled &&
+                  installment.installmentVersion !== "D" &&
+                  installment.installmentVersion !== "H",
               );
 
               const pendingCapitalAndInterest = remainingInstallments.reduce((sum, installment) => {
@@ -742,7 +853,8 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               let uiRemainingAmountDisplay = Math.max(0, pendingCapitalAndInterest);
 
               // Calcular el porcentaje de progreso basado en cuánto se ha pagado versus el total
-              const grandTotalObligation = account.downPayment +
+              const grandTotalObligation =
+                account.downPayment +
                 currentInstallments.reduce((sum, installment) => {
                   if (installment.isPaid) {
                     return sum + installment.amount;
@@ -753,7 +865,10 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
 
               let uiProgressPercentage = 0;
               if (grandTotalObligation > 0) {
-                uiProgressPercentage = Math.min(100, Math.round((totalEffectivelyPaid / grandTotalObligation) * 100));
+                uiProgressPercentage = Math.min(
+                  100,
+                  Math.round((totalEffectivelyPaid / grandTotalObligation) * 100),
+                );
               } else {
                 if (account.totalAmount <= account.downPayment && account.totalAmount >= 0) {
                   uiProgressPercentage = 100;
@@ -769,7 +884,10 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               }
 
               // DEBUG: Log generated installments for this account
-              console.log(`DEBUG (FRONTEND): Installments for account ${account.id}`, currentInstallments);
+              console.log(
+                `DEBUG (FRONTEND): Installments for account ${account.id}`,
+                currentInstallments,
+              );
               // DEBUG: Log account data received by the component
               console.log(`DEBUG (FRONTEND): Account data for ${account.id}`, {
                 installmentAmount: account.installmentAmount,
@@ -778,7 +896,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                 numberOfInstallments: account.numberOfInstallments,
                 // Agregar cálculos para depuración
                 calculatedRemainingAmount: uiRemainingAmountDisplay,
-                pendingInstallments: remainingInstallments.length
+                pendingInstallments: remainingInstallments.length,
               });
 
               return (
@@ -902,17 +1020,23 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                 <CardContent className="pt-4">
                                   <dl className="grid grid-cols-2 gap-y-2">
                                     <dt className="text-sm font-medium">Monto Total (c/Int):</dt>
-                                    <dd className="text-sm">{formatCurrency(grandTotalObligation)} ({account.currency || 'ARS'})</dd>
+                                    <dd className="text-sm">
+                                      {formatCurrency(grandTotalObligation)} (
+                                      {account.currency || "ARS"})
+                                    </dd>
 
                                     <dt className="text-sm font-medium">Pago Inicial:</dt>
-                                    <dd className="text-sm">{formatCurrency(account.downPayment)}</dd>
+                                    <dd className="text-sm">
+                                      {formatCurrency(account.downPayment)}
+                                    </dd>
 
-                                    {account.interestRate !== null && account.interestRate !== undefined && (
-                                      <>
-                                        <dt className="text-sm font-medium">Tasa de Interés:</dt>
-                                        <dd className="text-sm">{account.interestRate}%</dd>
-                                      </>
-                                    )}
+                                    {account.interestRate !== null &&
+                                      account.interestRate !== undefined && (
+                                        <>
+                                          <dt className="text-sm font-medium">Tasa de Interés:</dt>
+                                          <dd className="text-sm">{account.interestRate}%</dd>
+                                        </>
+                                      )}
 
                                     <dt className="text-sm font-medium">Monto Financiado:</dt>
                                     <dd className="text-sm">
@@ -920,9 +1044,13 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                     </dd>
 
                                     <dt className="text-sm font-medium">Monto Pagado:</dt>
-                                    <dd className="text-sm">{formatCurrency(totalEffectivelyPaid)}</dd>
+                                    <dd className="text-sm">
+                                      {formatCurrency(totalEffectivelyPaid)}
+                                    </dd>
 
-                                    <dt className="text-sm font-medium">Saldo Pendiente (c/Int):</dt>
+                                    <dt className="text-sm font-medium">
+                                      Saldo Pendiente (c/Int):
+                                    </dt>
                                     <dd className="text-sm font-semibold">
                                       {formatCurrency(uiRemainingAmountDisplay)}
                                     </dd>
@@ -955,23 +1083,43 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                 </TableHeader>
                                 <TableBody>
                                   {currentInstallments.map((installment) => (
-                                    <TableRow key={`${installment.number}-${installment.paymentId || 'pending'}-${installment.installmentVersion || 'original'}-${Math.random()}`}>
-                                      <TableCell className="font-medium">{installment.number}{installment.installmentVersion && installment.installmentVersion !== 'Original (Anulado)' ? String(installment.installmentVersion).toUpperCase() : ''}</TableCell>
+                                    <TableRow
+                                      key={`${installment.number}-${installment.paymentId || "pending"}-${installment.installmentVersion || "original"}-${Math.random()}`}
+                                    >
+                                      <TableCell className="font-medium">
+                                        {installment.number}
+                                        {installment.installmentVersion &&
+                                        installment.installmentVersion !== "Original (Anulado)"
+                                          ? String(installment.installmentVersion).toUpperCase()
+                                          : ""}
+                                      </TableCell>
                                       <TableCell>{formatDate(installment.dueDate)}</TableCell>
                                       <TableCell className="text-right">
-                                        {installment.capitalAtPeriodStart !== undefined ? formatCurrency(installment.capitalAtPeriodStart) : '-'}
+                                        {installment.capitalAtPeriodStart !== undefined
+                                          ? formatCurrency(installment.capitalAtPeriodStart)
+                                          : "-"}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {installment.amortization !== undefined ? formatCurrency(installment.amortization) : '-'}
+                                        {installment.amortization !== undefined
+                                          ? formatCurrency(installment.amortization)
+                                          : "-"}
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        {installment.interestForPeriod !== undefined ? formatCurrency(installment.interestForPeriod) : '-'}
+                                        {installment.interestForPeriod !== undefined
+                                          ? formatCurrency(installment.interestForPeriod)
+                                          : "-"}
                                       </TableCell>
                                       <TableCell className="text-right font-semibold">
                                         {formatCurrency(
                                           (() => {
-                                            const sign = installment.installmentVersion === 'H' ? -1 : 1;
-                                            if (installment.installmentVersion === 'D' || installment.installmentVersion === 'H' || installment.installmentVersion === 'Original (Anulado)') {
+                                            const sign =
+                                              installment.installmentVersion === "H" ? -1 : 1;
+                                            if (
+                                              installment.installmentVersion === "D" ||
+                                              installment.installmentVersion === "H" ||
+                                              installment.installmentVersion ===
+                                                "Original (Anulado)"
+                                            ) {
                                               // For annulment entries, show the amount associated with them
                                               return sign * installment.amount;
                                             } else if (installment.isPaid) {
@@ -979,21 +1127,49 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                               return sign * installment.amount;
                                             } else {
                                               // If pending, show the calculated expected amount
-                                              return sign * (installment.calculatedInstallmentAmount ?? 0); // Fallback to 0 if undefined
+                                              return (
+                                                sign *
+                                                (installment.calculatedInstallmentAmount ?? 0)
+                                              ); // Fallback to 0 if undefined
                                             }
-                                          })()
+                                          })(),
                                         )}
                                       </TableCell>
                                       <TableCell>
-                                        {installment.installmentVersion === 'D' ? (
-                                          <Badge className={statusColorMap.ANNULLED || 'bg-orange-100 text-orange-800'}>Anulación (D)</Badge>
-                                        ) : installment.installmentVersion === 'H' ? (
-                                          <Badge className={statusColorMap.ANNULLED || 'bg-orange-100 text-orange-800'}>Anulación (H)</Badge>
-                                        ) : installment.installmentVersion === 'Original (Anulado)' ? (
-                                          <Badge className={statusColorMap.ANNULLED || 'bg-orange-100 text-orange-800'}>Pagada (Anulada)</Badge>
+                                        {installment.installmentVersion === "D" ? (
+                                          <Badge
+                                            className={
+                                              statusColorMap.ANNULLED ||
+                                              "bg-orange-100 text-orange-800"
+                                            }
+                                          >
+                                            Anulación (D)
+                                          </Badge>
+                                        ) : installment.installmentVersion === "H" ? (
+                                          <Badge
+                                            className={
+                                              statusColorMap.ANNULLED ||
+                                              "bg-orange-100 text-orange-800"
+                                            }
+                                          >
+                                            Anulación (H)
+                                          </Badge>
+                                        ) : installment.installmentVersion ===
+                                          "Original (Anulado)" ? (
+                                          <Badge
+                                            className={
+                                              statusColorMap.ANNULLED ||
+                                              "bg-orange-100 text-orange-800"
+                                            }
+                                          >
+                                            Pagada (Anulada)
+                                          </Badge>
                                         ) : installment.isPaid ? (
                                           <Badge className="bg-green-100 text-green-800">
-                                            Pagada{installment.paymentDate ? ` el ${formatDate(installment.paymentDate)}` : ''}
+                                            Pagada
+                                            {installment.paymentDate
+                                              ? ` el ${formatDate(installment.paymentDate)}`
+                                              : ""}
                                           </Badge>
                                         ) : installment.isPending ? (
                                           <Badge className={statusColorMap.PENDING}>
@@ -1006,25 +1182,38 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                         )}
                                       </TableCell>
                                       <TableCell className="text-center">
-                                        {(installment.installmentVersion === 'D' || installment.installmentVersion === 'H' || installment.installmentVersion === 'Original (Anulado)') ? null
-                                          : installment.isPaid ? (
-                                            <AnnulPaymentButton
-                                              paymentId={installment.paymentId!}
-                                              onAnnulmentSuccess={() => installment.paymentId && handleAnnulmentSuccess(installment.paymentId)}
-                                              className="text-xs"
-                                              buttonText="Anular"
-                                              variant="destructive"
-                                            />
-                                          ) : (
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="text-xs"
-                                              onClick={(e) => handlePaymentClick(e, account.id, installment.number, installment.calculatedInstallmentAmount ?? installment.amount)}
-                                            >
-                                              Pagar
-                                            </Button>
-                                          )}
+                                        {installment.installmentVersion === "D" ||
+                                        installment.installmentVersion === "H" ||
+                                        installment.installmentVersion ===
+                                          "Original (Anulado)" ? null : installment.isPaid ? (
+                                          <AnnulPaymentButton
+                                            paymentId={installment.paymentId!}
+                                            onAnnulmentSuccess={() =>
+                                              installment.paymentId &&
+                                              handleAnnulmentSuccess(installment.paymentId)
+                                            }
+                                            className="text-xs"
+                                            buttonText="Anular"
+                                            variant="destructive"
+                                          />
+                                        ) : (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs"
+                                            onClick={(e) =>
+                                              handlePaymentClick(
+                                                e,
+                                                account.id,
+                                                installment.number,
+                                                installment.calculatedInstallmentAmount ??
+                                                  installment.amount,
+                                              )
+                                            }
+                                          >
+                                            Pagar
+                                          </Button>
+                                        )}
                                       </TableCell>
                                     </TableRow>
                                   ))}

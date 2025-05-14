@@ -18,7 +18,7 @@
       "src/components/custom/ColorItem.tsx",
       "src/components/custom/ColorSelector.tsx",
       "src/components/custom/BrandModelCombobox.tsx",
-      "src/components/custom/SucursalSelector.tsx", 
+      "src/components/custom/SucursalSelector.tsx",
       "src/app/(app)/sales/FilterSection.tsx",
       "src/components/ui/sidebar.tsx"
     ]

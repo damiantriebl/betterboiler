@@ -1,8 +1,8 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 import { uploadToS3 } from "@/lib/s3-upload";
+import { revalidatePath } from "next/cache";
 
 type ModelInput = {
   name: string;
@@ -17,26 +17,26 @@ export const createModel = async (input: ModelInput | FormData) => {
     let pathToRevalidate = "/configuration";
     let productImage: File | null = null;
     let specSheet: File | null = null;
-    let additionalFiles: File[] = [];
+    const additionalFiles: File[] = [];
 
     // Handle both FormData and direct object input
     if (input instanceof FormData) {
       name = input.get("name") as string;
       brandId = Number(input.get("brandId"));
-      
+
       if (input.has("pathToRevalidate")) {
         pathToRevalidate = input.get("pathToRevalidate") as string;
       }
-      
+
       // Handle file uploads
       if (input.has("productImage")) {
         productImage = input.get("productImage") as File;
       }
-      
+
       if (input.has("specSheet")) {
         specSheet = input.get("specSheet") as File;
       }
-      
+
       // Handle multiple additional files
       for (let i = 0; input.has(`additionalFile${i}`); i++) {
         additionalFiles.push(input.get(`additionalFile${i}`) as File);
@@ -54,7 +54,7 @@ export const createModel = async (input: ModelInput | FormData) => {
     const uploadResults = {
       imageUrl: null as string | null,
       specSheetUrl: null as string | null,
-      additionalFiles: [] as { url: string; name: string; type: string }[]
+      additionalFiles: [] as { url: string; name: string; type: string }[],
     };
 
     if (productImage) {
@@ -77,29 +77,30 @@ export const createModel = async (input: ModelInput | FormData) => {
         uploadResults.additionalFiles.push({
           url: result.url,
           name: file.name,
-          type: file.type
+          type: file.type,
         });
       }
     }
 
     // Create the model with file URLs
     const model = await prisma.model.create({
-      data: { 
-        name, 
+      data: {
+        name,
         brandId,
         imageUrl: uploadResults.imageUrl,
         specSheetUrl: uploadResults.specSheetUrl,
         // Store additional files as JSON in the database
-        additionalFilesJson: uploadResults.additionalFiles.length > 0 
-          ? JSON.stringify(uploadResults.additionalFiles)
-          : null
+        additionalFilesJson:
+          uploadResults.additionalFiles.length > 0
+            ? JSON.stringify(uploadResults.additionalFiles)
+            : null,
       },
     });
 
     // Format the result to include file information
     const result = {
       ...model,
-      additionalFiles: uploadResults.additionalFiles
+      additionalFiles: uploadResults.additionalFiles,
     };
 
     revalidatePath(pathToRevalidate);
@@ -110,4 +111,4 @@ export const createModel = async (input: ModelInput | FormData) => {
     }
     return { success: false, error: error.message || "Error al crear modelo." };
   }
-}; 
+};

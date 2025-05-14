@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { generateInventoryReportPDF } from "./actions";
 
 export async function POST(request: NextRequest) {
@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const { dateRange } = await request.json();
     const response = await generateInventoryReportPDF(dateRange);
     const pdfBuffer = await response.arrayBuffer();
-    
+
     return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
@@ -17,4 +17,4 @@ export async function POST(request: NextRequest) {
     console.error("Error generating PDF:", error);
     return new NextResponse("Error generating PDF", { status: 500 });
   }
-} 
+}

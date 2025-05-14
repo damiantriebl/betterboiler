@@ -1,8 +1,8 @@
 // Types for banking promotions and installment plans
 
-import { PaymentMethod } from "./payment-methods";
-import { PaymentCard } from "./payment-cards";
-import { Day } from "@/zod/banking-promotion-schemas";
+import type { Day } from "@/zod/banking-promotion-schemas";
+import type { PaymentCard } from "./payment-cards";
+import type { PaymentMethod } from "./payment-methods";
 
 export interface Bank {
   id: number;
@@ -57,4 +57,4 @@ export interface PromotionCalculation {
   installmentAmount?: number;
   totalInterest?: number;
   installments?: number;
-} 
+}

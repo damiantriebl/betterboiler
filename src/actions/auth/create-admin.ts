@@ -12,7 +12,7 @@ export async function createAdminUser(
   name: string,
   organizationSlug: string,
   organizationName: string,
-  role: string = "root"
+  role = "root",
 ) {
   try {
     console.log(`Creando/verificando organización ${organizationName}...`);
@@ -37,7 +37,7 @@ export async function createAdminUser(
     // Si el usuario existe, actualizar sus datos
     if (existingUser) {
       console.log(`Usuario ${email} ya existe, actualizando...`);
-      
+
       // Actualizar el usuario
       await prisma.user.update({
         where: { id: existingUser.id },
@@ -45,13 +45,13 @@ export async function createAdminUser(
           name,
           emailVerified: true,
           role,
-          organizationId: organization.id
-        }
+          organizationId: organization.id,
+        },
       });
 
       // Limpiar y crear la cuenta correctamente
       await prisma.account.deleteMany({
-        where: { userId: existingUser.id }
+        where: { userId: existingUser.id },
       });
 
       // Registrar el usuario con Better Auth
@@ -59,16 +59,20 @@ export async function createAdminUser(
         userId: existingUser.id,
         email,
         password,
-        emailVerified: true
+        emailVerified: true,
       });
 
-      console.log(`Usuario actualizado: ${result?.id || 'error'}`);
-      return { success: true, message: "Usuario administrador actualizado correctamente", userId: existingUser.id };
+      console.log(`Usuario actualizado: ${result?.id || "error"}`);
+      return {
+        success: true,
+        message: "Usuario administrador actualizado correctamente",
+        userId: existingUser.id,
+      };
     }
-    
+
     // Si el usuario no existe, crearlo
     console.log(`Creando nuevo usuario ${email}...`);
-    
+
     // Crear usuario con datos básicos (sin cuenta aún)
     const newUser = await prisma.user.create({
       data: {
@@ -76,8 +80,8 @@ export async function createAdminUser(
         email,
         emailVerified: true,
         role,
-        organizationId: organization.id
-      }
+        organizationId: organization.id,
+      },
     });
 
     // Registrar el usuario con Better Auth
@@ -85,13 +89,17 @@ export async function createAdminUser(
       userId: newUser.id,
       email,
       password,
-      emailVerified: true
+      emailVerified: true,
     });
 
-    console.log(`Usuario creado: ${result?.id || 'error'}`);
-    return { success: true, message: "Usuario administrador creado correctamente", userId: newUser.id };
+    console.log(`Usuario creado: ${result?.id || "error"}`);
+    return {
+      success: true,
+      message: "Usuario administrador creado correctamente",
+      userId: newUser.id,
+    };
   } catch (error: any) {
     console.error("Error al crear usuario administrador:", error);
     return { success: false, message: `Error: ${error.message}`, error };
   }
-} 
+}

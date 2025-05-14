@@ -1,7 +1,7 @@
-'use server';
+"use server";
 
-import db from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import db from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 // Define a comprehensive type for the report data based on Prisma query
 export type CurrentAccountForReport = Prisma.CurrentAccountGetPayload<{
@@ -18,18 +18,18 @@ export type CurrentAccountForReport = Prisma.CurrentAccountGetPayload<{
     };
     payments: {
       orderBy: {
-        paymentDate: 'asc' // Order payments, might be useful for display
-      }
+        paymentDate: "asc"; // Order payments, might be useful for display
+      };
     };
     organization: true; // Might be useful for report headers
   };
 }>;
 
 export async function getCurrentAccountForReport(
-  accountId: string
+  accountId: string,
 ): Promise<CurrentAccountForReport | null> {
   if (!accountId) {
-    console.error('[getCurrentAccountForReport] Account ID is required.');
+    console.error("[getCurrentAccountForReport] Account ID is required.");
     return null;
   }
 
@@ -48,8 +48,9 @@ export async function getCurrentAccountForReport(
           },
         },
         payments: {
-          orderBy: { // It's good practice to order related records
-            paymentDate: 'asc',
+          orderBy: {
+            // It's good practice to order related records
+            paymentDate: "asc",
           },
         },
         organization: true,
@@ -63,7 +64,10 @@ export async function getCurrentAccountForReport(
 
     return account;
   } catch (error) {
-    console.error(`[getCurrentAccountForReport] Error fetching account for ID ${accountId}:`, error);
+    console.error(
+      `[getCurrentAccountForReport] Error fetching account for ID ${accountId}:`,
+      error,
+    );
     return null;
   }
-} 
+}

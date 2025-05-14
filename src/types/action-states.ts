@@ -3,10 +3,10 @@ import type { Brand, Model } from "@prisma/client";
 
 // General state for actions that might return data or just success/error
 export type ActionState<TData = null> = {
-    success: boolean;
-    message?: string;
-    error?: string;
-    data?: TData;
+  success: boolean;
+  message?: string;
+  error?: string;
+  data?: TData;
 };
 
 // Specific state for creating a brand (might not need extra data)
@@ -22,4 +22,4 @@ export type CreateModelState = ActionState<Model>;
 export type UpdateModelState = ActionState<Model>;
 
 // State for actions operating on multiple items (like reordering)
-export type BatchActionState = ActionState; 
+export type BatchActionState = ActionState;

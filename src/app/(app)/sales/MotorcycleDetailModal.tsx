@@ -1,63 +1,69 @@
 "use client";
 
+import { fetchImageAsBase64 } from "@/actions/fetchImageAsBase64";
+import { getOrganization } from "@/actions/get-organization";
+import { getLogoUrl } from "@/components/custom/OrganizationLogo";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
-import {
-  type Motorcycle,
-  MotorcycleState,
-  type Brand,
-  type Model,
-  type Sucursal,
-  type MotoColor,
-  type Reservation,
-  type ModelFile,
-} from "@prisma/client";
-import {
-  X,
-  RotateCcw,
-  Play,
-  Pause,
-  DollarSign,
-  Trash2,
-  BookmarkPlus,
-  Pencil,
-  Info,
-  ChevronLeft,
-  ChevronRight,
-  Calculator,
-  FileText,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePriceDisplayStore } from "@/stores/price-display-store";
+import type { ModelFileWithUrl, MotorcycleWithDetails } from "@/types/motorcycle";
+import type {
+  AmortizationScheduleEntry,
+  InstallmentDetails,
+  PaymentData,
+  QuotePDFProps,
+} from "@/types/quote";
+import {
+  type Brand,
+  type Model,
+  type ModelFile,
+  type MotoColor,
+  type Motorcycle,
+  MotorcycleState,
+  type Reservation,
+  type Sucursal,
+} from "@prisma/client";
+import { PDFDownloadLink } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { ClientDetail } from "./ClientDetail";
-import { type ModelFileWithUrl, type MotorcycleWithDetails } from "@/types/motorcycle";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import { QuotePDFDocument } from "./components/QuotePDF";
 import {
-  type AmortizationScheduleEntry,
-  type PaymentData,
-  type InstallmentDetails,
-  type QuotePDFProps
-} from "@/types/quote";
-import { getOrganization } from "@/actions/get-organization";
-import { getLogoUrl } from '@/components/custom/OrganizationLogo';
-import { fetchImageAsBase64 } from '@/actions/fetchImageAsBase64';
+  BookmarkPlus,
+  Calculator,
+  ChevronLeft,
+  ChevronRight,
+  DollarSign,
+  FileText,
+  Info,
+  Pause,
+  Pencil,
+  Play,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ClientDetail } from "./ClientDetail";
 import QuoteBridgePdf from "./components/QuoteBrigePdf";
+import { QuotePDFDocument } from "./components/QuotePDF";
 
 interface PriceDisplayState {
   mode: PriceDisplayMode;
@@ -91,7 +97,7 @@ function PaymentQuoteSimulator({
   motorcycle,
   onClose,
   onExportPDF,
-  organizationLogoUrl
+  organizationLogoUrl,
 }: {
   motorcycle: MotorcycleWithDetails | null;
   onClose: () => void;
@@ -110,41 +116,44 @@ function PaymentQuoteSimulator({
   }) => void;
   organizationLogoUrl?: string | null;
 }) {
-  const [activeTab, setActiveTab] = useState<'efectivo' | 'tarjeta' | 'cuenta_corriente'>('efectivo');
+  const [activeTab, setActiveTab] = useState<"efectivo" | "tarjeta" | "cuenta_corriente">(
+    "efectivo",
+  );
   const [paymentData, setPaymentData] = useState<PaymentData>({
-    metodoPago: 'efectivo',
+    metodoPago: "efectivo",
     cuotas: 1,
     isMayorista: false,
-    discountType: 'discount',
+    discountType: "discount",
     discountValue: 0,
     downPayment: 0,
     currentAccountInstallments: 12,
-    currentAccountFrequency: 'MONTHLY',
+    currentAccountFrequency: "MONTHLY",
     annualInterestRate: 30,
   });
 
   const getPeriodsPerYear = useCallback((frequency: string) => {
     const map: Record<string, number> = {
-      'WEEKLY': 52,
-      'BIWEEKLY': 26,
-      'MONTHLY': 12,
-      'QUARTERLY': 4,
-      'ANNUALLY': 1
+      WEEKLY: 52,
+      BIWEEKLY: 26,
+      MONTHLY: 12,
+      QUARTERLY: 4,
+      ANNUALLY: 1,
     };
     return map[frequency] || 12;
   }, []);
 
-  const basePrice = paymentData.isMayorista && motorcycle?.wholesalePrice
-    ? motorcycle.wholesalePrice
-    : (motorcycle?.retailPrice || 0);
+  const basePrice =
+    paymentData.isMayorista && motorcycle?.wholesalePrice
+      ? motorcycle.wholesalePrice
+      : motorcycle?.retailPrice || 0;
 
-  const modifierAmount = paymentData.discountValue > 0
-    ? basePrice * paymentData.discountValue / 100
-    : 0;
+  const modifierAmount =
+    paymentData.discountValue > 0 ? (basePrice * paymentData.discountValue) / 100 : 0;
 
-  const finalPrice = paymentData.discountType === 'discount'
-    ? basePrice - modifierAmount
-    : basePrice + modifierAmount;
+  const finalPrice =
+    paymentData.discountType === "discount"
+      ? basePrice - modifierAmount
+      : basePrice + modifierAmount;
 
   const financedAmount = finalPrice - paymentData.downPayment;
 
@@ -154,9 +163,9 @@ function PaymentQuoteSimulator({
         installmentAmount: 0,
         totalPayment: 0,
         totalInterest: 0,
-        currency: 'ARS',
+        currency: "ARS",
         schedule: [],
-        warning: undefined
+        warning: undefined,
       };
     }
 
@@ -178,7 +187,8 @@ function PaymentQuoteSimulator({
         totalPayment = installmentAmount * installments;
       }
       let cap = principal > 0 ? principal : 0;
-      const singleAmort = principal > 0 && installments > 0 ? Math.ceil(principal / installments) : 0;
+      const singleAmort =
+        principal > 0 && installments > 0 ? Math.ceil(principal / installments) : 0;
 
       for (let i = 1; i <= installments; i++) {
         let amortCalc = singleAmort;
@@ -193,12 +203,13 @@ function PaymentQuoteSimulator({
           interestForPeriod: 0,
           amortization: amortCalc,
           calculatedInstallmentAmount: amortCalc,
-          capitalAtPeriodEnd: Math.max(0, cap - amortCalc)
+          capitalAtPeriodEnd: Math.max(0, cap - amortCalc),
         });
         cap = Math.max(0, cap - amortCalc);
       }
       if (principal <= 0) installmentAmount = 0;
-      else if (installments > 0) installmentAmount = schedule.length > 0 ? schedule[0].calculatedInstallmentAmount : 0;
+      else if (installments > 0)
+        installmentAmount = schedule.length > 0 ? schedule[0].calculatedInstallmentAmount : 0;
       else installmentAmount = 0;
 
       totalPayment = schedule.reduce((sum, item) => sum + item.calculatedInstallmentAmount, 0);
@@ -209,7 +220,7 @@ function PaymentQuoteSimulator({
         totalInterest: 0,
         currency: motorcycle.currency || "ARS",
         schedule,
-        warning: principal <= 0 ? "El monto a financiar es cero." : undefined
+        warning: principal <= 0 ? "El monto a financiar es cero." : undefined,
       };
     }
 
@@ -220,7 +231,7 @@ function PaymentQuoteSimulator({
       totalPayment = installmentAmount * installments;
       let cap = principal;
       for (let i = 1; i <= installments; i++) {
-        let amort = (i === installments && cap < installmentAmount) ? cap : installmentAmount;
+        let amort = i === installments && cap < installmentAmount ? cap : installmentAmount;
         if (cap <= 0 && i > 1) amort = 0;
         schedule.push({
           installmentNumber: i,
@@ -228,9 +239,10 @@ function PaymentQuoteSimulator({
           interestForPeriod: 0,
           amortization: cap > 0 ? amort : 0,
           calculatedInstallmentAmount: cap > 0 ? amort : 0,
-          capitalAtPeriodEnd: Math.max(0, cap - amort)
+          capitalAtPeriodEnd: Math.max(0, cap - amort),
         });
-        if (cap > 0) cap -= amort; else cap = 0;
+        if (cap > 0) cap -= amort;
+        else cap = 0;
       }
       return {
         installmentAmount,
@@ -238,11 +250,11 @@ function PaymentQuoteSimulator({
         totalInterest: 0,
         currency: motorcycle.currency || "ARS",
         schedule,
-        warning: undefined
+        warning: undefined,
       };
     }
 
-    const ratePerPeriod = (annualRatePercent / 100) / periodsPerYearVal;
+    const ratePerPeriod = annualRatePercent / 100 / periodsPerYearVal;
 
     if (ratePerPeriod <= -1) {
       installmentAmount = Math.ceil(principal / installments);
@@ -252,26 +264,31 @@ function PaymentQuoteSimulator({
         totalInterest: 0,
         currency: motorcycle.currency || "ARS",
         warning: "Tasa de interés inválida para cálculo francés, se usó cálculo simple.",
-        schedule
+        schedule,
       };
     }
 
     const pmtNumerator = ratePerPeriod * Math.pow(1 + ratePerPeriod, installments);
     const pmtDenominator = Math.pow(1 + ratePerPeriod, installments) - 1;
 
-    if (pmtDenominator === 0 || (pmtNumerator === 0 && pmtDenominator === 0 && ratePerPeriod !== 0)) {
+    if (
+      pmtDenominator === 0 ||
+      (pmtNumerator === 0 && pmtDenominator === 0 && ratePerPeriod !== 0)
+    ) {
       installmentAmount = Math.ceil(principal / installments);
       return {
         installmentAmount,
         totalPayment: Math.ceil(installmentAmount * installments),
         totalInterest: 0,
         currency: motorcycle.currency || "ARS",
-        warning: "No se pudo calcular la cuota con interés (división por cero o tasa inválida), se usó cálculo simple.",
-        schedule
+        warning:
+          "No se pudo calcular la cuota con interés (división por cero o tasa inválida), se usó cálculo simple.",
+        schedule,
       };
     }
 
-    const rawPmt = ratePerPeriod === 0 ? (principal / installments) : principal * (pmtNumerator / pmtDenominator);
+    const rawPmt =
+      ratePerPeriod === 0 ? principal / installments : principal * (pmtNumerator / pmtDenominator);
     const fixedInstallment = Math.ceil(rawPmt);
     let currentCapital = principal;
     totalPayment = 0;
@@ -319,28 +336,38 @@ function PaymentQuoteSimulator({
       totalInterest: Math.ceil(totalInterest),
       currency: motorcycle.currency || "ARS",
       schedule,
-      warning: undefined
+      warning: undefined,
     };
   }, [motorcycle, paymentData, getPeriodsPerYear, financedAmount]);
 
-  const formatAmount = useCallback((amount: number) => {
-    return formatPrice(amount, motorcycle?.currency || "ARS");
-  }, [motorcycle?.currency]);
+  const formatAmount = useCallback(
+    (amount: number) => {
+      return formatPrice(amount, motorcycle?.currency || "ARS");
+    },
+    [motorcycle?.currency],
+  );
 
   const installmentDetailsCalculation = useMemo((): InstallmentDetails => {
-    if (paymentData.metodoPago === 'cuenta_corriente') {
+    if (paymentData.metodoPago === "cuenta_corriente") {
       return calculateInstallmentDetails();
     }
     // For cash or card, create a simple structure
     return {
-      installmentAmount: finalPrice > 0 && paymentData.cuotas > 0 ? Math.ceil(finalPrice / paymentData.cuotas) : 0,
+      installmentAmount:
+        finalPrice > 0 && paymentData.cuotas > 0 ? Math.ceil(finalPrice / paymentData.cuotas) : 0,
       schedule: [], // No detailed schedule for cash/card
       totalPayment: finalPrice,
       totalInterest: 0,
-      currency: motorcycle?.currency || 'ARS',
-      warning: undefined
+      currency: motorcycle?.currency || "ARS",
+      warning: undefined,
     };
-  }, [paymentData.metodoPago, paymentData.cuotas, finalPrice, calculateInstallmentDetails, motorcycle?.currency]);
+  }, [
+    paymentData.metodoPago,
+    paymentData.cuotas,
+    finalPrice,
+    calculateInstallmentDetails,
+    motorcycle?.currency,
+  ]);
 
   useEffect(() => {
     if (onExportPDF && motorcycle) {
@@ -355,7 +382,7 @@ function PaymentQuoteSimulator({
         installmentDetails: installmentDetailsCalculation,
         totalWithFinancing: installmentDetailsCalculation.totalPayment || 0,
         formatAmount,
-        organizationLogoUrl
+        organizationLogoUrl,
       });
     }
   }, [
@@ -369,26 +396,34 @@ function PaymentQuoteSimulator({
     formatAmount,
     onExportPDF,
     motorcycle,
-    organizationLogoUrl
+    organizationLogoUrl,
   ]);
 
-  const handleTabChange = (tab: 'efectivo' | 'tarjeta' | 'cuenta_corriente') => {
+  const handleTabChange = (tab: "efectivo" | "tarjeta" | "cuenta_corriente") => {
     setActiveTab(tab);
     setPaymentData({
       ...paymentData,
-      metodoPago: tab
+      metodoPago: tab,
     });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     let parsedValue: string | number = value;
-    if (['cuotas', 'discountValue', 'downPayment', 'currentAccountInstallments', 'annualInterestRate'].includes(name)) {
-      parsedValue = parseFloat(value) || 0;
+    if (
+      [
+        "cuotas",
+        "discountValue",
+        "downPayment",
+        "currentAccountInstallments",
+        "annualInterestRate",
+      ].includes(name)
+    ) {
+      parsedValue = Number.parseFloat(value) || 0;
     }
     setPaymentData({
       ...paymentData,
-      [name]: parsedValue
+      [name]: parsedValue,
     });
   };
 
@@ -403,28 +438,44 @@ function PaymentQuoteSimulator({
         <table className="min-w-full text-xs divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 py-2 text-left font-medium text-gray-500 tracking-wider">N° Cuota</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">Capital Inicio</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">Amortización</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">Intereses</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">Cuota</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-500 tracking-wider">
+                N° Cuota
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">
+                Capital Inicio
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">
+                Amortización
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">
+                Intereses
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-gray-500 tracking-wider">
+                Cuota
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {details.schedule.map((item) => (
               <tr key={item.installmentNumber}>
                 <td className="px-3 py-2 whitespace-nowrap">{item.installmentNumber}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-right">{formatAmount(item.capitalAtPeriodStart)}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-right">{formatAmount(item.amortization)}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-right">{formatAmount(item.interestForPeriod)}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-right font-semibold">{formatAmount(item.calculatedInstallmentAmount)}</td>
+                <td className="px-3 py-2 whitespace-nowrap text-right">
+                  {formatAmount(item.capitalAtPeriodStart)}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap text-right">
+                  {formatAmount(item.amortization)}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap text-right">
+                  {formatAmount(item.interestForPeriod)}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap text-right font-semibold">
+                  {formatAmount(item.calculatedInstallmentAmount)}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {details.warning && (
-          <p className="text-xs text-amber-600 mt-1">{details.warning}</p>
-        )}
+        {details.warning && <p className="text-xs text-amber-600 mt-1">{details.warning}</p>}
       </div>
     );
   };
@@ -433,20 +484,20 @@ function PaymentQuoteSimulator({
     <div className="py-4 space-y-6">
       <div className="flex space-x-2 border-b pb-2">
         <Button
-          variant={activeTab === 'efectivo' ? 'default' : 'outline'}
-          onClick={() => handleTabChange('efectivo')}
+          variant={activeTab === "efectivo" ? "default" : "outline"}
+          onClick={() => handleTabChange("efectivo")}
         >
           Efectivo/Transferencia
         </Button>
         <Button
-          variant={activeTab === 'tarjeta' ? 'default' : 'outline'}
-          onClick={() => handleTabChange('tarjeta')}
+          variant={activeTab === "tarjeta" ? "default" : "outline"}
+          onClick={() => handleTabChange("tarjeta")}
         >
           Tarjeta
         </Button>
         <Button
-          variant={activeTab === 'cuenta_corriente' ? 'default' : 'outline'}
-          onClick={() => handleTabChange('cuenta_corriente')}
+          variant={activeTab === "cuenta_corriente" ? "default" : "outline"}
+          onClick={() => handleTabChange("cuenta_corriente")}
         >
           Financiación
         </Button>
@@ -460,7 +511,9 @@ function PaymentQuoteSimulator({
               <Checkbox
                 id="isMayorista"
                 checked={paymentData.isMayorista}
-                onCheckedChange={(checked) => setPaymentData({ ...paymentData, isMayorista: !!checked })}
+                onCheckedChange={(checked) =>
+                  setPaymentData({ ...paymentData, isMayorista: !!checked })
+                }
               />
               <Label htmlFor="isMayorista">Usar precio mayorista</Label>
             </div>
@@ -468,19 +521,30 @@ function PaymentQuoteSimulator({
               <div className="flex items-center justify-between">
                 <Label htmlFor="discountType">Tipo de ajuste</Label>
                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="discountType" className={`text-xs px-2 py-1 rounded ${paymentData.discountType === 'discount' ? 'bg-green-100 text-green-800' : 'bg-gray-100'} cursor-pointer`}>
+                  <Label
+                    htmlFor="discountType"
+                    className={`text-xs px-2 py-1 rounded ${paymentData.discountType === "discount" ? "bg-green-100 text-green-800" : "bg-gray-100"} cursor-pointer`}
+                  >
                     Descuento
                   </Label>
                   <div
                     className="relative w-8 h-4 bg-gray-200 rounded-full cursor-pointer"
-                    onClick={() => setPaymentData({
-                      ...paymentData,
-                      discountType: paymentData.discountType === 'discount' ? 'surcharge' : 'discount'
-                    })}
+                    onClick={() =>
+                      setPaymentData({
+                        ...paymentData,
+                        discountType:
+                          paymentData.discountType === "discount" ? "surcharge" : "discount",
+                      })
+                    }
                   >
-                    <div className={`absolute top-[2px] w-3 h-3 rounded-full transition-all ${paymentData.discountType === 'discount' ? 'left-[2px] bg-green-500' : 'left-[18px] bg-amber-500'}`}></div>
+                    <div
+                      className={`absolute top-[2px] w-3 h-3 rounded-full transition-all ${paymentData.discountType === "discount" ? "left-[2px] bg-green-500" : "left-[18px] bg-amber-500"}`}
+                    ></div>
                   </div>
-                  <Label htmlFor="discountType" className={`text-xs px-2 py-1 rounded ${paymentData.discountType === 'surcharge' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100'} cursor-pointer`}>
+                  <Label
+                    htmlFor="discountType"
+                    className={`text-xs px-2 py-1 rounded ${paymentData.discountType === "surcharge" ? "bg-amber-100 text-amber-800" : "bg-gray-100"} cursor-pointer`}
+                  >
                     Recargo
                   </Label>
                 </div>
@@ -494,22 +558,29 @@ function PaymentQuoteSimulator({
                 value={paymentData.discountValue}
                 onChange={handleInputChange}
                 placeholder="Porcentaje"
-                className={paymentData.discountType === 'discount' ? 'border-green-200 focus:border-green-500' : 'border-amber-200 focus:border-amber-500'}
+                className={
+                  paymentData.discountType === "discount"
+                    ? "border-green-200 focus:border-green-500"
+                    : "border-amber-200 focus:border-amber-500"
+                }
               />
               <p className="text-xs text-muted-foreground">
-                {paymentData.discountType === 'discount' ? 'Descuento' : 'Recargo'} del {paymentData.discountValue}%
+                {paymentData.discountType === "discount" ? "Descuento" : "Recargo"} del{" "}
+                {paymentData.discountValue}%
               </p>
             </div>
           </div>
 
-          {activeTab === 'tarjeta' && (
+          {activeTab === "tarjeta" && (
             <div className="p-4 border rounded-md">
               <h3 className="font-medium mb-3">Opciones de Tarjeta</h3>
               <div className="mb-3">
                 <Label htmlFor="cuotas">Número de cuotas</Label>
                 <Select
                   value={paymentData.cuotas.toString()}
-                  onValueChange={(value) => handleInputChange({ target: { name: 'cuotas', value } } as any)}
+                  onValueChange={(value) =>
+                    handleInputChange({ target: { name: "cuotas", value } } as any)
+                  }
                 >
                   <SelectTrigger id="cuotas">
                     <SelectValue placeholder="Seleccione cuotas" />
@@ -527,7 +598,7 @@ function PaymentQuoteSimulator({
             </div>
           )}
 
-          {activeTab === 'cuenta_corriente' && (
+          {activeTab === "cuenta_corriente" && (
             <div className="p-4 border rounded-md">
               <h3 className="font-medium mb-3">Opciones de Financiación</h3>
               <div className="mb-3">
@@ -557,7 +628,9 @@ function PaymentQuoteSimulator({
                 <Label htmlFor="currentAccountFrequency">Frecuencia de pago</Label>
                 <Select
                   value={paymentData.currentAccountFrequency.toString()}
-                  onValueChange={(value) => handleInputChange({ target: { name: 'currentAccountFrequency', value } } as any)}
+                  onValueChange={(value) =>
+                    handleInputChange({ target: { name: "currentAccountFrequency", value } } as any)
+                  }
                 >
                   <SelectTrigger id="currentAccountFrequency">
                     <SelectValue placeholder="Seleccione frecuencia" />
@@ -593,25 +666,33 @@ function PaymentQuoteSimulator({
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium">Vehículo:</span>
-                <span>{motorcycle?.brand?.name} {motorcycle?.model?.name} ({motorcycle?.year})</span>
+                <span>
+                  {motorcycle?.brand?.name} {motorcycle?.model?.name} ({motorcycle?.year})
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Precio base:</span>
                 <span>{formatAmount(basePrice)}</span>
               </div>
               {paymentData.discountValue > 0 && (
-                <div className={`flex justify-between ${paymentData.discountType === 'discount' ? 'text-green-600' : 'text-amber-600'}`}>
+                <div
+                  className={`flex justify-between ${paymentData.discountType === "discount" ? "text-green-600" : "text-amber-600"}`}
+                >
                   <span className="font-medium">
-                    {paymentData.discountType === 'discount' ? 'Descuento' : 'Recargo'} ({paymentData.discountValue}%):
+                    {paymentData.discountType === "discount" ? "Descuento" : "Recargo"} (
+                    {paymentData.discountValue}%):
                   </span>
-                  <span>{paymentData.discountType === 'discount' ? '-' : '+'}{formatAmount(modifierAmount)}</span>
+                  <span>
+                    {paymentData.discountType === "discount" ? "-" : "+"}
+                    {formatAmount(modifierAmount)}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-lg pt-2 border-t">
                 <span>Precio final:</span>
                 <span>{formatAmount(finalPrice)}</span>
               </div>
-              {activeTab === 'tarjeta' && paymentData.cuotas > 1 && (
+              {activeTab === "tarjeta" && paymentData.cuotas > 1 && (
                 <div className="mt-4 pt-2 border-t">
                   <div className="flex justify-between">
                     <span className="font-medium">Cuotas:</span>
@@ -623,7 +704,7 @@ function PaymentQuoteSimulator({
                   </div>
                 </div>
               )}
-              {activeTab === 'cuenta_corriente' && (
+              {activeTab === "cuenta_corriente" && (
                 <div className="mt-4 pt-2 border-t space-y-3">
                   <div className="flex justify-between">
                     <span className="font-medium">Pago inicial:</span>
@@ -635,10 +716,19 @@ function PaymentQuoteSimulator({
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Cuotas:</span>
-                    <span>{paymentData.currentAccountInstallments} ({paymentData.currentAccountFrequency.toLowerCase() === 'monthly' ? 'mensuales' :
-                      paymentData.currentAccountFrequency.toLowerCase() === 'biweekly' ? 'quincenales' :
-                        paymentData.currentAccountFrequency.toLowerCase() === 'weekly' ? 'semanales' :
-                          paymentData.currentAccountFrequency.toLowerCase() === 'quarterly' ? 'trimestrales' : 'anuales'})</span>
+                    <span>
+                      {paymentData.currentAccountInstallments} (
+                      {paymentData.currentAccountFrequency.toLowerCase() === "monthly"
+                        ? "mensuales"
+                        : paymentData.currentAccountFrequency.toLowerCase() === "biweekly"
+                          ? "quincenales"
+                          : paymentData.currentAccountFrequency.toLowerCase() === "weekly"
+                            ? "semanales"
+                            : paymentData.currentAccountFrequency.toLowerCase() === "quarterly"
+                              ? "trimestrales"
+                              : "anuales"}
+                      )
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Tasa anual:</span>
@@ -646,23 +736,30 @@ function PaymentQuoteSimulator({
                   </div>
                   <div className="flex justify-between font-semibold text-blue-600">
                     <span>Valor de cuota:</span>
-                    <span>{formatAmount(installmentDetailsCalculation.installmentAmount || 0)}</span>
+                    <span>
+                      {formatAmount(installmentDetailsCalculation.installmentAmount || 0)}
+                    </span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>Total a pagar:</span>
                     <span>{formatAmount(installmentDetailsCalculation.totalPayment || 0)}</span>
                   </div>
-                  {activeTab === 'cuenta_corriente' && 'totalInterest' in installmentDetailsCalculation && installmentDetailsCalculation.totalInterest !== undefined && installmentDetailsCalculation.totalInterest > 0 && (
-                    <div className="flex justify-between text-amber-600">
-                      <span className="font-medium">Intereses totales:</span>
-                      <span>{formatAmount(installmentDetailsCalculation.totalInterest || 0)}</span>
-                    </div>
-                  )}
+                  {activeTab === "cuenta_corriente" &&
+                    "totalInterest" in installmentDetailsCalculation &&
+                    installmentDetailsCalculation.totalInterest !== undefined &&
+                    installmentDetailsCalculation.totalInterest > 0 && (
+                      <div className="flex justify-between text-amber-600">
+                        <span className="font-medium">Intereses totales:</span>
+                        <span>
+                          {formatAmount(installmentDetailsCalculation.totalInterest || 0)}
+                        </span>
+                      </div>
+                    )}
                 </div>
               )}
             </div>
           </div>
-          {activeTab === 'cuenta_corriente' && (
+          {activeTab === "cuenta_corriente" && (
             <div className="border rounded-md p-3 bg-white max-h-[300px] overflow-y-auto">
               {renderAmortizationTable()}
             </div>
@@ -689,12 +786,14 @@ export function MotorcycleDetailModal({
   const [modelImages, setModelImages] = useState<ModelFileWithUrl[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
-  const shouldShowWholesale = usePriceDisplayStore(s => s.showWholesale());
-  const shouldShowCost = usePriceDisplayStore(s => s.showCost());
+  const shouldShowWholesale = usePriceDisplayStore((s) => s.showWholesale());
+  const shouldShowCost = usePriceDisplayStore((s) => s.showCost());
 
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [quotePdfProps, setQuotePdfProps] = useState<QuotePDFProps | null>(null);
-  const [organization, setOrganization] = useState<{ logo: string | null; name: string } | null>(null);
+  const [organization, setOrganization] = useState<{ logo: string | null; name: string } | null>(
+    null,
+  );
   const [shouldExportPdf, setShouldExportPdf] = useState(false);
 
   const { clientId, rawReservationData } = useMemo(() => {
@@ -703,7 +802,8 @@ export function MotorcycleDetailModal({
       return { clientId: motorcycle.clientId ?? null, rawReservationData: null };
     }
     if (motorcycle.state === MotorcycleState.RESERVADO) {
-      const active = motorcycle.reservations?.find(r => r.status === 'active') ?? motorcycle.reservation;
+      const active =
+        motorcycle.reservations?.find((r) => r.status === "active") ?? motorcycle.reservation;
       return { clientId: active?.clientId ?? null, rawReservationData: active ?? null };
     }
     return { clientId: null, rawReservationData: null };
@@ -712,11 +812,16 @@ export function MotorcycleDetailModal({
   useEffect(() => {
     if (isOpen && motorcycle?.model?.files) {
       const imageFiles = motorcycle.model.files
-        .filter(file => file.type === "image" || file.type.startsWith('image/'))
-        .map(file => ({
-          ...file,
-          url: file.s3Key ? `https://${process.env.NEXT_PUBLIC_AWS_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_BUCKET_REGION}.amazonaws.com/${file.s3Key}` : "",
-        } as ModelFileWithUrl));
+        .filter((file) => file.type === "image" || file.type.startsWith("image/"))
+        .map(
+          (file) =>
+            ({
+              ...file,
+              url: file.s3Key
+                ? `https://${process.env.NEXT_PUBLIC_AWS_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_BUCKET_REGION}.amazonaws.com/${file.s3Key}`
+                : "",
+            }) as ModelFileWithUrl,
+        );
       setModelImages(imageFiles);
       setIsLoadingImages(false);
     } else {
@@ -741,64 +846,126 @@ export function MotorcycleDetailModal({
   const canPause = isStock || isPausado;
 
   const handlePrevImage = () => {
-    setCurrentImageIndex(prev => (prev > 0 ? prev - 1 : modelImages.length - 1));
+    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : modelImages.length - 1));
   };
 
   const handleNextImage = () => {
-    setCurrentImageIndex(prev => (prev < modelImages.length - 1 ? prev + 1 : 0));
+    setCurrentImageIndex((prev) => (prev < modelImages.length - 1 ? prev + 1 : 0));
   };
 
   const renderActions = () => {
-    if (isEliminado) return (
-      <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-100" onClick={() => onToggleStatus(id, state)}>
-        <RotateCcw className="mr-2 h-4 w-4" /> Volver al Stock
-      </Button>
-    );
-    if (isProcesando) return (
-      <>
-        <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-100" onClick={() => onNavigateToSale(id.toString())}>
-          <Play className="mr-2 h-4 w-4" /> Continuar proceso
+    if (isEliminado)
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-green-600 border-green-600 hover:bg-green-100"
+          onClick={() => onToggleStatus(id, state)}
+        >
+          <RotateCcw className="mr-2 h-4 w-4" /> Volver al Stock
         </Button>
-        <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-100" onClick={() => onCancelProcess(id)}>
-          <Trash2 className="mr-2 h-4 w-4" /> Cancelar proceso
-        </Button>
-      </>
-    );
-    if (isReservado) return (
+      );
+    if (isProcesando)
+      return (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-blue-600 border-blue-600 hover:bg-blue-100"
+            onClick={() => onNavigateToSale(id.toString())}
+          >
+            <Play className="mr-2 h-4 w-4" /> Continuar proceso
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-600 hover:bg-red-100"
+            onClick={() => onCancelProcess(id)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Cancelar proceso
+          </Button>
+        </>
+      );
+    if (isReservado)
+      return (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-600 hover:bg-red-100"
+            onClick={() => onCancelProcess(id)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Quitar Reserva
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-blue-600 border-blue-600 hover:bg-blue-100"
+            onClick={() => onNavigateToSale(id.toString())}
+          >
+            <Play className="mr-2 h-4 w-4" /> Continuar Compra
+          </Button>
+        </>
+      );
+    return (
       <>
+        {canSell && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-green-600 border-green-600 hover:bg-green-100"
+            onClick={() => onAction("vender", motorcycle)}
+          >
+            <DollarSign className="mr-2 h-4 w-4" /> Vender
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-violet-600 border-violet-600 hover:bg-violet-100"
+          onClick={() => setIsQuoteModalOpen(true)}
+        >
+          <Calculator className="mr-2 h-4 w-4" /> Presupuesto
+        </Button>
+        {!isReservado && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-blue-600 border-blue-600 hover:bg-blue-100"
+            disabled={isPausado}
+            onClick={() => onAction("reservar", motorcycle)}
+          >
+            <BookmarkPlus className="mr-2 h-4 w-4" /> Reservar
+          </Button>
+        )}
+        {canPause && (
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              isPausado
+                ? "text-green-600 border-green-600 hover:bg-green-100"
+                : "text-yellow-600 border-yellow-600 hover:bg-yellow-100",
+            )}
+            onClick={() => onToggleStatus(id, state)}
+          >
+            {isPausado ? (
+              <>
+                <Play className="mr-2 h-4 w-4" /> Activar
+              </>
+            ) : (
+              <>
+                <Pause className="mr-2 h-4 w-4" /> Pausar
+              </>
+            )}
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
           className="text-red-600 border-red-600 hover:bg-red-100"
-          onClick={() => onCancelProcess(id)}
+          onClick={() => onSetEliminado(id)}
         >
-          <Trash2 className="mr-2 h-4 w-4" /> Quitar Reserva
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-blue-600 border-blue-600 hover:bg-blue-100"
-          onClick={() => onNavigateToSale(id.toString())}
-        >
-          <Play className="mr-2 h-4 w-4" /> Continuar Compra
-        </Button>
-      </>
-    );
-    return (
-      <>
-        {canSell && <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-100" onClick={() => onAction('vender', motorcycle)}>
-          <DollarSign className="mr-2 h-4 w-4" /> Vender
-        </Button>}
-        <Button variant="outline" size="sm" className="text-violet-600 border-violet-600 hover:bg-violet-100" onClick={() => setIsQuoteModalOpen(true)}>
-          <Calculator className="mr-2 h-4 w-4" /> Presupuesto
-        </Button>
-        {!isReservado && <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-100" disabled={isPausado} onClick={() => onAction('reservar', motorcycle)}>
-          <BookmarkPlus className="mr-2 h-4 w-4" /> Reservar
-        </Button>}
-        {canPause && <Button variant="outline" size="sm" className={cn(isPausado ? 'text-green-600 border-green-600 hover:bg-green-100' : 'text-yellow-600 border-yellow-600 hover:bg-yellow-100')} onClick={() => onToggleStatus(id, state)}>
-          {isPausado ? <><Play className="mr-2 h-4 w-4" /> Activar</> : <><Pause className="mr-2 h-4 w-4" /> Pausar</>}
-        </Button>}
-        <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-100" onClick={() => onSetEliminado(id)}>
           <Trash2 className="mr-2 h-4 w-4" /> Eliminar
         </Button>
       </>
@@ -811,17 +978,23 @@ export function MotorcycleDetailModal({
       <div className="p-4 border rounded-md bg-blue-50">
         <h3 className="text-base font-semibold mb-2 border-b pb-1 flex items-center">
           <Info className="mr-2 h-4 w-4 text-blue-600" />
-          {isReservado ? 'Detalles de la Reserva' : 'En Proceso Para'}
+          {isReservado ? "Detalles de la Reserva" : "En Proceso Para"}
         </h3>
         <ClientDetail
           clientId={clientId}
           currency={rawReservationData?.currency || "USD"}
-          reservationData={useMemo(() => rawReservationData ? {
-            amount: rawReservationData.amount,
-            createdAt: rawReservationData.createdAt,
-            paymentMethod: rawReservationData.paymentMethod,
-            notes: rawReservationData.notes
-          } : undefined, [rawReservationData])}
+          reservationData={useMemo(
+            () =>
+              rawReservationData
+                ? {
+                    amount: rawReservationData.amount,
+                    createdAt: rawReservationData.createdAt,
+                    paymentMethod: rawReservationData.paymentMethod,
+                    notes: rawReservationData.notes,
+                  }
+                : undefined,
+            [rawReservationData],
+          )}
         />
       </div>
     );
@@ -837,23 +1010,47 @@ export function MotorcycleDetailModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
             <div className="md:col-span-2 space-y-6">
               <div>
-                <h3 className="text-lg font-semibold mb-2 border-b pb-1">ID: {id} - {motorcycle.brand?.name} {motorcycle.model?.name} ({motorcycle.year})</h3>
+                <h3 className="text-lg font-semibold mb-2 border-b pb-1">
+                  ID: {id} - {motorcycle.brand?.name} {motorcycle.model?.name} ({motorcycle.year})
+                </h3>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                  <DetailItem label="Estado" value={<Badge variant="outline" className={cn("font-normal whitespace-nowrap text-xs px-1.5 py-0.5", estadoVentaConfig[state].className)}>{estadoVentaConfig[state].label}</Badge>} />
+                  <DetailItem
+                    label="Estado"
+                    value={
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "font-normal whitespace-nowrap text-xs px-1.5 py-0.5",
+                          estadoVentaConfig[state].className,
+                        )}
+                      >
+                        {estadoVentaConfig[state].label}
+                      </Badge>
+                    }
+                  />
                   <DetailItem label="Año" value={motorcycle.year} />
                   <DetailItem label="Kilometraje" value={`${motorcycle.mileage} km`} />
-                  <DetailItem label="Cilindrada" value={`${motorcycle.displacement ?? '-'} cc`} />
-                  <DetailItem label="Color" value={motorcycle.color?.name ?? 'N/A'} />
-                  <DetailItem label="Sucursal" value={motorcycle.branch?.name ?? 'N/A'} />
-                  <DetailItem label="Nro. Chasis" value={motorcycle.chassisNumber ?? 'N/A'} />
-                  <DetailItem label="Nro. Motor" value={motorcycle.engineNumber ?? 'N/A'} />
-                  <DetailItem label="Patente" value={motorcycle.licensePlate ?? 'N/A'} />
-                  <DetailItem label="Precio" value={formatPrice(motorcycle.retailPrice, currency)} />
+                  <DetailItem label="Cilindrada" value={`${motorcycle.displacement ?? "-"} cc`} />
+                  <DetailItem label="Color" value={motorcycle.color?.name ?? "N/A"} />
+                  <DetailItem label="Sucursal" value={motorcycle.branch?.name ?? "N/A"} />
+                  <DetailItem label="Nro. Chasis" value={motorcycle.chassisNumber ?? "N/A"} />
+                  <DetailItem label="Nro. Motor" value={motorcycle.engineNumber ?? "N/A"} />
+                  <DetailItem label="Patente" value={motorcycle.licensePlate ?? "N/A"} />
+                  <DetailItem
+                    label="Precio"
+                    value={formatPrice(motorcycle.retailPrice, currency)}
+                  />
                   {shouldShowWholesale && motorcycle.wholesalePrice && (
-                    <DetailItem label="Precio Mayorista" value={formatPrice(motorcycle.wholesalePrice, currency)} />
+                    <DetailItem
+                      label="Precio Mayorista"
+                      value={formatPrice(motorcycle.wholesalePrice, currency)}
+                    />
                   )}
                   {shouldShowCost && motorcycle.costPrice && (
-                    <DetailItem label="Precio Costo" value={formatPrice(motorcycle.costPrice, currency)} />
+                    <DetailItem
+                      label="Precio Costo"
+                      value={formatPrice(motorcycle.costPrice, currency)}
+                    />
                   )}
                 </div>
               </div>
@@ -917,10 +1114,10 @@ export function MotorcycleDetailModal({
             </div>
           </div>
           <DialogFooter className="mt-4 pt-4 border-t">
-            <div className="flex flex-wrap gap-2 justify-start flex-grow">
-              {renderActions()}
-            </div>
-            <Button variant="outline" onClick={onClose}>Cerrar</Button>
+            <div className="flex flex-wrap gap-2 justify-start flex-grow">{renderActions()}</div>
+            <Button variant="outline" onClick={onClose}>
+              Cerrar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -940,7 +1137,9 @@ export function MotorcycleDetailModal({
             organizationLogoUrl={organization?.logo ?? null}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsQuoteModalOpen(false)}>Cerrar</Button>
+            <Button variant="outline" onClick={() => setIsQuoteModalOpen(false)}>
+              Cerrar
+            </Button>
             {motorcycle && quotePdfProps && (
               <Button
                 variant="outline"
@@ -955,7 +1154,7 @@ export function MotorcycleDetailModal({
               <QuoteBridgePdf
                 {...quotePdfProps}
                 organizationLogoKey={organization?.logo ?? undefined}
-                fileName={`Presupuesto_${motorcycle?.brand?.name || ''}_${motorcycle?.model?.name || ''}_${new Date().toISOString().split('T')[0]}.pdf`}
+                fileName={`Presupuesto_${motorcycle?.brand?.name || ""}_${motorcycle?.model?.name || ""}_${new Date().toISOString().split("T")[0]}.pdf`}
                 onReady={() => setShouldExportPdf(false)}
               />
             )}

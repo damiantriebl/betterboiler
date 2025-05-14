@@ -1,36 +1,39 @@
-'use server';
+"use server";
 
-import { z } from 'zod';
-import { Prisma, type CurrentAccount, type Payment, type PaymentFrequency, type CurrentAccountStatus } from '@prisma/client';
-import db from '@/lib/prisma';
+import db from "@/lib/prisma";
+import type { ActionState } from "@/types/action-states";
+import { type RecordPaymentInput, recordPaymentSchema } from "@/zod/current-account-schemas";
 import {
-  recordPaymentSchema,
-  type RecordPaymentInput,
-} from '@/zod/current-account-schemas';
-import type { ActionState } from '@/types/action-states';
-import { revalidatePath } from 'next/cache';
+  type CurrentAccount,
+  type CurrentAccountStatus,
+  type Payment,
+  type PaymentFrequency,
+  Prisma,
+} from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 // Helper to determine next due date based on the last payment and frequency
 function calculateNextDueDateAfterPayment(lastDueDate: Date, frequency: PaymentFrequency): Date {
-    const next = new Date(lastDueDate);
-    switch (frequency) {
-        case 'WEEKLY':
-            next.setDate(next.getDate() + 7);
-            break;
-        case 'BIWEEKLY':
-            next.setDate(next.getDate() + 14);
-            break;
-        case 'MONTHLY':
-            next.setMonth(next.getMonth() + 1);
-            break;
-        case 'QUARTERLY':
-            next.setMonth(next.getMonth() + 3);
-            break;
-        case 'ANNUALLY':
-            next.setFullYear(next.getFullYear() + 1);
-            break;
-    }
-    return next;
+  const next = new Date(lastDueDate);
+  switch (frequency) {
+    case "WEEKLY":
+      next.setDate(next.getDate() + 7);
+      break;
+    case "BIWEEKLY":
+      next.setDate(next.getDate() + 14);
+      break;
+    case "MONTHLY":
+      next.setMonth(next.getMonth() + 1);
+      break;
+    case "QUARTERLY":
+      next.setMonth(next.getMonth() + 3);
+      break;
+    case "ANNUALLY":
+      next.setFullYear(next.getFullYear() + 1);
+      break;
+  }
+  return next;
 }
 
 export async function recordCurrentAccountPayment(
@@ -41,18 +44,20 @@ export async function recordCurrentAccountPayment(
     if (!validatedInput.success) {
       return {
         success: false,
-        error: "Error de validación: " + Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", "),
+        error:
+          "Error de validación: " +
+          Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", "),
       };
     }
 
-    const { 
-        currentAccountId, 
-        amountPaid, 
-        paymentDate, 
-        paymentMethod, 
-        transactionReference, 
-        notes,
-        isDownPayment
+    const {
+      currentAccountId,
+      amountPaid,
+      paymentDate,
+      paymentMethod,
+      transactionReference,
+      notes,
+      isDownPayment,
     } = validatedInput.data;
 
     // Use a transaction to ensure data integrity
@@ -65,27 +70,31 @@ export async function recordCurrentAccountPayment(
         throw new Error("Cuenta corriente no encontrada.");
       }
 
-      if (account.status === 'PAID_OFF') {
+      if (account.status === "PAID_OFF") {
         throw new Error("Esta cuenta corriente ya ha sido saldada.");
       }
 
       // Ensure remainingAmount is treated as a number for calculation
-      const currentRemainingAmount = typeof account.remainingAmount === 'number' 
-        ? account.remainingAmount 
-        : parseFloat((account.remainingAmount as any).toString());
+      const currentRemainingAmount =
+        typeof account.remainingAmount === "number"
+          ? account.remainingAmount
+          : Number.parseFloat((account.remainingAmount as any).toString());
 
       const newRemainingAmount = currentRemainingAmount - amountPaid;
-      
+
       let newStatus: CurrentAccountStatus = account.status;
       let updatedNextDueDate: Date | null = account.nextDueDate;
 
       if (newRemainingAmount <= 0) {
-        newStatus = 'PAID_OFF';
+        newStatus = "PAID_OFF";
         updatedNextDueDate = null;
       } else if (account.nextDueDate && !isDownPayment) {
-        updatedNextDueDate = calculateNextDueDateAfterPayment(new Date(account.nextDueDate), account.paymentFrequency);
+        updatedNextDueDate = calculateNextDueDateAfterPayment(
+          new Date(account.nextDueDate),
+          account.paymentFrequency,
+        );
       }
-      
+
       const newPayment = await tx.payment.create({
         data: {
           currentAccountId,
@@ -121,11 +130,12 @@ export async function recordCurrentAccountPayment(
   } catch (error: any) {
     console.error("Error recording payment:", error);
     if (error instanceof z.ZodError) {
-      return { 
-        success: false, 
-        error: "Error de validación: " + Object.values(error.flatten().fieldErrors).flat().join(", ") 
+      return {
+        success: false,
+        error:
+          "Error de validación: " + Object.values(error.flatten().fieldErrors).flat().join(", "),
       };
     }
     return { success: false, error: error.message || "Error desconocido al registrar el pago." };
   }
-} 
+}

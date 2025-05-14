@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3Client = new S3Client({
@@ -32,7 +32,7 @@ type S3UploadResult = S3UploadSuccess | S3UploadError;
 export async function uploadToS3(
   input: File | Buffer | FileUpload,
   key: string,
-  contentType?: string
+  contentType?: string,
 ): Promise<S3UploadResult> {
   try {
     let buffer: Buffer;
@@ -54,21 +54,23 @@ export async function uploadToS3(
       Key: key,
       Body: buffer,
       ContentType: finalContentType,
-      ACL: 'public-read',
+      ACL: "public-read",
     });
 
     await s3Client.send(command);
 
     // Construir URL pública para acceder al objeto (usar CloudFront si está configurado)
-    const bucketDomain = process.env.AWS_CLOUDFRONT_DOMAIN || `${BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com`;
+    const bucketDomain =
+      process.env.AWS_CLOUDFRONT_DOMAIN ||
+      `${BUCKET_NAME}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com`;
     const url = `https://${bucketDomain}/${key}`;
 
     return { success: true, url, key };
   } catch (error) {
     console.error("Error uploading to S3:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -85,4 +87,4 @@ export async function deleteFromS3(key: string): Promise<void> {
     console.error("Error deleting from S3:", error);
     throw error;
   }
-} 
+}

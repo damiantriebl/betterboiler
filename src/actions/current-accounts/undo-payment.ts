@@ -2,7 +2,7 @@
 
 import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import prisma from "@/lib/prisma";
-import { Prisma, type PrismaClient, type PaymentFrequency } from "@prisma/client";
+import { type PaymentFrequency, Prisma, type PrismaClient } from "@prisma/client";
 import { z } from "zod";
 
 const undoPaymentSchema = z.object({
@@ -12,12 +12,18 @@ const undoPaymentSchema = z.object({
 // Función para calcular el número de períodos por año según la frecuencia de pago
 function getPeriodsPerYear(frequency: PaymentFrequency): number {
   switch (frequency) {
-    case 'WEEKLY': return 52;
-    case 'BIWEEKLY': return 26;
-    case 'MONTHLY': return 12;
-    case 'QUARTERLY': return 4;
-    case 'ANNUALLY': return 1;
-    default: return 12; // Default a mensual
+    case "WEEKLY":
+      return 52;
+    case "BIWEEKLY":
+      return 26;
+    case "MONTHLY":
+      return 12;
+    case "QUARTERLY":
+      return 4;
+    case "ANNUALLY":
+      return 1;
+    default:
+      return 12; // Default a mensual
   }
 }
 
@@ -26,19 +32,18 @@ function calculateNewInstallment(
   remainingAmount: number,
   annualInterestRatePercent: number,
   remainingInstallments: number,
-  paymentFrequency: PaymentFrequency
+  paymentFrequency: PaymentFrequency,
 ): number {
   const periodsPerYear = getPeriodsPerYear(paymentFrequency);
   const tnaDecimal = annualInterestRatePercent / 100;
-  const periodicRate = annualInterestRatePercent > 0
-    ? Math.pow(1 + tnaDecimal, 1 / periodsPerYear) - 1
-    : 0;
+  const periodicRate =
+    annualInterestRatePercent > 0 ? Math.pow(1 + tnaDecimal, 1 / periodsPerYear) - 1 : 0;
 
   if (remainingAmount <= 0 || remainingInstallments <= 0) return 0;
   if (periodicRate === 0) return Math.ceil(remainingAmount / remainingInstallments);
 
   const factor = Math.pow(1 + periodicRate, remainingInstallments);
-  const raw = remainingAmount * (periodicRate * factor) / (factor - 1);
+  const raw = (remainingAmount * (periodicRate * factor)) / (factor - 1);
   return Math.ceil(raw);
 }
 
@@ -94,17 +99,26 @@ export async function undoPayment(
       }
 
       if (!paymentToAnnul.currentAccount) {
-        return { message: `Error: Current account data not found for payment ${paymentId}.`, success: false };
+        return {
+          message: `Error: Current account data not found for payment ${paymentId}.`,
+          success: false,
+        };
       }
-      
+
       if (paymentToAnnul.installmentVersion === "D" || paymentToAnnul.installmentVersion === "H") {
-        return { message: `Error: Payment ${paymentId} appears to be part of an annulment process already.`, success: false };
+        return {
+          message: `Error: Payment ${paymentId} appears to be part of an annulment process already.`,
+          success: false,
+        };
       }
 
       const amountPaidOriginal = paymentToAnnul.amountPaid;
       const currentAccountIdFromPayment = paymentToAnnul.currentAccountId;
       if (!currentAccountIdFromPayment) {
-         return { message: `Error: currentAccountId is missing on payment ${paymentId}.`, success: false };
+        return {
+          message: `Error: currentAccountId is missing on payment ${paymentId}.`,
+          success: false,
+        };
       }
 
       // 1. Mark the original payment with version "D" (Debe)
@@ -124,15 +138,17 @@ export async function undoPayment(
           amountPaid: paymentToAnnul.amountPaid, // Same amount
           paymentDate: paymentToAnnul.paymentDate,
           paymentMethod: paymentToAnnul.paymentMethod,
-          notes: paymentToAnnul.notes ? `${paymentToAnnul.notes} (Anulación H)` : `Asiento H por anulación de pago ${paymentId}`,
+          notes: paymentToAnnul.notes
+            ? `${paymentToAnnul.notes} (Anulación H)`
+            : `Asiento H por anulación de pago ${paymentId}`,
           transactionReference: paymentToAnnul.transactionReference,
           installmentNumber: paymentToAnnul.installmentNumber,
-          installmentVersion: "H", 
+          installmentVersion: "H",
           // Ensure all other relevant fields from paymentToAnnul are copied if necessary
           // createdAt will be new, updatedAt will be new by default
         },
       });
-      
+
       // Create a new pending payment entry for the same installment
       await tx.payment.create({
         data: {
@@ -160,14 +176,17 @@ export async function undoPayment(
         where: {
           currentAccountId: currentAccountIdFromPayment,
           installmentVersion: null, // Solo pagos normales y activos
-        }
+        },
       });
-      
+
       // 5. Determinar cuántas cuotas quedan pendientes
-      const remainingInstallments = Math.max(0, currentAccount.numberOfInstallments - validPaymentsCount);
+      const remainingInstallments = Math.max(
+        0,
+        currentAccount.numberOfInstallments - validPaymentsCount,
+      );
 
       // 6. Calcular nuevo monto de cuota basado en el saldo restante actualizado
-      let updateData: Prisma.CurrentAccountUpdateInput = {
+      const updateData: Prisma.CurrentAccountUpdateInput = {
         remainingAmount: newRemainingAmount,
         updatedAt: new Date(),
       };
@@ -178,19 +197,21 @@ export async function undoPayment(
           newRemainingAmount, // El saldo actualizado tras anular el pago
           currentAccount.interestRate ?? 0,
           remainingInstallments,
-          currentAccount.paymentFrequency
+          currentAccount.paymentFrequency,
         );
-        
+
         updateData.installmentAmount = newInstallmentAmount;
       }
 
       // Actualizar la cuenta corriente con los nuevos valores
       await tx.currentAccount.update({
         where: { id: currentAccountIdFromPayment },
-        data: updateData
+        data: updateData,
       });
 
-      console.log(`Payment ${paymentId} processed for D/H annulment. Payment D: ${paymentD.id}, Payment H: ${paymentH.id}. Current account ${currentAccountIdFromPayment} updated with new installment amount.`);
+      console.log(
+        `Payment ${paymentId} processed for D/H annulment. Payment D: ${paymentD.id}, Payment H: ${paymentH.id}. Current account ${currentAccountIdFromPayment} updated with new installment amount.`,
+      );
 
       return {
         message: `Anulación procesada para pago ${paymentId} (Asientos D/H generados). Saldo y cuota recalculados.`,
@@ -203,7 +224,7 @@ export async function undoPayment(
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       errorMessage = `Error de base de datos al anular el pago (D/H). Código: ${error.code}`;
     } else if (error instanceof Error) {
-        errorMessage = error.message;
+      errorMessage = error.message;
     }
     return {
       message: errorMessage,
@@ -214,10 +235,14 @@ export async function undoPayment(
 
 export async function fetchImageAsBase64(url: string): Promise<string> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error('No se pudo obtener la imagen');
+  if (!res.ok) throw new Error("No se pudo obtener la imagen");
   const buffer = await res.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString('base64');
+  const base64 = Buffer.from(buffer).toString("base64");
   // Intenta deducir el mime-type, por ejemplo 'image/png'
-  const mimeType = url.endsWith('.png') ? 'image/png' : url.endsWith('.jpg') || url.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
+  const mimeType = url.endsWith(".png")
+    ? "image/png"
+    : url.endsWith(".jpg") || url.endsWith(".jpeg")
+      ? "image/jpeg"
+      : "image/png";
   return `data:${mimeType};base64,${base64}`;
-} 
+}

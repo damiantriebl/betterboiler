@@ -1,16 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useTransition, useRef } from "react";
-import { useActionState } from "react";
+import { associateOrganizationBrand } from "@/actions/configuration/associate-organization-brand";
+import { createRootBrand, getRootBrands } from "@/actions/root/global-brand-actions";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -18,33 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Check, Info, Palette } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import {
-  associateOrganizationBrand,
-} from "@/actions/configuration/associate-organization-brand";
-import {
-  createRootBrand,
-  getRootBrands,
-} from "@/actions/root/global-brand-actions";
-import type { Brand } from "@prisma/client";
-import type { ActionState, CreateBrandState } from "@/types/action-states";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { ActionState, CreateBrandState } from "@/types/action-states";
+import type { Brand } from "@prisma/client";
+import { Check, Info, Loader2, Palette, Plus } from "lucide-react";
+import type React from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useActionState } from "react";
 import { HexColorPicker } from "react-colorful";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 interface CreateBrandModalProps {
   open: boolean;
@@ -88,7 +75,7 @@ export default function CreateBrandModal({
   // Custom wrapper for associateOrganizationBrand to be used with useActionState
   const wrappedAssociateAction = async (
     _prevState: AssociateBrandActionState,
-    formData: FormData
+    formData: FormData,
   ) => {
     const brandId = formData.get("brandId") as string;
     return await associateOrganizationBrand({
@@ -101,15 +88,11 @@ export default function CreateBrandModal({
   const [associateState, associateFormAction, isAssociating] = useActionState<
     AssociateBrandActionState,
     FormData
-  >(
-    wrappedAssociateAction,
-    { success: false, error: undefined, message: undefined }
-  );
+  >(wrappedAssociateAction, { success: false, error: undefined, message: undefined });
 
-  const [createState, createFormAction, isCreating] = useActionState(
-    createRootBrand,
-    { success: false }
-  );
+  const [createState, createFormAction, isCreating] = useActionState(createRootBrand, {
+    success: false,
+  });
 
   // Reset success handled ref when modal opens/closes
   useEffect(() => {
@@ -166,7 +149,11 @@ export default function CreateBrandModal({
       // Use timeout to avoid state updates during rendering
       setTimeout(() => onOpenChange(false), 0);
     } else if (associateState.error) {
-      toast({ title: "Error al asociar", description: associateState.error, variant: "destructive" });
+      toast({
+        title: "Error al asociar",
+        description: associateState.error,
+        variant: "destructive",
+      });
     }
   }, [associateState.success, associateState.error, toast, onSuccess, onOpenChange]);
 
@@ -203,7 +190,7 @@ export default function CreateBrandModal({
   // Actualizar el color seleccionado cuando cambia la marca seleccionada
   useEffect(() => {
     if (selectedBrandId) {
-      const brand = availableBrands.find(b => b.id === parseInt(selectedBrandId));
+      const brand = availableBrands.find((b) => b.id === Number.parseInt(selectedBrandId));
       setSelectedBrandColor(brand?.color || null);
     } else {
       setSelectedBrandColor(null);
@@ -221,17 +208,17 @@ export default function CreateBrandModal({
     });
 
     if (result.success) {
-      toast({ title: 'Marca asociada correctamente.' });
+      toast({ title: "Marca asociada correctamente." });
       onSuccess?.();
       onOpenChange(false);
     } else {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+      toast({ title: "Error", description: result.error, variant: "destructive" });
     }
   };
 
   // Filtrar marcas no asociadas para mostrar en el select
   const nonAssociatedBrands = availableBrands.filter(
-    brand => !existingBrandIds.includes(brand.id)
+    (brand) => !existingBrandIds.includes(brand.id),
   );
 
   // Verificar si hay marcas disponibles para asociar
@@ -252,12 +239,13 @@ export default function CreateBrandModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>{showNewBrandForm ? "Crear Nueva Marca Global" : "Asociar Marca Existente"}</DialogTitle>
+          <DialogTitle>
+            {showNewBrandForm ? "Crear Nueva Marca Global" : "Asociar Marca Existente"}
+          </DialogTitle>
           <DialogDescription>
             {showNewBrandForm
               ? "Crea una nueva marca global que estará disponible para todas las organizaciones."
-              : "Selecciona una marca global existente para asociarla a tu organización."
-            }
+              : "Selecciona una marca global existente para asociarla a tu organización."}
           </DialogDescription>
         </DialogHeader>
 
@@ -265,7 +253,9 @@ export default function CreateBrandModal({
           <form action={associateFormAction} className="grid gap-4 py-4">
             <input type="hidden" name="organizationId" value={organizationId} />
             {isFetchingBrands ? (
-              <div className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
+              <div className="text-center">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+              </div>
             ) : (
               <>
                 {hasAvailableBrands ? (
@@ -358,17 +348,31 @@ export default function CreateBrandModal({
               </>
             )}
 
-            <DialogFooter className={`mt-4 flex flex-col sm:flex-row sm:justify-between${availableBrands.length > 0 ? " sm:items-center" : ""}`}>
-              <Button type="button" variant="outline" onClick={() => setShowNewBrandForm(true)} disabled={isAssociating || isFetchingBrands}>
+            <DialogFooter
+              className={`mt-4 flex flex-col sm:flex-row sm:justify-between${availableBrands.length > 0 ? " sm:items-center" : ""}`}
+            >
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowNewBrandForm(true)}
+                disabled={isAssociating || isFetchingBrands}
+              >
                 <Plus className="mr-2 h-4 w-4" /> Crear Marca Global
               </Button>
-              <div className={`flex gap-2 mt-2 sm:mt-0${availableBrands.length === 0 ? " w-full justify-end" : ""}`}>
+              <div
+                className={`flex gap-2 mt-2 sm:mt-0${availableBrands.length === 0 ? " w-full justify-end" : ""}`}
+              >
                 <DialogClose asChild>
                   <Button type="button" variant="ghost" disabled={isAssociating}>
                     Cancelar
                   </Button>
                 </DialogClose>
-                <Button onClick={handleAssociateBrand} disabled={isAssociating || isFetchingBrands || !selectedBrandId || !hasAvailableBrands}>
+                <Button
+                  onClick={handleAssociateBrand}
+                  disabled={
+                    isAssociating || isFetchingBrands || !selectedBrandId || !hasAvailableBrands
+                  }
+                >
                   {isAssociating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Asociar Marca
                 </Button>
@@ -417,30 +421,17 @@ export default function CreateBrandModal({
                 />
                 <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
                   <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      disabled={isCreating}
-                    >
+                    <Button type="button" size="icon" variant="outline" disabled={isCreating}>
                       <Palette className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent side="right" align="start" className="w-auto p-0">
                     <div className="p-3">
-                      <HexColorPicker
-                        color={newBrandColor}
-                        onChange={setNewBrandColor}
-                      />
+                      <HexColorPicker color={newBrandColor} onChange={setNewBrandColor} />
                     </div>
                     <div className="flex justify-between items-center px-3 py-2 border-t">
-                      <div className="text-sm">
-                        {newBrandColor}
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => setIsColorPickerOpen(false)}
-                      >
+                      <div className="text-sm">{newBrandColor}</div>
+                      <Button size="sm" onClick={() => setIsColorPickerOpen(false)}>
                         Aceptar
                       </Button>
                     </div>
@@ -450,10 +441,19 @@ export default function CreateBrandModal({
             </div>
 
             {createState.error && (
-              <p className="text-sm text-red-500 col-span-4 text-center">Error: {createState.error}</p>
+              <p className="text-sm text-red-500 col-span-4 text-center">
+                Error: {createState.error}
+              </p>
             )}
-            <DialogFooter className={`mt-4${showNewBrandForm ? " flex flex-col sm:flex-row sm:justify-between" : ""}`}>
-              <Button type="button" variant="outline" onClick={() => setShowNewBrandForm(false)} disabled={isCreating}>
+            <DialogFooter
+              className={`mt-4${showNewBrandForm ? " flex flex-col sm:flex-row sm:justify-between" : ""}`}
+            >
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowNewBrandForm(false)}
+                disabled={isCreating}
+              >
                 Volver a Seleccionar
               </Button>
               <div className="flex gap-2 mt-2 sm:mt-0">

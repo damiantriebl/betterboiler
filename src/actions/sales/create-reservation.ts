@@ -1,9 +1,9 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { type CreateReservationInput, createReservationSchema } from "@/zod/ReservationZod";
 import { MotorcycleState } from "@prisma/client";
 import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
-import { CreateReservationInput, createReservationSchema } from "@/zod/ReservationZod";
 
 export async function createReservation(data: CreateReservationInput) {
   try {

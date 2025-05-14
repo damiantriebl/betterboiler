@@ -1,9 +1,9 @@
 "use server";
 
-import { renderToBuffer } from "@react-pdf/renderer";
-import { getInventoryStatusReport } from "@/lib/reports/inventory";
-import { InventoryReportPDF } from "@/components/pdf/InventoryReportPDF";
 import { auth } from "@/auth";
+import { InventoryReportPDF } from "@/components/pdf/InventoryReportPDF";
+import { getInventoryStatusReport } from "@/lib/reports/inventory";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -22,4 +22,4 @@ export async function generateInventoryPDF(dateRange?: { from?: Date; to?: Date 
       "Content-Disposition": "attachment; filename=inventory-report.pdf",
     },
   });
-} 
+}

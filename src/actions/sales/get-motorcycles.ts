@@ -1,10 +1,10 @@
 "use server";
 
-import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Prisma, type MotorcycleState } from "@prisma/client";
-import { headers } from "next/headers";
+import prisma from "@/lib/prisma";
+import { type MotorcycleState, Prisma } from "@prisma/client";
 import { unstable_noStore as noStore } from "next/cache";
+import { headers } from "next/headers";
 
 // Actualizar el tipo para incluir costPrice y wholesalePrice
 export type MotorcycleTableRowData = {
@@ -16,7 +16,7 @@ export type MotorcycleTableRowData = {
       color: string | null;
     }[];
   } | null;
-  model: { 
+  model: {
     name: string;
     files?: {
       id: string;
@@ -97,8 +97,8 @@ export async function getMotorcycles(
             },
           },
         },
-        model: { 
-          select: { 
+        model: {
+          select: {
             name: true,
             files: {
               select: {
@@ -110,9 +110,9 @@ export async function getMotorcycles(
                 size: true,
                 createdAt: true,
                 updatedAt: true,
-              }
-            }
-          } 
+              },
+            },
+          },
         },
         color: { select: { name: true, colorOne: true, colorTwo: true } },
         branch: { select: { name: true } },
@@ -169,10 +169,12 @@ export async function getMotorcycles(
         engineNumber: moto.engineNumber,
         // Relaciones (asegurando null si no existen)
         brand: finalBrand,
-        model: moto.model ? {
-          name: moto.model.name,
-          files: moto.model.files || []
-        } : null,
+        model: moto.model
+          ? {
+              name: moto.model.name,
+              files: moto.model.files || [],
+            }
+          : null,
         color: moto.color ?? null,
         branch: moto.branch ?? null,
         supplier: moto.supplier ?? undefined,

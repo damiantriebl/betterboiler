@@ -1,8 +1,8 @@
 "use server";
 
-import { PrismaClient, type PaymentMethod } from '@prisma/client';
-import { getOrganizationIdFromSession } from './getOrganizationIdFromSession';
-import { setupCurrentAccountMethod } from './setup-current-account-method';
+import { type PaymentMethod, PrismaClient } from "@prisma/client";
+import { getOrganizationIdFromSession } from "./getOrganizationIdFromSession";
+import { setupCurrentAccountMethod } from "./setup-current-account-method";
 
 const prisma = new PrismaClient();
 
@@ -16,13 +16,13 @@ export async function getPaymentMethodsAction(): Promise<ActionResult<PaymentMet
   try {
     // Primero asegurarse de que el método de cuenta corriente esté configurado
     await setupCurrentAccountMethod();
-    
+
     // Obtener ID de la organización actual desde la sesión
     const organizationIdResult = await getOrganizationIdFromSession();
     if (!organizationIdResult) {
-      return { success: false, error: 'Organization ID not found.' };
+      return { success: false, error: "Organization ID not found." };
     }
-    
+
     // Convertir el resultado a string para usarlo con Prisma
     const organizationId = String(organizationIdResult);
 
@@ -36,20 +36,20 @@ export async function getPaymentMethodsAction(): Promise<ActionResult<PaymentMet
         method: true,
       },
       orderBy: {
-        order: 'asc',
+        order: "asc",
       },
     });
 
     // Extraer solo los objetos PaymentMethod de los resultados
-    const paymentMethods = organizationPaymentMethods.map(opm => opm.method);
+    const paymentMethods = organizationPaymentMethods.map((opm) => opm.method);
 
     return { success: true, data: paymentMethods };
   } catch (error) {
-    console.error('Error fetching payment methods:', error);
-    let errorMessage = 'Failed to fetch payment methods.';
+    console.error("Error fetching payment methods:", error);
+    let errorMessage = "Failed to fetch payment methods.";
     if (error instanceof Error) {
       errorMessage = error.message;
     }
     return { success: false, error: errorMessage };
   }
-} 
+}

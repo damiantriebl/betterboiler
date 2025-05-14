@@ -118,7 +118,7 @@ body {
   .organization-logo-container {
     @apply transition-all duration-300 ease-in-out;
   }
-  
+
   .organization-logo-container:hover {
     @apply transform scale-105;
   }

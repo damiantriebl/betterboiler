@@ -1,9 +1,6 @@
 "use client";
 
-import type React from "react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import type { Client } from "@prisma/client";
+import { PlusCircle } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
 
 // Importar el formulario de cliente
 import ClientForm from "@/app/(app)/clients/ClientForm";

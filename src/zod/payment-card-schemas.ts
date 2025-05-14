@@ -1,10 +1,16 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Basic payment card schema
 export const paymentCardSchema = z.object({
-  name: z.string().min(1, "El nombre de la tarjeta no puede estar vacío.").max(100, "El nombre de la tarjeta es demasiado largo."),
+  name: z
+    .string()
+    .min(1, "El nombre de la tarjeta no puede estar vacío.")
+    .max(100, "El nombre de la tarjeta es demasiado largo."),
   type: z.enum(["credit", "debit"]).default("credit"),
-  issuer: z.string().min(1, "El emisor de la tarjeta no puede estar vacío.").max(100, "El emisor de la tarjeta es demasiado largo."),
+  issuer: z
+    .string()
+    .min(1, "El emisor de la tarjeta no puede estar vacío.")
+    .max(100, "El emisor de la tarjeta es demasiado largo."),
   logoUrl: z.string().url("El formato de la URL del logo es inválido.").optional().nullable(),
 });
 
@@ -20,4 +26,4 @@ export const cardOrderSchema = z.object({
   order: z.number().int().min(0),
 });
 
-export const updateCardsOrderSchema = z.array(cardOrderSchema); 
+export const updateCardsOrderSchema = z.array(cardOrderSchema);

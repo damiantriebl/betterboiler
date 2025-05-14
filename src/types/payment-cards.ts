@@ -24,4 +24,4 @@ export interface OrganizationPaymentCardDisplay {
   order: number;
   isEnabled: boolean;
   card: PaymentCard;
-} 
+}

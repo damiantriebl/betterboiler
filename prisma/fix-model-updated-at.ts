@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 /**
  * Script para actualizar los valores nulos de updatedAt a que coincidan con createdAt en el modelo Model
@@ -9,7 +9,7 @@ export async function fixModelUpdatedAt() {
   const prisma = new PrismaClient();
 
   try {
-    console.log('🔍 Buscando registros de Model con updatedAt nulos...');
+    console.log("🔍 Buscando registros de Model con updatedAt nulos...");
 
     // Primero obtenemos todos los modelos con updatedAt null
     // En Prisma no podemos consultar directamente null, así que usamos un método alternativo
@@ -22,12 +22,14 @@ export async function fixModelUpdatedAt() {
     });
 
     // Filtrar manualmente los que tienen updatedAt null o undefined
-    const modelsToFix = allModels.filter(model => model.updatedAt === null || model.updatedAt === undefined);
+    const modelsToFix = allModels.filter(
+      (model) => model.updatedAt === null || model.updatedAt === undefined,
+    );
 
     console.log(`📊 Encontrados ${modelsToFix.length} registros para actualizar`);
 
     if (modelsToFix.length === 0) {
-      console.log('✅ No hay registros que necesiten actualización');
+      console.log("✅ No hay registros que necesiten actualización");
       return;
     }
 
@@ -43,7 +45,7 @@ export async function fixModelUpdatedAt() {
 
     console.log(`✅ Actualizados ${updatedCount} registros correctamente`);
   } catch (error) {
-    console.error('❌ Error al actualizar los registros:', error);
+    console.error("❌ Error al actualizar los registros:", error);
   } finally {
     await prisma.$disconnect();
   }
@@ -52,9 +54,9 @@ export async function fixModelUpdatedAt() {
 // Ejecutar la función si este archivo se ejecuta directamente
 if (import.meta.url === new URL(import.meta.url).href) {
   fixModelUpdatedAt()
-    .then(() => console.log('✨ Proceso completado'))
+    .then(() => console.log("✨ Proceso completado"))
     .catch((error) => {
-      console.error('❌ Error en el proceso:', error);
+      console.error("❌ Error en el proceso:", error);
       process.exit(1);
     });
-} 
+}

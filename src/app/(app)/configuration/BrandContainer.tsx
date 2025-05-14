@@ -1,11 +1,11 @@
-// src/app/(app)/configuracion/BrandContainer.tsx
-import type React from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { DraggableSyntheticListeners } from "@dnd-kit/core";
+import { GripVertical, Trash2 } from "lucide-react";
+// src/app/(app)/configuracion/BrandContainer.tsx
+import type React from "react";
 
 // --- Props con edición inline para Renombrar/Duplicar ---
 interface BrandContainerProps {

@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
   const result = await getSignedS3Url({ name, operation: operation as "put" | "get" });
 
-  if ('failure' in result) {
+  if ("failure" in result) {
     return NextResponse.json(result, { status: 400 });
   }
 

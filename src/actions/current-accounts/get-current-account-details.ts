@@ -1,13 +1,13 @@
-'use server';
+"use server";
 
-import db from '@/lib/prisma';
-import type { ActionState } from '@/types/action-states';
-import type { CurrentAccount, Client, Model, CurrentAccountPayment } from '@prisma/client';
+import db from "@/lib/prisma";
+import type { ActionState } from "@/types/action-states";
+import type { Client, CurrentAccount, CurrentAccountPayment, Model } from "@prisma/client";
 
 // Define a more specific type for the returned account, including relations
 export type CurrentAccountFullDetails = CurrentAccount & {
-  client: Pick<Client, 'id' | 'firstName' | 'lastName' | 'email' | 'phone'>; // Adjust fields as per your Client model
-  model: Pick<Model, 'id' | 'name'>; // Adjust fields as per your Model model
+  client: Pick<Client, "id" | "firstName" | "lastName" | "email" | "phone">; // Adjust fields as per your Client model
+  model: Pick<Model, "id" | "name">; // Adjust fields as per your Model model
   payments: CurrentAccountPayment[];
 };
 
@@ -23,12 +23,12 @@ export async function getCurrentAccountDetails(
       where: { id: accountId },
       include: {
         client: {
-          select: { 
-            id: true, 
+          select: {
+            id: true,
             firstName: true, // Tentative
-            lastName: true,  // Tentative
-            email: true,     // Tentative
-            phone: true      // Tentative
+            lastName: true, // Tentative
+            email: true, // Tentative
+            phone: true, // Tentative
             // Add/remove fields to match your Client model structure
           },
         },
@@ -37,7 +37,7 @@ export async function getCurrentAccountDetails(
         },
         payments: {
           orderBy: {
-            paymentDate: 'desc', // Show recent payments first
+            paymentDate: "desc", // Show recent payments first
           },
         },
       },
@@ -53,6 +53,9 @@ export async function getCurrentAccountDetails(
     };
   } catch (error) {
     console.error("Error fetching current account details:", error);
-    return { success: false, error: "Error desconocido al obtener los detalles de la cuenta corriente." };
+    return {
+      success: false,
+      error: "Error desconocido al obtener los detalles de la cuenta corriente.",
+    };
   }
-} 
+}

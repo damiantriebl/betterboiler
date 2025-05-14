@@ -1,16 +1,16 @@
 "use client"; // <-- ¡Importante! Este es el Client Component
 
-import { useState, useEffect } from "react";
+import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import type { MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { Day } from "@/zod/banking-promotion-schemas";
+import type { Brand, Client, Model, Motorcycle, MotorcycleState, Sucursal } from "@prisma/client";
+import { useEffect, useState } from "react";
 import MotorcycleTable from "./(table)/MotorcycleTable";
 import { PromotionDayFilter } from "./PromotionDayFilter";
-import { type Motorcycle, type MotorcycleState, type Brand, type Model, type Sucursal, type Client } from "@prisma/client";
-import { type MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
-import { type BankingPromotionDisplay } from "@/types/banking-promotions";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type Day } from "@/zod/banking-promotion-schemas";
 import { ReserveModal } from "./ReserveModal";
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 
 // Definir las props que espera este componente
 interface SalesClientComponentProps {
@@ -22,7 +22,8 @@ interface SalesClientComponentProps {
 }
 
 // Estado para la moto seleccionada para la venta
-interface SelectedMotorcycleForSale extends Omit<MotorcycleTableRowData, 'id' | 'retailPrice'> { // Omitir para redefinir con tipos correctos
+interface SelectedMotorcycleForSale extends Omit<MotorcycleTableRowData, "id" | "retailPrice"> {
+  // Omitir para redefinir con tipos correctos
   id: number; // Asegurar que id es number si MotorcycleTableRowData lo tiene como string o diferente
   name: string; // Nombre compuesto para mostrar
   retailPrice: number; // Asegurar que retailPrice es number
@@ -38,9 +39,12 @@ export default function SalesClientComponent({
   console.log("SalesClientComponent initialData:", initialData);
 
   // Estado para las promociones filtradas - inicializar directamente con promotions
-  const [filteredPromotions, setFilteredPromotions] = useState<BankingPromotionDisplay[]>(promotions);
+  const [filteredPromotions, setFilteredPromotions] =
+    useState<BankingPromotionDisplay[]>(promotions);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
-  const [selectedMotorcycle, setSelectedMotorcycle] = useState<SelectedMotorcycleForSale | null>(null);
+  const [selectedMotorcycle, setSelectedMotorcycle] = useState<SelectedMotorcycleForSale | null>(
+    null,
+  );
   const [organizationId, setOrganizationId] = useState<string | null>(null); // State for organizationId
   const [orgIdError, setOrgIdError] = useState<string | null>(null); // State for error
 
@@ -75,15 +79,17 @@ export default function SalesClientComponent({
   }, []); // Empty dependency array ensures this runs once on mount
 
   const handleOpenSaleModal = (motorcycle: MotorcycleTableRowData) => {
-    const motorcycleName = `${motorcycle.brand?.name || 'Marca'} ${motorcycle.model?.name || 'Modelo'} ${motorcycle.year || ''}`.trim();
+    const motorcycleName =
+      `${motorcycle.brand?.name || "Marca"} ${motorcycle.model?.name || "Modelo"} ${motorcycle.year || ""}`.trim();
 
-    if (typeof motorcycle.retailPrice !== 'number') {
+    if (typeof motorcycle.retailPrice !== "number") {
       console.error("Precio de venta no disponible o inválido:", motorcycle);
       alert("No se puede procesar la venta: precio no disponible.");
       return;
     }
     // Asegurarse de que el id de la motocicleta es un número, como espera ReserveModal
-    const motorcycleIdAsNumber = typeof motorcycle.id === 'string' ? parseInt(motorcycle.id, 10) : motorcycle.id;
+    const motorcycleIdAsNumber =
+      typeof motorcycle.id === "string" ? Number.parseInt(motorcycle.id, 10) : motorcycle.id;
     if (isNaN(motorcycleIdAsNumber)) {
       console.error("ID de motocicleta inválido:", motorcycle);
       alert("No se puede procesar la venta: ID de moto inválido.");
@@ -107,7 +113,7 @@ export default function SalesClientComponent({
   const handleSaleCompletion = (result: { type: string; payload: any }) => {
     console.log(`Proceso de venta completado: ${result.type}`, result.payload);
     alert(
-      `¡${result.type === 'current_account' ? 'Cuenta corriente creada' : 'Pago/Reserva registrado'} con éxito!`
+      `¡${result.type === "current_account" ? "Cuenta corriente creada" : "Pago/Reserva registrado"} con éxito!`,
     );
     handleCloseSaleModal();
     // TODO: Implementar la actualización de la tabla de motocicletas.
@@ -144,7 +150,7 @@ export default function SalesClientComponent({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-1">
                   <PromotionDayFilter
-                    promotions={allPromotions.filter(p => p.isEnabled)}
+                    promotions={allPromotions.filter((p) => p.isEnabled)}
                     onFilteredPromotionsChange={setFilteredPromotions}
                     currentDay={currentDay}
                   />
@@ -152,13 +158,17 @@ export default function SalesClientComponent({
                 <div className="md:col-span-2">
                   <h2 className="text-xl font-bold mb-4">Promociones Activas</h2>
                   {filteredPromotions.length === 0 ? (
-                    <p className="text-muted-foreground">No hay promociones activas para el día seleccionado.</p>
+                    <p className="text-muted-foreground">
+                      No hay promociones activas para el día seleccionado.
+                    </p>
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {filteredPromotions.map(promotion => (
+                      {filteredPromotions.map((promotion) => (
                         <Card key={promotion.id} className="p-4">
                           <h3 className="text-lg font-semibold">{promotion.name}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">{promotion.description || "Sin descripción"}</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {promotion.description || "Sin descripción"}
+                          </p>
                           <div className="flex flex-wrap gap-2 mt-2">
                             {promotion.discountRate ? (
                               <div className="text-green-600 font-medium">
@@ -170,11 +180,16 @@ export default function SalesClientComponent({
                               </div>
                             ) : null}
 
-                            {promotion.installmentPlans?.filter(p => p.isEnabled).map(plan => (
-                              <div key={plan.id} className="text-blue-600 text-sm">
-                                {plan.installments} cuotas {plan.interestRate === 0 ? "sin interés" : `(${plan.interestRate}%)`}
-                              </div>
-                            ))}
+                            {promotion.installmentPlans
+                              ?.filter((p) => p.isEnabled)
+                              .map((plan) => (
+                                <div key={plan.id} className="text-blue-600 text-sm">
+                                  {plan.installments} cuotas{" "}
+                                  {plan.interestRate === 0
+                                    ? "sin interés"
+                                    : `(${plan.interestRate}%)`}
+                                </div>
+                              ))}
                           </div>
                         </Card>
                       ))}

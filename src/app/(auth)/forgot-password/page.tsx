@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { forgotPasswordAction } from "@/actions/auth/forgot-password";
+import LoadingButton from "@/components/custom/LoadingButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -11,14 +12,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import LoadingButton from "@/components/custom/LoadingButton";
 import { useToast } from "@/hooks/use-toast";
-import { forgotPasswordAction } from "@/actions/auth/forgot-password";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { z } from "zod";
 import type { serverMessage } from "@/types/ServerMessageType";
 import { forgotPasswordSchema } from "@/zod/AuthZod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useActionState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 
 export default function ForgotPassword() {
   const { toast } = useToast();

@@ -1,33 +1,33 @@
-'use server';
+"use server";
 
-import db from '@/lib/prisma';
-import { getOrganizationIdFromSession } from './getOrganizationIdFromSession';
+import db from "@/lib/prisma";
+import { getOrganizationIdFromSession } from "./getOrganizationIdFromSession";
 
 export async function setupCurrentAccountMethod() {
   try {
     // Obtener el ID de organización actual
     const organizationIdResult = await getOrganizationIdFromSession();
     if (!organizationIdResult) {
-      return { success: false, error: 'No se pudo obtener el ID de la organización' };
+      return { success: false, error: "No se pudo obtener el ID de la organización" };
     }
-    
+
     // Convertir el resultado a string para usarlo con Prisma
     const organizationId = String(organizationIdResult);
 
     // 1. Verificar si el método de pago "cuenta_corriente" existe
     let paymentMethod = await db.paymentMethod.findFirst({
-      where: { type: 'current_account' }
+      where: { type: "current_account" },
     });
 
     // Si no existe, crearlo
     if (!paymentMethod) {
       paymentMethod = await db.paymentMethod.create({
         data: {
-          name: 'Cuenta Corriente',
-          type: 'current_account',
-          description: 'Pago con cuenta corriente financiada',
-          iconUrl: '/icons/payment-methods/current-account.svg'
-        }
+          name: "Cuenta Corriente",
+          type: "current_account",
+          description: "Pago con cuenta corriente financiada",
+          iconUrl: "/icons/payment-methods/current-account.svg",
+        },
       });
     }
 
@@ -35,8 +35,8 @@ export async function setupCurrentAccountMethod() {
     const existingOrgMethod = await db.organizationPaymentMethod.findFirst({
       where: {
         organizationId,
-        methodId: paymentMethod.id
-      }
+        methodId: paymentMethod.id,
+      },
     });
 
     // Si no está habilitado, habilitarlo
@@ -44,8 +44,8 @@ export async function setupCurrentAccountMethod() {
       // Obtener el orden más alto de los métodos de pago existentes
       const highestOrder = await db.organizationPaymentMethod.findFirst({
         where: { organizationId },
-        orderBy: { order: 'desc' },
-        select: { order: true }
+        orderBy: { order: "desc" },
+        select: { order: true },
       });
 
       const newOrder = (highestOrder?.order || 0) + 1;
@@ -55,8 +55,8 @@ export async function setupCurrentAccountMethod() {
           organizationId,
           methodId: paymentMethod.id,
           isEnabled: true,
-          order: newOrder
-        }
+          order: newOrder,
+        },
       });
     }
 
@@ -64,14 +64,14 @@ export async function setupCurrentAccountMethod() {
       success: true,
       data: {
         paymentMethod,
-        enabled: existingOrgMethod ? true : false
-      }
+        enabled: existingOrgMethod ? true : false,
+      },
     };
   } catch (error) {
     console.error("Error al configurar método de cuenta corriente:", error);
     return {
       success: false,
-      error: "Ocurrió un error al configurar el método de pago. Consulte los logs."
+      error: "Ocurrió un error al configurar el método de pago. Consulte los logs.",
     };
   }
-} 
+}

@@ -1,9 +1,9 @@
+import { auth } from "@/auth";
+import OrganizationTable from "@/components/admin/organizationTable";
 import UsersTable from "@/components/admin/userTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import OrganizationTable from "@/components/admin/organizationTable";
-import CreateOrganization from "./CreateOrEditOrganization";
-import { auth } from "@/auth";
 import { headers } from "next/headers";
+import CreateOrganization from "./CreateOrEditOrganization";
 
 export const dynamic = "force-dynamic";
 

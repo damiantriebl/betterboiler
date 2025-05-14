@@ -5,21 +5,30 @@ export interface SalesReport {
     totalProfit: Record<string, number>;
     averagePrice: Record<string, number>;
   };
-  salesBySeller: Record<string, {
-    name: string;
-    count: number;
-    revenue: Record<string, number>;
-    profit: Record<string, number>;
-  }>;
-  salesByBranch: Record<string, {
-    name: string;
-    count: number;
-    revenue: Record<string, number>;
-  }>;
-  salesByMonth: Record<string, {
-    count: number;
-    revenue: Record<string, number>;
-  }>;
+  salesBySeller: Record<
+    string,
+    {
+      name: string;
+      count: number;
+      revenue: Record<string, number>;
+      profit: Record<string, number>;
+    }
+  >;
+  salesByBranch: Record<
+    string,
+    {
+      name: string;
+      count: number;
+      revenue: Record<string, number>;
+    }
+  >;
+  salesByMonth: Record<
+    string,
+    {
+      count: number;
+      revenue: Record<string, number>;
+    }
+  >;
 }
 
 export interface ReportFilters {
@@ -32,4 +41,4 @@ export interface ReportFilters {
   brandId?: string;
   modelId?: string;
   supplierId?: string;
-} 
+}

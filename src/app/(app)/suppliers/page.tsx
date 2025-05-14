@@ -1,8 +1,8 @@
 // src/app/(app)/suppliers/page.tsx
 // Quitar "use client"; esta página ahora obtiene datos del servidor
 
-import React from "react";
 import { getSuppliers } from "@/actions/suppliers/manage-suppliers"; // Importar la acción
+import React from "react";
 import SuppliersClientComponent from "./SuppliersClientComponent"; // Importar el nuevo componente cliente
 
 // --- Eliminar Datos de Ejemplo ---
