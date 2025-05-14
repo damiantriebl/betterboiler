@@ -28,6 +28,11 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
       organizationId = org.id;
     }
 
+    // Validar que organizationId existe
+    if (!organizationId) {
+      throw new Error("Organization ID is required");
+    }
+
     // Si hay archivo de logo, subimos con el ID correcto
     if (logoFile && organizationId) {
       const buffer = Buffer.from(await logoFile.arrayBuffer());
@@ -74,7 +79,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
 
     // Actualizar datos de la organización (incluyendo thumbnail si existe)
     await prisma.organization.update({
-      where: { id: organizationId! },
+      where: { id: organizationId },
       data: {
         name,
         ...(logoUrl && { logo: logoUrl }),

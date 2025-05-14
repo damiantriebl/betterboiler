@@ -112,8 +112,8 @@ function calculateInstallmentWithInterest(
   }
 
   // Fórmula PMT
-  const numerator = principal * ratePerPeriod * Math.pow(1 + ratePerPeriod, installments);
-  const denominator = Math.pow(1 + ratePerPeriod, installments) - 1;
+  const numerator = principal * ratePerPeriod * (1 + ratePerPeriod) ** installments;
+  const denominator = (1 + ratePerPeriod) ** installments - 1;
 
   if (denominator === 0) {
     // Puede ocurrir si ratePerPeriod es 0 (ya manejado arriba) o problemas de precisión con Math.pow
@@ -139,9 +139,7 @@ export async function createCurrentAccount(
       );
       return {
         success: false,
-        error:
-          "Error de validación: " +
-          Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", "),
+        error: `Error de validación: ${Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", ")}`,
       };
     }
 
@@ -289,8 +287,7 @@ export async function createCurrentAccount(
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error:
-          "Error de validación: " + Object.values(error.flatten().fieldErrors).flat().join(", "),
+        error: `Error de validación: ${Object.values(error.flatten().fieldErrors).flat().join(", ")}`,
       };
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -302,14 +299,13 @@ export async function createCurrentAccount(
       });
       return {
         success: false,
-        error: "Error de base de datos al crear la cuenta: " + error.message,
+        error: `Error de base de datos al crear la cuenta: ${error.message}`,
       };
     }
     return {
       success: false,
       error:
-        "Error desconocido al crear la cuenta corriente: " +
-        (error instanceof Error ? error.message : String(error)),
+        `Error desconocido al crear la cuenta corriente: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

@@ -99,7 +99,7 @@ export async function getCurrentAccounts(
     if (error instanceof Prisma.PrismaClientValidationError) {
       return {
         success: false,
-        error: "Error de validación de Prisma al obtener cuentas corrientes: " + error.message,
+        error: `Error de validación de Prisma al obtener cuentas corrientes: ${error.message}`,
       };
     }
     // Handle generic errors

@@ -2,7 +2,11 @@ import { MercadoPagoConfig, Order } from "mercadopago";
 // archivo: app/api/mercadopago/process-payment/route.ts
 import { type NextRequest, NextResponse } from "next/server";
 
-const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! });
+if (!process.env.MP_ACCESS_TOKEN) {
+  throw new Error("MP_ACCESS_TOKEN is not defined in environment variables");
+}
+
+const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 const orderAPI = new Order(mpClient);
 
 export async function POST(request: NextRequest) {
@@ -64,14 +68,14 @@ export async function POST(request: NextRequest) {
 
     // 3. Retornar resultado al frontend
     return NextResponse.json({ status: mpOrder.status, id: mpOrder.id });
-  } catch (err: any) {
-    console.error("Error al crear orden en MP:", err.cause || err);
-    const errorMessage = err.cause?.message || err.message || "Error desconocido al crear orden";
-    const errorStatus = err.status || 500;
+  } catch (err: unknown) {
+    console.error("Error al crear orden en MP:", err instanceof Error ? err.cause || err : err);
+    const errorMessage = err instanceof Error 
+      ? err.cause?.message || err.message || "Error desconocido al crear orden"
+      : "Error desconocido al crear orden";
+    const errorStatus = err instanceof Error ? err.status || 500 : 500;
     // Devolver los detalles del error de MP si existen en err.cause.errors
-    const errorDetails = err.cause?.errors ||
-      err.errors ||
-      (err.cause ? [err.cause] : []) || [{ code: "backend_error", message: errorMessage }];
+    const errorDetails = err instanceof Error ? (err.cause?.errors || err.errors || (err.cause ? [err.cause] : [])) : [];
     return NextResponse.json(
       { error: errorMessage, details: errorDetails },
       { status: errorStatus },

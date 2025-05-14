@@ -1,5 +1,4 @@
-"use client";
-
+'use client';
 import { fetchImageAsBase64 } from "@/actions/fetchImageAsBase64";
 import { getLogoUrl } from "@/components/custom/OrganizationLogo";
 import type { QuotePDFProps } from "@/types/quote";
@@ -11,74 +10,55 @@ interface QuoteBridgePdfProps extends Omit<QuotePDFProps, "organizationLogo"> {
   onReady?: () => void;
 }
 
-const QuoteBridgePdf = ({
+export default function QuoteBridgePdf({
   organizationLogoKey,
   fileName = "Presupuesto.pdf",
   onReady,
   ...pdfProps
-}: QuoteBridgePdfProps) => {
+}: QuoteBridgePdfProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies
   useEffect(() => {
     let isMounted = true;
-    const generateAndDownloadPdf = async () => {
+    (async () => {
       setLoading(true);
       setError(null);
       try {
         let logoBase64 = "";
         if (organizationLogoKey) {
-          try {
-            const signedUrl = await getLogoUrl(organizationLogoKey);
-            logoBase64 = await fetchImageAsBase64(signedUrl);
-          } catch {
-            logoBase64 = "";
-          }
+          const signedUrl = await getLogoUrl(organizationLogoKey);
+          logoBase64 = await fetchImageAsBase64(signedUrl).catch(() => "");
         }
-        // Armar props para el PDF, incluyendo el logo en base64
-        const pdfPayload = {
-          ...pdfProps,
-          organizationLogo: logoBase64,
-        };
-        // POST a la API para generar el PDF
-        const response = await fetch("/api/generate-quote-pdf", {
+        const payload = { ...pdfProps, organizationLogo: logoBase64 };
+        const res = await fetch("/api/generate-quote-pdf", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(pdfPayload),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error("No se pudo generar el PDF");
-        const blob = await response.blob();
-        // Descargar el PDF automáticamente
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        if (onReady) onReady();
-      } catch (err: any) {
-        setError(err?.message || "Error desconocido");
+        if (!res.ok) throw new Error("No se pudo generar el PDF");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        onReady?.();
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (isMounted) setError(msg);
       } finally {
         if (isMounted) setLoading(false);
       }
-    };
-    generateAndDownloadPdf();
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Solo al montar
+    })();
+    return () => { isMounted = false };
+  }, [fileName, organizationLogoKey, onReady]);
 
-  if (loading) {
-    return <div className="text-sm text-muted-foreground">Generando PDF...</div>;
-  }
-  if (error) {
-    return <div className="text-sm text-red-600">Error: {error}</div>;
-  }
+  if (loading) return <div>Generando PDF…</div>;
+  if (error) return <div>Error: {error}</div>;
   return null;
-};
-
-export default QuoteBridgePdf;
+}

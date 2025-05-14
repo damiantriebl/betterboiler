@@ -75,7 +75,7 @@ export async function getSuppliersReport(filters: SuppliersReportFilters) {
         };
       }
 
-      supplier.motorcycles.forEach((motorcycle) => {
+      for (const motorcycle of supplier.motorcycles) {
         acc[supplierName].motorcyclesCount += 1;
         const currency = motorcycle.currency;
         if (!acc[supplierName].purchases[currency]) {
@@ -89,7 +89,7 @@ export async function getSuppliersReport(filters: SuppliersReportFilters) {
           }
           summary.totalPurchases[currency] += motorcycle.costPrice;
         }
-      });
+      }
 
       return acc;
     },
@@ -99,26 +99,30 @@ export async function getSuppliersReport(filters: SuppliersReportFilters) {
   // Agrupar compras por mes
   const purchasesByMonth = suppliersData.reduce(
     (acc, supplier) => {
-      supplier.motorcycles.forEach((motorcycle) => {
+      for (const motorcycle of supplier.motorcycles) {
         const monthYear = motorcycle.createdAt?.toISOString().slice(0, 7); // YYYY-MM
-        if (monthYear && motorcycle.costPrice) {
+        if (monthYear) {
           if (!acc[monthYear]) {
             acc[monthYear] = {
               count: 0,
-              amount: {},
+              totalInvestment: 0,
+              totalSales: 0,
+              soldCount: 0,
             };
           }
           acc[monthYear].count += 1;
-          const currency = motorcycle.currency;
-          if (!acc[monthYear].amount[currency]) {
-            acc[monthYear].amount[currency] = 0;
+          if (motorcycle.purchasePrice) {
+            acc[monthYear].totalInvestment += motorcycle.purchasePrice;
           }
-          acc[monthYear].amount[currency] += motorcycle.costPrice;
+          if (motorcycle.status === "SOLD" && motorcycle.salePrice) {
+            acc[monthYear].totalSales += motorcycle.salePrice;
+            acc[monthYear].soldCount += 1;
+          }
         }
-      });
+      }
       return acc;
     },
-    {} as { [key: string]: { count: number; amount: { [key: string]: number } } },
+    {} as { [key: string]: { count: number; totalInvestment: number; totalSales: number; soldCount: number } },
   );
 
   return {

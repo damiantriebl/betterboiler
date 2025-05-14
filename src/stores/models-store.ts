@@ -46,32 +46,24 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
     try {
       const result = await getModelsByBrandId(brandId);
 
-      if (result.success && Array.isArray(result.models)) {
-        const brandModels = result.models.map((model) => ({
-          id: model.id,
-          name: model.name,
-          brandId: model.brandId,
-          imageUrl: model.imageUrl,
-          specSheetUrl: model.specSheetUrl,
-          additionalFiles: model.additionalFiles,
-        }));
-
+      if (result.success && result.data) {
+        const brandModels = result.data;
         set((state) => ({
           models: {
             ...state.models,
             [brandId]: brandModels,
           },
           loadingBrandIds: state.loadingBrandIds.filter((id) => id !== brandId),
+          error: null,
         }));
-
         return brandModels;
-      } else {
-        set((state) => ({
-          error: result.error || "Error al obtener modelos",
-          loadingBrandIds: state.loadingBrandIds.filter((id) => id !== brandId),
-        }));
-        return [];
       }
+      set((state) => ({
+        error: result.error || "Error al obtener modelos",
+        models: [],
+        loadingBrandIds: state.loadingBrandIds.filter((id) => id !== brandId),
+      }));
+      return [];
     } catch (error) {
       set((state) => ({
         error: error instanceof Error ? error.message : "Error al obtener modelos",
@@ -83,41 +75,36 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
 
   addModel: async (name: string, brandId: number, formData?: FormData) => {
     try {
-      let result;
+      let result: ApiResult | null = null;
 
       if (formData) {
-        // Use FormData if provided (for file uploads)
-        result = await createModel(formData);
+        formData.append("name", name);
+        formData.append("brandId", brandId.toString());
+        result = await fetch("/api/models", {
+          method: "POST",
+          body: formData,
+        }).then((res) => res.json());
       } else {
-        // Use regular object if no FormData
-        result = await createModel({
-          name,
-          brandId,
-          pathToRevalidate: "/configuration",
-        });
+        result = await fetch("/api/models", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, brandId }),
+        }).then((res) => res.json());
       }
 
-      if (result.success && result.model) {
-        const newModel: ModelData = {
-          id: result.model.id,
-          name: result.model.name,
-          brandId: result.model.brandId,
-          imageUrl: result.model.imageUrl,
-          specSheetUrl: result.model.specSheetUrl,
-          additionalFiles: result.model.additionalFiles,
-        };
-
+      if (result?.success?.models?.[0]) {
+        const newModel = result.success.models[0];
         set((state) => ({
           models: {
             ...state.models,
             [brandId]: [...(state.models[brandId] || []), newModel],
           },
+          error: null,
         }));
-
         return { success: true, model: newModel };
-      } else {
-        return { success: false, error: result.error || "Error al crear modelo" };
       }
+      
+      return { success: false, error: result?.error || "Error al crear modelo" };
     } catch (error) {
       return {
         success: false,

@@ -140,10 +140,11 @@ export default function CurrentAccountPaymentFields({
       };
     }
 
-    const pmtNumerator = ratePerPeriod * Math.pow(1 + ratePerPeriod, installments);
-    const pmtDenominator = Math.pow(1 + ratePerPeriod, installments) - 1;
+    const periodicInterestRate = ratePerPeriod;
+    const numerator = periodicInterestRate * (1 + periodicInterestRate) ** installments;
+    const denominator = (1 + periodicInterestRate) ** installments - 1;
 
-    if (pmtDenominator === 0 || (pmtNumerator === 0 && pmtDenominator === 0)) {
+    if (denominator === 0 || (numerator === 0 && denominator === 0)) {
       installmentAmount = Math.ceil(principal / installments);
       // Schedule simple también aquí
       return {
@@ -157,7 +158,7 @@ export default function CurrentAccountPaymentFields({
       };
     }
 
-    const rawPmt = principal * (pmtNumerator / pmtDenominator);
+    const rawPmt = principal * (numerator / denominator);
     const fixedInstallment = Math.ceil(rawPmt);
     let currentCapital = principal;
 

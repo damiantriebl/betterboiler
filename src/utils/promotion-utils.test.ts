@@ -10,7 +10,7 @@ import {
 
 // Mock the Date
 const mockDate = new Date(2023, 5, 16); // A Friday
-vi.spyOn(global, "Date").mockImplementation(() => mockDate as any);
+vi.spyOn(global, "Date").mockImplementation(() => mockDate as unknown);
 
 describe("Promotion Utilities", () => {
   let mockPromotionAllDays: BankingPromotionDisplay;

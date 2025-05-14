@@ -35,7 +35,7 @@ interface SaleModalProps {
   // Callback after any sale process (reservation, current account creation) is done
   onSaleProcessCompleted: (data: {
     type: "reservation" | "current_account" | "other_payment";
-    payload: any;
+    payload: Record<string, unknown>;
   }) => void;
 }
 

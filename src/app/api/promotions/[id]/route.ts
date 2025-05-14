@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Convertir el ID de la promoción a número
     const promotionId = Number.parseInt(params.id);
-    if (isNaN(promotionId)) {
+    if (Number.isNaN(promotionId)) {
       return NextResponse.json({ error: "ID de promoción inválido" }, { status: 400 });
     }
 
@@ -36,10 +36,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Devolver la promoción
     return NextResponse.json(promotion);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error al obtener promoción:", error);
     return NextResponse.json(
-      { error: error.message || "Error al obtener la promoción" },
+      { error: error instanceof Error ? error.message : "Error desconocido" },
       { status: 500 },
     );
   }

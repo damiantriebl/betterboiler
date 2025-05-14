@@ -47,7 +47,6 @@ export function ColorSelector({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        {/* biome-ignore lint/a11y/useSemanticElements: Using Button with Popover for custom combobox */}
         <Button
           variant="outline"
           role="combobox"

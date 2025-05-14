@@ -155,37 +155,28 @@ export default function CreateBrandModal({
         variant: "destructive",
       });
     }
-  }, [associateState.success, associateState.error, toast, onSuccess, onOpenChange]);
+  }, [associateState.success, associateState.error, associateState.message, toast, onSuccess, onOpenChange]);
 
   // Handle create success/error
   useEffect(() => {
     if (createState.success && !successHandledRef.current.create) {
       successHandledRef.current.create = true;
-      toast({ title: "Marca Global Creada", description: createState.message });
-      startFetchingBrands(async () => {
-        try {
-          const brands = await getRootBrands();
-          setAvailableBrands(brands);
-          setShowNewBrandForm(false);
-          setNewBrandName("");
-          setNewBrandColor("#3B82F6");
-        } catch (error) {
-          console.error("Error refetching global brands:", error);
-          toast({
-            title: "Error",
-            description: "No se pudieron recargar las marcas globales.",
-            variant: "destructive",
-          });
-        }
-      });
-    } else if (createState.error) {
       toast({
-        title: "Error al Crear Marca Global",
-        description: createState.error,
+        title: "Marca creada",
+        description: "La marca se ha creado correctamente",
+      });
+      onSuccess?.();
+      onOpenChange(false);
+    }
+    if (createState.error && !successHandledRef.current.create) {
+      successHandledRef.current.create = true;
+      toast({
         variant: "destructive",
+        title: "Error al crear la marca",
+        description: createState.message || "Hubo un error al crear la marca",
       });
     }
-  }, [createState.success, createState.error, toast]);
+  }, [createState.success, createState.error, createState.message, toast, onSuccess, onOpenChange]);
 
   // Actualizar el color seleccionado cuando cambia la marca seleccionada
   useEffect(() => {
@@ -285,7 +276,7 @@ export default function CreateBrandModal({
                                     <span
                                       className="inline-block w-3 h-3 rounded-full mr-2"
                                       style={{ backgroundColor: brand.color }}
-                                    ></span>
+                                    />
                                   )}
                                   {brand.name}
                                 </span>
@@ -312,7 +303,7 @@ export default function CreateBrandModal({
                                 <span
                                   className="inline-block w-3 h-3 rounded-full mr-2"
                                   style={{ backgroundColor: brand.color }}
-                                ></span>
+                                />
                               )}
                               {brand.name}
                             </SelectItem>
@@ -406,6 +397,14 @@ export default function CreateBrandModal({
                   className="w-10 h-10 rounded-md border cursor-pointer"
                   style={{ backgroundColor: newBrandColor }}
                   onClick={() => setIsColorPickerOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setIsColorPickerOpen(true);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 />
                 <Input
                   id="new-brand-color"

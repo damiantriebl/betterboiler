@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     color: "#333333",
   },
   table: {
-    display: "table" as any, // Required for table behavior
+    display: "table" as Display,
     width: "auto",
     borderStyle: "solid",
     borderWidth: 1,
@@ -222,8 +222,8 @@ function calculateFrenchAmortizationScheduleForPdf(
   }
 
   const pmtNumerator =
-    periodicInterestRate * Math.pow(1 + periodicInterestRate, numberOfInstallments);
-  const pmtDenominator = Math.pow(1 + periodicInterestRate, numberOfInstallments) - 1;
+    periodicInterestRate * ((1 + periodicInterestRate) ** numberOfInstallments);
+  const pmtDenominator = ((1 + periodicInterestRate) ** numberOfInstallments) - 1;
   const rawPmt = principal * (pmtNumerator / pmtDenominator);
   const fixedInstallment = Math.ceil(rawPmt);
 
@@ -279,14 +279,14 @@ function generateInstallmentsForPdf(account: CurrentAccountForReport): PdfInstal
   );
 
   const paymentsByInstallmentNumber: Record<number, Payment[]> = {};
-  account.payments?.forEach((p) => {
+  for (const p of account.payments ?? []) {
     if (p.installmentNumber !== null) {
       if (!paymentsByInstallmentNumber[p.installmentNumber]) {
         paymentsByInstallmentNumber[p.installmentNumber] = [];
       }
       paymentsByInstallmentNumber[p.installmentNumber].push(p);
     }
-  });
+  }
 
   for (let i = 0; i < account.numberOfInstallments; i++) {
     const installmentNumber = i + 1;
@@ -300,21 +300,24 @@ function generateInstallmentsForPdf(account: CurrentAccountForReport): PdfInstal
       case "BIWEEKLY":
         dueDate.setDate(startDate.getDate() + 14 * i);
         break;
-      case "MONTHLY":
+      case "MONTHLY": {
         const mDate = new Date(startDate);
         mDate.setMonth(mDate.getMonth() + i);
         dueDate.setTime(mDate.getTime());
         break;
-      case "QUARTERLY":
+      }
+      case "QUARTERLY": {
         const qDate = new Date(startDate);
         qDate.setMonth(qDate.getMonth() + 3 * i);
         dueDate.setTime(qDate.getTime());
         break;
-      case "ANNUALLY":
+      }
+      case "ANNUALLY": {
         const aDate = new Date(startDate);
         aDate.setFullYear(aDate.getFullYear() + i);
         dueDate.setTime(aDate.getTime());
         break;
+      }
     }
 
     const paymentsForThis = paymentsByInstallmentNumber[installmentNumber] || [];
@@ -690,8 +693,8 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                   style={{ ...styles.tableCol, ...styles.tableCellRight, width: colWidths.amort }}
                 >
                   {inst.amortization !== undefined &&
-                  inst.installmentVersion !== "D" &&
-                  inst.installmentVersion !== "H"
+                    inst.installmentVersion !== "D" &&
+                    inst.installmentVersion !== "H"
                     ? formatCurrencyForPdf(inst.amortization, "")
                     : "-"}
                 </Text>
@@ -703,8 +706,8 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                   }}
                 >
                   {inst.interestForPeriod !== undefined &&
-                  inst.installmentVersion !== "D" &&
-                  inst.installmentVersion !== "H"
+                    inst.installmentVersion !== "D" &&
+                    inst.installmentVersion !== "H"
                     ? formatCurrencyForPdf(inst.interestForPeriod, "")
                     : "-"}
                 </Text>
@@ -718,9 +721,9 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                 >
                   {formatCurrencyForPdf(
                     (inst.installmentVersion === "H" ? -1 : 1) *
-                      (inst.isPaid && inst.originalPaymentAmount !== undefined
-                        ? inst.originalPaymentAmount
-                        : (inst.calculatedInstallmentAmount ?? inst.amount)),
+                    (inst.isPaid && inst.originalPaymentAmount !== undefined
+                      ? inst.originalPaymentAmount
+                      : (inst.calculatedInstallmentAmount ?? inst.amount)),
                     account.currency || "$",
                   )}
                 </Text>

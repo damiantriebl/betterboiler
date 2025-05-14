@@ -85,11 +85,15 @@ export async function getReservationsReport(filters: ReportFilters) {
     }
   > = {};
 
-  motorcycles.forEach((motorcycle) => {
-    motorcycle.reservations.forEach((reservation) => {
+  // Procesar los datos para el reporte
+  for (const motorcycle of motorcycles) {
+    for (const reservation of motorcycle.reservations) {
       // Actualizar totales por moneda
-      totalAmount[reservation.currency] =
-        (totalAmount[reservation.currency] || 0) + reservation.amount;
+      const currency = reservation.currency;
+      if (!totalAmount[currency]) {
+        totalAmount[currency] = 0;
+      }
+      totalAmount[currency] += reservation.amount;
 
       // Actualizar totales por estado
       const status = reservation.status;
@@ -97,8 +101,8 @@ export async function getReservationsReport(filters: ReportFilters) {
         reservationsByStatus[status] = { count: 0, amount: {} };
       }
       reservationsByStatus[status].count++;
-      reservationsByStatus[status].amount[reservation.currency] =
-        (reservationsByStatus[status].amount[reservation.currency] || 0) + reservation.amount;
+      reservationsByStatus[status].amount[currency] =
+        (reservationsByStatus[status].amount[currency] || 0) + reservation.amount;
 
       // Actualizar totales por sucursal
       if (motorcycle.branch) {
@@ -119,11 +123,11 @@ export async function getReservationsReport(filters: ReportFilters) {
         else if (status === "cancelled") reservationsByBranch[branchId].cancelled++;
         else if (status === "expired") reservationsByBranch[branchId].expired++;
 
-        reservationsByBranch[branchId].amount[reservation.currency] =
-          (reservationsByBranch[branchId].amount[reservation.currency] || 0) + reservation.amount;
+        reservationsByBranch[branchId].amount[currency] =
+          (reservationsByBranch[branchId].amount[currency] || 0) + reservation.amount;
       }
-    });
-  });
+    }
+  }
 
   // Calcular totales para el resumen
   const totalReservations = motorcycles.length;

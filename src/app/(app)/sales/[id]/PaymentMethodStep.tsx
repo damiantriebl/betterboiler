@@ -101,20 +101,20 @@ export default function PaymentMethodStep({
     // Regla 1: Verificar compatibilidad de cuotas (para tarjetas)
     if (paymentData.metodoPago === "tarjeta") {
       const hasInstallmentPlans = currentPromo.installmentPlans?.some(
-        (plan) => plan && plan.isEnabled,
+        (plan) => plan?.isEnabled,
       );
 
       // Si la promoción actual tiene planes de cuotas, verificar compatibilidad
       if (hasInstallmentPlans) {
         const currentPromoPlans =
           currentPromo.installmentPlans
-            ?.filter((plan) => plan && plan.isEnabled)
+            ?.filter((plan) => plan?.isEnabled)
             ?.map((plan) => plan.installments) || [];
 
         for (const promo of selectedPromos) {
           const promoPlans =
             promo.installmentPlans
-              ?.filter((plan) => plan && plan.isEnabled)
+              ?.filter((plan) => plan?.isEnabled)
               ?.map((plan) => plan.installments) || [];
 
           // Verificar si tienen al menos un plan en común
@@ -198,6 +198,15 @@ export default function PaymentMethodStep({
     isReserved ? reservationAmount : 0,
     paymentData.downPayment,
   );
+
+  // Reemplazar los onFocus y onBlur con funciones separadas
+  const handleDateFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.type = "date";
+  };
+
+  const handleDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.type = "text";
+  };
 
   return (
     <div className="space-y-6 mt-6">
@@ -377,9 +386,8 @@ export default function PaymentMethodStep({
                     <Input
                       name="chequeFecha"
                       placeholder="Fecha de Emisión/Pago"
-                      type="text"
-                      onFocus={(e) => (e.target.type = "date")}
-                      onBlur={(e) => (e.target.type = "text")}
+                      onFocus={handleDateFocus}
+                      onBlur={handleDateBlur}
                       onChange={onPaymentDataChange}
                       value={paymentData.chequeFecha || ""}
                     />
@@ -501,6 +509,15 @@ export default function PaymentMethodStep({
                             key={promo.id}
                             className={`flex items-center space-x-3 p-3 border rounded-md ${isSelected ? "border-primary bg-primary/10" : ""} ${isDisabled && !isSelected ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                             onClick={() => !isDisabled && onPromotionSelection(promo.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                !isDisabled && onPromotionSelection(promo.id);
+                              }
+                            }}
+                            role="button"
+                            tabIndex={isDisabled ? -1 : 0}
+                            aria-disabled={isDisabled}
                           >
                             <Checkbox
                               checked={isSelected}
@@ -538,7 +555,7 @@ export default function PaymentMethodStep({
                                         <Badge key={plan.id} variant="outline" className="text-xs">
                                           {plan.installments}c{" "}
                                           {bestRatesMap[plan.installments]?.interestRate ===
-                                          plan.interestRate ? (
+                                            plan.interestRate ? (
                                             <Check className="h-3 w-3 ml-1 text-green-600" />
                                           ) : null}
                                           {plan.interestRate > 0

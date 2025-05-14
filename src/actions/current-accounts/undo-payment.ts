@@ -37,12 +37,12 @@ function calculateNewInstallment(
   const periodsPerYear = getPeriodsPerYear(paymentFrequency);
   const tnaDecimal = annualInterestRatePercent / 100;
   const periodicRate =
-    annualInterestRatePercent > 0 ? Math.pow(1 + tnaDecimal, 1 / periodsPerYear) - 1 : 0;
+    annualInterestRatePercent > 0 ? (1 + tnaDecimal) ** (1 / periodsPerYear) - 1 : 0;
 
   if (remainingAmount <= 0 || remainingInstallments <= 0) return 0;
   if (periodicRate === 0) return Math.ceil(remainingAmount / remainingInstallments);
 
-  const factor = Math.pow(1 + periodicRate, remainingInstallments);
+  const factor = (1 + periodicRate) ** remainingInstallments;
   const raw = (remainingAmount * (periodicRate * factor)) / (factor - 1);
   return Math.ceil(raw);
 }

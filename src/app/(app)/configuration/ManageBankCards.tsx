@@ -44,7 +44,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { BankWithCards, CardType } from "@/types/bank-cards";
+import type { BankWithCards, CardType, BankCard } from "@/types/bank-cards";
 import type { Bank } from "@/types/banking-promotions";
 import { Building, CreditCard, GripVertical, Plus, Trash2 } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
@@ -232,7 +232,7 @@ export default function ManageBankCards({
           }));
         return {
           ...bankWithCards,
-          cards: [...bankWithCards.cards, ...(cardsToAdd as any)],
+          cards: [...bankWithCards.cards, ...(cardsToAdd as BankCard[])],
         };
       }
       return bankWithCards;

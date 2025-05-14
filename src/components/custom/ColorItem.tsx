@@ -69,12 +69,12 @@ export default function ColorItem({
     style ??
     (sortable
       ? {
-          transform: CSS.Transform.toString(sortable.transform),
-          transition: sortable.transition,
-          opacity: sortable.isDragging || itemIsBusy ? 0.6 : 1,
-          zIndex: sortable.isDragging ? 10 : undefined,
-          pointerEvents: itemIsBusy ? "none" : undefined,
-        }
+        transform: CSS.Transform.toString(sortable.transform),
+        transition: sortable.transition,
+        opacity: sortable.isDragging || itemIsBusy ? 0.6 : 1,
+        zIndex: sortable.isDragging ? 10 : undefined,
+        pointerEvents: itemIsBusy ? "none" : undefined,
+      }
       : {});
   const finalIsDragging = isDragging ?? sortable?.isDragging ?? false;
 
@@ -389,7 +389,6 @@ export default function ColorItem({
             />
           ) : (
             <div className="flex items-center">
-              {/* biome-ignore lint/a11y/useButtonType: Span made accessible with role, tabIndex, and onKeyDown */}
               <span
                 className={cn(
                   "cursor-pointer hover:text-primary hover:underline truncate",

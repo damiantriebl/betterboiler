@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
 import MotorcycleTable from "./(table)/MotorcycleTable";
 import { PromotionDayFilter } from "./PromotionDayFilter";
 import { ReserveModal } from "./ReserveModal";
+import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
+import type { Client as ClientType } from "@/types/client";
 
 // Definir las props que espera este componente
 interface SalesClientComponentProps {
@@ -57,7 +59,7 @@ export default function SalesClientComponent({
     if (promotions.length > 0) {
       setFilteredPromotions(promotions);
     }
-  }, [JSON.stringify(promotions)]);
+  }, [promotions]);
 
   useEffect(() => {
     const fetchOrganizationId = async () => {
@@ -90,7 +92,7 @@ export default function SalesClientComponent({
     // Asegurarse de que el id de la motocicleta es un número, como espera ReserveModal
     const motorcycleIdAsNumber =
       typeof motorcycle.id === "string" ? Number.parseInt(motorcycle.id, 10) : motorcycle.id;
-    if (isNaN(motorcycleIdAsNumber)) {
+    if (Number.isNaN(motorcycleIdAsNumber)) {
       console.error("ID de motocicleta inválido:", motorcycle);
       alert("No se puede procesar la venta: ID de moto inválido.");
       return;
@@ -110,7 +112,7 @@ export default function SalesClientComponent({
     setSelectedMotorcycle(null);
   };
 
-  const handleSaleCompletion = (result: { type: string; payload: any }) => {
+  const handleSaleCompletion = (result: { type: string; payload: Record<string, unknown> }) => {
     console.log(`Proceso de venta completado: ${result.type}`, result.payload);
     alert(
       `¡${result.type === "current_account" ? "Cuenta corriente creada" : "Pago/Reserva registrado"} con éxito!`,
@@ -137,8 +139,8 @@ export default function SalesClientComponent({
         <TabsContent value="catalog">
           <Card className="p-6">
             <MotorcycleTable
-              initialData={initialData as any} // DEUDA TÉCNICA: Coincidir tipos MotorcycleWithFullDetails
-              clients={clients as any} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
+              initialData={initialData as MotorcycleWithFullDetails} // DEUDA TÉCNICA: Coincidir tipos MotorcycleWithFullDetails
+              clients={clients as Client[]} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
               activePromotions={hasPromotions ? filteredPromotions : []}
             />
           </Card>
@@ -209,7 +211,7 @@ export default function SalesClientComponent({
           motorcycleId={selectedMotorcycle.id}
           motorcycleName={selectedMotorcycle.name}
           motorcyclePrice={selectedMotorcycle.retailPrice}
-          clients={clients as any} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
+          clients={clients as Client[]} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
           onSaleProcessCompleted={handleSaleCompletion}
         />
       )}

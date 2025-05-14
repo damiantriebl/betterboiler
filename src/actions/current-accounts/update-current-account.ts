@@ -9,19 +9,19 @@ import {
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { CurrentAccount } from "@prisma/client";
 
 export async function updateCurrentAccount(
   input: UpdateCurrentAccountInput,
-): Promise<ActionState & { data?: any }> {
+): Promise<ActionState & { data?: CurrentAccount | null }> {
   // Adjust data type as needed
   try {
     const validatedInput = updateCurrentAccountSchema.safeParse(input);
     if (!validatedInput.success) {
       return {
         success: false,
-        error:
-          "Error de validación: " +
-          Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", "),
+        error: `Error de validación: ${Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", ")}`,
+        data: null
       };
     }
 
@@ -57,7 +57,7 @@ export async function updateCurrentAccount(
       },
     });
 
-    revalidatePath(`/current-accounts`);
+    revalidatePath("/current-accounts");
     revalidatePath(`/current-accounts/${id}`);
 
     return {
@@ -65,18 +65,12 @@ export async function updateCurrentAccount(
       message: "Cuenta corriente actualizada exitosamente.",
       data: updatedAccount,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error updating current account:", error);
-    if (error instanceof z.ZodError) {
-      return {
-        success: false,
-        error:
-          "Error de validación: " + Object.values(error.flatten().fieldErrors).flat().join(", "),
-      };
-    }
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return { success: false, error: "Error de base de datos al actualizar la cuenta." };
-    }
-    return { success: false, error: "Error desconocido al actualizar la cuenta corriente." };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido al actualizar la cuenta corriente",
+      data: null
+    };
   }
 }

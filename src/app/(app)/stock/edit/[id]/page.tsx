@@ -51,13 +51,15 @@ export default async function EditMotorcyclePage({ params }: EditMotorcyclePageP
       toast({ variant: "destructive", title: "Error", description: state.message });
       // Si hay errores de validación, pasarlos al form
       if (state.errors) {
-        Object.keys(state.errors).forEach((key) => {
+        for (const key of Object.keys(state.errors)) {
           const field = key as keyof MotorcycleBatchFormData;
-          const message = state.errors?.[field]?.[0]; // Tomar el primer mensaje
-          if (message) {
-            form.setError(field, { type: "server", message });
+          if (state.errors[field]) {
+            form.setError(field, {
+              type: "manual",
+              message: state.errors[field],
+            });
           }
-        });
+        }
       }
     }
   }, [state, form]); // Añadir form a las dependencias

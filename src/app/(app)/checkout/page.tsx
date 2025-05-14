@@ -19,7 +19,7 @@ type PaymentResultType = {
   id?: string;
   // Agrega otras propiedades que esperas de tu backend
   error?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 };
 
 export default function CheckoutPage() {

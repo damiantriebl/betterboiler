@@ -9,7 +9,10 @@ export const getModelsByBrandId = async (brandId: number) => {
       orderBy: { name: "asc" },
     });
     return { success: true, models };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Error al obtener modelos." };
+  } catch (error: unknown) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Error al obtener modelos." 
+    };
   }
 };

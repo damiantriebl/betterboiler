@@ -12,6 +12,7 @@ interface OrganizationLogoProps {
   size?: "sm" | "default" | "lg" | number;
   variant?: "default" | "bare";
   nameDisplayOpacity?: number;
+  className?: string;
 }
 
 // cache de URLs
@@ -19,7 +20,8 @@ const urlCache = new Map<string, string>();
 
 export async function getLogoUrl(input: string): Promise<string> {
   if (!input) throw new Error("No logo provided");
-  if (urlCache.has(input)) return urlCache.get(input)!;
+  const cachedUrl = urlCache.get(input);
+  if (cachedUrl) return cachedUrl;
   if (input.startsWith("http://") || input.startsWith("https://")) {
     urlCache.set(input, input);
     return input;
@@ -40,6 +42,7 @@ export default function OrganizationLogo({
   size = "default",
   variant = "default",
   nameDisplayOpacity = 1,
+  className,
 }: OrganizationLogoProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
@@ -144,7 +147,7 @@ export default function OrganizationLogo({
 
   // preload thumbnail
   useEffect(() => {
-    if (thumbnail) getLogoUrl(thumbnail).catch(() => {});
+    if (thumbnail) getLogoUrl(thumbnail).catch(() => { });
   }, [thumbnail]);
 
   const fetchLogoUrl = useCallback(
@@ -170,9 +173,8 @@ export default function OrganizationLogo({
       fetchLogoUrl(logo);
     } else {
       setHasError(true);
-      setImageUrl(null);
     }
-  }, [logo]);
+  }, [logo, fetchLogoUrl]);
 
   const renderFallback = () => (
     <Building className={fallbackIconClasses} style={isCustomSize ? customIconStyles : {}} />
@@ -181,7 +183,7 @@ export default function OrganizationLogo({
   const renderImage = () => (
     <img
       key={imageUrl}
-      src={imageUrl!}
+      src={imageUrl || ''}
       alt={name || "Organization Logo"}
       className={imgClasses}
       onError={() => setHasError(true)}
@@ -192,7 +194,7 @@ export default function OrganizationLogo({
     <div
       className={containerClasses}
       style={isCustomSize ? customContainerStyles : {}}
-      tabIndex={0}
+      role="img"
       aria-label={`${name || "Organization"} logo container`}
     >
       {imageUrl && !hasError ? renderImage() : renderFallback()}

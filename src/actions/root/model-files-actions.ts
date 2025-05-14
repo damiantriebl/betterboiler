@@ -162,7 +162,7 @@ export async function uploadModelFiles(
 
     await Promise.all(uploadPromises);
 
-    revalidatePath(`/root/global-brands`);
+    revalidatePath("/root/global-brands");
     return {
       success: true,
       message: `${uploadedFiles.length} archivo(s) subido(s) correctamente`,
@@ -239,7 +239,7 @@ export async function deleteModelFile(fileId: string): Promise<ActionState> {
       where: { id: fileId },
     });
 
-    revalidatePath(`/root/global-brands`);
+    revalidatePath("/root/global-brands");
     return {
       success: true,
       message: "Archivo eliminado correctamente",

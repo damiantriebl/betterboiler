@@ -51,6 +51,7 @@ import { AddOrSelectModelModal } from "./AddOrSelectModelModal";
 import BrandContainer from "./BrandContainer";
 import type { BrandWithDisplayModelsData, DisplayModelData } from "./Interfaces";
 import ModelItem from "./ModelItem";
+import type { DraggableAttributes } from "@dnd-kit/core";
 
 interface SingleBrandColumnProps {
   id: number;
@@ -403,7 +404,7 @@ export default function SingleBrandColumn({
           onRenameDuplicateBlur={handleRenameDuplicateBlur}
           onDelete={() => onAssociationDelete(organizationBrandId)}
           renderColorButton={renderColorButton}
-          dragAttributes={attributes as any}
+          dragAttributes={attributes as DraggableAttributes}
           dragListeners={listeners}
           isPending={isPending}
           isDragging={isColumnDragging}
@@ -435,8 +436,8 @@ export default function SingleBrandColumn({
                   <ModelItem
                     model={activeModel}
                     isOverlay
-                    onUpdate={() => {}}
-                    onDissociate={() => {}}
+                    onUpdate={() => { }}
+                    onDissociate={() => { }}
                   />
                 ) : null}
               </DragOverlay>

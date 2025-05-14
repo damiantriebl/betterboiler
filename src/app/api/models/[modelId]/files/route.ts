@@ -17,6 +17,13 @@ interface ModelFile {
   updatedAt: Date;
 }
 
+interface UploadResult {
+  success: boolean;
+  path?: string;
+  url?: string;
+  error?: string;
+}
+
 // Helper function to process image files
 async function processImage(file: File): Promise<{ original: Buffer; thumbnail: Buffer }> {
   const arrayBuffer = await file.arrayBuffer();
@@ -40,7 +47,7 @@ async function processImage(file: File): Promise<{ original: Buffer; thumbnail: 
 export async function GET(request: NextRequest, context: { params: { modelId: string } }) {
   try {
     const modelId = Number.parseInt(context.params.modelId);
-    if (isNaN(modelId)) {
+    if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID de modelo inválido" }, { status: 400 });
     }
 
@@ -95,7 +102,7 @@ export async function GET(request: NextRequest, context: { params: { modelId: st
 export async function POST(request: NextRequest, context: { params: { modelId: string } }) {
   try {
     const modelId = Number.parseInt(context.params.modelId);
-    if (isNaN(modelId)) {
+    if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID de modelo inválido" }, { status: 400 });
     }
 
@@ -115,7 +122,7 @@ export async function POST(request: NextRequest, context: { params: { modelId: s
       return NextResponse.json({ error: "No se proporcionó ningún archivo" }, { status: 400 });
     }
 
-    let uploadResult;
+    let uploadResult: UploadResult | null = null;
     let thumbnailPath: string | null = null;
     const basePath = `models/${brandName}/${modelId}`;
     const fileSize = file.size;

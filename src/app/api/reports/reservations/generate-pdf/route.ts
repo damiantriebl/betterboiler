@@ -1,8 +1,10 @@
 import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
-import type { ReservationReportPDF } from "@/components/reports/ReservationReportPDF";
+import type { ReservationReportPDF } from "@/components/pdf/ReservationReportPDF";
 import type { ReservationsReport } from "@/types/reports";
 import { renderToBuffer } from "@react-pdf/renderer";
+import { NextResponse } from "next/server";
+import { createElement } from "react";
 
 export async function POST(request: Request) {
     try {
@@ -26,9 +28,10 @@ export async function POST(request: Request) {
             throw new Error("No se pudo generar el reporte");
         }
 
-        // Generar el PDF - usando any temporalmente para evitar el error de tipos
-        // @ts-ignore - El tipo es correcto en runtime
-        const pdfBuffer = await renderToBuffer(<ReservationReportPDF report={report} />);
+        // Generar el PDF usando createElement
+        const pdfBuffer = await renderToBuffer(
+          createElement(ReservationReportPDF, { report })
+        );
 
         // Convertir el buffer a Uint8Array para la respuesta
         const pdfArray = new Uint8Array(pdfBuffer);

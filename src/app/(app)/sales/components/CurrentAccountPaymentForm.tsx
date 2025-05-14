@@ -61,8 +61,8 @@ const calculateInstallment = (
     return principal / numberOfInstallments;
   }
   const periodicInterestRate = annualRate / 100 / periodsPerYear;
-  const numerator = periodicInterestRate * Math.pow(1 + periodicInterestRate, numberOfInstallments);
-  const denominator = Math.pow(1 + periodicInterestRate, numberOfInstallments) - 1;
+  const numerator = periodicInterestRate * (1 + periodicInterestRate) ** numberOfInstallments;
+  const denominator = (1 + periodicInterestRate) ** numberOfInstallments - 1;
 
   if (denominator === 0) {
     // This can happen if periodicInterestRate is 0 and was not caught
@@ -237,12 +237,12 @@ export function CurrentAccountPaymentForm({
       }
     } else {
       if (result.errors) {
-        result.errors.forEach((err) => {
+        for (const err of result.errors) {
           setError(err.path as keyof CurrentAccountFormValues, {
             type: "manual",
             message: err.message,
           });
-        });
+        }
       }
       if (result.error) {
         setGeneralError(result.error);

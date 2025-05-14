@@ -107,8 +107,8 @@ export default function PromotionForm({
   // Determine initial isDiscount value and rate value
   const initialIsDiscount = promotion
     ? promotion.discountRate !== undefined &&
-      promotion.discountRate !== null &&
-      promotion.discountRate > 0
+    promotion.discountRate !== null &&
+    promotion.discountRate > 0
     : true;
   const initialRateValue = promotion
     ? initialIsDiscount
@@ -132,7 +132,7 @@ export default function PromotionForm({
         initialRateValue,
       });
     }
-  }, [promotion]);
+  }, [promotion, initialIsDiscount, initialRateValue]);
 
   // Extract bank and card IDs from promotion
   const { bankId: initialBankId, cardId: initialCardId } = promotion
@@ -188,7 +188,7 @@ export default function PromotionForm({
     if (watchPaymentMethodId) {
       setSelectedPaymentMethod(watchPaymentMethodId);
     }
-  }, [watchPaymentMethodId, paymentMethods]);
+  }, [watchPaymentMethodId]);
 
   // Update bankCardId when bankId or cardId changes
   useEffect(() => {
@@ -282,7 +282,7 @@ export default function PromotionForm({
     let surchargeRate: number | null = null;
     if (rawRate !== undefined && rawRate !== null) {
       const num = Number(rawRate);
-      if (!isNaN(num)) {
+      if (!Number.isNaN(num)) {
         if (isDisc) {
           discountRate = num;
         } else {
@@ -334,17 +334,17 @@ export default function PromotionForm({
 
             const bank: Bank | null = createdBankId
               ? {
-                  id: createdBankId,
-                  name: banksWithCards.find((b) => b.bank.id === createdBankId)?.bank.name || "",
-                }
+                id: createdBankId,
+                name: banksWithCards.find((b) => b.bank.id === createdBankId)?.bank.name || "",
+              }
               : null;
             const card: PaymentCard | null = createdCardId
               ? {
-                  id: createdCardId,
-                  name: "",
-                  type: "",
-                  issuer: "",
-                }
+                id: createdCardId,
+                name: "",
+                type: "",
+                issuer: "",
+              }
               : null;
 
             if (card && bank && createdBankId !== null && createdCardId !== null) {
@@ -452,17 +452,17 @@ export default function PromotionForm({
 
             const bank: Bank | null = updatedBankId
               ? {
-                  id: updatedBankId,
-                  name: banksWithCards.find((b) => b.bank.id === updatedBankId)?.bank.name || "",
-                }
+                id: updatedBankId,
+                name: banksWithCards.find((b) => b.bank.id === updatedBankId)?.bank.name || "",
+              }
               : null;
             const card: PaymentCard | null = updatedCardId
               ? {
-                  id: updatedCardId,
-                  name: "",
-                  type: "",
-                  issuer: "",
-                }
+                id: updatedCardId,
+                name: "",
+                type: "",
+                issuer: "",
+              }
               : null;
 
             if (card && bank && updatedBankId !== null && updatedCardId !== null) {
@@ -520,12 +520,9 @@ export default function PromotionForm({
             onSuccess?.();
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error al guardar promoción:", error);
-        const errorMessage =
-          error?.issues?.[0]?.message ||
-          error.message ||
-          "Ocurrió un error al guardar la promoción.";
+        const errorMessage = error instanceof Error ? error.message : "Error desconocido al guardar la promoción";
         toast({
           title: "Error",
           description: errorMessage,
@@ -650,7 +647,7 @@ export default function PromotionForm({
                               banksWithCards={banksWithCards}
                               selectedBankId={field.value ? Number.parseInt(field.value) : null}
                               selectedCardId={
-                                form.watch("cardId") ? Number.parseInt(form.watch("cardId")!) : null
+                                form.watch("cardId") ? Number.parseInt(form.watch("cardId") || "") : null
                               }
                               onSelectBank={(bankId) => {
                                 form.setValue("bankId", bankId ? String(bankId) : null);
@@ -944,16 +941,16 @@ export default function PromotionForm({
                       </Button>
                     </div>
 
-                    {form.watch("installmentPlans")?.map((plan, index) => (
-                      <Card key={index}>
+                    {form.watch("installmentPlans")?.map((plan) => (
+                      <Card key={plan.id}>
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-sm font-medium">Plan {index + 1}</h4>
+                            <h4 className="text-sm font-medium">Plan {plan.id}</h4>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeInstallmentPlan(index)}
+                              onClick={() => removeInstallmentPlan(Number.parseInt(plan.id))}
                             >
                               <Trash className="h-4 w-4 text-destructive" />
                             </Button>
@@ -962,7 +959,7 @@ export default function PromotionForm({
                           <div className="grid grid-cols-2 gap-4">
                             <FormField
                               control={form.control}
-                              name={`installmentPlans.${index}.installments`}
+                              name={`installmentPlans.${plan.id}.installments`}
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Cuotas</FormLabel>
@@ -977,7 +974,7 @@ export default function PromotionForm({
                                         const value = e.target.value
                                           ? Number.parseInt(e.target.value, 10)
                                           : 0;
-                                        field.onChange(isNaN(value) ? 0 : value);
+                                        field.onChange(Number.isNaN(value) ? 0 : value);
                                       }}
                                     />
                                   </FormControl>
@@ -988,7 +985,7 @@ export default function PromotionForm({
 
                             <FormField
                               control={form.control}
-                              name={`installmentPlans.${index}.interestRate`}
+                              name={`installmentPlans.${plan.id}.interestRate`}
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Interés (%)</FormLabel>
@@ -1015,7 +1012,7 @@ export default function PromotionForm({
 
                           <FormField
                             control={form.control}
-                            name={`installmentPlans.${index}.isEnabled`}
+                            name={`installmentPlans.${plan.id}.isEnabled`}
                             render={({ field }) => (
                               <FormItem className="flex items-center space-x-2 mt-2">
                                 <FormControl>
@@ -1031,11 +1028,11 @@ export default function PromotionForm({
 
                     {(!form.watch("installmentPlans") ||
                       form.watch("installmentPlans").length === 0) && (
-                      <p className="text-center text-muted-foreground text-sm border rounded-md p-4">
-                        No hay planes de cuotas configurados. Haga clic en "Agregar plan" para crear
-                        uno.
-                      </p>
-                    )}
+                        <p className="text-center text-muted-foreground text-sm border rounded-md p-4">
+                          No hay planes de cuotas configurados. Haga clic en "Agregar plan" para crear
+                          uno.
+                        </p>
+                      )}
                   </div>
                 )}
               </CardContent>

@@ -57,7 +57,7 @@ export const createCurrentAccountSchema = z
     numberOfInstallments: z.number().int().positive("El número de cuotas debe ser positivo."),
     installmentAmount: z.number().positive("El monto de la cuota debe ser positivo."),
     paymentFrequency: paymentFrequencySchema,
-    startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    startDate: z.string().refine((date) => !Number.isNaN(Date.parse(date)), {
       message: "Fecha de inicio inválida.",
     }),
     interestRate: z.number().min(0, "La tasa de interés no puede ser negativa.").optional(),

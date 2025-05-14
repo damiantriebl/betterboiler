@@ -39,10 +39,10 @@ export const calculateRemainingAmount = (
   }
 
   if (totalCurrency === "USD" && reservationCurrency === "ARS") {
-    // Convertir la reserva en ARS a USD
     const reservationInUSD = reservationAmount / exchangeRate;
     return totalPrice - reservationInUSD;
-  } else if (totalCurrency === "ARS" && reservationCurrency === "USD") {
+  }
+  if (totalCurrency === "ARS" && reservationCurrency === "USD") {
     // Convertir la reserva en USD a ARS
     const reservationInARS = reservationAmount * exchangeRate;
     return totalPrice - reservationInARS;
@@ -66,8 +66,8 @@ export const arePromotionsCompatible = (
   }
 
   // Obtener los planes habilitados
-  const enabledPlans1 = promotion1.installmentPlans.filter((plan) => plan && plan.isEnabled);
-  const enabledPlans2 = promotion2.installmentPlans.filter((plan) => plan && plan.isEnabled);
+  const enabledPlans1 = promotion1.installmentPlans.filter((plan) => plan?.isEnabled);
+  const enabledPlans2 = promotion2.installmentPlans.filter((plan) => plan?.isEnabled);
 
   // Si alguna promoción no tiene planes habilitados, son compatibles
   if (!enabledPlans1.length || !enabledPlans2.length) {
@@ -90,7 +90,7 @@ export const getCommonInstallmentPlans = (promotions: BankingPromotionDisplay[])
   // Obtener planes habilitados de la primera promoción
   const firstPromoPlans =
     promotions[0].installmentPlans
-      ?.filter((plan) => plan && plan.isEnabled)
+      ?.filter((plan) => plan?.isEnabled)
       ?.map((plan) => plan.installments) || [];
 
   // Si solo hay una promoción, devolver sus planes
@@ -100,7 +100,7 @@ export const getCommonInstallmentPlans = (promotions: BankingPromotionDisplay[])
   return firstPromoPlans.filter((installments) =>
     promotions.every((promo) =>
       promo.installmentPlans
-        ?.filter((plan) => plan && plan.isEnabled)
+        ?.filter((plan) => plan?.isEnabled)
         ?.some((plan) => plan.installments === installments),
     ),
   );
@@ -130,15 +130,15 @@ export const calculateFinalPrice = (
 
   // Apply banking promotions
   if (promotions && promotions.length > 0) {
-    promotions.forEach((promotion) => {
-      if (!promotion) return;
-
-      if (promotion.discountRate) {
-        price = price * (1 - promotion.discountRate / 100);
-      } else if (promotion.surchargeRate) {
-        price = price * (1 + promotion.surchargeRate / 100);
+    for (const promotion of promotions) {
+      if (!promotion) continue;
+      if (promotion.discountRate && promotion.discountRate > 0) {
+        price *= 1 - promotion.discountRate / 100;
       }
-    });
+      if (promotion.surchargeRate && promotion.surchargeRate > 0) {
+        price *= 1 + promotion.surchargeRate / 100;
+      }
+    }
   }
 
   return Math.max(0, price); // Ensure price is not negative
@@ -151,14 +151,18 @@ export const getAvailableInstallmentPlans = (
   promotions: BankingPromotionDisplay[],
 ): { installments: number; interestRate: number }[] => {
   const planMap: Record<number, number[]> = {};
-  promotions.forEach((promo) => {
-    promo.installmentPlans
-      ?.filter((plan) => plan && plan.isEnabled)
-      .forEach((plan) => {
-        if (!planMap[plan.installments]) planMap[plan.installments] = [];
-        planMap[plan.installments].push(plan.interestRate);
-      });
-  });
+  for (const promo of promotions) {
+    if (promo.installmentPlans) {
+      for (const plan of promo.installmentPlans) {
+        if (plan.isEnabled) {
+          if (!planMap[plan.installments]) {
+            planMap[plan.installments] = [];
+          }
+          planMap[plan.installments].push(plan.interestRate);
+        }
+      }
+    }
+  }
   return Object.entries(planMap)
     .map(([installments, rates]) => ({
       installments: Number(installments),
@@ -174,14 +178,17 @@ export const getBestRatesByInstallment = (
   promotions: BankingPromotionDisplay[],
 ): Record<number, number> => {
   const ratesMap: Record<number, number[]> = {};
-  promotions.forEach((promo) => {
-    promo.installmentPlans
-      ?.filter((plan) => plan && plan.isEnabled)
-      .forEach((plan) => {
-        if (!ratesMap[plan.installments]) ratesMap[plan.installments] = [];
-        ratesMap[plan.installments].push(plan.interestRate);
-      });
-  });
+  
+  for (const promo of promotions) {
+    const enabledPlans = promo.installmentPlans?.filter((plan) => plan?.isEnabled) ?? [];
+    for (const plan of enabledPlans) {
+      if (!ratesMap[plan.installments]) {
+        ratesMap[plan.installments] = [];
+      }
+      ratesMap[plan.installments].push(plan.interestRate);
+    }
+  }
+  
   const bestRates: Record<number, number> = {};
   for (const [inst, rates] of Object.entries(ratesMap)) {
     bestRates[Number(inst)] = Math.min(...rates);

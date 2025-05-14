@@ -44,9 +44,7 @@ export async function recordCurrentAccountPayment(
     if (!validatedInput.success) {
       return {
         success: false,
-        error:
-          "Error de validación: " +
-          Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", "),
+        error: `Error de validación: ${Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", ")}`,
       };
     }
 
@@ -74,11 +72,11 @@ export async function recordCurrentAccountPayment(
         throw new Error("Esta cuenta corriente ya ha sido saldada.");
       }
 
-      // Ensure remainingAmount is treated as a number for calculation
-      const currentRemainingAmount =
-        typeof account.remainingAmount === "number"
+      // Convertir el remainingAmount a número si es necesario
+      const currentRemainingAmount = 
+        typeof account.remainingAmount === "number"       
           ? account.remainingAmount
-          : Number.parseFloat((account.remainingAmount as any).toString());
+          : Number.parseFloat(account.remainingAmount.toString());
 
       const newRemainingAmount = currentRemainingAmount - amountPaid;
 
@@ -119,7 +117,7 @@ export async function recordCurrentAccountPayment(
       return { newPayment, updatedAccount };
     });
 
-    revalidatePath(`/current-accounts`);
+    revalidatePath("/current-accounts");
     revalidatePath(`/current-accounts/${currentAccountId}`);
 
     return {
@@ -127,15 +125,14 @@ export async function recordCurrentAccountPayment(
       message: "Pago registrado exitosamente.",
       data: result.newPayment,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error recording payment:", error);
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error:
-          "Error de validación: " + Object.values(error.flatten().fieldErrors).flat().join(", "),
+        error: `Error de validación: ${Object.values(error.flatten().fieldErrors).flat().join(", ")}`,
       };
     }
-    return { success: false, error: error.message || "Error desconocido al registrar el pago." };
+    return { success: false, error: error instanceof Error ? error.message : "Error desconocido al registrar el pago." };
   }
 }

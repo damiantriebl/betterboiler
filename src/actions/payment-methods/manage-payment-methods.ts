@@ -20,8 +20,7 @@ export async function togglePaymentMethod(
     return {
       success: false,
       error:
-        "Error de validación: " +
-        Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", "),
+        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
 
@@ -44,12 +43,11 @@ export async function togglePaymentMethod(
       success: true,
       message: `Método de pago ${isEnabled ? "habilitado" : "deshabilitado"} correctamente.`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating payment method status:", error);
     return {
       success: false,
-      error:
-        "No se pudo actualizar el método de pago. Es posible que la tabla no exista todavía o que haya un problema con la conexión.",
+      error: error instanceof Error ? error.message : "Error al actualizar el estado del método de pago.",
     };
   }
 }
@@ -94,12 +92,11 @@ export async function associatePaymentMethod(
 
     revalidatePath("/configuration");
     return { success: true, message: "Método de pago asociado correctamente." };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error associating payment method:", error);
     return {
       success: false,
-      error:
-        "No se pudo asociar el método de pago. Es posible que la tabla no exista todavía o que haya un problema con la conexión.",
+      error: error instanceof Error ? error.message : "Error al asociar el método de pago.",
     };
   }
 }
@@ -117,12 +114,11 @@ export async function removePaymentMethod(
 
     revalidatePath("/configuration");
     return { success: true, message: "Método de pago desasociado correctamente." };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error removing payment method:", error);
     return {
       success: false,
-      error:
-        "No se pudo eliminar el método de pago. Es posible que la tabla no exista todavía o que haya un problema con la conexión.",
+      error: error instanceof Error ? error.message : "Error al eliminar el método de pago.",
     };
   }
 }
@@ -145,12 +141,11 @@ export async function updatePaymentMethodsOrder(
 
     revalidatePath("/configuration");
     return { success: true, message: "Orden de métodos de pago actualizado correctamente." };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating payment methods order:", error);
     return {
       success: false,
-      error:
-        "No se pudo actualizar el orden de los métodos de pago. Es posible que la tabla no exista todavía o que haya un problema con la conexión.",
+      error: error instanceof Error ? error.message : "Error al actualizar el orden de los métodos de pago.",
     };
   }
 }

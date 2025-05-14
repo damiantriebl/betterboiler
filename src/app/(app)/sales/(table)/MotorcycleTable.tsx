@@ -48,17 +48,6 @@ import MotorcycleRow from "./MotorcycleRow";
 import MotorcycleStatusBadge from "./MotorcycleStatusBadge";
 import PaginationControl from "./PaginationControl";
 
-export type MotorcycleWithFullDetails = MotorcycleWithDetails & {
-  brand?: (Brand & { organizationBrands?: { color: string }[] }) | null;
-  color?: MotoColor | null;
-};
-
-interface MotorcycleTableProps {
-  initialData: MotorcycleWithFullDetails[];
-  clients: Client[];
-  activePromotions?: BankingPromotionDisplay[];
-}
-
 type SortableKey = keyof Pick<
   Motorcycle,
   "id" | "year" | "mileage" | "retailPrice" | "state" | "chassisNumber" | "createdAt" | "updatedAt"
@@ -415,22 +404,22 @@ export default function MotorcycleTable({
         prev.map((m) =>
           m.id === updatedMoto.motorcycleId
             ? {
-                ...m,
-                state: MotorcycleState.RESERVADO,
-                reservation: {
-                  id: updatedMoto.reservationId,
-                  amount: updatedMoto.amount,
-                  motorcycleId: updatedMoto.motorcycleId,
-                  clientId: updatedMoto.clientId,
-                  expirationDate: null,
-                  status: "active",
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  organizationId: m.organizationId,
-                  notes: null,
-                  paymentMethod: null,
-                },
-              }
+              ...m,
+              state: MotorcycleState.RESERVADO,
+              reservation: {
+                id: updatedMoto.reservationId,
+                amount: updatedMoto.amount,
+                motorcycleId: updatedMoto.motorcycleId,
+                clientId: updatedMoto.clientId,
+                expirationDate: null,
+                status: "active",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                organizationId: m.organizationId,
+                notes: null,
+                paymentMethod: null,
+              },
+            }
             : m,
         ),
       );
@@ -458,9 +447,9 @@ export default function MotorcycleTable({
             current.map((moto) =>
               moto.id === motoId
                 ? {
-                    ...moto,
-                    state: newStatus,
-                  }
+                  ...moto,
+                  state: newStatus,
+                }
                 : moto,
             ),
           );
@@ -492,9 +481,9 @@ export default function MotorcycleTable({
       ...moto,
       model: moto.model
         ? {
-            ...moto.model,
-            imageUrl: moto.model.imageUrl || null,
-          }
+          ...moto.model,
+          imageUrl: moto.model.imageUrl || null,
+        }
         : null,
     };
     console.log("handleOpenDetailModal - Moto data:", JSON.stringify(motoWithModelData, null, 2));

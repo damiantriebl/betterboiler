@@ -56,7 +56,7 @@ export async function getBanksWithCards(organizationId: string): Promise<BankWit
     // Agrupar por banco
     const bankMap = new Map<number, BankWithCards>();
 
-    bankCards.forEach((bankCard) => {
+    for (const bankCard of bankCards) {
       if (!bankMap.has(bankCard.bankId)) {
         bankMap.set(bankCard.bankId, {
           bank: bankCard.bank,
@@ -64,13 +64,16 @@ export async function getBanksWithCards(organizationId: string): Promise<BankWit
         });
       }
 
-      bankMap.get(bankCard.bankId)!.cards.push({
-        id: bankCard.id,
-        cardType: bankCard.cardType,
-        isEnabled: bankCard.isEnabled,
-        order: bankCard.order,
-      });
-    });
+      const bank = bankMap.get(bankCard.bankId);
+      if (bank) {
+        bank.cards.push({
+          id: bankCard.id,
+          cardType: bankCard.cardType,
+          isEnabled: bankCard.isEnabled,
+          order: bankCard.order,
+        });
+      }
+    }
 
     // Convertir Map a array
     return Array.from(bankMap.values());

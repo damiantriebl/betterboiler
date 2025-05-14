@@ -52,6 +52,19 @@ interface BrandFiles {
   hasOtherFiles: boolean;
 }
 
+interface ModelFile {
+  type?: string;
+  url?: string;
+  name?: string;
+}
+
+interface ModelWithFiles extends Model {
+  files?: ModelFile[];
+  imageUrl?: string;
+  specSheetUrl?: string;
+  brand?: Brand;
+}
+
 interface SingleGlobalBrandColumnProps {
   brand: Brand & { models?: Model[] } & { files?: BrandFiles };
   onDelete: (brandId: number) => void;
@@ -106,32 +119,26 @@ function SortableModelItem({
   };
 
   // Calcular flags de archivos para el modelo
-  const files = (model as any).files || [];
+  const files = (model as ModelWithFiles).files || [];
 
   // Utilidades para encontrar archivos relevantes
   const imageTypes = ["image", "img", "photo", "picture"];
-  const isImage = (file: any) =>
-    imageTypes.includes(file.type) || (file.url && /\.(jpe?g|png|webp|gif)$/i.test(file.url));
+  const isImage = (file: ModelFile) =>
+    imageTypes.includes(file.type || "") || file.url?.match(/\.(jpe?g|png|webp|gif)$/i) !== null;
 
-  const isSheet = (file: any) =>
-    file.type === "spec_sheet" || (file.url && file.url.endsWith(".pdf"));
+  const isSheet = (file: ModelFile) =>
+    file.type === "spec_sheet" || file.url?.endsWith(".pdf");
 
   // Obtener la marca desde el contexto superior donde está disponible
   const getBrandName = () => {
     try {
-      // En SingleGlobalBrandColumn tenemos la prop 'brand' disponible
       if (typeof brandId === "number") {
         // Intentamos obtener el nombre de la marca desde el modelo
-        const brandName = (model as any).brand?.name;
+        const brandName = (model as ModelWithFiles).brand?.name;
         if (brandName) return brandName.toLowerCase();
-
-        // Es mejor usar el brandId para determinar la marca
-        // que depender de variables globales
-        return `brand_${brandId}`;
       }
       return "";
-    } catch (e) {
-      console.error("Error obteniendo nombre de marca:", e);
+    } catch {
       return "";
     }
   };
@@ -174,7 +181,7 @@ function SortableModelItem({
   const pdfUrl = buildFileUrl("spec_sheet");
 
   // Para archivos adicionales, necesitamos nombres específicos
-  const firstOtherFile = files.find((file: any) => !isImage(file) && !isSheet(file));
+  const firstOtherFile = files.find((file: ModelFile) => !isImage(file) && !isSheet(file));
   const otherFileName = firstOtherFile?.name || "";
   const firstOtherUrl = otherFileName ? buildFileUrl("other", otherFileName) : "";
 
@@ -185,17 +192,17 @@ function SortableModelItem({
   const firstOtherName = firstOtherFile?.name || "Archivo adicional";
 
   const hasPhoto =
-    ("imageUrl" in model && !!(model as any).imageUrl) ||
+    ("imageUrl" in model && !!(model as ModelWithFiles).imageUrl) ||
     files.some(
-      (file: any) =>
-        ["image", "img", "photo", "picture"].includes(file.type) ||
-        (file.url && /\.(jpe?g|png|webp|gif)$/i.test(file.url)),
+      (file: ModelFile) =>
+        imageTypes.includes(file.type || "") ||
+        file.url?.match(/\.(jpe?g|png|webp|gif)$/i) !== null,
     );
   const hasTechnicalSheet = !!(
-    ("specSheetUrl" in model && (model as any).specSheetUrl) ||
-    files.some((file: any) => file.type === "spec_sheet" || (file.url && file.url.endsWith(".pdf")))
+    ("specSheetUrl" in model && (model as ModelWithFiles).specSheetUrl) ||
+    files.some((file: ModelFile) => file.type === "spec_sheet" || file.url?.endsWith(".pdf"))
   );
-  const hasOtherFiles = files.some((file: any) => !isImage(file) && !isSheet(file));
+  const hasOtherFiles = files.some((file: ModelFile) => !isImage(file) && !isSheet(file));
 
   const handleSave = () => {
     const formData = new FormData();

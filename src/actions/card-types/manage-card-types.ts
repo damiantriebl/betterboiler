@@ -80,11 +80,11 @@ export async function createCardType(
       data: newCardType as CardType, // Assert type if necessary, ensure structure matches
       fieldErrors: null,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating card type:", error);
     return {
       success: false,
-      message: error.message || "Error desconocido al crear el tipo de tarjeta.", // Use message field
+      message: error instanceof Error ? error.message : "Error desconocido al crear el tipo de tarjeta",
       fieldErrors: null,
       data: null,
     };

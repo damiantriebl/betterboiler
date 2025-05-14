@@ -27,9 +27,9 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
-type ActionState<T = any> =
+type ActionState<T = unknown, E = unknown> =
   | { success: true; message?: string; data?: T }
-  | { success: false; error: string; errors?: any[] };
+  | { success: false; error: string; errors?: E[] };
 
 type SidebarContext = {
   state: "expanded" | "collapsed";
@@ -405,9 +405,13 @@ const SidebarContent = React.forwardRef<
     name: string;
   }
 
+  function hasOrganization(user: unknown): user is { organization: OrganizationInfo } {
+    return typeof user === "object" && user !== null && "organization" in user;
+  }
+
   const organizationName =
-    session?.user && "organization" in (session.user as any)
-      ? (session.user as unknown as { organization: OrganizationInfo }).organization?.name
+    session?.user && hasOrganization(session.user)
+      ? session.user.organization?.name
       : "Organización";
   const userName = session?.user?.name || "Usuario";
 
@@ -732,7 +736,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className,
       )}
       {...props}

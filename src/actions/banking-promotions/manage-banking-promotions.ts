@@ -7,10 +7,11 @@ import {
   updateInstallmentPlanStatusSchema,
 } from "@/zod/banking-promotion-schemas";
 import { revalidatePath } from "next/cache";
+import type { BankingPromotion } from "@prisma/client";
 
 // Create a new banking promotion
 export async function createBankingPromotion(
-  data: any, // Keep 'any' for now, validation happens next
+  data: CreateBankingPromotionInput, // Reemplazar any con un tipo específico
 ) {
   try {
     // Validate the data - include organizationId in validation
@@ -84,17 +85,17 @@ export async function createBankingPromotion(
       message: "Promoción bancaria creada correctamente",
       data: newPromotion,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating banking promotion:", error);
     return {
       success: false,
-      message: error.message || "Error al crear la promoción bancaria",
+      error: error instanceof Error ? error.message : "Error desconocido al crear la promoción",
     };
   }
 }
 
 // Update a banking promotion
-export async function updateBankingPromotion(data: any) {
+export async function updateBankingPromotion(data: UpdateBankingPromotionInput) {
   try {
     // Validate the data
     const validatedData = updateBankingPromotionSchema.parse(data);
@@ -198,40 +199,40 @@ export async function updateBankingPromotion(data: any) {
       message: "Promoción bancaria actualizada correctamente",
       data: completePromotion,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating banking promotion:", error);
     return {
       success: false,
-      message: error.message || "Error al actualizar la promoción bancaria",
+      error: error instanceof Error ? error.message : "Error desconocido al actualizar la promoción",
     };
   }
 }
 
 // Toggle a banking promotion's enabled status
-export async function toggleBankingPromotion(id: number, isEnabled: boolean) {
+export async function toggleBankingPromotion(data: ToggleBankingPromotionInput) {
   try {
     await prisma.bankingPromotion.update({
-      where: { id },
-      data: { isEnabled },
+      where: { id: data.id },
+      data: { isEnabled: data.isEnabled },
     });
 
     revalidatePath("/configuration");
 
     return {
       success: true,
-      message: `Promoción ${isEnabled ? "habilitada" : "deshabilitada"} correctamente`,
+      message: `Promoción ${data.isEnabled ? "habilitada" : "deshabilitada"} correctamente`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling banking promotion:", error);
     return {
       success: false,
-      message: error.message || "Error al cambiar el estado de la promoción",
+      error: error instanceof Error ? error.message : "Error desconocido al cambiar el estado de la promoción",
     };
   }
 }
 
 // Toggle an installment plan's enabled status
-export async function toggleInstallmentPlan(data: any) {
+export async function toggleInstallmentPlan(data: ToggleInstallmentPlanInput) {
   try {
     const { id, isEnabled } = updateInstallmentPlanStatusSchema.parse(data);
 
@@ -246,17 +247,17 @@ export async function toggleInstallmentPlan(data: any) {
       success: true,
       message: `Plan de cuotas ${isEnabled ? "habilitado" : "deshabilitado"} correctamente`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling installment plan:", error);
     return {
       success: false,
-      message: error.message || "Error al cambiar el estado del plan de cuotas",
+      error: error instanceof Error ? error.message : "Error desconocido al cambiar el estado del plan",
     };
   }
 }
 
 // Delete a banking promotion
-export async function deleteBankingPromotion(id: number) {
+export async function deleteBankingPromotion(id: string) {
   try {
     await prisma.bankingPromotion.delete({
       where: { id },
@@ -268,17 +269,17 @@ export async function deleteBankingPromotion(id: number) {
       success: true,
       message: "Promoción bancaria eliminada correctamente",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting banking promotion:", error);
     return {
       success: false,
-      message: error.message || "Error al eliminar la promoción bancaria",
+      error: error instanceof Error ? error.message : "Error desconocido al eliminar la promoción",
     };
   }
 }
 
 // Get promotion details with installment plans
-export async function getBankingPromotionDetails(id: number) {
+export async function getBankingPromotionDetails(id: string) {
   try {
     const promotion = await prisma.bankingPromotion.findUnique({
       where: { id },
@@ -313,11 +314,11 @@ export async function getBankingPromotionDetails(id: number) {
       success: true,
       data: promotion,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching banking promotion details:", error);
     return {
       success: false,
-      message: error.message || "Error al obtener los detalles de la promoción",
+      error: error instanceof Error ? error.message : "Error desconocido al obtener los detalles de la promoción",
     };
   }
 }

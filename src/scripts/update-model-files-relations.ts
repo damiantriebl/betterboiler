@@ -91,9 +91,9 @@ async function main() {
       {} as Record<string, number>,
     );
 
-    Object.entries(types).forEach(([type, count]) => {
+    for (const [type, count] of Object.entries(types)) {
       console.log(`- ${type}: ${count}`);
-    });
+    }
   }
 }
 

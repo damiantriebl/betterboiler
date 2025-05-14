@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 export const associateOrganizationBrand = async ({
   organizationId,
@@ -33,10 +34,10 @@ export const associateOrganizationBrand = async ({
     }
 
     return { success: true, message: "Marca asociada correctamente." };
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (
-      error.code === "P2002" ||
-      (error.message && error.message.includes("Unique constraint failed"))
+      (error instanceof PrismaClientKnownRequestError && error.code === "P2002") ||
+      (error instanceof Error && error.message?.includes("Unique constraint failed"))
     ) {
       return {
         success: false,
@@ -45,7 +46,7 @@ export const associateOrganizationBrand = async ({
     }
     return {
       success: false,
-      error: error.message || "Error al asociar la marca.",
+      error: error instanceof Error ? error.message : "Error al asociar la marca.",
     };
   }
 };

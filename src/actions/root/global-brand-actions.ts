@@ -31,7 +31,7 @@ function handlePrismaError(error: unknown, defaultMessage: string): ActionState<
     // Catch Zod errors passed through
     return {
       success: false,
-      error: "Error de validación: " + Object.values(error.flatten().fieldErrors).flat().join(", "),
+      error: `Error de validación: ${Object.values(error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
   return { success: false, error: defaultMessage };
@@ -100,8 +100,7 @@ export async function createRootBrand(
     return {
       success: false,
       error:
-        "Error de validación: " +
-        Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", "),
+        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
 
@@ -155,8 +154,7 @@ export async function createRootModel(
     return {
       success: false,
       error:
-        "Error de validación: " +
-        Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", "),
+        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
   const { name, brandId } = validatedFields.data;
@@ -210,8 +208,7 @@ export async function updateRootBrand(
     return {
       success: false,
       error:
-        "Error de validación: " +
-        Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", "),
+        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
   const { id, name } = validatedFields.data;
@@ -254,8 +251,7 @@ export async function updateRootModel(
     return {
       success: false,
       error:
-        "Error de validación: " +
-        Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", "),
+        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
   const { id, brandId, name } = validatedFields.data;

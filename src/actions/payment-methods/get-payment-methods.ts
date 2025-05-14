@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import type { OrganizationPaymentMethodDisplay, PaymentMethod } from "@/types/payment-methods";
+import type { OrganizationPaymentMethod } from "@prisma/client";
 
 // Default payment methods as fallback when tables don't exist
 const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -91,7 +92,7 @@ export async function getOrganizationPaymentMethods(
     });
 
     const formattedMethods: OrganizationPaymentMethodDisplay[] = organizationMethods.map(
-      (orgMethod: any) => ({
+      (orgMethod: OrganizationPaymentMethod) => ({
         id: orgMethod.id,
         order: orgMethod.order,
         isEnabled: orgMethod.isEnabled,
@@ -121,7 +122,7 @@ export async function getAvailablePaymentMethods(organizationId: string) {
       select: { methodId: true },
     });
 
-    const existingMethodIds = orgMethodIds.map((item: any) => item.methodId);
+    const existingMethodIds = orgMethodIds.map((item: { methodId: number }) => item.methodId);
 
     // Now get all methods that are not in the existing list
     const availableMethods = await prisma.paymentMethod.findMany({

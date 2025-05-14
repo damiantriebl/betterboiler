@@ -1,8 +1,6 @@
 "use client";
 
-import { fetchImageAsBase64 } from "@/actions/fetchImageAsBase64";
 import { getOrganization } from "@/actions/get-organization";
-import { getLogoUrl } from "@/components/custom/OrganizationLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { usePriceDisplayStore } from "@/stores/price-display-store";
+import { type PriceDisplayMode, usePriceDisplayStore } from "@/stores/price-display-store";
 import type { ModelFileWithUrl, MotorcycleWithDetails } from "@/types/motorcycle";
 import type {
   AmortizationScheduleEntry,
@@ -33,18 +31,8 @@ import type {
   QuotePDFProps,
 } from "@/types/quote";
 import {
-  type Brand,
-  type Model,
-  type ModelFile,
-  type MotoColor,
-  type Motorcycle,
   MotorcycleState,
-  type Reservation,
-  type Sucursal,
 } from "@prisma/client";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import {
   BookmarkPlus,
   Calculator,
@@ -64,6 +52,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientDetail } from "./ClientDetail";
 import QuoteBridgePdf from "./components/QuoteBrigePdf";
 import { QuotePDFDocument } from "./components/QuotePDF";
+import { Switch } from "@/components/ui/switch";
 
 interface PriceDisplayState {
   mode: PriceDisplayMode;
@@ -268,8 +257,8 @@ function PaymentQuoteSimulator({
       };
     }
 
-    const pmtNumerator = ratePerPeriod * Math.pow(1 + ratePerPeriod, installments);
-    const pmtDenominator = Math.pow(1 + ratePerPeriod, installments) - 1;
+    const pmtNumerator = ratePerPeriod * ((1 + ratePerPeriod) ** installments);
+    const pmtDenominator = (1 + ratePerPeriod) ** installments - 1;
 
     if (
       pmtDenominator === 0 ||
@@ -527,20 +516,18 @@ function PaymentQuoteSimulator({
                   >
                     Descuento
                   </Label>
-                  <div
-                    className="relative w-8 h-4 bg-gray-200 rounded-full cursor-pointer"
-                    onClick={() =>
-                      setPaymentData({
-                        ...paymentData,
-                        discountType:
-                          paymentData.discountType === "discount" ? "surcharge" : "discount",
+                  <Switch
+                    id="discountType"
+                    checked={paymentData.discountType === "discount"}
+                    onCheckedChange={(checked) =>
+                      handleInputChange({
+                        target: {
+                          name: "discountType",
+                          value: checked ? "discount" : "surcharge",
+                        },
                       })
                     }
-                  >
-                    <div
-                      className={`absolute top-[2px] w-3 h-3 rounded-full transition-all ${paymentData.discountType === "discount" ? "left-[2px] bg-green-500" : "left-[18px] bg-amber-500"}`}
-                    ></div>
-                  </div>
+                  />
                   <Label
                     htmlFor="discountType"
                     className={`text-xs px-2 py-1 rounded ${paymentData.discountType === "surcharge" ? "bg-amber-100 text-amber-800" : "bg-gray-100"} cursor-pointer`}
@@ -579,7 +566,9 @@ function PaymentQuoteSimulator({
                 <Select
                   value={paymentData.cuotas.toString()}
                   onValueChange={(value) =>
-                    handleInputChange({ target: { name: "cuotas", value } } as any)
+                    handleInputChange({
+                      target: { name: "cuotas", value },
+                    } as React.ChangeEvent<HTMLInputElement>)
                   }
                 >
                   <SelectTrigger id="cuotas">
@@ -629,7 +618,12 @@ function PaymentQuoteSimulator({
                 <Select
                   value={paymentData.currentAccountFrequency.toString()}
                   onValueChange={(value) =>
-                    handleInputChange({ target: { name: "currentAccountFrequency", value } } as any)
+                    handleInputChange({
+                      target: {
+                        name: "currentAccountFrequency",
+                        value
+                      }
+                    } as React.ChangeEvent<HTMLSelectElement>)
                   }
                 >
                   <SelectTrigger id="currentAccountFrequency">
@@ -987,13 +981,11 @@ export function MotorcycleDetailModal({
             () =>
               rawReservationData
                 ? {
-                    amount: rawReservationData.amount,
-                    createdAt: rawReservationData.createdAt,
-                    paymentMethod: rawReservationData.paymentMethod,
-                    notes: rawReservationData.notes,
-                  }
+                  ...rawReservationData,
+                  currency: rawReservationData.currency || "USD",
+                }
                 : undefined,
-            [rawReservationData],
+            [],
           )}
         />
       </div>
@@ -1060,7 +1052,7 @@ export function MotorcycleDetailModal({
               <div className="relative mb-4 rounded-lg overflow-hidden border aspect-video bg-gray-100">
                 {isLoadingImages ? (
                   <div className="flex items-center justify-center h-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
                   </div>
                 ) : modelImages.length > 0 ? (
                   <>
@@ -1072,6 +1064,7 @@ export function MotorcycleDetailModal({
                     {modelImages.length > 1 && (
                       <>
                         <button
+                          type="button"
                           onClick={handlePrevImage}
                           className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
                           title="Imagen anterior"
@@ -1080,6 +1073,7 @@ export function MotorcycleDetailModal({
                           <ChevronLeft className="h-6 w-6" />
                         </button>
                         <button
+                          type="button"
                           onClick={handleNextImage}
                           className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
                           title="Siguiente imagen"

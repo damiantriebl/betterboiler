@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+import type { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import type {
   InventoryStatusReport,
@@ -8,6 +8,22 @@ import type {
 } from "@/types/reports";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+interface AutoTableDoc extends jsPDF {
+  lastAutoTable: {
+    finalY: number;
+  };
+  autoTable: (options: {
+    head: string[][];
+    body: (string | number)[][];
+    startY?: number;
+    theme?: string;
+    headStyles?: {
+      fillColor?: string;
+      textColor?: string;
+    };
+  }) => void;
+}
 
 // Helper function to format currency
 const formatCurrency = (amount: number, currency: string) => {
@@ -33,14 +49,16 @@ const addHeader = (doc: jsPDF, title: string, dateRange?: { from?: Date; to?: Da
 };
 
 // Helper function to add table to PDF
-const addTable = (doc: jsPDF, headers: string[], data: any[][], startY = 40) => {
-  (doc as any).autoTable({
+const addTable = (doc: AutoTableDoc, headers: string[], data: (string | number)[][], startY = 40) => {
+  doc.autoTable({
     head: [headers],
     body: data,
     startY,
     theme: "grid",
-    headStyles: { fillColor: [41, 128, 185] },
-    styles: { fontSize: 10 },
+    headStyles: {
+      fillColor: [41, 128, 185],
+      textColor: 255,
+    },
   });
 };
 
@@ -68,7 +86,7 @@ export const generateInventoryPDF = (
 
   // By State section
   doc.setFontSize(14);
-  doc.text("Por Estado", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Por Estado", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const stateData = data.byState.map((item) => [item.state, item._count.toString()]);
 
@@ -76,7 +94,7 @@ export const generateInventoryPDF = (
 
   // By Brand section
   doc.setFontSize(14);
-  doc.text("Por Marca", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Por Marca", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const brandData = data.byBrand.map((item) => [item.brandName, item._count.toString()]);
 
@@ -84,7 +102,7 @@ export const generateInventoryPDF = (
 
   // Value by State section
   doc.setFontSize(14);
-  doc.text("Valor por Estado", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Valor por Estado", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const valueData = data.valueByState.map((item) => [
     item.state,
@@ -124,7 +142,7 @@ export const generateSalesPDF = (data: SalesReport, dateRange?: { from?: Date; t
 
   // Sales by Currency section
   doc.setFontSize(14);
-  doc.text("Ventas por Moneda", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Ventas por Moneda", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const currencyData = Object.entries(data.salesByCurrency).map(([currency, info]) => [
     currency,
@@ -137,7 +155,7 @@ export const generateSalesPDF = (data: SalesReport, dateRange?: { from?: Date; t
 
   // Sales by Branch section
   doc.setFontSize(14);
-  doc.text("Ventas por Sucursal", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Ventas por Sucursal", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const branchData = Object.entries(data.salesByBranch).map(([branch, info]) => [
     branch,
@@ -179,7 +197,7 @@ export const generateReservationsPDF = (
 
   // Reservations by Status section
   doc.setFontSize(14);
-  doc.text("Reservas por Estado", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Reservas por Estado", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const statusData = Object.entries(data.reservationsByStatus).map(([status, info]) => [
     status,
@@ -219,7 +237,7 @@ export const generateSuppliersPDF = (
 
   // Purchases by Supplier section
   doc.setFontSize(14);
-  doc.text("Compras por Proveedor", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Compras por Proveedor", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const supplierData = Object.entries(data.purchasesBySupplier).map(([supplier, info]) => [
     supplier,
@@ -231,7 +249,7 @@ export const generateSuppliersPDF = (
 
   // Supplier Details section
   doc.setFontSize(14);
-  doc.text("Detalles de Proveedores", 14, (doc as any).lastAutoTable.finalY + 20);
+  doc.text("Detalles de Proveedores", 14, (doc as AutoTableDoc).lastAutoTable.finalY + 20);
 
   const detailsData = data.supplierDetails.map((supplier) => [
     supplier.name,

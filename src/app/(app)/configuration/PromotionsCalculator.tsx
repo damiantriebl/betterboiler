@@ -49,7 +49,7 @@ export default function PromotionsCalculator({ promotions }: PromotionsCalculato
   // Handle amount change
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number.parseFloat(e.target.value);
-    if (!isNaN(value) && value > 0) {
+    if (!Number.isNaN(value) && value > 0) {
       setAmount(value);
     }
   };

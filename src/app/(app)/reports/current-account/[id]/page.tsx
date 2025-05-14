@@ -37,8 +37,7 @@ export default function CurrentAccountReportPage() {
         .catch((err) => {
           console.error("Error fetching current account for report:", err);
           setError(
-            "Error al cargar los datos para el reporte: " +
-              (err instanceof Error ? err.message : String(err)),
+            `Error al cargar los datos para el reporte: ${err instanceof Error ? err.message : String(err)}`,
           );
           setAccountData(null);
         })

@@ -75,10 +75,10 @@ function calculateInstallmentWithInterestCA(
   }
 
   const pmt =
-    (principal * (ratePerPeriod * Math.pow(1 + ratePerPeriod, installments))) /
-    (Math.pow(1 + ratePerPeriod, installments) - 1);
+    (principal * (ratePerPeriod * ((1 + ratePerPeriod) ** installments))) /
+    ((1 + ratePerPeriod) ** installments - 1);
 
-  if (isNaN(pmt) || !isFinite(pmt)) {
+  if (Number.isNaN(pmt) || !Number.isFinite(pmt)) {
     return Number.parseFloat((principal / installments).toFixed(2)); // Fallback si el cálculo falla
   }
   return Number.parseFloat(pmt.toFixed(2)); // Redondear a 2 decimales
@@ -568,7 +568,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
 
         // Determine best interest rate among promos that support this cuota
         const rates = promosWithCuotas.map(
-          (p) => p.installmentPlans!.find((pl) => pl.installments === cuotas)!.interestRate,
+          (p) => p.installmentPlans?.find((pl) => pl.installments === cuotas)?.interestRate ?? 0,
         );
         const bestRate = Math.min(...rates);
 
@@ -578,7 +578,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           ...promosWithCuotas
             .filter(
               (p) =>
-                p.installmentPlans!.find((pl) => pl.installments === cuotas)!.interestRate ===
+                p.installmentPlans?.find((pl) => pl.installments === cuotas)?.interestRate ===
                 bestRate,
             )
             .map((p) => p.id),
@@ -892,19 +892,16 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
                   router.push("/current-accounts");
                 }, 1500); // Small delay to allow the user to see the success toast
                 return; // Skip the default navigation
-              } else {
-                console.error(
-                  "❌ [sales/page] Error al crear cuenta corriente:",
-                  currentAccountResult.error,
-                );
-                toast({
-                  title: "Advertencia",
-                  description:
-                    "Venta completada, pero hubo un problema al crear la cuenta corriente: " +
-                    (currentAccountResult.error || "Error desconocido"),
-                  variant: "destructive",
-                });
               }
+              console.error(
+                "❌ [sales/page] Error al crear cuenta corriente:",
+                currentAccountResult.error,
+              );
+              toast({
+                title: "Advertencia",
+                description: `Venta completada, pero hubo un problema al crear la cuenta corriente: ${currentAccountResult.error || "Error desconocido"}`,
+                variant: "destructive",
+              });
             } catch (error) {
               console.error("❌ [sales/page] Error al crear cuenta corriente:", error);
               toast({
@@ -960,7 +957,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
       case 0: // Confirm Motorcycle
         return (
           <ConfirmMotorcycleStep
-            moto={moto!}
+            moto={moto || null}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             reservationCurrency={reservationCurrency}
@@ -971,7 +968,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
       case 1: // Payment Method
         return (
           <PaymentMethodStep
-            moto={moto!}
+            moto={moto || null}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             reservationCurrency={reservationCurrency}
@@ -1004,7 +1001,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         return (
           <ConfirmationStep
             loading={loading}
-            moto={moto!}
+            moto={moto || null}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             buyerData={saleState.buyerData}

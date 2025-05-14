@@ -36,8 +36,7 @@ export async function getOrganizationIdFromSession(): Promise<SessionResult> {
     console.error("❌ Error in getOrganizationIdFromSession:", error);
     return {
       organizationId: null,
-      error:
-        "Error al obtener la sesión: " + (error instanceof Error ? error.message : String(error)),
+      error: `Error al obtener la sesión: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

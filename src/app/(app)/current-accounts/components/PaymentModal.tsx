@@ -82,14 +82,14 @@ export default function PaymentModal({
   });
 
   useEffect(() => {
-    if (form.watch("amountPaid") > defaultAmount) {
+    const amountPaid = form.watch("amountPaid");
+    if (amountPaid > defaultAmount) {
       setShowSurplusOptions(true);
-      form.setValue("surplusAction", "RECALCULATE");
     } else {
       setShowSurplusOptions(false);
       form.setValue("surplusAction", undefined);
     }
-  }, [form.watch("amountPaid"), defaultAmount, form]);
+  }, [defaultAmount, form]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -164,7 +164,7 @@ export default function PaymentModal({
                         const parts = sanitizedValue.split(".");
                         let finalValue = sanitizedValue;
                         if (parts.length > 2) {
-                          finalValue = parts[0] + "." + parts.slice(1).join("");
+                          finalValue = `${parts[0]}.${parts.slice(1).join("")}`;
                         }
 
                         if (finalValue === "") {
@@ -173,7 +173,7 @@ export default function PaymentModal({
                           field.onChange(undefined);
                         } else {
                           const numericValue = Number.parseFloat(finalValue);
-                          if (!isNaN(numericValue)) {
+                          if (!Number.isNaN(numericValue)) {
                             field.onChange(numericValue);
                           } else {
                             field.onChange(undefined);

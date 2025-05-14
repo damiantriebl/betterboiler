@@ -20,8 +20,7 @@ export async function togglePaymentCard(
     return {
       success: false,
       error:
-        "Error de validación: " +
-        Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", "),
+        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
 
@@ -43,11 +42,11 @@ export async function togglePaymentCard(
       success: true,
       message: `Tarjeta ${isEnabled ? "habilitada" : "deshabilitada"} correctamente.`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating payment card status:", error);
     return {
       success: false,
-      error: error.message || "Error al actualizar el estado de la tarjeta.",
+      error: error instanceof Error ? error.message : "Error al actualizar el estado de la tarjeta.",
     };
   }
 }
@@ -91,9 +90,9 @@ export async function associatePaymentCard(
 
     revalidatePath("/configuration");
     return { success: true, message: "Tarjeta asociada correctamente." };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error associating payment card:", error);
-    return { success: false, error: error.message || "Error al asociar la tarjeta." };
+    return { success: false, error: error instanceof Error ? error.message : "Error al asociar la tarjeta." };
   }
 }
 
@@ -109,9 +108,9 @@ export async function removePaymentCard(
 
     revalidatePath("/configuration");
     return { success: true, message: "Tarjeta desasociada correctamente." };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error removing payment card:", error);
-    return { success: false, error: error.message || "Error al eliminar la tarjeta." };
+    return { success: false, error: error instanceof Error ? error.message : "Error al eliminar la tarjeta." };
   }
 }
 
@@ -132,11 +131,11 @@ export async function updatePaymentCardsOrder(
 
     revalidatePath("/configuration");
     return { success: true, message: "Orden de tarjetas actualizado correctamente." };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating payment cards order:", error);
     return {
       success: false,
-      error: error.message || "Error al actualizar el orden de las tarjetas.",
+      error: error instanceof Error ? error.message : "Error al actualizar el orden de las tarjetas.",
     };
   }
 }

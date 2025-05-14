@@ -69,11 +69,11 @@ export async function associateBankWithCardType(
       success: true,
       message: "Tarjeta asociada al banco correctamente",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error associating bank with card type:", error);
     return {
       success: false,
-      error: error.message || "Error al asociar tarjeta con banco",
+      message: error instanceof Error ? error.message : "Error desconocido al asociar la tarjeta",
     };
   }
 }
@@ -103,11 +103,11 @@ export async function toggleBankCardStatus(
       success: true,
       message: `Tarjeta ${isEnabled ? "habilitada" : "deshabilitada"} correctamente`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error toggling bank card status:", error);
     return {
       success: false,
-      error: error.message || "Error al cambiar el estado de la tarjeta",
+      message: error instanceof Error ? error.message : "Error desconocido al cambiar el estado de la tarjeta",
     };
   }
 }
@@ -140,11 +140,11 @@ export async function updateBankCardsOrder(
       success: true,
       message: "Orden de tarjetas actualizado correctamente",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating bank cards order:", error);
     return {
       success: false,
-      error: error.message || "Error al actualizar el orden de las tarjetas",
+      message: error instanceof Error ? error.message : "Error desconocido al actualizar el orden",
     };
   }
 }
@@ -180,11 +180,11 @@ export async function dissociateBankCard(
       success: true,
       message: "Asociación banco-tarjeta eliminada correctamente",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error dissociating bank card:", error);
     return {
       success: false,
-      error: error.message || "Error al eliminar la asociación banco-tarjeta",
+      message: error instanceof Error ? error.message : "Error desconocido al desasociar la tarjeta",
     };
   }
 }
@@ -241,11 +241,18 @@ export async function associateMultipleCardTypesToBank(
     }
 
     // Crear las nuevas asociaciones
+    if (!organizationId) {
+      return {
+        success: false,
+        message: "ID de organización no válido",
+      };
+    }
+
     await prisma.bankCard.createMany({
       data: idsToCreate.map((cardTypeId, index) => ({
         bankId,
         cardTypeId,
-        organizationId: organizationId!, // Sabemos que está definido aquí
+        organizationId, // Ya validamos que existe
         isEnabled: true, // Default
         order: index, // Podrías querer una lógica de orden más sofisticada
       })),
@@ -258,11 +265,11 @@ export async function associateMultipleCardTypesToBank(
       success: true,
       message: `${idsToCreate.length} tipo(s) de tarjeta asociados correctamente.`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error associating multiple card types:", error);
     return {
       success: false,
-      error: error.message || "Error al asociar los tipos de tarjeta.",
+      message: error instanceof Error ? error.message : "Error desconocido al asociar múltiples tarjetas",
     };
   }
 }

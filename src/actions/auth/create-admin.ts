@@ -98,8 +98,12 @@ export async function createAdminUser(
       message: "Usuario administrador creado correctamente",
       userId: newUser.id,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error al crear usuario administrador:", error);
-    return { success: false, message: `Error: ${error.message}`, error };
+    return { 
+      success: false, 
+      message: `Error: ${error instanceof Error ? error.message : 'Error desconocido'}`, 
+      error 
+    };
   }
 }

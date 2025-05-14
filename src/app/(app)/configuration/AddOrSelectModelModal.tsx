@@ -163,9 +163,8 @@ const AddOrSelectModelModal: React.FC<AddOrSelectModelModalProps> = ({
     setSelectedModelIds((prevSelectedIds) => {
       if (prevSelectedIds.includes(modelId)) {
         return prevSelectedIds.filter((id) => id !== modelId);
-      } else {
-        return [...prevSelectedIds, modelId];
       }
+      return [...prevSelectedIds, modelId];
     });
   };
 
@@ -305,17 +304,19 @@ const AddOrSelectModelModal: React.FC<AddOrSelectModelModalProps> = ({
                         <div
                           key={model.id}
                           className={cn(
-                            "flex items-center justify-between rounded-md px-3 py-2",
-                            isAlreadyAdded
-                              ? "bg-muted/50 cursor-not-allowed opacity-70"
-                              : "cursor-pointer",
-                            !isAlreadyAdded && selectedModelIds.includes(model.id)
-                              ? "bg-primary/10"
-                              : !isAlreadyAdded
-                                ? "hover:bg-muted"
-                                : "",
+                            "flex justify-between items-center p-2 rounded-md cursor-pointer hover:bg-accent",
+                            isAlreadyAdded && "opacity-50 cursor-not-allowed",
+                            selectedModelIds.includes(model.id) && "bg-accent"
                           )}
                           onClick={() => !isAlreadyAdded && handleToggleModelSelection(model.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              !isAlreadyAdded && handleToggleModelSelection(model.id);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                         >
                           <span>{model.name}</span>
                           <div className="flex items-center">
@@ -481,8 +482,8 @@ const AddOrSelectModelModal: React.FC<AddOrSelectModelModalProps> = ({
 
                     {additionalFiles.length > 0 && (
                       <div className="mt-2 space-y-2">
-                        {additionalFiles.map((file, index) => (
-                          <div key={index} className="flex items-center gap-2">
+                        {additionalFiles.map((file) => (
+                          <div key={`${file.name}-${file.lastModified}`} className="flex items-center gap-2">
                             <Badge variant="outline" className="flex items-center gap-1">
                               {file.type.includes("image") ? (
                                 <ImageIcon className="h-3 w-3" />
@@ -497,7 +498,7 @@ const AddOrSelectModelModal: React.FC<AddOrSelectModelModalProps> = ({
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeAdditionalFile(index)}
+                              onClick={() => removeAdditionalFile(additionalFiles.indexOf(file))}
                               className="h-6 w-6 p-0"
                             >
                               <XCircle className="h-4 w-4" />

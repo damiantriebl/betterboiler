@@ -64,7 +64,7 @@ export async function setupCurrentAccountMethod() {
       success: true,
       data: {
         paymentMethod,
-        enabled: existingOrgMethod ? true : false,
+        enabled: !!existingOrgMethod,
       },
     };
   } catch (error) {

@@ -1,14 +1,14 @@
 "use server";
 
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import type { ReadableStream } from "stream/web";
+import { PutObjectCommand, S3Client, type PutObjectCommandInput } from "@aws-sdk/client-s3";
+import type { ReadableStream } from "node:stream/web";
 
 // Configuración básica del cliente S3
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || "us-east-1",
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
   },
 });
 
@@ -87,7 +87,7 @@ export interface UploadOptions {
  * @returns URL del archivo subido
  */
 export async function uploadToS3(
-  file: Buffer | Blob | ReadableStream<any> | string,
+  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
   fileName: string,
   brandName: string,
   modelName: string,
@@ -122,7 +122,7 @@ export async function uploadToS3(
 
   try {
     // Parámetros para PutObjectCommand
-    const params: any = {
+    const params: PutObjectCommandInput = {
       Bucket: process.env.AWS_BUCKET_NAME || "uknapex",
       Key: s3Key,
       Body: file,
@@ -159,7 +159,7 @@ export async function uploadToS3(
  * Sube un archivo PDF a S3 (versión simplificada para fichas técnicas)
  */
 export async function uploadPdf(
-  file: Buffer | Blob | ReadableStream<any> | string,
+  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
   brandName: string,
   modelName: string,
 ): Promise<string> {
@@ -171,7 +171,7 @@ export async function uploadPdf(
  * Sube una imagen principal a S3
  */
 export async function uploadImage(
-  file: Buffer | Blob | ReadableStream<any> | string,
+  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
   brandName: string,
   modelName: string,
 ): Promise<string> {
@@ -182,7 +182,7 @@ export async function uploadImage(
  * Sube una imagen en miniatura a S3
  */
 export async function uploadThumbnail(
-  file: Buffer | Blob | ReadableStream<any> | string,
+  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
   brandName: string,
   modelName: string,
 ): Promise<string> {

@@ -9,7 +9,7 @@ export async function DELETE(
   try {
     const modelId = Number.parseInt(context.params.modelId);
 
-    if (isNaN(modelId)) {
+    if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 

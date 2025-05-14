@@ -105,10 +105,14 @@ export const createModel = async (input: ModelInput | FormData) => {
 
     revalidatePath(pathToRevalidate);
     return { success: true, model: result };
-  } catch (error: any) {
-    if (error.code === "P2002") {
+  } catch (error: unknown) {
+    if (error instanceof Error && 'code' in error && error.code === "P2002") {
       return { success: false, error: "El modelo ya existe para esta marca." };
     }
-    return { success: false, error: error.message || "Error al crear modelo." };
+    console.error("Error creating model:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido al crear el modelo",
+    };
   }
 };
