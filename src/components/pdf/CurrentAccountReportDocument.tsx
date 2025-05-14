@@ -221,9 +221,8 @@ function calculateFrenchAmortizationScheduleForPdf(
     return schedule;
   }
 
-  const pmtNumerator =
-    periodicInterestRate * ((1 + periodicInterestRate) ** numberOfInstallments);
-  const pmtDenominator = ((1 + periodicInterestRate) ** numberOfInstallments) - 1;
+  const pmtNumerator = periodicInterestRate * (1 + periodicInterestRate) ** numberOfInstallments;
+  const pmtDenominator = (1 + periodicInterestRate) ** numberOfInstallments - 1;
   const rawPmt = principal * (pmtNumerator / pmtDenominator);
   const fixedInstallment = Math.ceil(rawPmt);
 
@@ -693,8 +692,8 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                   style={{ ...styles.tableCol, ...styles.tableCellRight, width: colWidths.amort }}
                 >
                   {inst.amortization !== undefined &&
-                    inst.installmentVersion !== "D" &&
-                    inst.installmentVersion !== "H"
+                  inst.installmentVersion !== "D" &&
+                  inst.installmentVersion !== "H"
                     ? formatCurrencyForPdf(inst.amortization, "")
                     : "-"}
                 </Text>
@@ -706,8 +705,8 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                   }}
                 >
                   {inst.interestForPeriod !== undefined &&
-                    inst.installmentVersion !== "D" &&
-                    inst.installmentVersion !== "H"
+                  inst.installmentVersion !== "D" &&
+                  inst.installmentVersion !== "H"
                     ? formatCurrencyForPdf(inst.interestForPeriod, "")
                     : "-"}
                 </Text>
@@ -721,9 +720,9 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                 >
                   {formatCurrencyForPdf(
                     (inst.installmentVersion === "H" ? -1 : 1) *
-                    (inst.isPaid && inst.originalPaymentAmount !== undefined
-                      ? inst.originalPaymentAmount
-                      : (inst.calculatedInstallmentAmount ?? inst.amount)),
+                      (inst.isPaid && inst.originalPaymentAmount !== undefined
+                        ? inst.originalPaymentAmount
+                        : (inst.calculatedInstallmentAmount ?? inst.amount)),
                     account.currency || "$",
                   )}
                 </Text>

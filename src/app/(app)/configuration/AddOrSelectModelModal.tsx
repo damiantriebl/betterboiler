@@ -306,7 +306,7 @@ const AddOrSelectModelModal: React.FC<AddOrSelectModelModalProps> = ({
                           className={cn(
                             "flex justify-between items-center p-2 rounded-md cursor-pointer hover:bg-accent",
                             isAlreadyAdded && "opacity-50 cursor-not-allowed",
-                            selectedModelIds.includes(model.id) && "bg-accent"
+                            selectedModelIds.includes(model.id) && "bg-accent",
                           )}
                           onClick={() => !isAlreadyAdded && handleToggleModelSelection(model.id)}
                           onKeyDown={(e) => {
@@ -483,7 +483,10 @@ const AddOrSelectModelModal: React.FC<AddOrSelectModelModalProps> = ({
                     {additionalFiles.length > 0 && (
                       <div className="mt-2 space-y-2">
                         {additionalFiles.map((file) => (
-                          <div key={`${file.name}-${file.lastModified}`} className="flex items-center gap-2">
+                          <div
+                            key={`${file.name}-${file.lastModified}`}
+                            className="flex items-center gap-2"
+                          >
                             <Badge variant="outline" className="flex items-center gap-1">
                               {file.type.includes("image") ? (
                                 <ImageIcon className="h-3 w-3" />

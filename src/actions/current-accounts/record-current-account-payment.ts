@@ -73,8 +73,8 @@ export async function recordCurrentAccountPayment(
       }
 
       // Convertir el remainingAmount a número si es necesario
-      const currentRemainingAmount = 
-        typeof account.remainingAmount === "number"       
+      const currentRemainingAmount =
+        typeof account.remainingAmount === "number"
           ? account.remainingAmount
           : Number.parseFloat(account.remainingAmount.toString());
 
@@ -133,6 +133,9 @@ export async function recordCurrentAccountPayment(
         error: `Error de validación: ${Object.values(error.flatten().fieldErrors).flat().join(", ")}`,
       };
     }
-    return { success: false, error: error instanceof Error ? error.message : "Error desconocido al registrar el pago." };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido al registrar el pago.",
+    };
   }
 }

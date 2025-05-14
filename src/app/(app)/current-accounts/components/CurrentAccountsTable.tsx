@@ -349,7 +349,8 @@ const generateInstallments = (
   }
 
   // Definir funciones auxiliares para verificar tipos de pagos
-  const isDHVersion = (p: Payment) => p?.installmentVersion === "D" || p?.installmentVersion === "H";
+  const isDHVersion = (p: Payment) =>
+    p?.installmentVersion === "D" || p?.installmentVersion === "H";
   const isPendingByAnnul = (p: Payment) => p?.notes?.includes("Cuota pendiente tras anulación");
 
   // Encontrar pagos activos (no anulados y sin versiones D/H)
@@ -825,17 +826,17 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               const amortizationPlanForTotals =
                 (account.interestRate ?? 0) > 0 && financialPrincipalForSchedule > 0
                   ? calculateFrenchAmortizationSchedule(
-                    financialPrincipalForSchedule,
-                    account.interestRate ?? 0,
-                    account.numberOfInstallments,
-                    account.paymentFrequency as PaymentFrequency,
-                  )
+                      financialPrincipalForSchedule,
+                      account.interestRate ?? 0,
+                      account.numberOfInstallments,
+                      account.paymentFrequency as PaymentFrequency,
+                    )
                   : calculateFrenchAmortizationSchedule(
-                    financialPrincipalForSchedule,
-                    0, // No interest
-                    account.numberOfInstallments,
-                    account.paymentFrequency as PaymentFrequency,
-                  );
+                      financialPrincipalForSchedule,
+                      0, // No interest
+                      account.numberOfInstallments,
+                      account.paymentFrequency as PaymentFrequency,
+                    );
 
               // Obtener las cuotas generadas incluyendo pagos realizados
               const currentInstallments = generateInstallments(
@@ -1097,7 +1098,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                       <TableCell className="font-medium">
                                         {installment.number}
                                         {installment.installmentVersion &&
-                                          installment.installmentVersion !== "Original (Anulado)"
+                                        installment.installmentVersion !== "Original (Anulado)"
                                           ? String(installment.installmentVersion).toUpperCase()
                                           : ""}
                                       </TableCell>
@@ -1128,7 +1129,9 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                             if (installment.isPaid) {
                                               return sign * installment.amount;
                                             }
-                                            return sign * (installment.calculatedInstallmentAmount ?? 0);
+                                            return (
+                                              sign * (installment.calculatedInstallmentAmount ?? 0)
+                                            );
                                           })(),
                                         )}
                                       </TableCell>
@@ -1180,20 +1183,21 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                       </TableCell>
                                       <TableCell className="text-center">
                                         {installment.installmentVersion === "D" ||
-                                          installment.installmentVersion === "H" ||
-                                          installment.installmentVersion ===
-                                          "Original (Anulado)" ? null : installment.isPaid && installment.paymentId ? (
-                                            <AnnulPaymentButton
-                                              paymentId={installment.paymentId}
-                                              onAnnulmentSuccess={() =>
-                                                installment.paymentId &&
-                                                handleAnnulmentSuccess(installment.paymentId)
-                                              }
-                                              className="text-xs"
-                                              buttonText="Anular"
-                                              variant="destructive"
-                                            />
-                                          ) : (
+                                        installment.installmentVersion === "H" ||
+                                        installment.installmentVersion ===
+                                          "Original (Anulado)" ? null : installment.isPaid &&
+                                          installment.paymentId ? (
+                                          <AnnulPaymentButton
+                                            paymentId={installment.paymentId}
+                                            onAnnulmentSuccess={() =>
+                                              installment.paymentId &&
+                                              handleAnnulmentSuccess(installment.paymentId)
+                                            }
+                                            className="text-xs"
+                                            buttonText="Anular"
+                                            variant="destructive"
+                                          />
+                                        ) : (
                                           <Button
                                             size="sm"
                                             variant="outline"
@@ -1204,7 +1208,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                                 account.id,
                                                 installment.number,
                                                 installment.calculatedInstallmentAmount ??
-                                                installment.amount,
+                                                  installment.amount,
                                               )
                                             }
                                           >

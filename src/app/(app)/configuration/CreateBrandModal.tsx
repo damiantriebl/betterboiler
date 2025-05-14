@@ -155,7 +155,14 @@ export default function CreateBrandModal({
         variant: "destructive",
       });
     }
-  }, [associateState.success, associateState.error, associateState.message, toast, onSuccess, onOpenChange]);
+  }, [
+    associateState.success,
+    associateState.error,
+    associateState.message,
+    toast,
+    onSuccess,
+    onOpenChange,
+  ]);
 
   // Handle create success/error
   useEffect(() => {

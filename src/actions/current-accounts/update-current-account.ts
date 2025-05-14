@@ -21,7 +21,7 @@ export async function updateCurrentAccount(
       return {
         success: false,
         error: `Error de validación: ${Object.values(validatedInput.error.flatten().fieldErrors).flat().join(", ")}`,
-        data: null
+        data: null,
       };
     }
 
@@ -69,8 +69,11 @@ export async function updateCurrentAccount(
     console.error("Error updating current account:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido al actualizar la cuenta corriente",
-      data: null
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error desconocido al actualizar la cuenta corriente",
+      data: null,
     };
   }
 }

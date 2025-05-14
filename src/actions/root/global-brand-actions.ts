@@ -99,8 +99,7 @@ export async function createRootBrand(
     console.error("Validation Error:", validatedFields.error.flatten().fieldErrors);
     return {
       success: false,
-      error:
-        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
+      error: `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
 
@@ -153,8 +152,7 @@ export async function createRootModel(
   if (!validatedFields.success) {
     return {
       success: false,
-      error:
-        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
+      error: `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
   const { name, brandId } = validatedFields.data;
@@ -207,8 +205,7 @@ export async function updateRootBrand(
   if (!validatedFields.success) {
     return {
       success: false,
-      error:
-        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
+      error: `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
   const { id, name } = validatedFields.data;
@@ -250,8 +247,7 @@ export async function updateRootModel(
   if (!validatedFields.success) {
     return {
       success: false,
-      error:
-        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
+      error: `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
   const { id, brandId, name } = validatedFields.data;

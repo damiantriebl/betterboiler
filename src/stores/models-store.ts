@@ -103,7 +103,7 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
         }));
         return { success: true, model: newModel };
       }
-      
+
       return { success: false, error: result?.error || "Error al crear modelo" };
     } catch (error) {
       return {

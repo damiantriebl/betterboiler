@@ -304,8 +304,7 @@ export async function createCurrentAccount(
     }
     return {
       success: false,
-      error:
-        `Error desconocido al crear la cuenta corriente: ${error instanceof Error ? error.message : String(error)}`,
+      error: `Error desconocido al crear la cuenta corriente: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

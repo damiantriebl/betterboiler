@@ -107,7 +107,10 @@ export async function toggleBankCardStatus(
     console.error("Error toggling bank card status:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Error desconocido al cambiar el estado de la tarjeta",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Error desconocido al cambiar el estado de la tarjeta",
     };
   }
 }
@@ -184,7 +187,8 @@ export async function dissociateBankCard(
     console.error("Error dissociating bank card:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Error desconocido al desasociar la tarjeta",
+      message:
+        error instanceof Error ? error.message : "Error desconocido al desasociar la tarjeta",
     };
   }
 }
@@ -269,7 +273,8 @@ export async function associateMultipleCardTypesToBank(
     console.error("Error associating multiple card types:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Error desconocido al asociar múltiples tarjetas",
+      message:
+        error instanceof Error ? error.message : "Error desconocido al asociar múltiples tarjetas",
     };
   }
 }

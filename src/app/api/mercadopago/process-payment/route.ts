@@ -70,12 +70,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: mpOrder.status, id: mpOrder.id });
   } catch (err: unknown) {
     console.error("Error al crear orden en MP:", err instanceof Error ? err.cause || err : err);
-    const errorMessage = err instanceof Error 
-      ? err.cause?.message || err.message || "Error desconocido al crear orden"
-      : "Error desconocido al crear orden";
+    const errorMessage =
+      err instanceof Error
+        ? err.cause?.message || err.message || "Error desconocido al crear orden"
+        : "Error desconocido al crear orden";
     const errorStatus = err instanceof Error ? err.status || 500 : 500;
     // Devolver los detalles del error de MP si existen en err.cause.errors
-    const errorDetails = err instanceof Error ? (err.cause?.errors || err.errors || (err.cause ? [err.cause] : [])) : [];
+    const errorDetails =
+      err instanceof Error ? err.cause?.errors || err.errors || (err.cause ? [err.cause] : []) : [];
     return NextResponse.json(
       { error: errorMessage, details: errorDetails },
       { status: errorStatus },

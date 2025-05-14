@@ -107,8 +107,8 @@ export default function PromotionForm({
   // Determine initial isDiscount value and rate value
   const initialIsDiscount = promotion
     ? promotion.discountRate !== undefined &&
-    promotion.discountRate !== null &&
-    promotion.discountRate > 0
+      promotion.discountRate !== null &&
+      promotion.discountRate > 0
     : true;
   const initialRateValue = promotion
     ? initialIsDiscount
@@ -334,17 +334,17 @@ export default function PromotionForm({
 
             const bank: Bank | null = createdBankId
               ? {
-                id: createdBankId,
-                name: banksWithCards.find((b) => b.bank.id === createdBankId)?.bank.name || "",
-              }
+                  id: createdBankId,
+                  name: banksWithCards.find((b) => b.bank.id === createdBankId)?.bank.name || "",
+                }
               : null;
             const card: PaymentCard | null = createdCardId
               ? {
-                id: createdCardId,
-                name: "",
-                type: "",
-                issuer: "",
-              }
+                  id: createdCardId,
+                  name: "",
+                  type: "",
+                  issuer: "",
+                }
               : null;
 
             if (card && bank && createdBankId !== null && createdCardId !== null) {
@@ -452,17 +452,17 @@ export default function PromotionForm({
 
             const bank: Bank | null = updatedBankId
               ? {
-                id: updatedBankId,
-                name: banksWithCards.find((b) => b.bank.id === updatedBankId)?.bank.name || "",
-              }
+                  id: updatedBankId,
+                  name: banksWithCards.find((b) => b.bank.id === updatedBankId)?.bank.name || "",
+                }
               : null;
             const card: PaymentCard | null = updatedCardId
               ? {
-                id: updatedCardId,
-                name: "",
-                type: "",
-                issuer: "",
-              }
+                  id: updatedCardId,
+                  name: "",
+                  type: "",
+                  issuer: "",
+                }
               : null;
 
             if (card && bank && updatedBankId !== null && updatedCardId !== null) {
@@ -522,7 +522,8 @@ export default function PromotionForm({
         }
       } catch (error: unknown) {
         console.error("Error al guardar promoción:", error);
-        const errorMessage = error instanceof Error ? error.message : "Error desconocido al guardar la promoción";
+        const errorMessage =
+          error instanceof Error ? error.message : "Error desconocido al guardar la promoción";
         toast({
           title: "Error",
           description: errorMessage,
@@ -647,7 +648,9 @@ export default function PromotionForm({
                               banksWithCards={banksWithCards}
                               selectedBankId={field.value ? Number.parseInt(field.value) : null}
                               selectedCardId={
-                                form.watch("cardId") ? Number.parseInt(form.watch("cardId") || "") : null
+                                form.watch("cardId")
+                                  ? Number.parseInt(form.watch("cardId") || "")
+                                  : null
                               }
                               onSelectBank={(bankId) => {
                                 form.setValue("bankId", bankId ? String(bankId) : null);
@@ -1028,11 +1031,11 @@ export default function PromotionForm({
 
                     {(!form.watch("installmentPlans") ||
                       form.watch("installmentPlans").length === 0) && (
-                        <p className="text-center text-muted-foreground text-sm border rounded-md p-4">
-                          No hay planes de cuotas configurados. Haga clic en "Agregar plan" para crear
-                          uno.
-                        </p>
-                      )}
+                      <p className="text-center text-muted-foreground text-sm border rounded-md p-4">
+                        No hay planes de cuotas configurados. Haga clic en "Agregar plan" para crear
+                        uno.
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>

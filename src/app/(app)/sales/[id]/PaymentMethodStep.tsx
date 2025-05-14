@@ -100,9 +100,7 @@ export default function PaymentMethodStep({
 
     // Regla 1: Verificar compatibilidad de cuotas (para tarjetas)
     if (paymentData.metodoPago === "tarjeta") {
-      const hasInstallmentPlans = currentPromo.installmentPlans?.some(
-        (plan) => plan?.isEnabled,
-      );
+      const hasInstallmentPlans = currentPromo.installmentPlans?.some((plan) => plan?.isEnabled);
 
       // Si la promoción actual tiene planes de cuotas, verificar compatibilidad
       if (hasInstallmentPlans) {
@@ -555,7 +553,7 @@ export default function PaymentMethodStep({
                                         <Badge key={plan.id} variant="outline" className="text-xs">
                                           {plan.installments}c{" "}
                                           {bestRatesMap[plan.installments]?.interestRate ===
-                                            plan.interestRate ? (
+                                          plan.interestRate ? (
                                             <Check className="h-3 w-3 ml-1 text-green-600" />
                                           ) : null}
                                           {plan.interestRate > 0

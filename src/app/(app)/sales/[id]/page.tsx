@@ -75,7 +75,7 @@ function calculateInstallmentWithInterestCA(
   }
 
   const pmt =
-    (principal * (ratePerPeriod * ((1 + ratePerPeriod) ** installments))) /
+    (principal * (ratePerPeriod * (1 + ratePerPeriod) ** installments)) /
     ((1 + ratePerPeriod) ** installments - 1);
 
   if (Number.isNaN(pmt) || !Number.isFinite(pmt)) {

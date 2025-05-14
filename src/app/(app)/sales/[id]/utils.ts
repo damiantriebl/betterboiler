@@ -178,7 +178,7 @@ export const getBestRatesByInstallment = (
   promotions: BankingPromotionDisplay[],
 ): Record<number, number> => {
   const ratesMap: Record<number, number[]> = {};
-  
+
   for (const promo of promotions) {
     const enabledPlans = promo.installmentPlans?.filter((plan) => plan?.isEnabled) ?? [];
     for (const plan of enabledPlans) {
@@ -188,7 +188,7 @@ export const getBestRatesByInstallment = (
       ratesMap[plan.installments].push(plan.interestRate);
     }
   }
-  
+
   const bestRates: Record<number, number> = {};
   for (const [inst, rates] of Object.entries(ratesMap)) {
     bestRates[Number(inst)] = Math.min(...rates);

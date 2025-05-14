@@ -84,7 +84,8 @@ export async function createCardType(
     console.error("Error creating card type:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Error desconocido al crear el tipo de tarjeta",
+      message:
+        error instanceof Error ? error.message : "Error desconocido al crear el tipo de tarjeta",
       fieldErrors: null,
       data: null,
     };

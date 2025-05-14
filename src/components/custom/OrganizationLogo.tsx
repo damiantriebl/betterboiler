@@ -147,7 +147,7 @@ export default function OrganizationLogo({
 
   // preload thumbnail
   useEffect(() => {
-    if (thumbnail) getLogoUrl(thumbnail).catch(() => { });
+    if (thumbnail) getLogoUrl(thumbnail).catch(() => {});
   }, [thumbnail]);
 
   const fetchLogoUrl = useCallback(
@@ -183,7 +183,7 @@ export default function OrganizationLogo({
   const renderImage = () => (
     <img
       key={imageUrl}
-      src={imageUrl || ''}
+      src={imageUrl || ""}
       alt={name || "Organization Logo"}
       className={imgClasses}
       onError={() => setHasError(true)}

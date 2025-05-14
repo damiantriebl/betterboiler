@@ -263,14 +263,13 @@ export async function recordPayment(
         }
         updateData.numberOfInstallments = paidCount + 1 + count;
         if (lastAmt) {
-          updateData.notes =
-            `${account.notes || ""}\n[INFO_ULTIMA_CUOTA] ${JSON.stringify({
-              type: "LAST_INSTALLMENT_INFO",
-              lastInstallmentAmount: lastAmt,
-              originalInstallmentAmount: account.installmentAmount,
-              difference: lastAmt - account.installmentAmount,
-              calculatedAt: new Date().toISOString(),
-            })}`;
+          updateData.notes = `${account.notes || ""}\n[INFO_ULTIMA_CUOTA] ${JSON.stringify({
+            type: "LAST_INSTALLMENT_INFO",
+            lastInstallmentAmount: lastAmt,
+            originalInstallmentAmount: account.installmentAmount,
+            difference: lastAmt - account.installmentAmount,
+            calculatedAt: new Date().toISOString(),
+          })}`;
         }
       }
     } else {

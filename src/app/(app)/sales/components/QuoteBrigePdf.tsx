@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import { fetchImageAsBase64 } from "@/actions/fetchImageAsBase64";
 import { getLogoUrl } from "@/components/custom/OrganizationLogo";
 import type { QuotePDFProps } from "@/types/quote";
@@ -19,7 +19,6 @@ export default function QuoteBridgePdf({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -55,7 +54,9 @@ export default function QuoteBridgePdf({
         if (isMounted) setLoading(false);
       }
     })();
-    return () => { isMounted = false };
+    return () => {
+      isMounted = false;
+    };
   }, [fileName, organizationLogoKey, onReady]);
 
   if (loading) return <div>Generando PDF…</div>;

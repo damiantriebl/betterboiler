@@ -122,7 +122,14 @@ export async function getSuppliersReport(filters: SuppliersReportFilters) {
       }
       return acc;
     },
-    {} as { [key: string]: { count: number; totalInvestment: number; totalSales: number; soldCount: number } },
+    {} as {
+      [key: string]: {
+        count: number;
+        totalInvestment: number;
+        totalSales: number;
+        soldCount: number;
+      };
+    },
   );
 
   return {

@@ -203,7 +203,8 @@ export async function updateBankingPromotion(data: UpdateBankingPromotionInput) 
     console.error("Error updating banking promotion:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido al actualizar la promoción",
+      error:
+        error instanceof Error ? error.message : "Error desconocido al actualizar la promoción",
     };
   }
 }
@@ -226,7 +227,10 @@ export async function toggleBankingPromotion(data: ToggleBankingPromotionInput) 
     console.error("Error toggling banking promotion:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido al cambiar el estado de la promoción",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error desconocido al cambiar el estado de la promoción",
     };
   }
 }
@@ -251,7 +255,8 @@ export async function toggleInstallmentPlan(data: ToggleInstallmentPlanInput) {
     console.error("Error toggling installment plan:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido al cambiar el estado del plan",
+      error:
+        error instanceof Error ? error.message : "Error desconocido al cambiar el estado del plan",
     };
   }
 }
@@ -318,7 +323,10 @@ export async function getBankingPromotionDetails(id: string) {
     console.error("Error fetching banking promotion details:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido al obtener los detalles de la promoción",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error desconocido al obtener los detalles de la promoción",
     };
   }
 }

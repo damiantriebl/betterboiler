@@ -182,7 +182,8 @@ export default function ManageBankingPromotions({
 
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Ha ocurrido un error al cambiar el estado",
+          description:
+            error instanceof Error ? error.message : "Ha ocurrido un error al cambiar el estado",
           variant: "destructive",
         });
       }
@@ -225,7 +226,10 @@ export default function ManageBankingPromotions({
 
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Ha ocurrido un error al eliminar la promoción",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Ha ocurrido un error al eliminar la promoción",
           variant: "destructive",
         });
       } finally {

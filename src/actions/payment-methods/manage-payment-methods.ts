@@ -19,8 +19,7 @@ export async function togglePaymentMethod(
   if (!validatedFields.success) {
     return {
       success: false,
-      error:
-        `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
+      error: `Error de validación: ${Object.values(validatedFields.error.flatten().fieldErrors).flat().join(", ")}`,
     };
   }
 
@@ -47,7 +46,10 @@ export async function togglePaymentMethod(
     console.error("Error updating payment method status:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al actualizar el estado del método de pago.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar el estado del método de pago.",
     };
   }
 }
@@ -145,7 +147,10 @@ export async function updatePaymentMethodsOrder(
     console.error("Error updating payment methods order:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al actualizar el orden de los métodos de pago.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar el orden de los métodos de pago.",
     };
   }
 }

@@ -49,7 +49,12 @@ const addHeader = (doc: jsPDF, title: string, dateRange?: { from?: Date; to?: Da
 };
 
 // Helper function to add table to PDF
-const addTable = (doc: AutoTableDoc, headers: string[], data: (string | number)[][], startY = 40) => {
+const addTable = (
+  doc: AutoTableDoc,
+  headers: string[],
+  data: (string | number)[][],
+  startY = 40,
+) => {
   doc.autoTable({
     head: [headers],
     body: data,

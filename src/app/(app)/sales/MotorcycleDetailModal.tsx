@@ -30,9 +30,7 @@ import type {
   PaymentData,
   QuotePDFProps,
 } from "@/types/quote";
-import {
-  MotorcycleState,
-} from "@prisma/client";
+import { MotorcycleState } from "@prisma/client";
 import {
   BookmarkPlus,
   Calculator,
@@ -257,7 +255,7 @@ function PaymentQuoteSimulator({
       };
     }
 
-    const pmtNumerator = ratePerPeriod * ((1 + ratePerPeriod) ** installments);
+    const pmtNumerator = ratePerPeriod * (1 + ratePerPeriod) ** installments;
     const pmtDenominator = (1 + ratePerPeriod) ** installments - 1;
 
     if (
@@ -621,8 +619,8 @@ function PaymentQuoteSimulator({
                     handleInputChange({
                       target: {
                         name: "currentAccountFrequency",
-                        value
-                      }
+                        value,
+                      },
                     } as React.ChangeEvent<HTMLSelectElement>)
                   }
                 >
@@ -981,9 +979,9 @@ export function MotorcycleDetailModal({
             () =>
               rawReservationData
                 ? {
-                  ...rawReservationData,
-                  currency: rawReservationData.currency || "USD",
-                }
+                    ...rawReservationData,
+                    currency: rawReservationData.currency || "USD",
+                  }
                 : undefined,
             [],
           )}

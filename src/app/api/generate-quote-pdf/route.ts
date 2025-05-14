@@ -19,9 +19,7 @@ async function convertWebPToPNG(base64String: string): Promise<string> {
     if (!base64Data) throw new Error("Invalid base64 string");
 
     const buffer = Buffer.from(base64Data, "base64");
-    const pngBuffer = await sharp(buffer)
-      .png()
-      .toBuffer();
+    const pngBuffer = await sharp(buffer).png().toBuffer();
 
     return `data:image/png;base64,${pngBuffer.toString("base64")}`;
   } catch (error) {
@@ -36,9 +34,10 @@ export async function POST(req: Request) {
 
     // Convertir la imagen si es necesario (antes de crear el PDF)
     if (pdfProps.organizationLogo) {
-      const isWebP = pdfProps.organizationLogo.includes("data:image/webp") || 
-                    pdfProps.organizationLogo.includes("/webp");
-      
+      const isWebP =
+        pdfProps.organizationLogo.includes("data:image/webp") ||
+        pdfProps.organizationLogo.includes("/webp");
+
       if (isWebP) {
         console.log("Detectada imagen WebP, convirtiendo a PNG...");
         pdfProps.organizationLogo = await convertWebPToPNG(pdfProps.organizationLogo);
@@ -67,9 +66,12 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Error en la generación del PDF:", error);
-    return Response.json({ 
-      error: "No se pudo generar el PDF",
-      details: error instanceof Error ? error.message : "Error desconocido"
-    }, { status: 500 });
+    return Response.json(
+      {
+        error: "No se pudo generar el PDF",
+        details: error instanceof Error ? error.message : "Error desconocido",
+      },
+      { status: 500 },
+    );
   }
 }

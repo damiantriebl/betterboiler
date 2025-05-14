@@ -126,8 +126,7 @@ function SortableModelItem({
   const isImage = (file: ModelFile) =>
     imageTypes.includes(file.type || "") || file.url?.match(/\.(jpe?g|png|webp|gif)$/i) !== null;
 
-  const isSheet = (file: ModelFile) =>
-    file.type === "spec_sheet" || file.url?.endsWith(".pdf");
+  const isSheet = (file: ModelFile) => file.type === "spec_sheet" || file.url?.endsWith(".pdf");
 
   // Obtener la marca desde el contexto superior donde está disponible
   const getBrandName = () => {
