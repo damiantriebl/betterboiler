@@ -101,9 +101,20 @@ async function getOrganizationBrandsData(
         brand: {
           include: {
             models: {
+              orderBy: { name: "asc" },
               select: {
                 id: true,
                 name: true,
+                imageUrl: true,
+                specSheetUrl: true,
+                files: {
+                  select: {
+                    id: true,
+                    type: true,
+                    url: true,
+                    name: true,
+                  },
+                },
                 organizationModelConfigs: {
                   where: { organizationId: organizationId },
                   select: { order: true, isVisible: true },
@@ -114,6 +125,7 @@ async function getOrganizationBrandsData(
         },
       },
     });
+    console.log("getOrganizationBrandsData: orgBrandAssociations FROM PRISMA:", JSON.stringify(orgBrandAssociations, null, 2));
 
     // Define the expected type for association with includes
     type OrgBrandWithIncludes = Prisma.OrganizationBrandGetPayload<{
@@ -124,6 +136,16 @@ async function getOrganizationBrandsData(
               select: {
                 id: true;
                 name: true;
+                imageUrl: true;
+                specSheetUrl: true;
+                files: {
+                  select: {
+                    id: true;
+                    type: true;
+                    url: true;
+                    name: true;
+                  };
+                };
                 organizationModelConfigs: {
                   select: { order: true; isVisible: true };
                   where: { organizationId: string };
@@ -139,6 +161,7 @@ async function getOrganizationBrandsData(
     const formattedData: OrganizationBrandDisplayData[] = orgBrandAssociations.map(
       (assoc: OrgBrandWithIncludes) => {
         // Filter models: Keep only those configured AND visible for this organization
+        console.log(`getOrganizationBrandsData: Procesando asociación de marca: ${assoc.brand.name} (ID: ${assoc.brand.id})`);
         const orgVisibleModels = assoc.brand.models
           .filter(
             (m) =>
@@ -146,13 +169,20 @@ async function getOrganizationBrandsData(
               m.organizationModelConfigs.length > 0 &&
               m.organizationModelConfigs[0].isVisible,
           )
-          .map((m) => ({
-            id: m.id,
-            name: m.name,
-            // Use the order and visibility from the specific OrganizationModelConfig
-            orgOrder: m.organizationModelConfigs[0].order,
-            isVisible: m.organizationModelConfigs[0].isVisible,
-          }))
+          .map((m) => {
+            console.log(`getOrganizationBrandsData: Modelo original de Prisma ANTES de mapear (Marca ${assoc.brand.name}):`, JSON.stringify(m, null, 2));
+            const modelData = {
+              id: m.id,
+              name: m.name,
+              imageUrl: m.imageUrl,
+              specSheetUrl: m.specSheetUrl,
+              files: m.files,
+              orgOrder: m.organizationModelConfigs[0].order,
+              isVisible: m.organizationModelConfigs[0].isVisible,
+            };
+            console.log(`getOrganizationBrandsData: Modelo TRANSFORMADO para Display (Marca ${assoc.brand.name}):`, JSON.stringify(modelData, null, 2));
+            return modelData;
+          })
           // Sort the models based on their organization-specific order
           .sort((a, b) => a.orgOrder - b.orgOrder);
 
@@ -169,6 +199,7 @@ async function getOrganizationBrandsData(
       },
     );
 
+    console.log("getOrganizationBrandsData: formattedData FINAL:", JSON.stringify(formattedData, null, 2));
     return formattedData;
   } catch (error) {
     console.error("🚨 ERROR fetching Organization Brands N:M:", error);

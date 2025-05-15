@@ -49,16 +49,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientDetail } from "./ClientDetail";
 import QuoteBridgePdf from "./components/QuoteBrigePdf";
-import { QuotePDFDocument } from "./components/QuotePDF";
 import { Switch } from "@/components/ui/switch";
-
-interface PriceDisplayState {
-  mode: PriceDisplayMode;
-  setMode: (mode: PriceDisplayMode) => void;
-  showCost: () => boolean;
-  showWholesale: () => boolean;
-  showRetail: () => boolean;
-}
+import { useSessionStore } from "@/stores/session-store";
 
 interface Props {
   isOpen: boolean;
@@ -85,6 +77,7 @@ function PaymentQuoteSimulator({
   onClose,
   onExportPDF,
   organizationLogoUrl,
+  organizationName,
 }: {
   motorcycle: MotorcycleWithDetails | null;
   onClose: () => void;
@@ -100,8 +93,10 @@ function PaymentQuoteSimulator({
     totalWithFinancing: number;
     formatAmount: (amount: number) => string;
     organizationLogoUrl?: string | null;
+    organizationName?: string | null;
   }) => void;
   organizationLogoUrl?: string | null;
+  organizationName?: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<"efectivo" | "tarjeta" | "cuenta_corriente">(
     "efectivo",
@@ -370,6 +365,7 @@ function PaymentQuoteSimulator({
         totalWithFinancing: installmentDetailsCalculation.totalPayment || 0,
         formatAmount,
         organizationLogoUrl,
+        organizationName: organizationName || undefined,
       });
     }
   }, [
@@ -384,6 +380,7 @@ function PaymentQuoteSimulator({
     onExportPDF,
     motorcycle,
     organizationLogoUrl,
+    organizationName,
   ]);
 
   const handleTabChange = (tab: "efectivo" | "tarjeta" | "cuenta_corriente") => {
@@ -783,9 +780,7 @@ export function MotorcycleDetailModal({
 
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [quotePdfProps, setQuotePdfProps] = useState<QuotePDFProps | null>(null);
-  const [organization, setOrganization] = useState<{ logo: string | null; name: string } | null>(
-    null,
-  );
+  const { organizationLogo, organizationName, userName, userImage } = useSessionStore();
   const [shouldExportPdf, setShouldExportPdf] = useState(false);
 
   const { clientId, rawReservationData } = useMemo(() => {
@@ -821,10 +816,6 @@ export function MotorcycleDetailModal({
       setCurrentImageIndex(0);
     }
   }, [isOpen, motorcycle?.model?.files]);
-
-  useEffect(() => {
-    getOrganization().then(setOrganization).catch(console.error);
-  }, []);
 
   if (!isOpen || !motorcycle) return null;
 
@@ -979,9 +970,9 @@ export function MotorcycleDetailModal({
             () =>
               rawReservationData
                 ? {
-                    ...rawReservationData,
-                    currency: rawReservationData.currency || "USD",
-                  }
+                  ...rawReservationData,
+                  currency: rawReservationData.currency || "USD",
+                }
                 : undefined,
             [],
           )}
@@ -990,12 +981,32 @@ export function MotorcycleDetailModal({
     );
   };
 
+  // Wrapper para evitar pasar null en organizationName
+  const handleExportPDF = (pdfProps: any) => {
+    setQuotePdfProps({
+      ...pdfProps,
+      organizationName: pdfProps.organizationName || undefined,
+    });
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader className="pr-10">
-            <DialogTitle className="text-xl font-bold">Detalles de la Moto</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-xl font-bold">Detalles de la Moto</DialogTitle>
+              {userImage && userImage.startsWith("data:image") && (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={userImage}
+                    alt={userName || 'Usuario'}
+                    className="w-10 h-10 rounded-full object-cover border"
+                  />
+                  <span className="text-sm font-medium">{userName}</span>
+                </div>
+              )}
+            </div>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
             <div className="md:col-span-2 space-y-6">
@@ -1125,8 +1136,9 @@ export function MotorcycleDetailModal({
           <PaymentQuoteSimulator
             motorcycle={motorcycle}
             onClose={() => setIsQuoteModalOpen(false)}
-            onExportPDF={setQuotePdfProps}
-            organizationLogoUrl={organization?.logo ?? null}
+            onExportPDF={handleExportPDF}
+            organizationLogoUrl={organizationLogo || undefined}
+            organizationName={organizationName || undefined}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsQuoteModalOpen(false)}>
@@ -1145,7 +1157,7 @@ export function MotorcycleDetailModal({
             {shouldExportPdf && motorcycle && quotePdfProps && (
               <QuoteBridgePdf
                 {...quotePdfProps}
-                organizationLogoKey={organization?.logo ?? undefined}
+                organizationLogoKey={organizationLogo || undefined}
                 fileName={`Presupuesto_${motorcycle?.brand?.name || ""}_${motorcycle?.model?.name || ""}_${new Date().toISOString().split("T")[0]}.pdf`}
                 onReady={() => setShouldExportPdf(false)}
               />

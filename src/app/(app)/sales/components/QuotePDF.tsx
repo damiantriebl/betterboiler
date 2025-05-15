@@ -1,5 +1,5 @@
 import { formatPrice } from "@/lib/utils";
-import type { AmortizationScheduleEntry, QuotePDFProps } from "@/types/quote";
+import type { AmortizationScheduleEntry, QuotePDFProps as BaseQuotePDFProps } from "@/types/quote";
 import {
   Document,
   Image,
@@ -9,6 +9,13 @@ import {
   Text,
   View,
 } from "@react-pdf/renderer";
+
+export interface QuotePDFProps extends BaseQuotePDFProps {
+  motorcycleImage?: string;
+  organizationName?: string;
+  userName?: string;
+  userImage?: string;
+}
 
 // PDF Styles
 const styles = StyleSheet.create({
@@ -123,6 +130,10 @@ export const QuotePDFDocument = ({
   totalWithFinancing,
   organizationLogo,
   formatAmount: formatAmountProp, // Renombrar para evitar conflicto si se pasa como prop
+  motorcycleImage,
+  organizationName,
+  userName,
+  userImage,
 }: QuotePDFProps) => {
   if (!motorcycle) return null;
 
@@ -152,14 +163,18 @@ export const QuotePDFDocument = ({
     }
   };
 
-  const mainImageSrc = motorcycle.imageUrl;
-  const modelImageSrc = motorcycle.model?.imageUrl;
-
+  // Usar la imagen base64 si está disponible, si no, usar la lógica anterior
   let imageToDisplay: string | null | undefined = null;
-  if (mainImageSrc && mainImageSrc.trim() !== "") {
-    imageToDisplay = mainImageSrc;
-  } else if (modelImageSrc && modelImageSrc.trim() !== "") {
-    imageToDisplay = modelImageSrc;
+  if (motorcycleImage && motorcycleImage.startsWith("data:image")) {
+    imageToDisplay = motorcycleImage;
+  } else {
+    const mainImageSrc = motorcycle.imageUrl;
+    const modelImageSrc = motorcycle.model?.imageUrl;
+    if (mainImageSrc && mainImageSrc.trim() !== "") {
+      imageToDisplay = mainImageSrc;
+    } else if (modelImageSrc && modelImageSrc.trim() !== "") {
+      imageToDisplay = modelImageSrc;
+    }
   }
 
   // Usar la prop renombrada o la función local si la prop no es una función
@@ -172,17 +187,18 @@ export const QuotePDFDocument = ({
     <Page size="A4" style={styles.page}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Presupuesto</Text>
+          <Text style={styles.title}>Presupuesto {organizationName}</Text>
           <Text style={styles.subtitle}>Fecha: {getFormattedDate()}</Text>
         </View>
         <View style={styles.logoContainer}>
-          {
-            organizationLogo ? (
-              <Image src={organizationLogo} style={styles.logoImage} />
-            ) : (
-              <Text>Logo</Text>
-            ) // Fallback si no hay logo o no es base64
-          }
+          {organizationLogo ? (
+            <Image src={organizationLogo} style={styles.logoImage} />
+          ) : (
+            <Text>Logo</Text>
+          )}
+          {organizationName && (
+            <Text style={{ fontSize: 10, marginTop: 4, textAlign: "center" }}>{organizationName}</Text>
+          )}
         </View>
       </View>
 
@@ -229,7 +245,12 @@ export const QuotePDFDocument = ({
           )}
         </View>
       </View>
-
+      <View>
+        <Text>Presupuesto generado por: {userName}</Text>
+        {userImage && userImage.startsWith("data:image") && (
+          <Image src={userImage} style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }} />
+        )}
+      </View>
       <View style={styles.section}>
         <Text style={styles.subtitle}>Información de Pago</Text>
         <View style={styles.detailRow}>
@@ -323,7 +344,7 @@ export const QuotePDFDocument = ({
                   <Text style={styles.tableCellRight}>Interés</Text>
                   <Text style={styles.tableCellRight}>Cuota</Text>
                 </View>
-                {installmentDetails.schedule.map((item) => (
+                {installmentDetails.schedule.map((item: AmortizationScheduleEntry) => (
                   <View key={item.installmentNumber} style={styles.tableRow}>
                     <Text style={[styles.tableCellLeft, { flex: 0.5 }]}>
                       {item.installmentNumber}
@@ -393,6 +414,12 @@ export const QuotePDFDocument = ({
       <View style={styles.footer}>
         <Text>Este presupuesto es válido por 7 días desde la fecha de emisión.</Text>
         <Text>Todos los precios incluyen IVA.</Text>
+        {userName && (
+          <Text>Presupuesto generado por: {userName}</Text>
+        )}
+        {userImage && userImage.startsWith("data:image") && (
+          <Image src={userImage} style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }} />
+        )}
       </View>
     </Page>
   );

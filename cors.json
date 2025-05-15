@@ -1,9 +1,14 @@
 {
   "CORSRules": [
     {
-      "AllowedOrigins": ["*"],
-      "AllowedMethods": ["GET"],
-      "AllowedHeaders": ["*"]
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "https://tudominio.com"
+      ],
+      "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
     }
   ]
 }

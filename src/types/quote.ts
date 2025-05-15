@@ -35,10 +35,19 @@ export interface InstallmentDetails {
 
 // Props para el componente QuotePDFDocument
 export interface QuotePDFProps {
-  client: Client;
-  motorcycle: Motorcycle;
-  paymentDetails: PaymentDetails;
+  motorcycle: MotorcycleWithDetails | null;
+  paymentData: PaymentData;
+  activeTab: string;
+  basePrice: number;
+  modifierAmount: number;
+  finalPrice: number;
+  financedAmount: number;
+  installmentDetails: InstallmentDetails;
   totalWithFinancing: number;
   formatAmount: (amount: number) => string;
   organizationLogo?: string | null;
+  motorcycleImage?: string;
+  organizationName?: string;
+  userName?: string;
+  userImage?: string;
 }

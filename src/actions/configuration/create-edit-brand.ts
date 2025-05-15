@@ -210,26 +210,45 @@ export async function dissociateOrganizationBrand(
   const { organizationBrandId } = validatedFields.data;
 
   try {
-    // Verificar que la asociación pertenece a la organización actual
-    const associationToDelete = await prisma.organizationBrand.findUnique({
-      where: { id: organizationBrandId },
+    await prisma.$transaction(async (tx) => {
+      // 1. Verificar que la asociación pertenece a la organización actual y obtener brandId
+      const associationToDelete = await tx.organizationBrand.findUnique({
+        where: { id: organizationBrandId },
+        select: { organizationId: true, brandId: true }, // Seleccionar brandId también
+      });
+
+      if (!associationToDelete || associationToDelete.organizationId !== organizationId) {
+        // Lanzar un error para abortar la transacción si no se encuentra o no pertenece
+        throw new Error("Asociación no encontrada o no pertenece a tu organización.");
+      }
+
+      const brandIdToDeleteConfigs = associationToDelete.brandId;
+
+      // 2. Eliminar las OrganizationModelConfig asociadas a esta organización y marca
+      await tx.organizationModelConfig.deleteMany({
+        where: {
+          organizationId: organizationId,
+          model: {
+            brandId: brandIdToDeleteConfigs,
+          },
+        },
+      });
+
+      // 3. Borrar la entrada en OrganizationBrand
+      await tx.organizationBrand.delete({ where: { id: organizationBrandId } });
     });
-    if (!associationToDelete || associationToDelete.organizationId !== organizationId) {
-      return {
-        success: false,
-        error: "Asociación no encontrada o no pertenece a tu organización.",
-      };
-    }
 
-    // Borrar solo la entrada en OrganizationBrand
-    await prisma.organizationBrand.delete({ where: { id: organizationBrandId } });
-
-    revalidatePath("/configuracion");
-    return { success: true };
+    revalidatePath("/configuration"); // Estandarizar ruta
+    return { success: true }; // Eliminado message para cumplir con DissociateBrandState
   } catch (error) {
     console.error("🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):", error);
+    // Si el error es el que lanzamos arriba, usar su mensaje
+    if (error instanceof Error && error.message === "Asociación no encontrada o no pertenece a tu organización.") {
+      return { success: false, error: error.message };
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return { success: false, error: "La asociación a eliminar no se encontró." };
+      // Este error podría ocurrir si organizationBrand.delete falla porque ya no existe
+      return { success: false, error: "La asociación a eliminar no se encontró (P2025)." };
     }
     return { success: false, error: "Error al desasociar la marca." };
   }

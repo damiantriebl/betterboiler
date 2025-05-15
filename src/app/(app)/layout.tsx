@@ -1,11 +1,14 @@
 // Layout.tsx
 "use client";
 import { getOrganization } from "@/actions/get-organization";
+import { getSession } from "@/actions/get-session";
 import NavbarSticky from "@/components/custom/NavbarSticky";
 import AppSidebar from "@/components/ui/app-sidebar";
 import { PriceModeSelector } from "@/components/ui/price-mode-selector";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useSessionStore } from "@/stores/SessionStore";
 import { useEffect, useRef, useState } from "react";
+import TestDevtools from "./testdevtool";
 
 interface Org {
   logo: string | null;
@@ -18,9 +21,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [scrollAmount, setScrollAmount] = useState(0);
   const mainRef = useRef<HTMLDivElement>(null);
 
+  // Acceso al store de sesión
+  const setSession = useSessionStore((state) => state.setSession);
+
+  // Cargar datos de sesión completos
   useEffect(() => {
-    getOrganization().then(setOrg).catch(console.error);
-  }, []);
+    getSession().then((sessionData) => {
+      if (sessionData) {
+        // Actualizar el store con todos los datos de sesión
+        setSession(sessionData);
+
+        // Actualizar el estado local del org para NavbarSticky (si se requiere)
+        if (sessionData.organizationName) {
+          setOrg({
+            logo: sessionData.organizationLogo,
+            thumbnail: null, // No tenemos thumbnail en la sesión
+            name: sessionData.organizationName
+          });
+        }
+      }
+    }).catch(console.error);
+  }, [setSession]);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -44,14 +65,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="flex h-screen w-full overflow-hidden">
         <AppSidebar />
-        <div className=" relative">
+        <div className="relative">
           <SidebarTrigger />
+          <TestDevtools />
         </div>
         <main ref={mainRef} className="flex flex-col flex-1 overflow-y-auto items-center">
           <div className="flex items-end w-full justify-end pr-16">
             <PriceModeSelector />
           </div>
-          {org && <NavbarSticky organization={org} scrollAmount={scrollAmount} />}
+          {/* NavbarSticky ahora puede trabajar con o sin props de organización */}
+          <NavbarSticky scrollAmount={scrollAmount} organization={org || undefined} />
 
           <div className="w-full">{children}</div>
         </main>

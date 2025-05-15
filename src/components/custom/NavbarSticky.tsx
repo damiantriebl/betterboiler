@@ -2,18 +2,33 @@
 "use client";
 import { useMemo } from "react";
 import OrganizationLogo from "./OrganizationLogo";
+import { useSessionStore } from "@/stores/SessionStore";
 
 interface NavbarStickyProps {
-  organization: { logo: string | null; thumbnail: string | null; name: string };
+  organization?: { logo: string | null; thumbnail: string | null; name: string };
   scrollAmount: number;
 }
 
 export default function NavbarSticky({ organization, scrollAmount }: NavbarStickyProps) {
+  // Usar el store para obtener datos si no se proporcionan como props
+  const storeOrgName = useSessionStore((state) => state.organizationName);
+  const storeOrgLogo = useSessionStore((state) => state.organizationLogo);
+
+  // Usar los datos del store o los proporcionados como props
+  const orgData = useMemo(() => {
+    if (organization) return organization;
+    return {
+      logo: storeOrgLogo,
+      thumbnail: null, // No tenemos thumbnail en el store todavía
+      name: storeOrgName || "Organización"
+    };
+  }, [organization, storeOrgLogo, storeOrgName]);
+
   const logoKey = useMemo(() => {
-    return scrollAmount > 0.5 && organization.thumbnail
-      ? organization.thumbnail
-      : organization.logo;
-  }, [organization.logo, organization.thumbnail, scrollAmount]);
+    return scrollAmount > 0.5 && orgData.thumbnail
+      ? orgData.thumbnail
+      : orgData.logo;
+  }, [orgData.logo, orgData.thumbnail, scrollAmount]);
 
   const height = useMemo(() => {
     const startHeight = 5;
@@ -66,8 +81,8 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
     >
       <OrganizationLogo
         logo={logoKey}
-        thumbnail={organization.thumbnail}
-        name={organization.name}
+        thumbnail={orgData.thumbnail}
+        name={orgData.name}
         size={logoSize}
         variant={logoVariant}
         nameDisplayOpacity={nameOpacity}

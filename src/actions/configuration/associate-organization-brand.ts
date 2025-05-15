@@ -14,26 +14,54 @@ export const associateOrganizationBrand = async ({
   pathToRevalidate?: string;
 }) => {
   try {
-    // Obtener el color global de la marca
-    const globalBrand = await prisma.brand.findUnique({
+    // 1. Find the global brand and its models
+    const globalBrandWithModels = await prisma.brand.findUnique({
       where: { id: Number(brandId) },
-      select: { color: true },
+      include: {
+        models: {
+          orderBy: { name: "asc" }, // Optional: maintain a consistent initial order
+        },
+      },
     });
 
-    // Intenta crear la relación con el color global por defecto
-    await prisma.organizationBrand.create({
-      data: {
-        organizationId,
-        brandId: Number(brandId),
-        color: globalBrand?.color || null, // Usa el color global como valor por defecto
-      },
+    if (!globalBrandWithModels) {
+      console.log("associateOrganizationBrand: No se encontró la marca global con ID:", brandId);
+      return { success: false, error: "La marca global no fue encontrada." };
+    }
+    console.log("associateOrganizationBrand: globalBrandWithModels encontrado:", JSON.stringify(globalBrandWithModels, null, 2));
+
+    // Use a transaction to ensure atomicity
+    await prisma.$transaction(async (tx) => {
+      // 2. Create the OrganizationBrand association
+      await tx.organizationBrand.create({
+        data: {
+          organizationId,
+          brandId: Number(brandId),
+          color: globalBrandWithModels.color || null,
+        },
+      });
+
+      // 3. Create OrganizationModelConfig for each model of the brand
+      if (globalBrandWithModels.models && globalBrandWithModels.models.length > 0) {
+        const modelConfigs = globalBrandWithModels.models.map((model, index) => ({
+          organizationId,
+          modelId: model.id,
+          isVisible: true,
+          order: index,
+        }));
+        console.log("associateOrganizationBrand: modelConfigs a crear:", JSON.stringify(modelConfigs, null, 2));
+        await tx.organizationModelConfig.createMany({
+          data: modelConfigs,
+          skipDuplicates: true,
+        });
+      }
     });
 
     if (pathToRevalidate) {
       revalidatePath(pathToRevalidate);
     }
 
-    return { success: true, message: "Marca asociada correctamente." };
+    return { success: true, message: "Marca asociada y modelos configurados correctamente." };
   } catch (error: unknown) {
     if (
       (error instanceof PrismaClientKnownRequestError && error.code === "P2002") ||
@@ -44,9 +72,60 @@ export const associateOrganizationBrand = async ({
         error: "La marca ya está asociada a esta organización.",
       };
     }
+    console.error("Error associating brand:", error); // Log the actual error
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al asociar la marca.",
+      error: error instanceof Error ? error.message : "Error al asociar la marca y configurar sus modelos.",
     };
   }
 };
+
+// --- Acción: dissociateOrganizationBrand (Reemplaza deleteOrganizationBrand) ---
+export interface DissociateBrandState {
+  success: boolean;
+  error?: string | null;
+}
+
+export async function dissociateOrganizationBrand(
+  prevState: DissociateBrandState | null,
+  formData: FormData,
+): Promise<DissociateBrandState> {
+  const organizationId = await getOrganizationIdFromSession();
+  if (!organizationId)
+    return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const validatedFields = dissociateBrandSchema.safeParse({
+    organizationBrandId: formData.get("organizationBrandId"),
+  });
+
+  if (!validatedFields.success) return { success: false, error: "ID de asociación inválido." };
+  const { organizationBrandId } = validatedFields.data;
+
+  try {
+    // Verificar que la asociación pertenece a la organización actual
+    const associationToDelete = await prisma.organizationBrand.findUnique({
+      where: { id: organizationBrandId },
+    });
+    if (!associationToDelete || associationToDelete.organizationId !== organizationId) {
+      return {
+        success: false,
+        error: "Asociación no encontrada o no pertenece a tu organización.",
+      };
+    }
+
+    // Borrar solo la entrada en OrganizationBrand
+    await prisma.organizationBrand.delete({ where: { id: organizationBrandId } }); // <--- PUNTO CLAVE 1
+
+    revalidatePath("/configuracion"); // Asumo que es /configuration como en otros lados
+    return { success: true };
+  } catch (error) {
+    console.error("🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return { success: false, error: "La asociación a eliminar no se encontró." };
+    }
+    return { success: false, error: "Error al desasociar la marca." };
+  }
+}
+
+console.log("Server QuotePDFDocument: organizationLogo (primeros 100 chars)", organizationLogo?.substring(0, 100));
+console.log("Server QuotePDFDocument: motorcycleImage (primeros 100 chars)", motorcycleImage?.substring(0, 100));

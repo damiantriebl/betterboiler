@@ -34,12 +34,25 @@ export interface BrandWithModelsData {
 interface ModelWithOrgConfig extends Model {
   organizationModelConfigs: OrganizationModelConfig[];
 }
+
+// Define a type for the 'files' array elements if not already defined globally
+// This is a basic representation; adjust if you have a more specific global type
+export interface ModelFile {
+  id: string;
+  type: string;
+  url: string;
+  name: string | null; // Assuming name can be nullable based on your select
+}
+
 // Tipo para pasar al Frontend (combinado)
 export interface DisplayModelData {
   id: number;
   name: string;
   orgOrder: number;
   isVisible?: boolean;
+  imageUrl?: string | null; // Add imageUrl
+  specSheetUrl?: string | null; // Add specSheetUrl
+  files?: ModelFile[]; // Add files array
 }
 
 export interface BrandWithDisplayModelsData {
