@@ -23,3 +23,42 @@ export type UpdateModelState = ActionState<Model>;
 
 // State for actions operating on multiple items (like reordering)
 export type BatchActionState = ActionState;
+
+export type CreatePettyCashDepositState = {
+  message?: string;
+  errors?: {
+    amount?: string[];
+    description?: string[];
+    organizationId?: string[];
+    branchId?: string[];
+    date?: string[];
+    reference?: string[];
+    _form?: string[];
+  };
+  status: 'success' | 'error' | 'idle';
+};
+
+export type CreatePettyCashWithdrawalState = {
+  message?: string;
+  errors?: {
+    depositId?: string[];
+    amountGiven?: string[];
+    description?: string[];
+    organizationId?: string[];
+    _form?: string[];
+  };
+  status: 'success' | 'error' | 'idle';
+};
+
+export type CreatePettyCashSpendState = {
+  message?: string;
+  errors?: {
+    withdrawalId?: string[];
+    amount?: string[];
+    description?: string[];
+    ticketFile?: string[];
+    organizationId?: string[];
+    _form?: string[];
+  };
+  status: 'success' | 'error' | 'idle';
+};

@@ -63,6 +63,7 @@ const getBrandSlug = (brandName: string): string => {
 
 // Normalizar nombre de modelo a slug para URL
 const getModelSlug = (modelName: string): string => {
+  console.log("modelName", modelName);
   return modelName.toLowerCase().replace(/\s+/g, "-");
 };
 
@@ -87,7 +88,7 @@ export interface UploadOptions {
  * @returns URL del archivo subido
  */
 export async function uploadToS3(
-  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
+  file: Buffer | Blob | string,
   fileName: string,
   brandName: string,
   modelName: string,
@@ -128,13 +129,12 @@ export async function uploadToS3(
       Body: file,
       ContentType: contentType,
       CacheControl: options.cacheControl || "max-age=31536000", // 1 año por defecto
-      ACL: "public-read",
     };
 
-    // Agregar ACL si se especifica
-    if (options.makeBucketPublic) {
-      params.ACL = "public-read";
-    }
+    // Agregar ACL si se especifica y el bucket lo soporta (eliminado por ahora)
+    // if (options.makeBucketPublic) {
+    //   params.ACL = "public-read";
+    // }
 
     // Agregar metadata personalizada si se especifica
     if (options.customMetadata) {
@@ -159,7 +159,7 @@ export async function uploadToS3(
  * Sube un archivo PDF a S3 (versión simplificada para fichas técnicas)
  */
 export async function uploadPdf(
-  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
+  file: Buffer | Blob | string,
   brandName: string,
   modelName: string,
 ): Promise<string> {
@@ -171,7 +171,7 @@ export async function uploadPdf(
  * Sube una imagen principal a S3
  */
 export async function uploadImage(
-  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
+  file: Buffer | Blob | string,
   brandName: string,
   modelName: string,
 ): Promise<string> {
@@ -182,9 +182,57 @@ export async function uploadImage(
  * Sube una imagen en miniatura a S3
  */
 export async function uploadThumbnail(
-  file: Buffer | Blob | ReadableStream<Uint8Array> | string,
+  file: Buffer | Blob | string,
   brandName: string,
   modelName: string,
 ): Promise<string> {
   return uploadToS3(file, "img_small.webp", brandName, modelName, "image_small");
+}
+
+/**
+ * Sube un archivo genérico a S3 a una ruta (key) específica.
+ * @param file El archivo a subir (Buffer, Blob o ReadableStream)
+ * @param s3Key La ruta completa (key) donde se guardará el archivo en S3.
+ * @param contentType El Content-Type del archivo (ej: "image/jpeg", "application/pdf").
+ * @param options Opciones adicionales para la subida (ej: cacheControl).
+ * @returns URL del archivo subido.
+ */
+export async function uploadGenericFileToS3(
+  file: Buffer | Blob | string,
+  s3Key: string,
+  contentType: string,
+  options: UploadOptions = {},
+): Promise<string> {
+  try {
+    const params: PutObjectCommandInput = {
+      Bucket: process.env.AWS_BUCKET_NAME || "uknapex",
+      Key: s3Key,
+      Body: file,
+      ContentType: contentType,
+      CacheControl: options.cacheControl || "public-read, max-age=31536000",
+      // ACL: options.makeBucketPublic !== undefined ? (options.makeBucketPublic ? "public-read" : undefined) : "public-read", // Eliminado
+    };
+
+    if (options.customMetadata) {
+      params.Metadata = options.customMetadata;
+    }
+
+    await s3Client.send(new PutObjectCommand(params));
+
+    const bucketDomain =
+      process.env.AWS_CLOUDFRONT_DOMAIN ||
+      `${params.Bucket}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com`;
+    
+    // Si se usa CloudFront, es preferible no incluir el nombre del bucket en la ruta si CloudFront está configurado para el bucket raíz.
+    // Pero para S3 directo, sí se necesita. La URL base actual es correcta para S3 directo o CloudFront apuntando al bucket.
+    return `https://${bucketDomain}/${s3Key}`;
+
+  } catch (error) {
+    console.error("Error al subir archivo genérico a S3:", error);
+    // Asegúrate de que el error se propague para que la función que llama pueda manejarlo.
+    if (error instanceof Error) {
+      throw new Error(`Error al subir a S3: ${error.message}`);
+    }
+    throw new Error("Error desconocido al subir archivo genérico a S3.");
+  }
 }

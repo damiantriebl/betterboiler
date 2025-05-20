@@ -127,5 +127,3 @@ export async function dissociateOrganizationBrand(
   }
 }
 
-console.log("Server QuotePDFDocument: organizationLogo (primeros 100 chars)", organizationLogo?.substring(0, 100));
-console.log("Server QuotePDFDocument: motorcycleImage (primeros 100 chars)", motorcycleImage?.substring(0, 100));

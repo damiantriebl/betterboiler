@@ -3,7 +3,6 @@ import {
   getAllBanks,
   getOrganizationBankingPromotions,
 } from "@/actions/banking-promotions/get-banking-promotions";
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import {
   getAvailablePaymentMethods,
   getOrganizationPaymentMethods,
@@ -15,8 +14,7 @@ import prisma from "@/lib/prisma";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
 import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { OrganizationPaymentMethodDisplay, PaymentMethod } from "@/types/payment-methods";
-import type { Model, OrganizationBrand, OrganizationModelConfig } from "@prisma/client";
-import type { Sucursal } from "@prisma/client";
+import type { Model, OrganizationBrand, OrganizationModelConfig, Branch } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -26,7 +24,6 @@ import { DisplayModelData, type OrganizationBrandDisplayData } from "./Interface
 import ManageBankCards from "./ManageBankCards";
 import ManageBankingPromotions from "./ManageBankingPromotions";
 import ManageBranches from "./ManageBranches";
-import ManageBrands from "./ManageBrands";
 import ManageColors from "./ManageColors";
 import ManagePaymentMethods from "./ManagePaymentMethods";
 
@@ -234,15 +231,15 @@ async function getMotoColors(organizationId: string): Promise<ColorConfig[]> {
   }
 }
 
-async function getOrganizationSucursales(organizationId: string): Promise<Sucursal[]> {
+async function getOrganizationBranches(organizationId: string): Promise<Branch[]> {
   try {
-    const sucursales = await prisma.sucursal.findMany({
+    const branches = await prisma.branch.findMany({
       where: { organizationId: organizationId },
       orderBy: { order: "asc" },
     });
-    return sucursales;
+    return branches;
   } catch (error) {
-    console.error("🚨 ERROR fetching Sucursales:", error);
+    console.error("🚨 ERROR fetching Branches:", error);
     return [];
   }
 }
@@ -283,38 +280,18 @@ async function getBankingPromotionsData(organizationId: string) {
 
 export default async function ConfigurationPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user?.id) {
-    redirect("/sign-in");
+  if (!session?.user?.organizationId) {
+    return redirect("/login");
   }
   const organizationId = session.user.organizationId;
 
-  if (!organizationId) {
-    return (
-      <div className="container mx-auto p-4">
-        <p className="text-red-600">Error: Usuario no asociado a una organización.</p>
-      </div>
-    );
-  }
-
-  const [
-    initialOrganizationBrands,
-    initialMotoColorsData,
-    initialSucursalesData,
-    { organizationMethods, availableMethods },
-    { promotions, banks },
-  ] = await Promise.all([
-    getOrganizationBrandsData(organizationId),
-    getMotoColors(organizationId),
-    getOrganizationSucursales(organizationId),
-    getPaymentMethodsData(organizationId),
-    getBankingPromotionsData(organizationId),
-  ]);
-
-  // Fetch card types
-  const cardTypes = await getAllCardTypes();
-
-  // Fetch banks with cards
-  const banksWithCards = await getBanksWithCards(organizationId);
+  const organizationBrandsData = await getOrganizationBrandsData(organizationId);
+  const motoColorsData = await getMotoColors(organizationId);
+  const organizationBranchesData = await getOrganizationBranches(organizationId);
+  const paymentMethodsData = await getPaymentMethodsData(organizationId);
+  const bankingPromotionsData = await getBankingPromotionsData(organizationId);
+  const banksWithCardsData = await getBanksWithCards(organizationId);
+  const allCardTypesData = await getAllCardTypes();
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -324,7 +301,7 @@ export default async function ConfigurationPage() {
         <TabsList className="grid w-full grid-cols-5 mb-4">
           <TabsTrigger value="marcas">Marcas</TabsTrigger>
           <TabsTrigger value="colores">Colores</TabsTrigger>
-          <TabsTrigger value="sucursales">Sucursales</TabsTrigger>
+          <TabsTrigger value="branches">Sucursales</TabsTrigger>
           <TabsTrigger value="metodos-pago">Métodos de Pago</TabsTrigger>
           <TabsTrigger value="bancos-tarjetas">Bancos y Tarjetas</TabsTrigger>
           <TabsTrigger value="promociones">Promociones</TabsTrigger>
@@ -333,27 +310,27 @@ export default async function ConfigurationPage() {
         <TabsContent value="marcas">
           <Suspense fallback={<Skeleton className="h-48 w-full" />}>
             <ClientManageBrands
-              initialOrganizationBrands={initialOrganizationBrands}
+              initialOrganizationBrands={organizationBrandsData}
               organizationId={organizationId}
             />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="colores">
-          <ManageColors initialColorsData={initialMotoColorsData} organizationId={organizationId} />
+          <ManageColors initialColorsData={motoColorsData} organizationId={organizationId} />
         </TabsContent>
 
-        <TabsContent value="sucursales">
-          <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-            <ManageBranches initialSucursalesData={initialSucursalesData} />
+        <TabsContent value="branches">
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+            <ManageBranches initialBranchesData={organizationBranchesData} />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="metodos-pago">
           <Suspense fallback={<Skeleton className="h-48 w-full" />}>
             <ManagePaymentMethods
-              initialOrganizationMethods={organizationMethods}
-              availableMethods={availableMethods}
+              initialOrganizationMethods={paymentMethodsData.organizationMethods}
+              availableMethods={paymentMethodsData.availableMethods}
               organizationId={organizationId}
             />
           </Suspense>
@@ -362,9 +339,9 @@ export default async function ConfigurationPage() {
         <TabsContent value="bancos-tarjetas">
           <Suspense fallback={<Skeleton className="h-48 w-full" />}>
             <ManageBankCards
-              initialBanksWithCards={banksWithCards}
-              availableCardTypes={cardTypes}
-              availableBanks={banks}
+              initialBanksWithCards={banksWithCardsData}
+              availableCardTypes={allCardTypesData}
+              availableBanks={bankingPromotionsData.banks}
               organizationId={organizationId}
             />
           </Suspense>
@@ -373,11 +350,11 @@ export default async function ConfigurationPage() {
         <TabsContent value="promociones">
           <Suspense fallback={<Skeleton className="h-48 w-full" />}>
             <ManageBankingPromotions
-              promotions={promotions}
-              paymentMethods={organizationMethods
+              promotions={bankingPromotionsData.promotions}
+              paymentMethods={paymentMethodsData.organizationMethods
                 .map((om) => om.card)
                 .filter((method): method is PaymentMethod => method !== undefined)}
-              bankCards={banksWithCards.flatMap((b) =>
+              bankCards={banksWithCardsData.flatMap((b) =>
                 b.cards.map((card) => ({
                   id: card.id,
                   bank: b.bank,

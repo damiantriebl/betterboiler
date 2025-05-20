@@ -9,6 +9,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useSessionStore } from "@/stores/SessionStore";
 import { useEffect, useRef, useState } from "react";
 import TestDevtools from "./testdevtool";
+import { Input } from "@/components/ui/input";
 
 interface Org {
   logo: string | null;
@@ -34,7 +35,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         // Actualizar el estado local del org para NavbarSticky (si se requiere)
         if (sessionData.organizationName) {
           setOrg({
-            logo: sessionData.organizationLogo,
+            logo: sessionData.organizationLogo || null,
             thumbnail: null, // No tenemos thumbnail en la sesión
             name: sessionData.organizationName
           });
@@ -67,7 +68,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <div className="relative">
           <SidebarTrigger />
-          <TestDevtools />
         </div>
         <main ref={mainRef} className="flex flex-col flex-1 overflow-y-auto items-center">
           <div className="flex items-end w-full justify-end pr-16">

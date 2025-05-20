@@ -1,34 +1,20 @@
 "use server";
 
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { headers } from "next/headers";
-
-// Helper para obtener organizationId (reutilizado)
-async function getOrganizationIdFromSession(): Promise<string | null> {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    console.log("🔍 DEBUG Session in helper:", {
-      sessionExists: !!session,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      organizationId: session?.user?.organizationId,
-    });
-    return session?.user?.organizationId ?? null;
-  } catch (error) {
-    console.error("Error getting session:", error);
-    return null;
-  }
-}
+// Import the main getOrganizationIdFromSession function
+import { getOrganizationIdFromSession } from "./get-Organization-Id-From-Session"; 
 
 export async function getOrganization() {
   try {
-    const organizationId = await getOrganizationIdFromSession();
+    // Use the imported function
+    const sessionResult = await getOrganizationIdFromSession();
 
-    if (!organizationId) {
-      console.log("❌ No organizationId found in session");
+    if (sessionResult.error || !sessionResult.organizationId) {
+      console.log("❌ No organizationId found in session or error occurred:", sessionResult.error || "No organizationId");
       return null;
     }
+    
+    const { organizationId } = sessionResult;
 
     // Buscar en la base de datos
     console.log("🔍 Searching organization in database:", organizationId);

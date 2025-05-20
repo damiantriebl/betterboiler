@@ -81,10 +81,13 @@ model Organization {
   organizationPaymentMethods OrganizationPaymentMethod[]
   payments                   Payment[]
   reservations               Reservation[]
-  sucursales                 Sucursal[]
+  branches                   Branch[]
   suppliers                  Supplier[]
   motorcycles                Motorcycle[]
   users                      User[]
+  pettyCashDeposits          PettyCashDeposit[]
+  pettyCashWithdrawals       PettyCashWithdrawal[]
+  pettyCashSpends            PettyCashSpend[]
 
   @@map("organization")
 }
@@ -208,15 +211,16 @@ model OrganizationModelConfig {
   @@index([modelId])
 }
 
-model Sucursal {
-  id             Int          @id @default(autoincrement())
-  name           String
-  order          Int
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  motorcycles    Motorcycle[]
+model Branch {
+  id                   Int                  @id @default(autoincrement())
+  name                 String
+  order                Int
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  organizationId       String
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  motorcycles          Motorcycle[]
+  pettyCashDeposits    PettyCashDeposit[]
 
   @@unique([organizationId, name])
   @@index([organizationId, order])
@@ -320,7 +324,7 @@ model Motorcycle {
   soldAt          DateTime?
   currentAccounts CurrentAccount[]
   reservations    Reservation[]
-  branch          Sucursal         @relation(fields: [branchId], references: [id])
+  branch          Branch         @relation(fields: [branchId], references: [id])
   brand           Brand            @relation(fields: [brandId], references: [id])
   client          Client?          @relation(fields: [clientId], references: [id])
   color           MotoColor        @relation(fields: [colorId], references: [id])
@@ -589,4 +593,77 @@ enum PaymentStatus {
   PROCESSING
   FAILED
   PARTIAL
+}
+
+enum PettyCashDepositStatus {
+  OPEN
+  CLOSED
+  PENDING_FUNDING
+}
+
+enum PettyCashWithdrawalStatus {
+  PENDING_JUSTIFICATION
+  PARTIALLY_JUSTIFIED
+  JUSTIFIED
+  NOT_CLOSED // Cuando el depósito se cierra pero este retiro no está justificado
+}
+
+model PettyCashDeposit {
+  id              String                    @id @default(cuid())
+  organizationId  String
+  amount          Float
+  date            DateTime
+  description     String
+  reference       String?
+  status          PettyCashDepositStatus   @default(OPEN)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  branchId        Int?
+
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch          Branch?                @relation(fields: [branchId], references: [id], onDelete:SetNull)
+  withdrawals     PettyCashWithdrawal[]
+
+  @@index([organizationId, date])
+  @@index([organizationId, status])
+  @@index([branchId])
+}
+
+model PettyCashWithdrawal {
+  id                String                    @id @default(cuid())
+  organizationId    String
+  depositId         String
+  userId            String // ID del usuario que recibe/gestiona el retiro
+  userName          String // Nombre del usuario para mostrar en la UI
+  amountGiven       Float // Monto total entregado en este retiro
+  amountJustified   Float                     @default(0) // Monto justificado por gastos
+  date              DateTime
+  status            PettyCashWithdrawalStatus @default(PENDING_JUSTIFICATION)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  organization      Organization              @relation(fields: [organizationId], references: [id], onDelete:NoAction, map: "withdrawal_organization") // Evitar ciclos de cascada si org se borra
+  deposit           PettyCashDeposit          @relation(fields: [depositId], references: [id], onDelete:Cascade)
+  spends            PettyCashSpend[]
+
+  @@index([organizationId, userId])
+  @@index([depositId])
+}
+
+model PettyCashSpend {
+  id             String   @id @default(cuid())
+  organizationId String
+  withdrawalId   String
+  motive         String?
+  description    String/*  */
+  amount         Float
+  date           DateTime
+  ticketUrl      String?  // URL del comprobante, opcional
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: NoAction, map: "spend_organization") // Evitar ciclos de cascada
+  withdrawal   PettyCashWithdrawal  @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+
+  @@index([withdrawalId])
 }

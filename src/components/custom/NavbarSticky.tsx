@@ -25,14 +25,16 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
   }, [organization, storeOrgLogo, storeOrgName]);
 
   const logoKey = useMemo(() => {
+    if (!orgData.logo && !orgData.thumbnail) return null;
     return scrollAmount > 0.5 && orgData.thumbnail
       ? orgData.thumbnail
       : orgData.logo;
   }, [orgData.logo, orgData.thumbnail, scrollAmount]);
 
+  // Todos los hooks useMemo deben llamarse ANTES del retorno condicional.
   const height = useMemo(() => {
-    const startHeight = 5;
-    const endHeight = 3.5;
+    const startHeight = 3.5;
+    const endHeight = 2.5;
     return startHeight - scrollAmount * (startHeight - endHeight);
   }, [scrollAmount]);
 
@@ -43,8 +45,8 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
   }, [scrollAmount]);
 
   const logoSize = useMemo(() => {
-    const startSize = 8;
-    const endSize = 2.5;
+    const startSize = 4;
+    const endSize = 2;
     return Math.max(endSize, startSize - scrollAmount * (startSize - endSize));
   }, [scrollAmount]);
 
@@ -52,11 +54,9 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
     return scrollAmount > 0.3 ? "default" : "bare";
   }, [scrollAmount]);
 
-  const showName = scrollAmount > 0.7;
   const nameOpacity = useMemo(() => {
     const startFade = 0.8;
     const endFade = 0.95;
-
     let calculatedOpacity = 0;
     if (scrollAmount <= startFade) {
       calculatedOpacity = 0;
@@ -68,11 +68,17 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
     return calculatedOpacity;
   }, [scrollAmount]);
 
+  // Ahora, después de que todos los hooks se hayan llamado, podemos retornar null.
+  if (!logoKey) {
+    return null;
+  }
+
   return (
     <div
       className={`
-        sticky top-0 z-50 flex items-center justify-center space-x-4
+        sticky top-0 z-50 flex items-center justify-start space-x-4
         bg-background transition-all duration-200 ease-out
+        pl-8
       `}
       style={{
         height: `${height}rem`,
@@ -87,6 +93,21 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
         variant={logoVariant}
         nameDisplayOpacity={nameOpacity}
       />
+      {/* Mostrar el nombre de la organización si es necesario y visible */}
+      {nameOpacity > 0 && (
+        <span
+          style={{
+            opacity: nameOpacity,
+            transition: "opacity 0.2s ease-in-out",
+            fontWeight: 600,
+            fontSize: "1.25rem", // Ajustar tamaño según necesidad
+            lineHeight: "1",
+            color: "hsl(var(--foreground))", // Usar variables de color de Tailwind/Shadcn
+          }}
+        >
+          {orgData.name}
+        </span>
+      )}
     </div>
   );
 }
