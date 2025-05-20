@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -30,11 +31,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { createPettyCashSpendWithTicket } from "@/actions";
 import { useToast } from "@/hooks/use-toast";
-import React, { useEffect, useActionState, useRef } from "react";
+import React, { useEffect, useActionState, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { createPettyCashSpendSchema as zodGlobalSchema } from "@/zod/PettyCashZod";
 import { z } from "zod";
 import { CreatePettyCashSpendState } from "@/types/action-states";
+import { type PettyCashSpend } from "@prisma/client";
+import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement";
+import { UpdatePettyCashMovementSchema, type UpdatePettyCashMovementFormValues } from "@/zod/pettyCashSchema";
 
 const spendFormClientSchema = zodGlobalSchema.omit({ withdrawalId: true, ticketUrl: true }).extend({
     motive: z.string().min(1, "El motivo es requerido."),
@@ -61,6 +65,9 @@ export default function SpendForm({
 }: SpendFormProps) {
     const { toast } = useToast();
     const formRef = useRef<HTMLFormElement>(null);
+    const [currentWithdrawalBalance, setCurrentWithdrawalBalance] = useState<number | null>(null);
+    const [balanceError, setBalanceError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [state, formAction, isPending] = useActionState<CreatePettyCashSpendState, FormData>(
         createPettyCashSpendWithTicket,
@@ -122,6 +129,22 @@ export default function SpendForm({
         }
     }, [state, onClose, toast, form]);
 
+    useEffect(() => {
+        async function fetchWithdrawalBalance() {
+            if (withdrawalId && organizationId) {
+                // Asumiría que getPettyCashWithdrawalBalance existe y es una server action
+                // const result = await getPettyCashWithdrawalBalance(withdrawalId, organizationId);
+                // if (result.error) {
+                //     setBalanceError(result.error);
+                //     toast({ variant: "destructive", title: "Error", description: result.error });
+                // } else {
+                //     setCurrentWithdrawalBalance(result.balance);
+                // }
+            }
+        }
+        fetchWithdrawalBalance();
+    }, [withdrawalId, organizationId]);
+
     const attemptFormSubmission = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -152,6 +175,12 @@ export default function SpendForm({
                 description: "Por favor corrige los errores en el formulario.",
             });
         }
+
+        const spendAmount = form.getValues("amount");
+        if (currentWithdrawalBalance !== null && spendAmount > currentWithdrawalBalance) {
+            form.setError("amount", { type: "manual", message: `El monto no puede exceder el saldo disponible del retiro: ${currentWithdrawalBalance}` });
+            return;
+        }
     };
 
     let ticketErrorMessage: string | null = null;
@@ -165,11 +194,56 @@ export default function SpendForm({
         }
     }
 
+    const handleSubmit = async (values: UpdatePettyCashMovementFormValues) => {
+        setIsSubmitting(true);
+        try {
+            const result = await updatePettyCashMovement(values);
+
+            if (!result.success) {
+                toast({
+                    title: "Error al actualizar",
+                    description: result.fieldErrors
+                        ? "Por favor revise los campos."
+                        : result.error || "Ocurrió un error desconocido.",
+                    variant: "destructive",
+                });
+                if (result.fieldErrors) {
+                    for (const [field, errors] of Object.entries(result.fieldErrors)) {
+                        if (errors && errors.length > 0) {
+                            form.setError(field as keyof UpdatePettyCashMovementFormValues, {
+                                type: "server",
+                                message: errors.join(", "),
+                            });
+                        }
+                    }
+                }
+            } else {
+                toast({
+                    title: "Éxito",
+                    description: result.message || "Gasto actualizado correctamente.",
+                });
+                onClose();
+            }
+        } catch (error) {
+            console.error("Error in handleSubmit:", error);
+            toast({
+                title: "Error inesperado",
+                description: "Ocurrió un error al actualizar el gasto.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <Dialog open={true} onOpenChange={(open) => { if (!open) { form.reset(); onClose(); } }}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Registrar Gasto y Subir Comprobante</DialogTitle>
+                    <DialogDescription>
+                        Complete los detalles del gasto y adjunte el comprobante si es necesario.
+                    </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                     <form
@@ -189,8 +263,9 @@ export default function SpendForm({
                                     <FormControl>
                                         <Input
                                             type="number"
-                                            step="0.01"
-                                            placeholder="0.00"
+                                            step="100"
+                                            min="100"
+                                            placeholder="100"
                                             {...field}
                                             value={
                                                 field.value === 0 && !fieldState.isDirty && !formState.isSubmitted
@@ -207,9 +282,16 @@ export default function SpendForm({
                                                 }
                                             }}
                                             onBlur={e => {
-                                                const numericValue = parseFloat(String(field.value));
-                                                field.onChange(isNaN(numericValue) ? 0 : numericValue);
-                                                if (field.onBlur) field.onBlur();
+                                                let numericValue = parseFloat(String(field.value));
+                                                if (isNaN(numericValue)) {
+                                                    numericValue = 0;
+                                                } else if (numericValue < 100 && numericValue !== 0) {
+                                                    numericValue = 100;
+                                                }
+                                                field.onChange(numericValue);
+                                                if (field.onBlur) {
+                                                    field.onBlur();
+                                                }
                                             }}
                                         />
                                     </FormControl>

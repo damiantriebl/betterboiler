@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -145,6 +146,9 @@ const WithdrawForm = ({ depositId, onSubmitAction, onClose, users, organizationI
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
                     <DialogTitle>Registrar Retiro de Caja Chica</DialogTitle>
+                    <DialogDescription>
+                        Seleccione el beneficiario e ingrese el monto y la fecha del retiro.
+                    </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 pt-4">
@@ -186,17 +190,42 @@ const WithdrawForm = ({ depositId, onSubmitAction, onClose, users, organizationI
                         <FormField
                             control={form.control}
                             name="amountGiven"
-                            render={({ field }) => (
+                            render={({ field, fieldState, formState }) => (
                                 <FormItem>
                                     <FormLabel>Monto a Retirar</FormLabel>
                                     <FormControl>
                                         <Input
                                             type="number"
-                                            placeholder="Monto del retiro"
+                                            placeholder="100"
                                             {...field}
-                                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                            min="0.01"
-                                            step="0.01"
+                                            value={
+                                                field.value === 0 && !fieldState.isDirty && !formState.isSubmitted
+                                                    ? ""
+                                                    : String(field.value)
+                                            }
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                if (val === "") {
+                                                    field.onChange(0);
+                                                } else {
+                                                    const numericValue = parseFloat(val);
+                                                    field.onChange(isNaN(numericValue) ? val : numericValue);
+                                                }
+                                            }}
+                                            onBlur={e => {
+                                                let numericValue = parseFloat(String(field.value));
+                                                if (isNaN(numericValue)) {
+                                                    numericValue = 0;
+                                                } else if (numericValue < 100 && numericValue !== 0) {
+                                                    numericValue = 100;
+                                                }
+                                                field.onChange(numericValue);
+                                                if (field.onBlur) {
+                                                    field.onBlur();
+                                                }
+                                            }}
+                                            min="100"
+                                            step="100"
                                         />
                                     </FormControl>
                                     <FormMessage />

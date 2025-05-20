@@ -174,15 +174,40 @@ const DepositForm = ({ onSubmitAction, onClose, organizationId, branches }: Depo
                         <FormField
                             control={form.control}
                             name="amount"
-                            render={({ field }) => (
+                            render={({ field, fieldState, formState }) => (
                                 <FormItem>
                                     <FormLabel>Monto</FormLabel>
                                     <FormControl>
                                         <Input
                                             type="number"
-                                            placeholder="Monto a ingresar"
+                                            placeholder="100"
                                             {...field}
-                                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                            value={
+                                                field.value === 0 && !fieldState.isDirty && !formState.isSubmitted
+                                                    ? ""
+                                                    : String(field.value)
+                                            }
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                if (val === "") {
+                                                    field.onChange(0);
+                                                } else {
+                                                    const numericValue = parseFloat(val);
+                                                    field.onChange(isNaN(numericValue) ? val : numericValue);
+                                                }
+                                            }}
+                                            onBlur={e => {
+                                                let numericValue = parseFloat(String(field.value));
+                                                if (isNaN(numericValue)) {
+                                                    numericValue = 0;
+                                                } else if (numericValue < 100 && numericValue !== 0) {
+                                                    numericValue = 100;
+                                                }
+                                                field.onChange(numericValue);
+                                                if (field.onBlur) {
+                                                    field.onBlur();
+                                                }
+                                            }}
                                             min="100"
                                             step="100"
                                         />

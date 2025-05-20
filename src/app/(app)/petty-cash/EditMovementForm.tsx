@@ -31,18 +31,26 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { PettyCashMovement } from "@prisma/client";
-import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement"; // Importar la acción
+import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement";
+import { UpdatePettyCashMovementSchema, type UpdatePettyCashMovementFormValues } from "@/zod/pettyCashSchema"; // Asegúrate que el schema se importa
+
+// Definición simple para los tipos de movimiento si no existe un enum global
+const pettyCashMovementTypeEnum = {
+    options: ["DEPOSIT", "WITHDRAWAL", "SPEND"] as const, // Usar const assertion para tipos literales
+};
 
 interface EditMovementFormProps {
     movement: PettyCashMovement;
-    onSubmitAction: typeof updatePettyCashMovement; // Usar el tipo de la acción importada
     onClose: () => void;
-    users: { id: string; name: string; role: string }[];
+    users: { id: string; name: string; role: string }[]; // Esta prop parece no usarse, considerar eliminarla si no es necesaria.
 }
 
-// El tipo para el formulario se deriva del schema de Zod
-type EditMovementFormValues = z.infer<typeof updatePettyCashMovementSchema>;
+// El tipo para el formulario se deriva del schema de Zod, no es necesario redefinirlo como EditMovementFormValues si ya existe UpdatePettyCashMovementFormValues
+// type EditMovementFormValues = z.infer<typeof UpdatePettyCashMovementSchema>; // Ya se importa UpdatePettyCashMovementFormValues
 
+// Esta interfaz local podría causar confusión con el tipo de retorno de la acción.
+// La acción ya define su tipo de retorno.
+/*
 interface UpdatePettyCashMovementResult {
     success: boolean;
     error?: string; // Error general
@@ -50,45 +58,50 @@ interface UpdatePettyCashMovementResult {
     data?: UpdatePettyCashMovementFormValues;
     // NO tiene fieldErrors directamente aquí.
 }
+*/
+
+// Definición del enum que falta
+const pettyCashMovementTypeEnumZod = z.enum(["DEPOSIT", "WITHDRAWAL", "SPEND"]);
 
 const EditMovementForm = ({
     movement,
-    onSubmitAction,
     onClose,
-    users,
+    users, // Esta prop parece no usarse
 }: EditMovementFormProps) => {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const form = useForm<EditMovementFormValues>({
-        resolver: zodResolver(updatePettyCashMovementSchema),
+    const form = useForm<UpdatePettyCashMovementFormValues>({ // Usar el tipo importado del schema
+        resolver: zodResolver(UpdatePettyCashMovementSchema), // Usar el schema importado
         defaultValues: {
-            id: movement.id,
-            type: movement.type,
-            description: movement.description,
+            movementId: movement.id, // Ajustar al schema
+            // type: movement.type, // 'type' no está en UpdatePettyCashMovementSchema
+            description: movement.description ?? undefined, // Usar ?? undefined para campos opcionales
             amount: movement.amount,
-            date: new Date(movement.date), // Asegurar que sea un objeto Date
+            // date: new Date(movement.date), // 'date' no está en UpdatePettyCashMovementSchema
+            ticketNumber: movement.motive ?? undefined, // Asumiendo que 'motive' mapea a 'ticketNumber'
+            receiptUrl: movement.ticketUrl ?? undefined, // Asumiendo que 'ticketUrl' mapea a 'receiptUrl'
         },
     });
 
-    const handleSubmit = async (values: EditMovementFormValues) => {
+    const handleSubmit = async (values: UpdatePettyCashMovementFormValues) => { // Usar el tipo importado
         setIsSubmitting(true);
         try {
-            const result = await onSubmitAction(values);
+            // Llamar a la acción directamente
+            const result = await updatePettyCashMovement(values);
 
-            if (result.error) {
+            if (!result.success) { // Simplificar la condición
                 toast({
                     title: "Error al actualizar",
                     description: result.fieldErrors
                         ? "Por favor revise los campos."
-                        : result.error,
+                        : result.error || "Ocurrió un error desconocido.",
                     variant: "destructive",
                 });
                 if (result.fieldErrors) {
                     for (const [field, errors] of Object.entries(result.fieldErrors)) {
-                        if (Array.isArray(errors) && errors.length > 0) {
-                            // @ts-ignore TODO: fix this type error, field might not be in EditMovementFormValues
-                            form.setError(field as keyof EditMovementFormValues, {
+                        if (errors && errors.length > 0) { // Chequear que errors exista
+                            form.setError(field as keyof UpdatePettyCashMovementFormValues, { // Quitar el @ts-ignore si es posible
                                 type: "server",
                                 message: errors.join(", "),
                             });
@@ -98,7 +111,7 @@ const EditMovementForm = ({
             } else {
                 toast({
                     title: "Éxito",
-                    description: "Movimiento actualizado correctamente.",
+                    description: result.message || "Movimiento actualizado correctamente.",
                 });
                 onClose();
             }
@@ -117,10 +130,11 @@ const EditMovementForm = ({
         <Dialog open={true} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Editar Movimiento</DialogTitle>
+                    <DialogTitle>Editar Gasto</DialogTitle> {/* Cambiado para reflejar que se editan Gastos */}
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-4">
+                        {/* El campo 'type' no está en el schema de actualización, se elimina del formulario
                         <FormField
                             control={form.control}
                             name="type"
@@ -147,6 +161,7 @@ const EditMovementForm = ({
                                 </FormItem>
                             )}
                         />
+                        */}
                         <FormField
                             control={form.control}
                             name="description"
@@ -154,7 +169,7 @@ const EditMovementForm = ({
                                 <FormItem>
                                     <FormLabel>Descripción</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Descripción del movimiento" {...field} />
+                                        <Input placeholder="Descripción del gasto" {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -162,8 +177,8 @@ const EditMovementForm = ({
                         />
                         <FormField
                             control={form.control}
-                            name="amount"
-                            render={({ field }) => (
+                            name="amount" // Primero el monto
+                            render={({ field, fieldState, formState }) => (
                                 <FormItem>
                                     <FormLabel>Monto</FormLabel>
                                     <FormControl>
@@ -171,15 +186,58 @@ const EditMovementForm = ({
                                             type="number"
                                             placeholder="100"
                                             {...field}
-                                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                            min="100"
-                                            step="100"
+                                            value={field.value === undefined || field.value === null ? "" : String(field.value)} // Manejar undefined/null para el valor inicial
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                // Permitir campo vacío para borrar, o parsear a número
+                                                const numericValue = value === "" ? undefined : parseFloat(value);
+                                                field.onChange(numericValue);
+                                            }}
+                                            onBlur={(e) => { // Asegurar que onBlur también maneje el parseo
+                                                const value = e.target.value;
+                                                const numericValue = parseFloat(value);
+                                                if (!isNaN(numericValue)) {
+                                                    field.onChange(numericValue); // Actualiza el valor del formulario
+                                                } else if (value === "") {
+                                                    field.onChange(undefined); // Permitir borrar el campo
+                                                }
+                                                // No es necesario llamar a field.onBlur() explícitamente aquí si no se necesita un comportamiento adicional
+                                            }}
+                                            min="0" // O el mínimo que corresponda, puede ser 1 o 100
+                                            step="0.01" // O el step que corresponda, como 1 o 100
                                         />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                        <FormField
+                            control={form.control}
+                            name="ticketNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Número de Comprobante</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Ej: F001-00001234" {...field} value={field.value ?? ""} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="receiptUrl" // Campo para la URL del comprobante (opcional)
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>URL del Comprobante (Opcional)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="https://ejemplo.com/comprobante.jpg" {...field} value={field.value ?? ""} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {/* El campo 'date' no está en el schema de actualización, se elimina del formulario
                         <FormField
                             control={form.control}
                             name="date"
@@ -197,6 +255,7 @@ const EditMovementForm = ({
                                 </FormItem>
                             )}
                         />
+                        */}
                         <DialogFooter className="pt-4">
                             <DialogClose asChild>
                                 <Button type="button" variant="outline" onClick={onClose} aria-label="Cancelar" disabled={isSubmitting}>
@@ -209,6 +268,7 @@ const EditMovementForm = ({
                         </DialogFooter>
                     </form>
                 </Form>
+                {/* TODO: Agregar DialogDescription si es necesario para accesibilidad */}
             </DialogContent>
         </Dialog>
     );
