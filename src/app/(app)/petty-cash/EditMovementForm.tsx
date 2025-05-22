@@ -30,7 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { PettyCashSpend } from "@prisma/client";
+import type { PettyCashSpend } from "@prisma/client";
 import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement";
 import { UpdatePettyCashMovementSchema, type UpdatePettyCashMovementFormValues } from "@/zod/pettyCashSchema"; // Asegúrate que el schema se importa
 
@@ -174,13 +174,13 @@ const EditMovementForm = ({
                                             onChange={(e) => {
                                                 const value = e.target.value;
                                                 // Permitir campo vacío para borrar, o parsear a número
-                                                const numericValue = value === "" ? undefined : parseFloat(value);
+                                                const numericValue = value === "" ? undefined : Number.parseFloat(value);
                                                 field.onChange(numericValue);
                                             }}
                                             onBlur={(e) => { // Asegurar que onBlur también maneje el parseo
                                                 const value = e.target.value;
-                                                const numericValue = parseFloat(value);
-                                                if (!isNaN(numericValue)) {
+                                                const numericValue = Number.parseFloat(value);
+                                                if (!Number.isNaN(numericValue)) {
                                                     field.onChange(numericValue); // Actualiza el valor del formulario
                                                 } else if (value === "") {
                                                     field.onChange(undefined); // Permitir borrar el campo

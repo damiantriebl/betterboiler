@@ -13,7 +13,7 @@ const formDataWithdrawalSchema = z.object({
   userId: z.string().min(1, "El ID de usuario es requerido."), // Asumo que esto vendrá de algún lugar (ej. usuario logueado o selección)
   userName: z.string().min(1, "El nombre de usuario es requerido."), // Asumo que esto vendrá de algún lugar
   amountGiven: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
+    (a) => Number.parseFloat(z.string().parse(a)),
     z.number().positive("El monto entregado debe ser positivo."),
   ),
   date: z.preprocess(
@@ -133,7 +133,7 @@ export async function createPettyCashWithdrawal(
       const createdWithdrawal = await tx.pettyCashWithdrawal.create({
         data: {
           organizationId: finalOrganizationId,
-          depositId: targetDeposit!.id,
+          depositId: targetDeposit?.id,
           userId,
           userName,
           amountGiven,
@@ -143,19 +143,19 @@ export async function createPettyCashWithdrawal(
       });
 
       const totalWithdrawalsAfterCurrent = await tx.pettyCashWithdrawal.aggregate({
-        where: { depositId: targetDeposit!.id },
+        where: { depositId: targetDeposit?.id },
         _sum: { amountGiven: true },
       });
       const newTotalWithdrawn = totalWithdrawalsAfterCurrent._sum.amountGiven || 0;
       
-      let newDepositStatus: PettyCashDepositStatus = targetDeposit!.status;
-      if (newTotalWithdrawn >= targetDeposit!.amount) {
+      let newDepositStatus: PettyCashDepositStatus = targetDeposit?.status as PettyCashDepositStatus;
+      if (newTotalWithdrawn >= (targetDeposit?.amount ?? Number.POSITIVE_INFINITY)) {
         newDepositStatus = "CLOSED";
       }
 
-      if (newDepositStatus !== targetDeposit!.status) {
+      if (newDepositStatus !== targetDeposit?.status) {
         await tx.pettyCashDeposit.update({
-          where: { id: targetDeposit!.id },
+          where: { id: targetDeposit?.id },
           data: { status: newDepositStatus },
         });
       }

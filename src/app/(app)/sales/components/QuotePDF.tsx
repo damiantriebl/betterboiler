@@ -165,7 +165,7 @@ export const QuotePDFDocument = ({
 
   // Usar la imagen base64 si está disponible, si no, usar la lógica anterior
   let imageToDisplay: string | null | undefined = null;
-  if (motorcycleImage && motorcycleImage.startsWith("data:image")) {
+  if (motorcycleImage?.startsWith("data:image")) {
     imageToDisplay = motorcycleImage;
   } else {
     const mainImageSrc = motorcycle.imageUrl;
@@ -247,7 +247,7 @@ export const QuotePDFDocument = ({
       </View>
       <View>
         <Text>Presupuesto generado por: {userName}</Text>
-        {userImage && userImage.startsWith("data:image") && (
+        {userImage?.startsWith("data:image") && (
           <Image src={userImage} style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }} />
         )}
       </View>
@@ -417,7 +417,7 @@ export const QuotePDFDocument = ({
         {userName && (
           <Text>Presupuesto generado por: {userName}</Text>
         )}
-        {userImage && userImage.startsWith("data:image") && (
+        {userImage?.startsWith("data:image") && (
           <Image src={userImage} style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }} />
         )}
       </View>

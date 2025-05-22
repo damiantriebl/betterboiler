@@ -17,8 +17,8 @@ export async function getPettyCashBalance(organizationId: string, branchId: stri
 
   let numericBranchId: number | null = null;
   if (branchId !== GENERAL_ACCOUNT_ID_VALUE) {
-    numericBranchId = parseInt(branchId, 10);
-    if (isNaN(numericBranchId)) {
+    numericBranchId = Number.parseInt(branchId, 10);
+    if (Number.isNaN(numericBranchId)) {
       console.error("getPettyCashBalance: branchId no es un número válido ni la caja general.");
       return { balance: 0, error: "Branch ID inválido." };
     }

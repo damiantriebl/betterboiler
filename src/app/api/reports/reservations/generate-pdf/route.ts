@@ -4,7 +4,7 @@ import { ReservationReportPDF } from "@/components/reports/ReservationReportPDF"
 import type { ReservationsReport } from "@/types/reports";
 import { pdf } from "@react-pdf/renderer";
 import { createElement } from "react";
-import type { Readable } from 'stream'; // Importar Readable de Node.js
+import type { Readable } from 'node:stream'; // Importar Readable de Node.js
 
 // Helper para convertir Readable (Node.js stream) a Buffer
 async function streamToBuffer(stream: Readable): Promise<Buffer> {

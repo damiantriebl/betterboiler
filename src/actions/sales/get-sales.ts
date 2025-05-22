@@ -2,7 +2,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
-import { MotorcycleState } from "@prisma/client";
+import { MotorcycleState, type Prisma } from "@prisma/client";
 
 export async function getSales({ since }: { since?: string } = {}) {
   // Obtener la organización del usuario autenticado
@@ -14,7 +14,7 @@ export async function getSales({ since }: { since?: string } = {}) {
     return [];
   }
 
-  const where: any = {
+  const where: Prisma.MotorcycleWhereInput = {
     organizationId,
     state: MotorcycleState.VENDIDO,
   };

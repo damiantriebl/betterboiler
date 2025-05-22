@@ -5,7 +5,7 @@ export default function TestDevtools() {
     const setSession = useSessionStore((s) => s.setSession);
 
     return (
-        <button onClick={() => setSession({ userName: "Prueba" })}>
+        <button type="button" onClick={() => setSession({ userName: "Prueba" })}>
             Cambiar usuario
         </button>
     );

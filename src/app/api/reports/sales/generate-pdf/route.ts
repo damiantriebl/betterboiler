@@ -1,7 +1,7 @@
 import type { ReportFilters } from "@/types/SalesReportType";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateSalesReportPDF } from "./actions";
-import { Readable } from "stream";
+import { Readable } from "node:stream";
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 
 export async function POST(request: NextRequest) {
@@ -16,9 +16,8 @@ export async function POST(request: NextRequest) {
     filters.organizationId = org.organizationId;
 
     const pdfBuffer = await generateSalesReportPDF(filters);
-    const stream = Readable.from(pdfBuffer);
 
-    return new NextResponse(stream as any, {
+    return new NextResponse(Buffer.from(pdfBuffer).buffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": 'attachment; filename="reporte-ventas.pdf"',

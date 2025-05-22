@@ -88,7 +88,7 @@ const PettyCashTable = ({
         <div className="w-full rounded-md border mt-6">
             <Table>
                 <TableHeader>
-                    <TableRow><TableHead className="w-10"></TableHead><TableHead>Fecha</TableHead><TableHead>Descripción</TableHead><TableHead>Referencia</TableHead><TableHead className="text-right">Depositado</TableHead><TableHead className="text-center">Estado</TableHead><TableHead className="text-center">Acciones</TableHead></TableRow>
+                    <TableRow><TableHead className="w-10" /><TableHead>Fecha</TableHead><TableHead>Descripción</TableHead><TableHead>Referencia</TableHead><TableHead className="text-right">Depositado</TableHead><TableHead className="text-center">Estado</TableHead><TableHead className="text-center">Acciones</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                     {deposits.map((deposit) => (
@@ -168,7 +168,7 @@ const DepositEntry = ({ deposit, users, onAddWithdrawal, onAddSpend, onDeleteSpe
                             <div className="pl-10 pr-4 py-2"> {/* Indentación para la tabla anidada */}
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="text-xs bg-slate-100 dark:bg-slate-750"><TableHead className="w-8"></TableHead><TableHead>Fecha Ret.</TableHead><TableHead>Responsable</TableHead><TableHead>Desc. Retiro</TableHead><TableHead className="text-right">Entregado</TableHead><TableHead className="text-right">Justificado</TableHead><TableHead className="text-center">Estado Ret.</TableHead><TableHead className="text-center">Acciones</TableHead></TableRow>
+                                        <TableRow className="text-xs bg-slate-100 dark:bg-slate-750"><TableHead className="w-8" /><TableHead>Fecha Ret.</TableHead><TableHead>Responsable</TableHead><TableHead>Desc. Retiro</TableHead><TableHead className="text-right">Entregado</TableHead><TableHead className="text-right">Justificado</TableHead><TableHead className="text-center">Estado Ret.</TableHead><TableHead className="text-center">Acciones</TableHead></TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {deposit.withdrawals.map(withdrawal => (

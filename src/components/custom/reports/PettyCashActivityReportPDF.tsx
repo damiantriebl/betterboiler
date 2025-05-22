@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import {
     Document,
     Page,
@@ -133,15 +133,15 @@ const PettyCashActivityReportPDF: React.FC<PettyCashActivityReportPDFProps> = ({
     let totalWithdrawals = 0;
     let totalSpends = 0;
 
-    data.forEach(deposit => {
+    for (const deposit of data) {
         totalDeposits += deposit.amount;
-        deposit.withdrawals.forEach(withdrawal => {
+        for (const withdrawal of deposit.withdrawals) {
             totalWithdrawals += withdrawal.amountGiven;
-            withdrawal.spends.forEach(spend => {
+            for (const spend of withdrawal.spends) {
                 totalSpends += spend.amount;
-            });
-        });
-    });
+            }
+        }
+    }
 
     return (
         <Document author="Apex Software" title={`Reporte de Actividad de Caja Chica ${formatDateShort(fromDate)} - ${formatDateShort(toDate)}`}>

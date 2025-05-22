@@ -108,8 +108,8 @@ export async function toggleSecureMode(
         // --- Parámetros OTP --- 
         const OTP_ISSUER = process.env.OTP_ISSUER || "Apex Software"; 
         const OTP_ALGORITHM = process.env.OTP_ALGORITHM || "SHA1"; 
-        const OTP_DIGITS = parseInt(process.env.OTP_DIGITS || "6"); 
-        const OTP_PERIOD = parseInt(process.env.OTP_PERIOD || "120");  
+        const OTP_DIGITS = Number.parseInt(process.env.OTP_DIGITS || "6"); 
+        const OTP_PERIOD = Number.parseInt(process.env.OTP_PERIOD || "120");  
         console.log(`[toggleSecureMode] Usando para QR: Issuer=${OTP_ISSUER}, Algorithm=${OTP_ALGORITHM}, Digits=${OTP_DIGITS}, Period=${OTP_PERIOD}`);
 
         if (isEnabled) {
@@ -192,8 +192,8 @@ export async function verifyOtpSetup(tokenAsNumber: number): Promise<VerifyOtpSe
     const OTP_ISSUER = process.env.OTP_ISSUER || "Apex Software";
     const OTP_ALGORITHM = process.env.OTP_ALGORITHM || "SHA1";
     const rawDigits = process.env.OTP_DIGITS || "6";
-    const OTP_DIGITS_FROM_CONFIG = parseInt(rawDigits, 10);
-    const OTP_PERIOD = parseInt(process.env.OTP_PERIOD || "120", 10);
+    const OTP_DIGITS_FROM_CONFIG = Number.parseInt(rawDigits, 10);
+    const OTP_PERIOD = Number.parseInt(process.env.OTP_PERIOD || "120", 10);
 
     console.log(`[verifyOtpSetup] Token (str): '${token}', Longitud: ${token.length}`);
     console.log(`[verifyOtpSetup] rawDigits (process.env.OTP_DIGITS): '${rawDigits}'`);
@@ -205,7 +205,7 @@ export async function verifyOtpSetup(tokenAsNumber: number): Promise<VerifyOtpSe
     const testResult = tokenRegex.test(token);
     console.log(`[verifyOtpSetup] Resultado de tokenRegex.test(token): ${testResult}`);
 
-    if (isNaN(OTP_DIGITS_FROM_CONFIG) || OTP_DIGITS_FROM_CONFIG <= 0) {
+    if (Number.isNaN(OTP_DIGITS_FROM_CONFIG) || OTP_DIGITS_FROM_CONFIG <= 0) {
         console.error(`[verifyOtpSetup] ERROR CRÍTICO: OTP_DIGITS_FROM_CONFIG no es un número válido (${OTP_DIGITS_FROM_CONFIG}). No se puede validar el token.`);
         return { success: false, error: "Error interno en la configuración de OTP. Contacte al administrador." };
     }

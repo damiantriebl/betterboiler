@@ -41,8 +41,8 @@ export async function getPettyCashMovements(
 
   let numericBranchId: number | null = null;
   if (branchId !== GENERAL_ACCOUNT_ID_MOVEMENTS) {
-    const parsed = parseInt(branchId, 10);
-    if (isNaN(parsed)) {
+    const parsed = Number.parseInt(branchId, 10);
+    if (Number.isNaN(parsed)) {
       console.error("getPettyCashMovements: branchId no es un número válido.");
       return [];
     }
@@ -107,7 +107,7 @@ export async function getPettyCashMovements(
     const formattedSpends: FormattedMovement[] = spends.map(s => {
       let userData: FormattedMovement['user'] = null;
       // s.withdrawal ahora solo tendrá userId y userName (si existen en el modelo y se seleccionaron)
-      if (s.withdrawal && s.withdrawal.userId) {
+      if (s.withdrawal?.userId) {
         userData = {
           id: s.withdrawal.userId,
           name: s.withdrawal.userName, // Puede ser null si no existe o no se seleccionó

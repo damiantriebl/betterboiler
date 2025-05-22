@@ -153,13 +153,13 @@ export default function ProfileForm({
             toast({ title: "Éxito", description: "Perfil actualizado correctamente" });
             initialProfileOriginalKey.current = form.getValues("profileOriginalKey");
             initialProfileCropKey.current = form.getValues("profileCropKey");
-            if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+            if (profileImagePreview?.startsWith('blob:')) {
                 const s3Key = form.getValues("profileCropKey") || form.getValues("profileOriginalKey");
                 if (s3Key) {
                     async function refreshPreviewFromS3() {
                         setIsLoadingPreview(true);
-                        const url = await getLogoUrl(s3Key!);
-                        setProfileImagePreview(url || s3Key!);
+                        const url = await getLogoUrl(s3Key as string);
+                        setProfileImagePreview(url || s3Key as string);
                         setIsLoadingPreview(false);
                     }
                     refreshPreviewFromS3();
@@ -176,12 +176,12 @@ export default function ProfileForm({
         const currentOriginalKey = form.getValues("profileOriginalKey");
         const s3KeyToLoad = currentCropKey || currentOriginalKey;
 
-        if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+        if (profileImagePreview?.startsWith('blob:')) {
             return;
         }
 
         if (s3KeyToLoad) {
-            if (profileImagePreview === s3KeyToLoad || (profileImagePreview && profileImagePreview.includes(encodeURIComponent(s3KeyToLoad)))) {
+            if (profileImagePreview === s3KeyToLoad || (profileImagePreview?.includes(encodeURIComponent(s3KeyToLoad)))) {
                 return;
             }
             setIsLoadingPreview(true);
@@ -200,7 +200,7 @@ export default function ProfileForm({
             if (isMounted) setProfileImagePreview(null);
         }
         return () => { isMounted = false; };
-    }, [form.watch("profileCropKey"), form.watch("profileOriginalKey")]);
+    }, [profileImagePreview, form]);
 
     return (
         <Card className="w-[600px]">

@@ -14,6 +14,14 @@ interface SessionResult {
   error?: string;
 }
 
+interface S3SignedUrlResponse {
+  success?: {
+    url: string;
+  };
+  error?: string;
+  message?: string;
+}
+
 export async function getOrganizationIdFromSession(): Promise<SessionResult> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -93,31 +101,22 @@ export async function getLogoUrl(input: string): Promise<string | null> { // Dev
   try {
     const res = await fetch(`/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`);
     
-    let data;
+    let data: S3SignedUrlResponse;
     try {
       data = await res.json();
     } catch (e) {
-      // Intentar leer el cuerpo como texto si el parseo JSON falla
-      let textResponse = "";
-      try {
-        textResponse = await res.text();
-      } catch (textError) {
-        console.error(`getLogoUrl: Error al leer la respuesta como texto después de fallo de JSON (para input: ${input})`, textError);
-      }
-      console.error(`getLogoUrl: API /api/s3/get-signed-url (para input: ${input}) no devolvió JSON válido. Status: ${res.status}. Respuesta: ${textResponse.substring(0, 200)}...`);
-      return null; // Devuelve null en caso de error de parseo JSON
+      console.error("Error parsing JSON from S3 signed URL response (getOrganizationIdFromSession):", e);
+      return null; 
     }
 
-    if (res.ok && data && data.success?.url) {
+    if (data.success?.url) {
       urlCache.set(input, data.success.url);
       return data.success.url;
     }
-    
-    // Si res no está ok, o data no tiene la estructura esperada.
-    const errorMessage = data?.failure || `Fallo al obtener URL firmada (HTTP ${res.status})`;
-    console.error(`getLogoUrl: Error tras llamar a API (para input: ${input}): ${errorMessage}`, data);
-    return null; // Devuelve null si la API no fue exitosa o no devolvió la URL
-
+    console.error(
+      `Error fetching signed URL for logo ${input} (getOrganizationIdFromSession): ${data.error || data.message || 'Unknown error from S3 API'}`,
+    );
+    return null;
   } catch (error) {
     // Este catch es para errores inesperados durante el fetch mismo (ej. red)
     console.error(`getLogoUrl: Error de fetch para input: ${input}:`, error);

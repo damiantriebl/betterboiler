@@ -1,5 +1,5 @@
 "use client";
-import { fetchImageAsBase64 } from "@/actions/fetchImageAsBase64";
+import { fetchImageAsBase64 } from "@/actions/fetch-Image-As-Base64";
 import { getLogoUrl } from "@/components/custom/OrganizationLogo";
 import type { QuotePDFProps } from "@/types/quote";
 import { useEffect, useState } from "react";

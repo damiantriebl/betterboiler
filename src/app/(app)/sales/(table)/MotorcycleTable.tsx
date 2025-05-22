@@ -20,20 +20,13 @@ import { useToast } from "@/hooks/use-toast";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import { estadoVentaConfig } from "@/types/motorcycle";
 import type {
-  MotorcycleWithActions,
   MotorcycleWithFullDetails,
-  ReservationUpdate,
   ReservationWithDetails,
 } from "@/types/motorcycle";
 import {
-  type Brand,
   type Client,
-  type Model,
-  type MotoColor,
   type Motorcycle,
   MotorcycleState,
-  type Reservation,
-  type Branch,
   type CurrentAccount,
 } from "@prisma/client";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
@@ -52,7 +45,7 @@ import PaginationControl from "./PaginationControl";
 // Definición de Props para MotorcycleTable
 interface MotorcycleTableProps {
   initialData: MotorcycleWithFullDetails[];
-  clients: any[]; // DEUDA TÉCNICA: Usar un tipo más específico o el Client de Prisma y ajustar el origen.
+  clients: Client[];
   activePromotions: BankingPromotionDisplay[];
   onInitiateSale?: (motorcycle: MotorcycleWithFullDetails) => void; // Añadida prop opcional para iniciar venta
 }
@@ -661,12 +654,12 @@ export default function MotorcycleTable({
             paginatedData.map((moto) => (
               <MotorcycleRow
                 key={moto.id}
-                moto={moto as any}
-                onAction={handleAction as any}
+                moto={moto}
+                onAction={handleAction}
                 onToggleStatus={handleToggleStatus}
                 onCancelProcess={handleCancelProcess}
                 onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                onRowDoubleClick={handleOpenDetailModal as any}
+                onRowDoubleClick={handleOpenDetailModal}
                 isPending={isPending}
               >
                 {visibleColumns.includes("brandModel") && (
@@ -716,23 +709,21 @@ export default function MotorcycleTable({
                   </TableCell>
                 )}
                 {visibleColumns.includes("actions") && (
-                  <TableCell>
-                    <div className="flex items-center justify-end">
-                      <ActionButtons
-                        moto={moto as any}
-                        onAction={handleAction as any}
-                        onToggleStatus={handleToggleStatus}
-                        onCancelProcess={handleCancelProcess}
-                        onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                      />
-                      <ActionMenu
-                        moto={moto as any}
-                        onAction={handleAction as any}
-                        onToggleStatus={handleToggleStatus}
-                        onCancelProcess={handleCancelProcess}
-                        onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                      />
-                    </div>
+                  <TableCell className="text-right print:hidden">
+                    <ActionButtons
+                      moto={moto}
+                      onAction={handleAction}
+                      onToggleStatus={handleToggleStatus}
+                      onCancelProcess={handleCancelProcess}
+                      onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
+                    />
+                    <ActionMenu
+                      moto={moto}
+                      onAction={handleAction}
+                      onToggleStatus={handleToggleStatus}
+                      onCancelProcess={handleCancelProcess}
+                      onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
+                    />
                   </TableCell>
                 )}
               </MotorcycleRow>

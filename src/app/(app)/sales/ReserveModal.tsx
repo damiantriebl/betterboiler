@@ -2,7 +2,7 @@
 
 import { getPaymentMethodsAction } from "@/actions/payment-methods/get-payment-methods-action";
 import { createReservation } from "@/actions/sales/create-reservation"; // Will be used for non-current-account for now
-import type { Client } from "@/app/(app)/clients/columns"; // Assuming this is Client from Prisma or a compatible type
+import type { Client, CurrentAccount, PaymentMethod } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CurrentAccount, PaymentMethod } from "@prisma/client";
 import { useEffect, useState } from "react";
 import { CurrentAccountPaymentForm } from "./components/CurrentAccountPaymentForm";
 

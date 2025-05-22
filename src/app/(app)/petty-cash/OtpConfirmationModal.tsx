@@ -43,7 +43,9 @@ export default function OtpConfirmationModal({
             timerRef.current = setInterval(() => {
                 setTimeLeft((prevTime) => {
                     if (prevTime <= 1) {
-                        clearInterval(timerRef.current!);
+                        if (timerRef.current) {
+                            clearInterval(timerRef.current);
+                        }
                         return 0;
                     }
                     return prevTime - 1;

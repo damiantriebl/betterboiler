@@ -208,13 +208,13 @@ const WithdrawForm = ({ depositId, onSubmitAction, onClose, users, organizationI
                                                 if (val === "") {
                                                     field.onChange(0);
                                                 } else {
-                                                    const numericValue = parseFloat(val);
-                                                    field.onChange(isNaN(numericValue) ? val : numericValue);
+                                                    const numericValue = Number.parseFloat(val);
+                                                    field.onChange(Number.isNaN(numericValue) ? val : numericValue);
                                                 }
                                             }}
                                             onBlur={e => {
-                                                let numericValue = parseFloat(String(field.value));
-                                                if (isNaN(numericValue)) {
+                                                let numericValue = Number.parseFloat(String(field.value));
+                                                if (Number.isNaN(numericValue)) {
                                                     numericValue = 0;
                                                 } else if (numericValue < 100 && numericValue !== 0) {
                                                     numericValue = 100;

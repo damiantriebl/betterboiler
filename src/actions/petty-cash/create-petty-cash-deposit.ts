@@ -17,14 +17,14 @@ const GENERAL_ACCOUNT_VALUE = "__general__"; // Make sure this is defined or imp
 const formDataSchema = z.object({
     description: z.string().min(1, "La descripción es requerida."),
     amount: z.preprocess(
-        (a) => parseFloat(z.string({required_error: "El monto es requerido."}).trim().parse(a)),
+        (a) => Number.parseFloat(z.string({required_error: "El monto es requerido."}).trim().parse(a)),
         z.number({invalid_type_error: "El monto debe ser un número."}).positive("El monto debe ser positivo.")
     ),
     date: z.preprocess(
         (d) => {
             const parsedDate = new Date(z.string({required_error: "La fecha es requerida."}).trim().parse(d));
             // Check if the date is valid after parsing
-            if (isNaN(parsedDate.getTime())) {
+            if (Number.isNaN(parsedDate.getTime())) {
                 throw new Error("Fecha inválida.");
             }
             return parsedDate;
@@ -45,7 +45,7 @@ export async function createPettyCashDeposit(
   const org = await getOrganizationIdFromSession();
   const organizationIdFromSession = org.organizationId;
 
-  let effectiveOrganizationId: string | null = organizationIdFromForm || organizationIdFromSession;
+  const effectiveOrganizationId: string | null = organizationIdFromForm || organizationIdFromSession;
 
   if (!effectiveOrganizationId) {
     return { 
@@ -82,8 +82,8 @@ export async function createPettyCashDeposit(
 
   let branchIdForDb: number | null = null;
   if (rawBranchId && rawBranchId !== GENERAL_ACCOUNT_VALUE) {
-    const parsedBranchId = parseInt(rawBranchId, 10);
-    if (!isNaN(parsedBranchId)) {
+    const parsedBranchId = Number.parseInt(rawBranchId, 10);
+    if (!Number.isNaN(parsedBranchId)) {
       branchIdForDb = parsedBranchId;
     } else {
       // Handle error: branchId is present but not a valid number and not GENERAL_ACCOUNT_VALUE

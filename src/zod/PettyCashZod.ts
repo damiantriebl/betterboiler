@@ -16,12 +16,12 @@ export const pettyCashWithdrawalStatusEnum = z.enum([
 // --- Deposit Schemas ---
 export const createPettyCashDepositSchema = z.object({
   amount: z.preprocess(
-    (val) => typeof val === 'string' ? parseFloat(val) : val,
+    (val) => typeof val === 'string' ? Number.parseFloat(val) : val,
     z.number({ invalid_type_error: "El monto debe ser un número." }).positive("El monto debe ser positivo.")
   ),
   date: z.preprocess(
     (arg) => {
-      if (typeof arg == "string" || arg instanceof Date) return new Date(arg);
+      if (typeof arg === "string" || arg instanceof Date) return new Date(arg);
     },
     z.date({ required_error: "La fecha es requerida.", invalid_type_error: "Formato de fecha inválido." })
   ),

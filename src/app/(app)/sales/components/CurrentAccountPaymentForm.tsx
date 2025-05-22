@@ -218,7 +218,7 @@ export function CurrentAccountPaymentForm({
     const sessionInfo = await getOrganizationIdFromSession();
     if (sessionInfo.error || !sessionInfo.organizationId) {
       setGeneralError(sessionInfo.error || "No se pudo obtener el ID de la organización. Intente nuevamente.");
-      setError("organizationId" as any, { message: sessionInfo.error || "Organization ID es requerido." }); // Añadir error al campo si existe
+      // setError("organizationId" as any, { message: sessionInfo.error || "Organization ID es requerido." }); // Comentado o eliminado
       setActionIsLoading(false);
       return;
     }

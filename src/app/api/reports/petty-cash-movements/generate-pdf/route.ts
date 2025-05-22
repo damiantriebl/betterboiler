@@ -1,18 +1,19 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { renderToStream } from "@react-pdf/renderer";
-import PettyCashActivityReportPDF from "@/components/custom/reports/PettyCashActivityReportPDF";
+import { renderToStream, renderToBuffer, Font } from "@react-pdf/renderer";
+import PettyCashActivityReportPDF from '@/components/custom/reports/PettyCashActivityReportPDF';
 import type { ReportDataForPdf } from "@/types/PettyCashActivity";
-import React, { type ReactElement, type JSXElementConstructor } from 'react';
+import React, { type ReactElement } from 'react';
 import prisma from "@/lib/prisma";
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import type { PettyCashActivityReportPDFProps } from '@/types/PettyCashActivity';
 
 // branchId puede ser un string (ID numérico o "general_account") o no estar definido.
 const querySchema = z.object({
-    fromDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    fromDate: z.string().refine((val) => !Number.isNaN(Date.parse(val)), {
         message: "fromDate debe ser una fecha válida",
     }),
-    toDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    toDate: z.string().refine((val) => !Number.isNaN(Date.parse(val)), {
         message: "toDate debe ser una fecha válida",
     }),
     branchId: z.string().optional(), // Sigue siendo opcional
@@ -50,8 +51,8 @@ export async function GET(request: Request) {
             branchCondition = { branchId: null };
         } else {
             // Asumimos que cualquier otro string es un ID numérico válido para parsear
-            const parsedBranchId = parseInt(branchId, 10);
-            if (!isNaN(parsedBranchId)) {
+            const parsedBranchId = Number.parseInt(branchId, 10);
+            if (!Number.isNaN(parsedBranchId)) {
                 branchCondition = { branchId: parsedBranchId };
             } else {
                 // Si no es "general_account" y no es un número parseable, podría ser un error o ignorarlo.
@@ -89,16 +90,16 @@ export async function GET(request: Request) {
         }) as ReportDataForPdf[]; 
 
         if (!pettyCashDeposits || pettyCashDeposits.length === 0) {
-            const pdfDocProps = { 
-                data: [], 
-                fromDate: startDate, 
-                toDate: new Date(toDate) 
+            const pdfDocProps = {
+                data: [],
+                fromDate: startDate,
+                toDate: new Date(toDate)
             };
-            const pdfDoc = React.createElement(PettyCashActivityReportPDF, pdfDocProps as any); 
+            const pdfDoc = React.createElement(PettyCashActivityReportPDF, pdfDocProps as PettyCashActivityReportPDFProps);
 
-            const stream = await renderToStream(pdfDoc as ReactElement<any, string | JSXElementConstructor<any>>); 
-    
-            return new NextResponse(stream as any, {
+            const pdfBuffer = await renderToBuffer(pdfDoc as ReactElement<typeof PettyCashActivityReportPDF>);
+
+            return new NextResponse(Buffer.from(pdfBuffer).buffer, {
                 headers: {
                     "Content-Type": "application/pdf",
                     "Content-Disposition": `attachment; filename="reporte_actividad_caja_chica_vacio.pdf"`,
@@ -106,19 +107,19 @@ export async function GET(request: Request) {
             });
         }
         
-        const pdfDocPropsFilled = { 
-            data: pettyCashDeposits, 
-            fromDate: startDate, 
-            toDate: new Date(toDate) 
+        const pdfDocPropsFilled = {
+            data: pettyCashDeposits,
+            fromDate: startDate,
+            toDate: new Date(toDate)
         };
-        const pdfDoc = React.createElement(PettyCashActivityReportPDF, pdfDocPropsFilled as any);
+        const pdfDoc = React.createElement(PettyCashActivityReportPDF, pdfDocPropsFilled as PettyCashActivityReportPDFProps);
 
-        const stream = await renderToStream(pdfDoc as ReactElement<any, string | JSXElementConstructor<any>>);
+        const pdfBuffer = await renderToBuffer(pdfDoc as ReactElement<typeof PettyCashActivityReportPDF>);
 
         const safeFromDate = startDate.toISOString().split('T')[0];
         const safeToDate = new Date(toDate).toISOString().split('T')[0];
 
-        return new NextResponse(stream as any, {
+        return new NextResponse(Buffer.from(pdfBuffer).buffer, {
             headers: {
                 "Content-Type": "application/pdf",
                 "Content-Disposition": `attachment; filename="reporte_actividad_caja_chica_${safeFromDate}_a_${safeToDate}.pdf"`,

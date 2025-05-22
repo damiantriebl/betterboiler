@@ -51,8 +51,8 @@ export async function deletePettyCashWithdrawal(
 
             const OTP_ISSUER = process.env.OTP_ISSUER || "Apex Software";
             const OTP_ALGORITHM = process.env.OTP_ALGORITHM || "SHA1";
-            const OTP_DIGITS_FROM_CONFIG = parseInt(process.env.OTP_DIGITS || "6", 10);
-            const OTP_PERIOD = parseInt(process.env.OTP_PERIOD || "120", 10);
+            const OTP_DIGITS_FROM_CONFIG = Number.parseInt(process.env.OTP_DIGITS || "6", 10);
+            const OTP_PERIOD = Number.parseInt(process.env.OTP_PERIOD || "120", 10);
 
             const tokenRegex = new RegExp(`^\\d{${OTP_DIGITS_FROM_CONFIG}}$`);
             if (!tokenRegex.test(otpToken)) {

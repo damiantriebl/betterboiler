@@ -32,8 +32,8 @@ export async function depositPettyCash({
 
   let actualBranchIdForDb: number | null = null;
   if (branchIdReceived !== GENERAL_ACCOUNT_ID_DEPOSIT) {
-    const parsedBranchId = parseInt(branchIdReceived, 10);
-    if (isNaN(parsedBranchId)) {
+    const parsedBranchId = Number.parseInt(branchIdReceived, 10);
+    if (Number.isNaN(parsedBranchId)) {
       throw new Error("Branch ID inválido.");
     }
     actualBranchIdForDb = parsedBranchId;

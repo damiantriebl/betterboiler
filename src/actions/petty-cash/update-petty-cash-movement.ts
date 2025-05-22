@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { UpdatePettyCashMovementSchema, type UpdatePettyCashMovementFormValues } from "@/zod/pettyCashSchema";
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 interface UpdatePettyCashMovementResult {
     success: boolean;

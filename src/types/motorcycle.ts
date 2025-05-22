@@ -6,7 +6,7 @@ import {
   type Motorcycle,
   MotorcycleState,
   type Reservation,
-  type Sucursal,
+  type Branch,
 } from "@prisma/client";
 
 export interface ModelFileWithUrl {
@@ -43,7 +43,7 @@ export interface MotorcycleWithDetails extends Motorcycle {
         files?: ModelFileWithUrl[];
       })
     | null;
-  branch?: Sucursal | null;
+  branch?: Branch | null;
   color?: MotoColor | null;
   reservations?: ReservationWithDetails[];
   reservation?: ReservationWithDetails | null;

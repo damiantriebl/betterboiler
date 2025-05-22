@@ -1,10 +1,28 @@
 'use server';
 
+import { auth } from "@/auth";
+
 // Definición de urlCache a nivel de módulo, específica para getLogoUrl
 const urlCache = new Map<string, string>();
 
+const GENERAL_ACCOUNT_ID_LOGO_URL = "GENERAL_ACCOUNT";
+
+interface S3SignedUrlResponse {
+  success?: {
+    url: string;
+  };
+  error?: string;
+  message?: string;
+}
+
 // Modificada para devolver null en caso de error en lugar de lanzar excepciones
 export async function getLogoUrl(input: string): Promise<string | null> { // Devuelve string | null
+  const session = await auth.api.getSession({
+    headers: {
+      // ... existing code ...
+    }
+  });
+
   if (!input) {
     console.error("getLogoUrl: No logo input provided");
     return null; // Devuelve null si no hay input
@@ -21,30 +39,24 @@ export async function getLogoUrl(input: string): Promise<string | null> { // Dev
   try {
     const res = await fetch(`/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`);
     
-    let data;
+    let data: S3SignedUrlResponse;
     try {
       data = await res.json();
     } catch (e) {
-      // Intentar leer el cuerpo como texto si el parseo JSON falla
-      let textResponse = "";
-      try {
-        textResponse = await res.text();
-      } catch (textError) {
-        console.error(`getLogoUrl: Error al leer la respuesta como texto después de fallo de JSON (para input: ${input})`, textError);
-      }
-      console.error(`getLogoUrl: API /api/s3/get-signed-url (para input: ${input}) no devolvió JSON válido. Status: ${res.status}. Respuesta: ${textResponse.substring(0, 200)}...`);
-      return null; // Devuelve null en caso de error de parseo JSON
+      console.error("Error parsing JSON from S3 signed URL response:", e);
+      return null;
     }
 
-    if (res.ok && data && data.success?.url) {
+    if (data.success?.url) {
       urlCache.set(input, data.success.url);
       return data.success.url;
     }
     
-    // Si res no está ok, o data no tiene la estructura esperada.
-    const errorMessage = data?.failure || `Fallo al obtener URL firmada (HTTP ${res.status})`;
-    console.error(`getLogoUrl: Error tras llamar a API (para input: ${input}): ${errorMessage}`, data);
-    return null; // Devuelve null si la API no fue exitosa o no devolvió la URL
+    // Usar data.error o data.message si existen, en lugar de data.failure
+    console.error(
+      `Error fetching signed URL for ${input}: ${data.error || data.message || 'Unknown error from S3 API'}`,
+    );
+    return null;
 
   } catch (error) {
     // Este catch es para errores inesperados durante el fetch mismo (ej. red)

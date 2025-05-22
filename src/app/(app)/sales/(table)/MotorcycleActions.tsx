@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
+import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 
 // Definición de colores y estilos para los botones
 const actionConfig = {
@@ -44,8 +45,8 @@ export interface MotorcycleWithActions {
 }
 
 interface MotorcycleActionButtonsProps {
-  moto: MotorcycleWithActions;
-  onAction: (action: "vender" | "reservar" | "eliminarLogico", moto: MotorcycleWithActions) => void;
+  moto: MotorcycleWithFullDetails;
+  onAction: (action: "vender" | "reservar" | "eliminarLogico", moto: MotorcycleWithFullDetails) => void;
   onToggleStatus: (motoId: number, currentStatus: MotorcycleState) => void;
   onCancelProcess: (motoId: number) => void;
   onNavigateToDetail: (motoId: string) => void;

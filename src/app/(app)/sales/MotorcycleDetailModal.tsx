@@ -517,7 +517,7 @@ function PaymentQuoteSimulator({
                           name: "discountType",
                           value: checked ? "discount" : "surcharge",
                         },
-                      } as any)
+                      } as React.ChangeEvent<HTMLInputElement>)
                     }
                   />
                   <Label
@@ -978,8 +978,20 @@ export function MotorcycleDetailModal({
     );
   };
 
-  // Wrapper para evitar pasar null en organizationName
-  const handleExportPDF = (pdfProps: any) => {
+  const handleExportPDF = (pdfProps: {
+    motorcycle: MotorcycleWithDetails | null;
+    paymentData: PaymentData;
+    activeTab: string;
+    basePrice: number;
+    modifierAmount: number;
+    finalPrice: number;
+    financedAmount: number;
+    installmentDetails: InstallmentDetails;
+    totalWithFinancing: number;
+    formatAmount: (amount: number) => string;
+    organizationLogoUrl?: string | null;
+    organizationName?: string | null;
+  }) => {
     setQuotePdfProps({
       ...pdfProps,
       organizationName: pdfProps.organizationName || undefined,
@@ -993,7 +1005,7 @@ export function MotorcycleDetailModal({
           <DialogHeader className="pr-10">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-bold">Detalles de la Moto</DialogTitle>
-              {userImage && userImage.startsWith("data:image") && (
+              {userImage?.startsWith("data:image") && (
                 <div className="flex items-center gap-2">
                   <img
                     src={userImage}

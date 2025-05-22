@@ -6,9 +6,9 @@ import {
 } from "@/actions";
 import PettyCashClientPage from "./PettyCashClientPage";
 import type { Branch } from "@prisma/client";
-import { getSessionDetails } from "@/actions/getSessionDetails";
 import { getBranchesForOrganizationAction } from "@/actions/get-Branches-For-Organization-Action";
 import { getUsersForOrganizationAction } from "@/actions/get-Users-For-Organization-Action";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 
 // La definición del tipo User se puede mover a un archivo global /types/User.ts
 // y ser importada tanto aquí como en getUsersForOrganizationAction.ts y en PettyCashClientPage.tsx
@@ -20,13 +20,13 @@ interface User {
 }
 
 export default async function PettyCashDataFetcher() {
-    const sessionDetails = await getSessionDetails();
+    const org = await getOrganizationIdFromSession();
 
-    if (sessionDetails.error || !sessionDetails.organizationId) {
-        return <p className="p-4 text-red-600">Error: {sessionDetails.error || "Usuario no autenticado o sin organización."}</p>;
+    if (org.error || !org.organizationId) {
+        return <p className="p-4 text-red-600">Error: {org.error || "Usuario no autenticado o sin organización."}</p>;
     }
 
-    const organizationId = sessionDetails.organizationId;
+    const organizationId = org.organizationId;
 
     const { data: pettyCashData, error: pettyCashError } = await getPettyCashData();
 

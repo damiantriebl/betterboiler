@@ -111,7 +111,7 @@ export default function SecuritySettings() {
     const handleVerifyOtp = () => {
         if (otpToken.length === 6) {
             startTransition(() => {
-                verifyAction(parseInt(otpToken, 10));
+                verifyAction(Number.parseInt(otpToken, 10));
             });
         }
     };

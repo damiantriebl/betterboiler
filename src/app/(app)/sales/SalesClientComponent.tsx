@@ -238,7 +238,7 @@ export default function SalesClientComponent({
           motorcycleId={selectedMotorcycle.id}
           motorcycleName={selectedMotorcycle.name}
           motorcyclePrice={selectedMotorcycle.retailPrice}
-          clients={clients as any}
+          clients={clients}
           onSaleProcessCompleted={handleSaleCompletion}
         />
       )}

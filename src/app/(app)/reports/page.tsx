@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOrganization } from "@/hooks/use-organization";
-import type { ReportFilters } from "@/types/reports";
 import type {
   InventoryStatusReport,
   ReservationsReport as ReservationsReportType,
@@ -91,43 +90,37 @@ export default function ReportsPage() {
   });
   const [isPettyCashReportLoading, setIsPettyCashReportLoading] = useState(false);
 
-  const getDateRangeFromPreset = (preset: string): DateRange | undefined => {
-    const now = new Date();
-    switch (preset) {
-      case "today":
-        return { from: startOfDay(now), to: endOfDay(now) };
-      case "currentMonth":
-        return { from: startOfMonth(now), to: endOfMonth(now) };
-      case "lastMonth":
-        const lastMonthStart = startOfMonth(subMonths(now, 1));
-        const lastMonthEnd = endOfMonth(subMonths(now, 1));
-        return { from: lastMonthStart, to: lastMonthEnd };
-      case "ytd":
-        return { from: startOfYear(now), to: endOfDay(now) };
-      case "lastYear":
-        const lastYearStart = startOfYear(subYears(now, 1));
-        const lastYearEnd = endOfYear(subYears(now, 1));
-        return { from: lastYearStart, to: lastYearEnd };
-      case "custom":
-        return customDateRange;
-      default:
-        return undefined;
+  const now = new Date();
+  const dateRangePresets: Record<string, DateRange> = {
+    today: { from: startOfDay(now), to: endOfDay(now) },
+    currentMonth: { from: startOfMonth(now), to: endOfMonth(now) },
+    lastMonth: {
+      from: startOfMonth(subMonths(now, 1)),
+      to: endOfMonth(subMonths(now, 1))
+    },
+    ytd: { from: startOfYear(now), to: endOfDay(now) },
+    lastYear: {
+      from: startOfYear(subYears(now, 1)),
+      to: endOfYear(subYears(now, 1))
     }
   };
 
-  const updateDateFilters = (newPreset: string) => {
-    setSelectedDateRange(newPreset);
-    const newDateRange = getDateRangeFromPreset(newPreset);
+  const getDateRangeFromPreset = (rangeKey: string): DateRange | undefined => {
+    if (rangeKey === "custom") {
+      return customDateRange;
+    }
+    return dateRangePresets[rangeKey];
+  };
+
+  const updateDateFilters = (rangeKey: string) => {
+    setSelectedDateRange(rangeKey);
+    const newDateRange = getDateRangeFromPreset(rangeKey);
     setFilters(prev => ({ ...prev, dateRange: newDateRange }));
     setPettyCashFilters(prev => ({ ...prev, dateRange: newDateRange }));
-    if (newPreset !== 'custom') {
+    if (rangeKey !== 'custom') {
       setCustomDateRange(undefined);
     }
   };
-
-  useEffect(() => {
-    updateDateFilters(selectedDateRange);
-  }, []);
 
   useEffect(() => {
     const loadBranches = () => {
@@ -844,17 +837,12 @@ export default function ReportsPage() {
 
               {selectedDateRange === "custom" && (
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <span className="block text-sm font-medium text-gray-700 mb-1">
                     Seleccione Rango Personalizado
-                  </label>
+                  </span>
                   <DatePickerWithRange
                     value={customDateRange}
-                    onChange={(range) => {
-                      setCustomDateRange(range);
-                      if (selectedDateRange === "custom") {
-                        setPettyCashFilters(prev => ({ ...prev, dateRange: range }));
-                      }
-                    }}
+                    onChange={setCustomDateRange}
                   />
                 </div>
               )}

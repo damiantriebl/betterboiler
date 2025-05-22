@@ -7,7 +7,16 @@ import { useState, useEffect } from "react";
 import AvatarUser from "@/components/custom/AvatarUser";
 
 export default function DevToolsDebug() {
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        userName: string | null;
+        userEmail: string | null;
+        userImage: string | null;
+        userRole: string | null;
+        userId: string | null;
+        organizationName: string | null;
+        organizationLogo: string | null;
+        organizationId: string | null;
+    }>({
         userName: "",
         userEmail: "",
         userImage: "",
@@ -26,20 +35,20 @@ export default function DevToolsDebug() {
     // Inicializar el formulario con los datos actuales del store
     useEffect(() => {
         setFormData({
-            userName: storeData.userName || "",
-            userEmail: storeData.userEmail || "",
-            userImage: storeData.userImage || "",
-            userRole: storeData.userRole || "",
-            userId: storeData.userId || "",
-            organizationName: storeData.organizationName || "",
-            organizationLogo: storeData.organizationLogo || "",
-            organizationId: storeData.organizationId || ""
+            userName: storeData.userName || null,
+            userEmail: storeData.userEmail || null,
+            userImage: storeData.userImage || null,
+            userRole: storeData.userRole || null,
+            userId: storeData.userId || null,
+            organizationName: storeData.organizationName || null,
+            organizationLogo: storeData.organizationLogo || null,
+            organizationId: storeData.organizationId || null
         });
     }, [storeData]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => ({ ...prev, [name]: value || null }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -47,7 +56,7 @@ export default function DevToolsDebug() {
 
         // Convertir valores vacíos a null o undefined para la store
         const sessionUpdate = Object.entries(formData).reduce((acc, [key, value]) => {
-            acc[key as keyof typeof formData] = value || null;
+            acc[key as keyof typeof formData] = value;
             return acc;
         }, {} as typeof formData);
 
@@ -71,50 +80,55 @@ export default function DevToolsDebug() {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <h3 className="text-lg font-medium">Datos de Usuario</h3>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">ID de Usuario</label>
+                                <label htmlFor="userId" className="text-sm font-medium">ID de Usuario</label>
                                 <Input
+                                    id="userId"
                                     name="userId"
-                                    value={formData.userId}
+                                    value={formData.userId || ""}
                                     onChange={handleInputChange}
                                     placeholder="ID de usuario"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Nombre de Usuario</label>
+                                <label htmlFor="userName" className="text-sm font-medium">Nombre de Usuario</label>
                                 <Input
+                                    id="userName"
                                     name="userName"
-                                    value={formData.userName}
+                                    value={formData.userName || ""}
                                     onChange={handleInputChange}
                                     placeholder="Nombre completo"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Email</label>
+                                <label htmlFor="userEmail" className="text-sm font-medium">Email</label>
                                 <Input
+                                    id="userEmail"
                                     name="userEmail"
-                                    value={formData.userEmail}
+                                    value={formData.userEmail || ""}
                                     onChange={handleInputChange}
                                     placeholder="Email"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Imagen de Usuario</label>
+                                <label htmlFor="userImage" className="text-sm font-medium">Imagen de Usuario</label>
                                 <Input
+                                    id="userImage"
                                     name="userImage"
-                                    value={formData.userImage}
+                                    value={formData.userImage || ""}
                                     onChange={handleInputChange}
                                     placeholder="URL de imagen de usuario"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Rol de Usuario</label>
+                                <label htmlFor="userRole" className="text-sm font-medium">Rol de Usuario</label>
                                 <Input
+                                    id="userRole"
                                     name="userRole"
-                                    value={formData.userRole}
+                                    value={formData.userRole || ""}
                                     onChange={handleInputChange}
                                     placeholder="Rol (admin, user, etc.)"
                                 />
@@ -122,30 +136,33 @@ export default function DevToolsDebug() {
 
                             <h3 className="text-lg font-medium pt-2">Datos de Organización</h3>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">ID de Organización</label>
+                                <label htmlFor="organizationId" className="text-sm font-medium">ID de Organización</label>
                                 <Input
+                                    id="organizationId"
                                     name="organizationId"
-                                    value={formData.organizationId}
+                                    value={formData.organizationId || ""}
                                     onChange={handleInputChange}
                                     placeholder="ID de organización"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Nombre de Organización</label>
+                                <label htmlFor="organizationName" className="text-sm font-medium">Nombre de Organización</label>
                                 <Input
+                                    id="organizationName"
                                     name="organizationName"
-                                    value={formData.organizationName}
+                                    value={formData.organizationName || ""}
                                     onChange={handleInputChange}
                                     placeholder="Nombre de organización"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Logo URL</label>
+                                <label htmlFor="organizationLogo" className="text-sm font-medium">Logo URL</label>
                                 <Input
+                                    id="organizationLogo"
                                     name="organizationLogo"
-                                    value={formData.organizationLogo}
+                                    value={formData.organizationLogo || ""}
                                     onChange={handleInputChange}
                                     placeholder="URL de imagen de logo"
                                 />

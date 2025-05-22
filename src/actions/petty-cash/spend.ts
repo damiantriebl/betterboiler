@@ -1,7 +1,8 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client"; // No importar PettyCashAccount directamente si causa error
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import type { PettyCashAccount } from "@/types/PettyCashAccount";
 
 const GENERAL_ACCOUNT_ID_ACTION_SPEND = "GENERAL_ACCOUNT"; // Constante para la caja general
 
@@ -39,15 +40,15 @@ export async function spendPettyCash({
 
   let actualBranchIdForDb: number | null = null;
   if (branchIdContext !== GENERAL_ACCOUNT_ID_ACTION_SPEND) {
-    const parsedBranchId = parseInt(branchIdContext, 10);
-    if (isNaN(parsedBranchId)) {
+    const parsedBranchId = Number.parseInt(branchIdContext, 10);
+    if (Number.isNaN(parsedBranchId)) {
       throw new Error("Branch ID inválido para el gasto.");
     }
     actualBranchIdForDb = parsedBranchId;
   }
 
   try {
-    let pettyCashAccount;
+    let pettyCashAccount: PettyCashAccount | null;
     if (actualBranchIdForDb === null) {
       pettyCashAccount = await prisma.pettyCashAccount.findFirst({
         where: {

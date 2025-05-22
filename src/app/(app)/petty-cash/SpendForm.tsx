@@ -35,8 +35,8 @@ import React, { useEffect, useActionState, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { createPettyCashSpendSchema as zodGlobalSchema } from "@/zod/PettyCashZod";
 import { z } from "zod";
-import { CreatePettyCashSpendState } from "@/types/action-states";
-import { type PettyCashSpend } from "@prisma/client";
+import type { CreatePettyCashSpendState } from "@/types/action-states";
+import type { PettyCashSpend } from "@prisma/client";
 import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement";
 import { UpdatePettyCashMovementSchema, type UpdatePettyCashMovementFormValues } from "@/zod/pettyCashSchema";
 
@@ -186,7 +186,7 @@ export default function SpendForm({
     let ticketErrorMessage: string | null = null;
     if (form.formState.errors.root?.serverError?.message) {
         ticketErrorMessage = form.formState.errors.root.serverError.message;
-    } else if (state.errors && state.errors.ticketFile) {
+    } else if (state.errors?.ticketFile) {
         if (Array.isArray(state.errors.ticketFile)) {
             ticketErrorMessage = state.errors.ticketFile.join(", ");
         } else {
@@ -284,13 +284,13 @@ export default function SpendForm({
                                                 if (val === "") {
                                                     field.onChange(0);
                                                 } else {
-                                                    const numericValue = parseFloat(val);
-                                                    field.onChange(isNaN(numericValue) ? val : numericValue);
+                                                    const numericValue = Number.parseFloat(val);
+                                                    field.onChange(Number.isNaN(numericValue) ? val : numericValue);
                                                 }
                                             }}
                                             onBlur={e => {
-                                                let numericValue = parseFloat(String(field.value));
-                                                if (isNaN(numericValue)) {
+                                                let numericValue = Number.parseFloat(String(field.value));
+                                                if (Number.isNaN(numericValue)) {
                                                     numericValue = 0;
                                                 } else if (numericValue < 100 && numericValue !== 0) {
                                                     numericValue = 100;

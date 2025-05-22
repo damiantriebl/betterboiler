@@ -16,8 +16,8 @@ import OtpConfirmationModal from "./OtpConfirmationModal";
 
 import type { PettyCashData } from "@/actions/petty-cash/get-petty-cash-data";
 import {
-    createPettyCashDeposit,
-    createPettyCashWithdrawal,
+    type createPettyCashDeposit,
+    type createPettyCashWithdrawal,
     deletePettyCashMovement,
     deletePettyCashWithdrawal,
     deletePettyCashDeposit,
@@ -42,6 +42,12 @@ type ItemToDelete = {
     type: 'deposit' | 'withdrawal' | 'spend';
     name?: string;
 };
+
+interface ActionResult {
+    success: boolean;
+    error?: string;
+    message?: string;
+}
 
 export default function PettyCashClientPage({
     initialPettyCashData,
@@ -140,7 +146,7 @@ export default function PettyCashClientPage({
     const performDelete = async (id: string, type: ItemToDelete['type'], otpToken?: string) => {
         setIsProcessingDelete(true);
         try {
-            let result;
+            let result: ActionResult | undefined;
             switch (type) {
                 case 'spend':
                     result = await deletePettyCashMovement({ movementId: id, otpToken });

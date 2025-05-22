@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import type { WithdrawPettyCashFormValues } from "@/zod/pettyCashSchema"; // Importar el tipo del formulario Zod
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session"; // Importar
+import type { PettyCashAccount } from "@/types/PettyCashAccount";
 
 const GENERAL_ACCOUNT_ID_ACTION_WITHDRAW = "GENERAL_ACCOUNT";
 
@@ -38,15 +39,15 @@ export async function withdrawPettyCash({
 
   let actualBranchIdForDb: number | null = null;
   if (branchIdContext !== GENERAL_ACCOUNT_ID_ACTION_WITHDRAW) {
-    const parsedBranchId = parseInt(branchIdContext, 10);
-    if (isNaN(parsedBranchId)) {
+    const parsedBranchId = Number.parseInt(branchIdContext, 10);
+    if (Number.isNaN(parsedBranchId)) {
       return { success: false, error: "Branch ID inválido para el retiro." };
     }
     actualBranchIdForDb = parsedBranchId;
   }
 
   try {
-    let pettyCashAccount;
+    let pettyCashAccount: PettyCashAccount | null;
     if (actualBranchIdForDb === null) {
       pettyCashAccount = await prisma.pettyCashAccount.findFirst({
         where: {
