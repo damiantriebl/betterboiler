@@ -25,7 +25,7 @@ export default function ConfirmMotorcycleStep({
         <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mb-4">
           <h3 className="text-lg font-semibold text-blue-700 mb-2">Moto Reservada</h3>
           <p>
-            Esta moto tiene una reserva de{" "}
+            Esta moto tiene una reserva de
             <span className="font-bold">{formatPrice(reservationAmount)}</span>.
           </p>
           <p className="text-sm text-blue-600">
@@ -47,11 +47,11 @@ export default function ConfirmMotorcycleStep({
               <span className="font-medium">Año:</span> {moto?.year || "No disponible"}
             </p>
             <p>
-              <span className="font-medium">Cilindrada:</span>{" "}
+              <span className="font-medium">Cilindrada:</span>
               {moto?.displacement || "No disponible"}cc
             </p>
             <p>
-              <span className="font-medium">Número de Chasis:</span>{" "}
+              <span className="font-medium">Número de Chasis:</span>
               {moto?.chassisNumber || "No disponible"}
             </p>
             <p>
@@ -63,7 +63,7 @@ export default function ConfirmMotorcycleStep({
           <h3 className="text-lg font-semibold mb-2">Estado y Ubicación</h3>
           <div className="space-y-2">
             <p>
-              <span className="font-medium">Estado:</span>{" "}
+              <span className="font-medium">Estado:</span>
               {moto?.state === "STOCK" ? "Disponible" : moto?.state}
             </p>
             <p>
@@ -73,7 +73,7 @@ export default function ConfirmMotorcycleStep({
               <span className="font-medium">Estado de Venta:</span> {moto?.state || "No disponible"}
             </p>
             <p>
-              <span className="font-medium">Ubicación:</span>{" "}
+              <span className="font-medium">Ubicación:</span>
               {moto?.branch?.name || "No disponible"}
             </p>
             <p>

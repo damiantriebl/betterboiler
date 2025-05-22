@@ -1,44 +1,27 @@
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
 import { ReservationReportPDF } from "@/components/reports/ReservationReportPDF";
 import type { DateRange } from "@/types/DateRange";
-import type { ReportFilters } from "@/types/reports";
+import type { ReportFilters, ReservationsReport } from "@/types/reports";
 import { pdf } from "@react-pdf/renderer";
 
 export async function generateReservationReportPDF(dateRange?: DateRange) {
   try {
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) {
+    const org = await getOrganizationIdFromSession();
+    if (!org.organizationId) {
       throw new Error("No organization found");
     }
 
     // Preparar los filtros para el reporte
     const filters: ReportFilters = {
       dateRange,
-      organizationId,
+      organizationId: org.organizationId,
     };
 
-    const reportData = await getReservationsReport(filters);
-
-    // Transformar los datos al formato esperado por ReservationReportPDF
-    const report = {
-      reservations: reportData.byClient.flatMap((client) =>
-        client.reservations.map((res) => ({
-          date: res.date,
-          customerName: client.client.name,
-          model: `${res.motorcycle.brand} ${res.motorcycle.model}`,
-          amount: res.amount,
-        })),
-      ),
-      totalReservations: reportData.summary.totalReservations,
-      totalAmount: Object.values(reportData.summary.totalsByCurrency).reduce(
-        (total, curr) => total + curr.reservedAmount,
-        0,
-      ),
-    };
+    const reportData: ReservationsReport = await getReservationsReport(filters);
 
     // Generar el PDF
-    const doc = pdf(<ReservationReportPDF report={report} />);
+    const doc = pdf(<ReservationReportPDF report={reportData} />);
     const buffer = await doc.toBuffer();
 
     return buffer;

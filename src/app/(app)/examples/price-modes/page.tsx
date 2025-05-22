@@ -48,7 +48,7 @@ export default function PriceModesExamplePage() {
         </p>
         <div className="mt-4 p-4 bg-muted rounded-md">
           <p>
-            <strong>Modo actual:</strong>{" "}
+            <strong>Modo actual:</strong>
             {mode === "all"
               ? "Todos los precios (Costo, Mayorista, Minorista)"
               : mode === "retail-wholesale"

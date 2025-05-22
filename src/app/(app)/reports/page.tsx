@@ -25,6 +25,7 @@ import type {
   ReservationsReport as ReservationsReportType,
   SalesReport as SalesReportType,
 } from "@/types/reports";
+import type { Branch } from "@prisma/client";
 import {
   endOfDay,
   endOfMonth,
@@ -35,9 +36,10 @@ import {
   subMonths,
   subYears,
 } from "date-fns";
-import { Download, LineChart, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Download, LineChart, Loader2, FileText } from "lucide-react";
+import { useState, useEffect, startTransition } from "react";
 import type { DateRange } from "react-day-picker";
+import { getBranchesForOrganizationAction } from "@/actions/get-Branches-For-Organization-Action";
 
 type LocalFilters = {
   organizationId: string;
@@ -58,6 +60,11 @@ const reportFetchers = {
   "cost-analysis": getSuppliersReport,
 } as const;
 
+interface PettyCashReportLocalFilters {
+  dateRange: DateRange | undefined;
+  branchId: string | "all";
+}
+
 export default function ReportsPage() {
   const { organization, loading: orgLoading, error: orgError } = useOrganization();
   const orgId = organization?.id ?? "";
@@ -74,6 +81,79 @@ export default function ReportsPage() {
     modelId: "all",
     dateRange: undefined,
   });
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
+  const [pettyCashFilters, setPettyCashFilters] = useState<PettyCashReportLocalFilters>({
+    dateRange: undefined,
+    branchId: "all",
+  });
+  const [isPettyCashReportLoading, setIsPettyCashReportLoading] = useState(false);
+
+  const getDateRangeFromPreset = (preset: string): DateRange | undefined => {
+    const now = new Date();
+    switch (preset) {
+      case "today":
+        return { from: startOfDay(now), to: endOfDay(now) };
+      case "currentMonth":
+        return { from: startOfMonth(now), to: endOfMonth(now) };
+      case "lastMonth":
+        const lastMonthStart = startOfMonth(subMonths(now, 1));
+        const lastMonthEnd = endOfMonth(subMonths(now, 1));
+        return { from: lastMonthStart, to: lastMonthEnd };
+      case "ytd":
+        return { from: startOfYear(now), to: endOfDay(now) };
+      case "lastYear":
+        const lastYearStart = startOfYear(subYears(now, 1));
+        const lastYearEnd = endOfYear(subYears(now, 1));
+        return { from: lastYearStart, to: lastYearEnd };
+      case "custom":
+        return customDateRange;
+      default:
+        return undefined;
+    }
+  };
+
+  const updateDateFilters = (newPreset: string) => {
+    setSelectedDateRange(newPreset);
+    const newDateRange = getDateRangeFromPreset(newPreset);
+    setFilters(prev => ({ ...prev, dateRange: newDateRange }));
+    setPettyCashFilters(prev => ({ ...prev, dateRange: newDateRange }));
+    if (newPreset !== 'custom') {
+      setCustomDateRange(undefined);
+    }
+  };
+
+  useEffect(() => {
+    updateDateFilters(selectedDateRange);
+  }, []);
+
+  useEffect(() => {
+    const loadBranches = () => {
+      if (!organization?.id) {
+        setBranches([]);
+        return;
+      }
+
+      setIsLoadingBranches(true);
+      startTransition(() => {
+        getBranchesForOrganizationAction(organization.id)
+          .then(branchesData => {
+            setBranches(branchesData || []);
+          })
+          .catch(error => {
+            console.error("Error cargando sucursales con getBranchesForOrganizationAction:", error);
+            setBranches([]);
+          })
+          .finally(() => {
+            setIsLoadingBranches(false);
+          });
+      });
+    };
+
+    loadBranches();
+  }, [organization?.id]);
 
   const handleDateRangeChange = (newRange: DateRange | undefined) => {
     setFilters((prev) => ({
@@ -261,545 +341,571 @@ export default function ReportsPage() {
     }));
   };
 
-  if (!organization) {
-    return (
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="py-10">
-            <div className="text-center text-muted-foreground">
-              {orgLoading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Cargando organización...</span>
-                </div>
-              ) : orgError ? (
-                <div className="text-destructive">Error: {orgError.message}</div>
-              ) : (
-                "No hay una organización seleccionada"
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const handleGeneratePettyCashReportPDF = async () => {
+    if (!organization?.id || !pettyCashFilters.dateRange?.from || !pettyCashFilters.dateRange?.to) {
+      console.error("Por favor, seleccione un rango de fechas para el reporte de caja chica.");
+      return;
+    }
+    setIsPettyCashReportLoading(true);
+    try {
+      const params = new URLSearchParams({
+        fromDate: pettyCashFilters.dateRange.from.toISOString(),
+        toDate: pettyCashFilters.dateRange.to.toISOString(),
+      });
+
+      if (pettyCashFilters.branchId && pettyCashFilters.branchId !== "all") {
+        params.append("branchId", pettyCashFilters.branchId);
+      }
+
+      const response = await fetch(
+        `/api/reports/petty-cash-movements/generate-pdf?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Error al generar el reporte PDF de caja chica"
+        );
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "petty_cash_movements_report.pdf";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error generando PDF de Caja Chica:", error);
+    } finally {
+      setIsPettyCashReportLoading(false);
+    }
+  };
+
+  if (orgLoading) {
+    return <p>Cargando organización...</p>;
+  }
+
+  if (orgError) {
+    return <p>Error al cargar la organización: {orgError.message}</p>;
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Reportes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="inventory" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="inventory">Inventario</TabsTrigger>
-              <TabsTrigger value="sales">Ventas</TabsTrigger>
-              <TabsTrigger value="reservations">Reservas</TabsTrigger>
-              <TabsTrigger value="suppliers">Proveedores</TabsTrigger>
-            </TabsList>
+    <div className="container mx-auto p-4 md:p-8">
+      <h1 className="text-3xl font-bold mb-6">Reportes</h1>
+      <Tabs defaultValue="inventory-status" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="inventory-status">Inventario</TabsTrigger>
+          <TabsTrigger value="sales">Ventas</TabsTrigger>
+          <TabsTrigger value="reservations">Reservas</TabsTrigger>
+          <TabsTrigger value="suppliers">Proveedores</TabsTrigger>
+          <TabsTrigger value="petty-cash">Caja Chica</TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="inventory" className="space-y-4">
-              <div className="flex flex-wrap gap-4">
-                <Button
-                  variant={selectedDateRange === "today" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
-                >
-                  Hoy
-                </Button>
-                <Button
-                  variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-                    })
-                  }
-                >
-                  Este Mes
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth(), 0),
-                    })
-                  }
-                >
-                  Mes Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), 0, 1),
-                      to: new Date(),
-                    })
-                  }
-                >
-                  Este Año
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear() - 1, 0, 1),
-                      to: new Date(new Date().getFullYear() - 1, 11, 31),
-                    })
-                  }
-                >
-                  Año Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "custom" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange(undefined)}
-                >
-                  Personalizado
-                </Button>
+        <TabsContent value="inventory-status" className="space-y-4">
+          <div className="flex flex-wrap gap-4">
+            <Button
+              variant={selectedDateRange === "today" ? "default" : "outline"}
+              onClick={() => updateDateFilters("today")}
+            >
+              Hoy
+            </Button>
+            <Button
+              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("currentMonth")}
+            >
+              Este Mes
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastMonth")}
+            >
+              Mes Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "ytd" ? "default" : "outline"}
+              onClick={() => updateDateFilters("ytd")}
+            >
+              Este Año
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastYear")}
+            >
+              Año Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "custom" ? "default" : "outline"}
+              onClick={() => updateDateFilters("custom")}
+            >
+              Personalizado
+            </Button>
+          </div>
+
+          {selectedDateRange === "custom" && (
+            <DatePickerWithRange
+              value={customDateRange}
+              onChange={handleCustomDateRangeChange}
+            />
+          )}
+
+          <div className="flex flex-wrap gap-4">
+            <Select value={filters.branchId} onValueChange={handleBranchChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.brandId} onValueChange={handleBrandChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Marca" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              onClick={() =>
+                setFilters({
+                  organizationId: orgId,
+                  branchId: "all",
+                  brandId: "all",
+                  modelId: "all",
+                  dateRange: undefined,
+                })
+              }
+            >
+              Limpiar Filtros
+            </Button>
+          </div>
+
+          <div className="flex justify-end gap-4">
+            <Button
+              onClick={() => handleGenerateReport("inventory-status")}
+              disabled={reportLoading}
+            >
+              {reportLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <LineChart className="mr-2 h-4 w-4" />
+                  Generar Reporte
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleExportInventoryPDF}
+              disabled={reportLoading || !inventoryReport}
+              variant="outline"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportar PDF
+            </Button>
+          </div>
+
+          {inventoryReport && <InventoryReport data={inventoryReport} />}
+        </TabsContent>
+
+        <TabsContent value="sales" className="space-y-4">
+          <div className="flex flex-wrap gap-4">
+            <Button
+              variant={selectedDateRange === "today" ? "default" : "outline"}
+              onClick={() => updateDateFilters("today")}
+            >
+              Hoy
+            </Button>
+            <Button
+              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("currentMonth")}
+            >
+              Este Mes
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastMonth")}
+            >
+              Mes Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "ytd" ? "default" : "outline"}
+              onClick={() => updateDateFilters("ytd")}
+            >
+              Este Año
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastYear")}
+            >
+              Año Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "custom" ? "default" : "outline"}
+              onClick={() => updateDateFilters("custom")}
+            >
+              Personalizado
+            </Button>
+          </div>
+
+          {selectedDateRange === "custom" && (
+            <DatePickerWithRange
+              value={customDateRange}
+              onChange={handleCustomDateRangeChange}
+            />
+          )}
+
+          <div className="flex flex-wrap gap-4">
+            <Select value={filters.branchId} onValueChange={handleBranchChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.brandId} onValueChange={handleBrandChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Marca" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              onClick={() =>
+                setFilters({
+                  organizationId: orgId,
+                  branchId: "all",
+                  brandId: "all",
+                  modelId: "all",
+                  dateRange: undefined,
+                })
+              }
+            >
+              Limpiar Filtros
+            </Button>
+          </div>
+
+          <div className="flex justify-end gap-4">
+            <Button
+              onClick={() => handleGenerateReport("sales-by-period")}
+              disabled={reportLoading}
+            >
+              {reportLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <LineChart className="mr-2 h-4 w-4" />
+                  Generar Reporte
+                </>
+              )}
+            </Button>
+            <Button onClick={handleExportSalesPDF} disabled={reportLoading} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Exportar PDF
+            </Button>
+          </div>
+
+          <div className="mt-4">
+            <SalesReport data={salesReport} dateRange={filters.dateRange} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="reservations" className="space-y-4">
+          <div className="flex flex-wrap gap-4">
+            <Button
+              variant={selectedDateRange === "today" ? "default" : "outline"}
+              onClick={() => updateDateFilters("today")}
+            >
+              Hoy
+            </Button>
+            <Button
+              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("currentMonth")}
+            >
+              Este Mes
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastMonth")}
+            >
+              Mes Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "ytd" ? "default" : "outline"}
+              onClick={() => updateDateFilters("ytd")}
+            >
+              Este Año
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastYear")}
+            >
+              Año Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "custom" ? "default" : "outline"}
+              onClick={() => updateDateFilters("custom")}
+            >
+              Personalizado
+            </Button>
+          </div>
+
+          {selectedDateRange === "custom" && (
+            <DatePickerWithRange value={customDateRange} onChange={handleCustomDateRangeChange} />
+          )}
+
+          <div className="flex justify-end gap-4">
+            <Button
+              onClick={() => handleGenerateReport("reservations")}
+              disabled={reportLoading}
+            >
+              {reportLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <LineChart className="mr-2 h-4 w-4" />
+                  Generar Reporte
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleExportReservationsPDF}
+              disabled={reportLoading}
+              variant="outline"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportar PDF
+            </Button>
+          </div>
+
+          <div className="mt-4">
+            {reservationsReport ? (
+              <ReservationsReport data={reservationsReport} />
+            ) : (
+              <div>Seleccione un rango de fechas y genere el reporte</div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="suppliers" className="space-y-4">
+          <div className="flex flex-wrap gap-4">
+            <Button
+              variant={selectedDateRange === "today" ? "default" : "outline"}
+              onClick={() => updateDateFilters("today")}
+            >
+              Hoy
+            </Button>
+            <Button
+              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("currentMonth")}
+            >
+              Este Mes
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastMonth")}
+            >
+              Mes Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "ytd" ? "default" : "outline"}
+              onClick={() => updateDateFilters("ytd")}
+            >
+              Este Año
+            </Button>
+            <Button
+              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
+              onClick={() => updateDateFilters("lastYear")}
+            >
+              Año Anterior
+            </Button>
+            <Button
+              variant={selectedDateRange === "custom" ? "default" : "outline"}
+              onClick={() => updateDateFilters("custom")}
+            >
+              Personalizado
+            </Button>
+          </div>
+
+          {selectedDateRange === "custom" && (
+            <DatePickerWithRange value={customDateRange} onChange={handleCustomDateRangeChange} />
+          )}
+
+          <div className="flex flex-wrap gap-4">
+            <Select value={filters.branchId} onValueChange={handleBranchChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.brandId} onValueChange={handleBrandChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Marca" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              onClick={() =>
+                setFilters({
+                  organizationId: orgId,
+                  branchId: "all",
+                  brandId: "all",
+                  modelId: "all",
+                  dateRange: undefined,
+                })
+              }
+            >
+              Limpiar Filtros
+            </Button>
+          </div>
+
+          <div className="flex justify-end gap-4">
+            <Button
+              onClick={() => handleGenerateReport("purchases-by-supplier")}
+              disabled={reportLoading}
+            >
+              {reportLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <LineChart className="mr-2 h-4 w-4" />
+                  Generar Reporte
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleExportInventoryPDF}
+              disabled={reportLoading || !inventoryReport}
+              variant="outline"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportar PDF
+            </Button>
+          </div>
+
+          <div className="mt-4">
+            <div>Reporte de Proveedores (En desarrollo)</div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="petty-cash" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Reporte de Movimientos de Caja Chica
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-wrap gap-2 mb-4">
+                {[
+                  { label: "Hoy", value: "today" },
+                  { label: "Este Mes", value: "currentMonth" },
+                  { label: "Mes Anterior", value: "lastMonth" },
+                  { label: "Este Año", value: "ytd" },
+                  { label: "Año Anterior", value: "lastYear" },
+                  { label: "Personalizado", value: "custom" },
+                ].map(preset => (
+                  <Button
+                    key={preset.value}
+                    variant={selectedDateRange === preset.value ? "default" : "outline"}
+                    onClick={() => updateDateFilters(preset.value)}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
               </div>
 
               {selectedDateRange === "custom" && (
-                <DatePickerWithRange
-                  value={customDateRange}
-                  onChange={handleCustomDateRangeChange}
-                />
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Seleccione Rango Personalizado
+                  </label>
+                  <DatePickerWithRange
+                    value={customDateRange}
+                    onChange={(range) => {
+                      setCustomDateRange(range);
+                      if (selectedDateRange === "custom") {
+                        setPettyCashFilters(prev => ({ ...prev, dateRange: range }));
+                      }
+                    }}
+                  />
+                </div>
               )}
 
-              <div className="flex flex-wrap gap-4">
-                <Select value={filters.branchId} onValueChange={handleBranchChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Sucursal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {/* Add branch options */}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.brandId} onValueChange={handleBrandChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Marca" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {/* Add brand options */}
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  onClick={() =>
-                    setFilters({
-                      organizationId: orgId,
-                      branchId: "all",
-                      brandId: "all",
-                      modelId: "all",
-                      dateRange: undefined,
-                    })
-                  }
-                >
-                  Limpiar Filtros
-                </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <div>
+                  <label
+                    htmlFor="pettyCashBranch"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Sucursal
+                  </label>
+                  <Select
+                    value={pettyCashFilters.branchId}
+                    onValueChange={(value) =>
+                      setPettyCashFilters((prev) => ({ ...prev, branchId: value }))
+                    }
+                    disabled={isLoadingBranches}
+                  >
+                    <SelectTrigger id="pettyCashBranch" className="w-full">
+                      <SelectValue placeholder={isLoadingBranches ? "Cargando..." : "Seleccionar sucursal"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las sucursales</SelectItem>
+                      <SelectItem value="general_account">Cuenta General</SelectItem>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id.toString()}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-4">
-                <Button
-                  onClick={() => handleGenerateReport("inventory-status")}
-                  disabled={reportLoading}
-                >
-                  {reportLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generando...
-                    </>
-                  ) : (
-                    <>
-                      <LineChart className="mr-2 h-4 w-4" />
-                      Generar Reporte
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleExportInventoryPDF}
-                  disabled={reportLoading || !inventoryReport}
-                  variant="outline"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-              </div>
-
-              {inventoryReport && <InventoryReport data={inventoryReport} />}
-            </TabsContent>
-
-            <TabsContent value="sales" className="space-y-4">
-              <div className="flex flex-wrap gap-4">
-                <Button
-                  variant={selectedDateRange === "today" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
-                >
-                  Hoy
-                </Button>
-                <Button
-                  variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-                    })
-                  }
-                >
-                  Este Mes
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth(), 0),
-                    })
-                  }
-                >
-                  Mes Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), 0, 1),
-                      to: new Date(),
-                    })
-                  }
-                >
-                  Este Año
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear() - 1, 0, 1),
-                      to: new Date(new Date().getFullYear() - 1, 11, 31),
-                    })
-                  }
-                >
-                  Año Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "custom" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange(undefined)}
-                >
-                  Personalizado
-                </Button>
-              </div>
-
-              {selectedDateRange === "custom" && (
-                <DatePickerWithRange
-                  value={customDateRange}
-                  onChange={handleCustomDateRangeChange}
-                />
-              )}
-
-              <div className="flex flex-wrap gap-4">
-                <Select value={filters.branchId} onValueChange={handleBranchChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Sucursal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {/* Add branch options */}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.brandId} onValueChange={handleBrandChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Marca" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {/* Add brand options */}
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  onClick={() =>
-                    setFilters({
-                      organizationId: orgId,
-                      branchId: "all",
-                      brandId: "all",
-                      modelId: "all",
-                      dateRange: undefined,
-                    })
-                  }
-                >
-                  Limpiar Filtros
-                </Button>
-              </div>
-
-              <div className="flex justify-end gap-4">
-                <Button
-                  onClick={() => handleGenerateReport("sales-by-period")}
-                  disabled={reportLoading}
-                >
-                  {reportLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generando...
-                    </>
-                  ) : (
-                    <>
-                      <LineChart className="mr-2 h-4 w-4" />
-                      Generar Reporte
-                    </>
-                  )}
-                </Button>
-                <Button onClick={handleExportSalesPDF} disabled={reportLoading} variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-              </div>
-
-              {/* Contenido del tab seleccionado */}
-              <div className="mt-4">
-                <SalesReport data={salesReport} dateRange={filters.dateRange} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="reservations" className="space-y-4">
-              <div className="flex flex-wrap gap-4">
-                <Button
-                  variant={selectedDateRange === "today" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
-                >
-                  Hoy
-                </Button>
-                <Button
-                  variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-                    })
-                  }
-                >
-                  Este Mes
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth(), 0),
-                    })
-                  }
-                >
-                  Mes Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), 0, 1),
-                      to: new Date(),
-                    })
-                  }
-                >
-                  Este Año
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear() - 1, 0, 1),
-                      to: new Date(new Date().getFullYear() - 1, 11, 31),
-                    })
-                  }
-                >
-                  Año Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "custom" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange(undefined)}
-                >
-                  Personalizado
-                </Button>
-              </div>
-
-              {selectedDateRange === "custom" && (
-                <DatePickerWithRange value={filters.dateRange} onChange={handleDateRangeChange} />
-              )}
-
-              <div className="flex justify-end gap-4">
-                <Button
-                  onClick={() => handleGenerateReport("reservations")}
-                  disabled={reportLoading}
-                >
-                  {reportLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generando...
-                    </>
-                  ) : (
-                    <>
-                      <LineChart className="mr-2 h-4 w-4" />
-                      Generar Reporte
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleExportReservationsPDF}
-                  disabled={reportLoading}
-                  variant="outline"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-              </div>
-
-              {/* Contenido del tab seleccionado */}
-              <div className="mt-4">
-                {reservationsReport ? (
-                  <ReservationsReport data={reservationsReport} />
+              <Button
+                onClick={handleGeneratePettyCashReportPDF}
+                disabled={isPettyCashReportLoading || !pettyCashFilters.dateRange?.from}
+                className="w-full md:w-auto"
+              >
+                {isPettyCashReportLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <div>Seleccione un rango de fechas y genere el reporte</div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="suppliers" className="space-y-4">
-              <div className="flex flex-wrap gap-4">
-                <Button
-                  variant={selectedDateRange === "today" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange({ from: new Date(), to: new Date() })}
-                >
-                  Hoy
-                </Button>
-                <Button
-                  variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-                    })
-                  }
-                >
-                  Este Mes
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
-                      to: new Date(new Date().getFullYear(), new Date().getMonth(), 0),
-                    })
-                  }
-                >
-                  Mes Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "ytd" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear(), 0, 1),
-                      to: new Date(),
-                    })
-                  }
-                >
-                  Este Año
-                </Button>
-                <Button
-                  variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-                  onClick={() =>
-                    handleDateRangeChange({
-                      from: new Date(new Date().getFullYear() - 1, 0, 1),
-                      to: new Date(new Date().getFullYear() - 1, 11, 31),
-                    })
-                  }
-                >
-                  Año Anterior
-                </Button>
-                <Button
-                  variant={selectedDateRange === "custom" ? "default" : "outline"}
-                  onClick={() => handleDateRangeChange(undefined)}
-                >
-                  Personalizado
-                </Button>
-              </div>
-
-              {selectedDateRange === "custom" && (
-                <DatePickerWithRange value={filters.dateRange} onChange={handleDateRangeChange} />
-              )}
-
-              <div className="flex flex-wrap gap-4">
-                <Select value={filters.branchId} onValueChange={handleBranchChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Sucursal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {/* Add branch options */}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.brandId} onValueChange={handleBrandChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Marca" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {/* Add brand options */}
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  onClick={() =>
-                    setFilters({
-                      organizationId: orgId,
-                      branchId: "all",
-                      brandId: "all",
-                      modelId: "all",
-                      dateRange: undefined,
-                    })
-                  }
-                >
-                  Limpiar Filtros
-                </Button>
-              </div>
-
-              <div className="flex justify-end gap-4">
-                <Button
-                  onClick={() => handleGenerateReport("purchases-by-supplier")}
-                  disabled={reportLoading}
-                >
-                  {reportLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generando...
-                    </>
-                  ) : (
-                    <>
-                      <LineChart className="mr-2 h-4 w-4" />
-                      Generar Reporte
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleExportInventoryPDF}
-                  disabled={reportLoading || !inventoryReport}
-                  variant="outline"
-                >
                   <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-              </div>
-
-              {/* Contenido del tab seleccionado */}
-              <div className="mt-4">
-                <div>Reporte de Proveedores (En desarrollo)</div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                )}
+                Exportar PDF Caja Chica
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

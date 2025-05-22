@@ -4,7 +4,6 @@ import { getEnabledBankingPromotions } from "@/actions/banking-promotions/get-ba
 import { getClients } from "@/actions/clients/get-clients";
 import { createCurrentAccount } from "@/actions/current-accounts/create-current-account";
 import { recordCurrentAccountPayment } from "@/actions/current-accounts/record-current-account-payment";
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import { completeSale } from "@/actions/sales/complete-sale";
 import { getMotorcycleById } from "@/actions/sales/get-motorcycle-by-id";
 import { Button } from "@/components/ui/button";
@@ -40,6 +39,7 @@ import {
 import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
 // Import types
 import type { SaleProcessState } from "./types";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 
 // For TypeScript with Next.js params
 type PageParams = {
@@ -775,10 +775,10 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
             try {
               console.log("🔍 [sales/page] Iniciando proceso de creación de cuenta corriente");
               // El organizationId es necesario para la cuenta corriente
-              const sessionResult = await getOrganizationIdFromSession(); // Get the SessionResult object
-              console.log("🔍 [sales/page] OrganizationID session result obtenido:", sessionResult);
+              const org = await getOrganizationIdFromSession(); // Get the SessionResult object
+              console.log("🔍 [sales/page] OrganizationID session result obtenido:", org);
 
-              if (!sessionResult.organizationId) {
+              if (!org.organizationId) {
                 // Check the property
                 console.error(
                   "❌ [sales/page] Error: No se pudo obtener el ID de la organización para la cuenta corriente",
@@ -787,7 +787,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
                   "No se pudo obtener el ID de la organización para la cuenta corriente.",
                 );
               }
-              const currentOrganizationId = sessionResult.organizationId; // Extract the string ID
+              const currentOrganizationId = org.organizationId; // Extract the string ID
 
               const principalAmount = finalPrice - (Number(saleState.paymentData.downPayment) || 0);
               const calculatedInstallmentAmt = calculateInstallmentWithInterestCA(
@@ -953,11 +953,19 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
 
   // Render step content
   const renderStepContent = () => {
+    if (!moto) {
+      return (
+        <div className="flex justify-center items-center h-full min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+
     switch (saleState.currentStep) {
       case 0: // Confirm Motorcycle
         return (
           <ConfirmMotorcycleStep
-            moto={moto || null}
+            moto={moto}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             reservationCurrency={reservationCurrency}
@@ -968,7 +976,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
       case 1: // Payment Method
         return (
           <PaymentMethodStep
-            moto={moto || null}
+            moto={moto}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             reservationCurrency={reservationCurrency}
@@ -1001,7 +1009,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         return (
           <ConfirmationStep
             loading={loading}
-            moto={moto || null}
+            moto={moto}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             buyerData={saleState.buyerData}

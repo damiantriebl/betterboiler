@@ -31,7 +31,7 @@ export async function getBranchesForOrg(): Promise<{ data?: BranchData[]; error?
   }
 
   try {
-    const branchesFromDb = await prisma.sucursal.findMany({
+    const branchesFromDb = await prisma.branch.findMany({
       where: { organizationId: organizationId },
       select: {
         id: true,

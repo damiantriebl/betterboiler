@@ -1,6 +1,6 @@
 "use client";
 
-import { setupCurrentAccountMethod } from "@/actions/setup-current-account-method";
+import { setupCurrentAccountMethod } from "@/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

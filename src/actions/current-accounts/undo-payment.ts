@@ -1,9 +1,9 @@
 "use server";
 
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import prisma from "@/lib/prisma";
 import { type PaymentFrequency, Prisma, type PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 const undoPaymentSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required."),
@@ -60,16 +60,15 @@ export async function undoPayment(
   prevState: UndoPaymentFormState,
   formData: FormData,
 ): Promise<UndoPaymentFormState> {
-  const session = await getOrganizationIdFromSession();
+  const org = await getOrganizationIdFromSession();
 
-  if (!session?.organizationId) {
+  if (!org?.organizationId) {
     return {
       message: "Error: Organization not found or user not authenticated.",
       success: false,
     };
   }
-  const organizationId = session.organizationId;
-  // const userId = session.userId; // TODO: Extract actual userId for auditing if needed
+  const organizationId = org.organizationId;
 
   const validatedFields = undoPaymentSchema.safeParse({
     paymentId: formData.get("paymentId"),

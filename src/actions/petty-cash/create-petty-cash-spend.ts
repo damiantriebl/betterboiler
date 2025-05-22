@@ -1,16 +1,15 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "./getOrganizationIdFromSession";
-import {
-  createPettyCashSpendSchema,
+import {  
   type CreatePettyCashSpendInput,
 } from "@/zod/PettyCashZod";
 import { revalidatePath } from "next/cache";
 import type { PettyCashSpend, PettyCashWithdrawal, PettyCashWithdrawalStatus, PettyCashDepositStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import type { CreatePettyCashSpendState } from "@/types/action-states"; // Import global state type
-import { uploadGenericFileToS3 } from "./S3/uploadToS3"; // Usar la nueva función
+import { uploadGenericFileToS3 } from "../S3/uploadToS3"; // Usar la nueva función
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 interface CreatePettyCashSpendResult {
   data?: PettyCashSpend;
@@ -51,9 +50,9 @@ export async function createPettyCashSpendWithTicket(
 ): Promise<CreatePettyCashSpendState> { // Use global state type
   
   const organizationIdFromForm = formData.get("organizationId") as string | null;
-  // Fallback to session if not in form (though form should always send it now)
-  const sessionInfo = await getOrganizationIdFromSession(); 
-  const organizationIdFromSession = sessionInfo.organizationId;
+
+  const org = await getOrganizationIdFromSession(); 
+  const organizationIdFromSession = org.organizationId;
 
   let effectiveOrganizationId: string | null = organizationIdFromForm || organizationIdFromSession;
 

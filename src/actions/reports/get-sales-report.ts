@@ -1,13 +1,28 @@
 "use server";
 
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import prisma from "@/lib/prisma";
 import type { SalesReport } from "@/types/reports";
 import { MotorcycleState } from "@prisma/client";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 export async function getSalesReport(dateRange?: { from?: Date; to?: Date }): Promise<SalesReport> {
-  const organizationId = await getOrganizationIdFromSession();
-
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId) {
+    console.error("Error en getSalesReport: No se pudo obtener el ID de la organización. Mensaje de sesión:", org.error);
+    // Devolver una estructura SalesReport vacía/por defecto que coincida con el tipo
+    return {
+      summary: {
+        totalSales: 0,
+        totalRevenue: {},
+        totalProfit: {},
+        averagePrice: {},
+      },
+      salesBySeller: {},
+      salesByBranch: {},
+      salesByMonth: {},
+    };
+  }
+  const organizationId = org.organizationId;
   // Obtener todas las motos vendidas
   const sales = await prisma.motorcycle.findMany({
     where: {

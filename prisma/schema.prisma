@@ -88,6 +88,10 @@ model Organization {
   pettyCashDeposits          PettyCashDeposit[]
   pettyCashWithdrawals       PettyCashWithdrawal[]
   pettyCashSpends            PettyCashSpend[]
+  secureModeEnabled          Boolean  @default(false)
+  otpSecret                  String?
+  otpAuthUrl                 String?
+  otpVerified                Boolean  @default(false)
 
   @@map("organization")
 }

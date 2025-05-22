@@ -12,12 +12,17 @@ import DepositForm from "./DepositForm";
 import WithdrawForm from "./WithdrawForm";
 import SpendForm from "./SpendForm";
 import PettyCashTable from "./PettyCashTable";
+import OtpConfirmationModal from "./OtpConfirmationModal";
 
-import type { PettyCashData } from "@/actions/get-petty-cash-data";
-import type {
+import type { PettyCashData } from "@/actions/petty-cash/get-petty-cash-data";
+import {
     createPettyCashDeposit,
     createPettyCashWithdrawal,
+    deletePettyCashMovement,
+    deletePettyCashWithdrawal,
+    deletePettyCashDeposit,
 } from "@/actions";
+import { getSecuritySettings } from "@/actions/configuration/security-actions";
 
 const GENERAL_ACCOUNT_VALUE = "__general__";
 
@@ -29,7 +34,14 @@ interface PettyCashClientPageProps {
     users: User[];
     createDepositAction: typeof createPettyCashDeposit;
     createWithdrawalAction: typeof createPettyCashWithdrawal;
+    createSpendWithTicketAction: typeof createPettyCashDeposit;
 }
+
+type ItemToDelete = {
+    id: string;
+    type: 'deposit' | 'withdrawal' | 'spend';
+    name?: string;
+};
 
 export default function PettyCashClientPage({
     initialPettyCashData,
@@ -37,9 +49,11 @@ export default function PettyCashClientPage({
     users,
     createDepositAction,
     createWithdrawalAction,
+    createSpendWithTicketAction,
 }: PettyCashClientPageProps) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
+    const [isProcessingDelete, setIsProcessingDelete] = useState(false);
 
     const [showDepositForm, setShowDepositForm] = useState(false);
     const [showWithdrawFormForDeposit, setShowWithdrawFormForDeposit] = useState<string | null>(null);
@@ -50,13 +64,22 @@ export default function PettyCashClientPage({
     const currentUserId = useSessionStore((state) => state.userId);
     const organizationIdFromStore = useSessionStore((state) => state.organizationId);
 
+    const [pettyCashDataState, setPettyCashDataState] = useState<PettyCashData[]>(initialPettyCashData);
+
+    const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
+
+    useEffect(() => {
+        setPettyCashDataState(initialPettyCashData);
+    }, [initialPettyCashData]);
+
     const filteredPettyCashData = useMemo(() => {
-        if (!initialPettyCashData) return [];
+        if (!pettyCashDataState) return [];
         if (selectedBranchId === GENERAL_ACCOUNT_VALUE) {
-            return initialPettyCashData.filter(deposit => deposit.branchId === null);
+            return pettyCashDataState.filter(deposit => deposit.branchId === null);
         }
-        return initialPettyCashData.filter(deposit => deposit.branchId === selectedBranchId);
-    }, [initialPettyCashData, selectedBranchId]);
+        return pettyCashDataState.filter(deposit => deposit.branchId === selectedBranchId);
+    }, [pettyCashDataState, selectedBranchId]);
 
     const calculateTotalAvailable = (deposits: PettyCashData[]) => {
         return deposits.reduce((acc, deposit) => {
@@ -70,6 +93,94 @@ export default function PettyCashClientPage({
         setShowDepositForm(false);
         setShowWithdrawFormForDeposit(null);
         setShowSpendFormForWithdrawal(null);
+    };
+
+    const refreshData = async () => {
+        console.log("Simulando recarga de datos...");
+    };
+
+    const handleInitiateDelete = async (id: string, type: ItemToDelete['type'], name?: string) => {
+        try {
+            // Primero, verificar el rol del usuario
+            const allowedRolesToDelete = ['cash-manager', 'admin', 'root'];
+            if (!userRole || !allowedRolesToDelete.includes(userRole)) {
+                toast({ variant: "destructive", title: "Acceso denegado", description: "No tienes permiso para eliminar ítems." });
+                setItemToDelete(null);
+                return;
+            }
+
+            // Si el rol es permitido, continuar con la lógica de OTP/confirmación
+            setItemToDelete({ id, type, name: name || `el ${type} seleccionado` });
+
+            const securitySettings = await getSecuritySettings();
+            if (securitySettings.error) {
+                toast({ variant: "destructive", title: "Error de seguridad", description: securitySettings.error });
+                setItemToDelete(null);
+                return;
+            }
+
+            // Si el modo seguro de la organización está activo, siempre pedir OTP a roles permitidos
+            if (securitySettings.secureModeEnabled) {
+                setIsOtpModalOpen(true);
+            } else {
+                // Modo seguro no activo, usar confirmación simple
+                if (window.confirm(`¿Estás seguro de que quieres eliminar ${name || `el ${type} seleccionado`}? Esta acción no se puede deshacer.`)) {
+                    // setIsProcessingDelete(true); // performDelete se encarga de esto
+                    await performDelete(id, type);
+                } else {
+                    setItemToDelete(null);
+                }
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo verificar la configuración de seguridad o procesar la solicitud." });
+            setItemToDelete(null);
+        }
+    };
+
+    const performDelete = async (id: string, type: ItemToDelete['type'], otpToken?: string) => {
+        setIsProcessingDelete(true);
+        try {
+            let result;
+            switch (type) {
+                case 'spend':
+                    result = await deletePettyCashMovement({ movementId: id, otpToken });
+                    break;
+                case 'withdrawal':
+                    result = await deletePettyCashWithdrawal({ withdrawalId: id, otpToken });
+                    break;
+                case 'deposit':
+                    result = await deletePettyCashDeposit({ depositId: id, otpToken });
+                    break;
+                default:
+                    throw new Error("Tipo de ítem desconocido para eliminar");
+            }
+
+            if (result.success) {
+                toast({ title: "Éxito", description: result.message || `${type.charAt(0).toUpperCase() + type.slice(1)} eliminado correctamente.` });
+                await refreshData();
+            } else {
+                toast({ variant: "destructive", title: "Error al eliminar", description: result.error || "Ocurrió un error desconocido." });
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: error instanceof Error ? error.message : "Error eliminando el ítem." });
+        } finally {
+            setIsProcessingDelete(false);
+            setIsOtpModalOpen(false);
+            setItemToDelete(null);
+        }
+    };
+
+    const handleConfirmDeleteWithOtp = async (otpToken: string) => {
+        if (itemToDelete) {
+            await performDelete(itemToDelete.id, itemToDelete.type, otpToken);
+        }
+    };
+
+    const handleCloseOtpModal = () => {
+        setIsOtpModalOpen(false);
+        if (!isProcessingDelete) {
+            setItemToDelete(null);
+        }
     };
 
     return (
@@ -145,9 +256,22 @@ export default function PettyCashClientPage({
                 currentUserId={currentUserId}
                 onAddWithdrawal={(depositId) => setShowWithdrawFormForDeposit(depositId)}
                 onAddSpend={(withdrawalId) => setShowSpendFormForWithdrawal(withdrawalId)}
+                onDeleteSpend={(spendId) => handleInitiateDelete(spendId, 'spend', 'este gasto')}
+                onDeleteWithdrawal={(withdrawalId) => handleInitiateDelete(withdrawalId, 'withdrawal', 'este retiro')}
+                onDeleteDeposit={(depositId) => handleInitiateDelete(depositId, 'deposit', 'este depósito')}
             />
 
-            {isLoading && <p className="text-center mt-4 font-semibold animate-pulse">Procesando...</p>}
+            {isOtpModalOpen && itemToDelete && (
+                <OtpConfirmationModal
+                    isOpen={isOtpModalOpen}
+                    onClose={handleCloseOtpModal}
+                    onConfirm={handleConfirmDeleteWithOtp}
+                    isSubmitting={isProcessingDelete}
+                    itemName={itemToDelete.name}
+                />
+            )}
+
+            {(isLoading || isProcessingDelete) && <p className="text-center mt-4 font-semibold animate-pulse">Procesando...</p>}
         </div>
     );
 } 

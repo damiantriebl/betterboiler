@@ -1,12 +1,12 @@
 "use client"; // <-- ¡Importante! Este es el Client Component
 
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import type { MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { Day } from "@/zod/banking-promotion-schemas";
-import type { Brand, Client, Model, Motorcycle, MotorcycleState, Sucursal } from "@prisma/client";
+import type { Brand, Client, Model, Motorcycle, MotorcycleState } from "@prisma/client";
 import { useEffect, useState } from "react";
 import MotorcycleTable from "./(table)/MotorcycleTable";
 import { PromotionDayFilter } from "./PromotionDayFilter";
@@ -64,12 +64,12 @@ export default function SalesClientComponent({
   useEffect(() => {
     const fetchOrganizationId = async () => {
       try {
-        const sessionResult = await getOrganizationIdFromSession();
-        if (sessionResult.organizationId) {
-          setOrganizationId(sessionResult.organizationId);
+        const orgSessionResult = await getOrganizationIdFromSession(); // Renombrado para claridad
+        if (orgSessionResult.organizationId) {
+          setOrganizationId(orgSessionResult.organizationId);
         } else {
-          console.error("Failed to get organizationId:", sessionResult.error);
-          setOrgIdError(sessionResult.error || "Failed to retrieve organization ID.");
+          console.error("Failed to get organizationId:", orgSessionResult.error);
+          setOrgIdError(orgSessionResult.error || "Failed to retrieve organization ID.");
           // Handle error appropriately, e.g., show a message to the user or disable certain features
         }
       } catch (error) {
@@ -80,7 +80,7 @@ export default function SalesClientComponent({
     fetchOrganizationId();
   }, []); // Empty dependency array ensures this runs once on mount
 
-  const handleOpenSaleModal = (motorcycle: MotorcycleTableRowData) => {
+  const handleOpenSaleModal = (motorcycle: MotorcycleWithFullDetails) => {
     const motorcycleName =
       `${motorcycle.brand?.name || "Marca"} ${motorcycle.model?.name || "Modelo"} ${motorcycle.year || ""}`.trim();
 
@@ -89,7 +89,6 @@ export default function SalesClientComponent({
       alert("No se puede procesar la venta: precio no disponible.");
       return;
     }
-    // Asegurarse de que el id de la motocicleta es un número, como espera ReserveModal
     const motorcycleIdAsNumber =
       typeof motorcycle.id === "string" ? Number.parseInt(motorcycle.id, 10) : motorcycle.id;
     if (Number.isNaN(motorcycleIdAsNumber)) {
@@ -98,12 +97,39 @@ export default function SalesClientComponent({
       return;
     }
 
-    setSelectedMotorcycle({
-      ...motorcycle, // Extiende el resto de las propiedades
+    // Crear un objeto compatible con SelectedMotorcycleForSale
+    // Extrayendo las propiedades necesarias de MotorcycleWithFullDetails
+    // y asegurando la compatibilidad de tipos para brand y model.
+    const selectedMotoData: SelectedMotorcycleForSale = {
       id: motorcycleIdAsNumber,
-      name: motorcycleName,
+      name: motorcycleName, // Esta es una propiedad compuesta, no está en MotorcycleTableRowData
       retailPrice: motorcycle.retailPrice,
-    });
+      year: motorcycle.year,
+      mileage: motorcycle.mileage,
+      displacement: motorcycle.displacement,
+      chassisNumber: motorcycle.chassisNumber,
+      engineNumber: motorcycle.engineNumber, // Correcto
+      currency: motorcycle.currency,
+      state: motorcycle.state,
+      brand: motorcycle.brand ? {
+        name: motorcycle.brand.name,
+        organizationBrands: motorcycle.brand?.organizationBrands || [],
+      } : null,
+      model: motorcycle.model ? {
+        name: motorcycle.model.name,
+        files: motorcycle.model.files || undefined,
+      } : null,
+      color: motorcycle.color ? {
+        name: motorcycle.color.name,
+        colorOne: motorcycle.color.colorOne,
+        colorTwo: motorcycle.color.colorTwo,
+      } : null,
+      branch: motorcycle.branch ? { name: motorcycle.branch.name } : null,
+      costPrice: motorcycle.costPrice,
+      wholesalePrice: motorcycle.wholesalePrice,
+    };
+
+    setSelectedMotorcycle(selectedMotoData);
     setIsSaleModalOpen(true);
   };
 
@@ -139,9 +165,10 @@ export default function SalesClientComponent({
         <TabsContent value="catalog">
           <Card className="p-6">
             <MotorcycleTable
-              initialData={initialData as MotorcycleWithFullDetails} // DEUDA TÉCNICA: Coincidir tipos MotorcycleWithFullDetails
-              clients={clients as Client[]} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
+              initialData={initialData as MotorcycleWithFullDetails[]}
+              clients={clients as Client[]}
               activePromotions={hasPromotions ? filteredPromotions : []}
+              onInitiateSale={handleOpenSaleModal}
             />
           </Card>
         </TabsContent>
@@ -186,7 +213,7 @@ export default function SalesClientComponent({
                               ?.filter((p) => p.isEnabled)
                               .map((plan) => (
                                 <div key={plan.id} className="text-blue-600 text-sm">
-                                  {plan.installments} cuotas{" "}
+                                  {plan.installments} cuotas
                                   {plan.interestRate === 0
                                     ? "sin interés"
                                     : `(${plan.interestRate}%)`}
@@ -211,7 +238,7 @@ export default function SalesClientComponent({
           motorcycleId={selectedMotorcycle.id}
           motorcycleName={selectedMotorcycle.name}
           motorcyclePrice={selectedMotorcycle.retailPrice}
-          clients={clients as Client[]} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
+          clients={clients as any}
           onSaleProcessCompleted={handleSaleCompletion}
         />
       )}

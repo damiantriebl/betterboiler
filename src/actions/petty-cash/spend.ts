@@ -22,7 +22,7 @@ export async function spendPettyCash({
 }: SpendPettyCashParams) {
 
   const sessionData = await getOrganizationIdFromSession();
-  console.log("🔍 DEBUG Session in spendPettyCash:", sessionData);
+ 
   
   if (sessionData.error || !sessionData.organizationId || !sessionData.userId) { 
     throw new Error(sessionData.error || "No se pudo obtener la información de la sesión o falta información esencial.");

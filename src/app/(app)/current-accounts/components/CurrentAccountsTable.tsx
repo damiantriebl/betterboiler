@@ -109,6 +109,7 @@ interface InstallmentInfo {
   amortization?: number; // Capital pagado en esta cuota
   interestForPeriod?: number; // Interés pagado en esta cuota
   calculatedInstallmentAmount?: number; // Cuota fija según sistema francés
+  isAnnulment?: boolean;
 }
 
 function getPeriodsPerYear(frequency: PaymentFrequency): number {
@@ -684,15 +685,19 @@ const generateInstallments = (
 };
 
 interface ExtendedPayment extends Payment {
-  installmentVersion?: string;
-  notes?: string;
+  installmentVersion: string | null;
+  notes: string | null;
   isDownPayment?: boolean;
 }
 
 interface LastInstallmentInfo {
-  amount: number;
-  date: string;
-  status: string;
+  type: string;
+  lastInstallmentAmount: number;
+  lastInstallmentNumber?: number;
+  originalInstallmentAmount?: number;
+  difference?: number;
+  calculatedAt?: string;
+  status?: string;
   notes?: string;
 }
 
@@ -826,17 +831,17 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               const amortizationPlanForTotals =
                 (account.interestRate ?? 0) > 0 && financialPrincipalForSchedule > 0
                   ? calculateFrenchAmortizationSchedule(
-                      financialPrincipalForSchedule,
-                      account.interestRate ?? 0,
-                      account.numberOfInstallments,
-                      account.paymentFrequency as PaymentFrequency,
-                    )
+                    financialPrincipalForSchedule,
+                    account.interestRate ?? 0,
+                    account.numberOfInstallments,
+                    account.paymentFrequency as PaymentFrequency,
+                  )
                   : calculateFrenchAmortizationSchedule(
-                      financialPrincipalForSchedule,
-                      0, // No interest
-                      account.numberOfInstallments,
-                      account.paymentFrequency as PaymentFrequency,
-                    );
+                    financialPrincipalForSchedule,
+                    0, // No interest
+                    account.numberOfInstallments,
+                    account.paymentFrequency as PaymentFrequency,
+                  );
 
               // Obtener las cuotas generadas incluyendo pagos realizados
               const currentInstallments = generateInstallments(
@@ -938,7 +943,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                               <span className="font-semibold">ID:</span> {account.client.id}
                             </p>
                             <p className="text-sm">
-                              <span className="font-semibold">Nombre completo:</span>{" "}
+                              <span className="font-semibold">Nombre completo:</span>
                               {account.client.firstName} {account.client.lastName}
                             </p>
                           </div>
@@ -966,23 +971,23 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                             {account.motorcycle ? (
                               <>
                                 <p className="text-sm">
-                                  <span className="font-semibold">Modelo:</span>{" "}
+                                  <span className="font-semibold">Modelo:</span>
                                   {account.motorcycle.model.name}
                                 </p>
                                 <p className="text-sm">
-                                  <span className="font-semibold">Año:</span>{" "}
+                                  <span className="font-semibold">Año:</span>
                                   {account.motorcycle.year}
                                 </p>
                                 <p className="text-sm">
-                                  <span className="font-semibold">Chasis:</span>{" "}
+                                  <span className="font-semibold">Chasis:</span>
                                   {account.motorcycle.chassisNumber}
                                 </p>
                                 <p className="text-sm">
-                                  <span className="font-semibold">Motor:</span>{" "}
+                                  <span className="font-semibold">Motor:</span>
                                   {account.motorcycle.engineNumber}
                                 </p>
                                 <p className="text-sm">
-                                  <span className="font-semibold">Precio:</span>{" "}
+                                  <span className="font-semibold">Precio:</span>
                                   {formatCurrency(account.motorcycle.retailPrice)}
                                 </p>
                               </>
@@ -1098,7 +1103,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                       <TableCell className="font-medium">
                                         {installment.number}
                                         {installment.installmentVersion &&
-                                        installment.installmentVersion !== "Original (Anulado)"
+                                          installment.installmentVersion !== "Original (Anulado)"
                                           ? String(installment.installmentVersion).toUpperCase()
                                           : ""}
                                       </TableCell>
@@ -1183,10 +1188,10 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                       </TableCell>
                                       <TableCell className="text-center">
                                         {installment.installmentVersion === "D" ||
-                                        installment.installmentVersion === "H" ||
-                                        installment.installmentVersion ===
+                                          installment.installmentVersion === "H" ||
+                                          installment.installmentVersion ===
                                           "Original (Anulado)" ? null : installment.isPaid &&
-                                          installment.paymentId ? (
+                                            installment.paymentId ? (
                                           <AnnulPaymentButton
                                             paymentId={installment.paymentId}
                                             onAnnulmentSuccess={() =>
@@ -1208,7 +1213,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                                 account.id,
                                                 installment.number,
                                                 installment.calculatedInstallmentAmount ??
-                                                  installment.amount,
+                                                installment.amount,
                                               )
                                             }
                                           >

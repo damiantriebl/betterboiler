@@ -1,15 +1,14 @@
 // Layout.tsx
 "use client";
-import { getOrganization } from "@/actions/get-organization";
 import { getSession } from "@/actions/get-session";
 import NavbarSticky from "@/components/custom/NavbarSticky";
 import AppSidebar from "@/components/ui/app-sidebar";
 import { PriceModeSelector } from "@/components/ui/price-mode-selector";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import type { SessionState } from "@/stores/SessionStore";
 import { useSessionStore } from "@/stores/SessionStore";
 import { useEffect, useRef, useState } from "react";
-import TestDevtools from "./testdevtool";
-import { Input } from "@/components/ui/input";
+
 
 interface Org {
   logo: string | null;
@@ -22,22 +21,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [scrollAmount, setScrollAmount] = useState(0);
   const mainRef = useRef<HTMLDivElement>(null);
 
-  // Acceso al store de sesión
   const setSession = useSessionStore((state) => state.setSession);
 
-  // Cargar datos de sesión completos
   useEffect(() => {
-    getSession().then((sessionData) => {
-      if (sessionData) {
-        // Actualizar el store con todos los datos de sesión
-        setSession(sessionData);
+    getSession().then((sessionDataResponse) => {
+      if (sessionDataResponse.session) {
+        const currentSession = sessionDataResponse.session;
 
-        // Actualizar el estado local del org para NavbarSticky (si se requiere)
-        if (sessionData.organizationName) {
+        const sessionToStore: Partial<Omit<SessionState, "setSession" | "clearSession">> = {
+          userId: currentSession.user?.id ?? null,
+          userName: currentSession.user?.name ?? null,
+          userEmail: currentSession.user?.email ?? null,
+          userImage: currentSession.user?.image ?? null,
+          userRole: currentSession.user?.role ?? null,
+          organizationId: currentSession.user?.organizationId ?? null,
+          organizationName: null,
+          organizationLogo: null,
+        };
+        setSession(sessionToStore);
+
+        if (sessionToStore.organizationLogo || sessionToStore.organizationName) {
           setOrg({
-            logo: sessionData.organizationLogo || null,
-            thumbnail: null, // No tenemos thumbnail en la sesión
-            name: sessionData.organizationName
+            logo: sessionToStore.organizationLogo || null,
+            thumbnail: null,
+            name: sessionToStore.organizationName || "Organización",
           });
         }
       }
@@ -73,7 +80,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-end w-full justify-end pr-16">
             <PriceModeSelector />
           </div>
-          {/* NavbarSticky ahora puede trabajar con o sin props de organización */}
           <NavbarSticky scrollAmount={scrollAmount} organization={org || undefined} />
 
           <div className="w-full">{children}</div>

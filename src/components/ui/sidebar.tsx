@@ -2,7 +2,7 @@
 
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
-import { FilePlus2, FileSpreadsheet, Icon, PanelLeft, User } from "lucide-react";
+import { CircleDollarSign, FilePlus2, FileSpreadsheet, Icon, PanelLeft, User } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -426,6 +426,7 @@ const SidebarContent = React.forwardRef<
     { href: "/suppliers", icon: Truck, label: "Proveedores" },
     { href: "/clients", icon: User, label: "Clientes" },
     { href: "/current-accounts", icon: FilePlus2, label: "Cuentas corrientes" },
+    { href: "/petty-cash", icon: CircleDollarSign, label: "Caja Chica" },
     { href: "/reports", icon: FileSpreadsheet, label: "Reportes" },
     { href: "/configuration", icon: Settings, label: "Configuración" },
   ];
@@ -466,7 +467,7 @@ const SidebarContent = React.forwardRef<
       <Separator className="mb-2" />
 
       <div className="flex flex-col flex-grow px-2">
-        <div className="flex-grow">
+        <div className="flex-grow flex flex-col gap-5">
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link
@@ -623,7 +624,7 @@ const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li
     <li
       ref={ref}
       data-sidebar="menu-item"
-      className={cn("group/menu-item relative", className)}
+      className={cn("group/menu-item relative list-none", className)}
       {...props}
     />
   ),

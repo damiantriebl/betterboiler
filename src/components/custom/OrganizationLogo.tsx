@@ -223,7 +223,6 @@ export default function OrganizationLogo({
             className="text-xl font-bold pr-2 transition-opacity duration-200 ease-out"
             style={{ opacity: nameDisplayOpacity }}
           >
-            {" "}
             {displayName}
           </div>
         </span>

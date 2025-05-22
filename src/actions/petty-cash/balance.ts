@@ -1,16 +1,9 @@
 "use server";
 import prisma from "@/lib/prisma";
-import type { PettyCashMovement } from '@prisma/client'; 
+// Se elimina: import type { PettyCashMovement } from '@prisma/client'; 
 import { Prisma } from '@prisma/client'; 
 
 const GENERAL_ACCOUNT_ID_VALUE = "GENERAL_ACCOUNT"; // Definir la constante aquí también
-
-interface AggregationResult {
-  type: PettyCashMovement['type']; 
-  _sum: {
-    amount: Prisma.Decimal | null; 
-  };
-}
 
 export async function getPettyCashBalance(organizationId: string, branchId: string) {
   if (!organizationId) {
@@ -33,30 +26,47 @@ export async function getPettyCashBalance(organizationId: string, branchId: stri
   // Si branchId es GENERAL_ACCOUNT_ID_VALUE, numericBranchId permanecerá null.
 
   try {
-    const agg = await prisma.pettyCashMovement.groupBy({
-      by: ["type"],
-      where: {
-        account: { 
-          organizationId: organizationId,
-          // Si numericBranchId es null (Caja General), Prisma buscará PettyCashAccount.branchId = null
-          // Si numericBranchId tiene un valor, buscará esa sucursal específica.
-          branchId: numericBranchId, 
-        }
+    // Calcular el total de depósitos (DEBE)
+    const totalDepositsResult = await prisma.pettyCashDeposit.aggregate({
+      _sum: {
+        amount: true,
       },
-      _sum: { amount: true },
+      where: {
+        organizationId: organizationId,
+        branchId: numericBranchId, // null para caja general, número para branch específica
+      },
     });
+    const depositsSum = totalDepositsResult._sum.amount || 0;
 
-    const typedAgg = agg as AggregationResult[];
+    // Calcular el total de gastos (HABER)
+    // Los gastos (PettyCashSpend) están vinculados a una organización y
+    // a una sucursal/caja general a través de PettyCashWithdrawal -> PettyCashDeposit.
+    const totalSpendsResult = await prisma.pettyCashSpend.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        organizationId: organizationId, // El gasto pertenece a esta organización
+        withdrawal: {                 // El retiro asociado al gasto
+          deposit: {                  // El depósito original asociado al retiro
+            branchId: numericBranchId, // Debe pertenecer a la sucursal/caja general especificada
+          },
+        },
+      },
+    });
+    const spendsSum = totalSpendsResult._sum.amount || 0;
 
-    const debeDecimal = typedAgg.find((x: AggregationResult) => x.type === "DEBE")?._sum.amount || new Prisma.Decimal(0);
-    const haberDecimal = typedAgg.find((x: AggregationResult) => x.type === "HABER")?._sum.amount || new Prisma.Decimal(0);
+    const balanceDecimal = new Prisma.Decimal(depositsSum).minus(new Prisma.Decimal(spendsSum));
 
-    const balance = debeDecimal.minus(haberDecimal); 
-
-    return { balance: balance.toNumber() }; 
+    return { balance: balanceDecimal.toNumber() };
 
   } catch (error) {
     console.error("Error al calcular el balance de caja chica:", error);
-    return { balance: 0, error: "Error al calcular el balance." };
+    // Asegurarse de que el error se propague o se maneje de forma que la UI pueda reaccionar
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Errores específicos de Prisma
+      return { balance: 0, error: `Error de base de datos: ${error.message}` };
+    }
+    return { balance: 0, error: "Error interno al calcular el balance." };
   }
 }

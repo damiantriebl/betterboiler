@@ -1,6 +1,7 @@
 "use client";
 
-import { createCurrentAccountAction } from "@/actions/create-current-account-action";
+import { createCurrentAccountAction } from "@/actions/current-accounts/create-current-account-action";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -136,7 +137,7 @@ export function CurrentAccountPaymentForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       clientId,
-      modelId,
+      motorcycleId: modelId,
       totalAmount: motorcyclePrice,
       downPayment: 0,
       numberOfInstallments: 12,
@@ -167,7 +168,7 @@ export function CurrentAccountPaymentForm({
 
   useEffect(() => {
     setValue("clientId", clientId);
-    setValue("modelId", modelId);
+    setValue("motorcycleId", modelId);
     setValue("totalAmount", motorcyclePrice);
   }, [clientId, modelId, motorcyclePrice, setValue]);
 
@@ -213,9 +214,20 @@ export function CurrentAccountPaymentForm({
     setGeneralError(null);
     clearErrors(); // Clear previous errors
 
+    // Obtener organizationId de la sesión
+    const sessionInfo = await getOrganizationIdFromSession();
+    if (sessionInfo.error || !sessionInfo.organizationId) {
+      setGeneralError(sessionInfo.error || "No se pudo obtener el ID de la organización. Intente nuevamente.");
+      setError("organizationId" as any, { message: sessionInfo.error || "Organization ID es requerido." }); // Añadir error al campo si existe
+      setActionIsLoading(false);
+      return;
+    }
+    const organizationId = sessionInfo.organizationId;
+
     const submissionData: CreateCurrentAccountInput = {
       clientId: data.clientId,
-      modelId: data.modelId,
+      motorcycleId: data.motorcycleId,
+      organizationId,
       totalAmount: data.totalAmount,
       downPayment: data.downPayment,
       numberOfInstallments: data.numberOfInstallments,
@@ -406,7 +418,7 @@ export function CurrentAccountPaymentForm({
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>Monto a Financiar:</span>{" "}
+                <span>Monto a Financiar:</span>
                 <strong>
                   $
                   {financedAmount.toLocaleString(undefined, {
@@ -416,7 +428,7 @@ export function CurrentAccountPaymentForm({
                 </strong>
               </div>
               <div className="flex justify-between">
-                <span>Monto de Cuota:</span>{" "}
+                <span>Monto de Cuota:</span>
                 <strong>
                   $
                   {calculatedInstallmentAmount.toLocaleString(undefined, {
@@ -426,7 +438,7 @@ export function CurrentAccountPaymentForm({
                 </strong>
               </div>
               <div className="flex justify-between">
-                <span>Total a Pagar (Financiado):</span>{" "}
+                <span>Total a Pagar (Financiado):</span>
                 <strong>
                   $
                   {totalRepayment.toLocaleString(undefined, {
@@ -436,7 +448,7 @@ export function CurrentAccountPaymentForm({
                 </strong>
               </div>
               <div className="flex justify-between">
-                <span>Total Intereses Pagados:</span>{" "}
+                <span>Total Intereses Pagados:</span>
                 <strong>
                   $
                   {totalInterest.toLocaleString(undefined, {

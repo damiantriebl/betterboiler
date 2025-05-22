@@ -218,8 +218,7 @@ export default function SupplierForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Tabs defaultValue="identificacion" className="w-full">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 mb-4">
-                {" "}
-                {/* Ajustar grid */}
+
                 {tabsConfig.map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value}>
                     {tab.label}

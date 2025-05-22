@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   type CreateCurrentAccountInput,
   createCurrentAccountSchema,
-} from "../zod/current-account-schemas";
+} from "../../zod/current-account-schemas";
 
 const prisma = new PrismaClient();
 

@@ -88,7 +88,7 @@ grupos
 [ ] generar el primer concepto de grupos
 
 presupuesto
-[ ] armar un pdf, 
+[x] armar un pdf, 
 [ ] enviar un whatsapp
 [ ] enviar email
 
@@ -98,4 +98,7 @@ AFIP
 cuenta corriente
 [x] agregar pagina
 [ ] enviar un mail con un pdf con lo remanente
-[ ] anular con pagos previos (el modal para generar una nueva cuenta corriente)
+[x] anular con pagos previos (el modal para generar una nueva cuenta corriente)
+
+caja chica
+[x] 

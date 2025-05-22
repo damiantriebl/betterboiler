@@ -1,50 +1,35 @@
 "use server";
 
 import { auth } from "@/auth";
-import prisma from "@/lib/prisma";
+import type { Session } from "@/auth";
 import { headers } from "next/headers";
 
-export async function getSession() {
+interface FullSessionResult {
+  session: Session | null;
+  error?: string;
+}
+
+export async function getSession(): Promise<FullSessionResult> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    
-    if (!session || !session.user) {
-      console.log("❌ No session found");
-      return null;
+
+    if (!session) {
+      console.error("❌ No session found.");
+      return {
+        session: null,
+        error: "No se encontró la sesión.",
+      };
     }
-    
-    // Obtener datos de la organización si hay un organizationId
-    let orgName = null;
-    let orgLogo = null;
-    
-    if (session.user.organizationId) {
-      const org = await prisma.organization.findUnique({
-        where: { id: session.user.organizationId },
-        select: { name: true, logo: true }
-      });
-      
-      if (org) {
-        orgName = org.name;
-        orgLogo = org.logo;
-      }
-    }
-    
-    // Extraer los datos del usuario y la organización para el store
+
+    console.log("✅ Full session retrieved:", session);
     return {
-      // Datos de organización
-      organizationId: session.user.organizationId || null,
-      organizationName: orgName,
-      organizationLogo: orgLogo,
-      
-      // Datos de usuario
-      userId: session.user.id,
-      userName: session.user.name || null,
-      userEmail: session.user.email,
-      userImage: session.user.profileOriginal || null,
-      userRole: session.user.role,
+      session,
     };
   } catch (error) {
-    console.error("🔥 ERROR SERVER ACTION (getSession):", error);
-    return null;
+    console.error("❌ Error in getSession:", error);
+    return {
+      session: null,
+      error: `Error al obtener la sesión: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
 } 

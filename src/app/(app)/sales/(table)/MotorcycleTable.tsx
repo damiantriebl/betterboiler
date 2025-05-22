@@ -1,5 +1,4 @@
 import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status";
-import type { Client as ClientColumn } from "@/app/(app)/clients/columns";
 import { Button } from "@/components/ui/button";
 import { PriceDisplay } from "@/components/ui/price-display";
 import {
@@ -24,6 +23,7 @@ import type {
   MotorcycleWithActions,
   MotorcycleWithFullDetails,
   ReservationUpdate,
+  ReservationWithDetails,
 } from "@/types/motorcycle";
 import {
   type Brand,
@@ -33,13 +33,14 @@ import {
   type Motorcycle,
   MotorcycleState,
   type Reservation,
-  type Sucursal,
+  type Branch,
+  type CurrentAccount,
 } from "@prisma/client";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import DeleteConfirmationDialog from "../DeleteDialog";
-import { MotorcycleDetailModal, type MotorcycleWithDetails } from "../MotorcycleDetailModal";
+import { MotorcycleDetailModal } from "../MotorcycleDetailModal";
 import { ReserveModal } from "../ReserveModal";
 import { ColumnSelector } from "./ColumnSelector";
 import FilterSection from "./FilterSection";
@@ -47,6 +48,14 @@ import { ActionButtons, ActionMenu } from "./MotorcycleActions";
 import MotorcycleRow from "./MotorcycleRow";
 import MotorcycleStatusBadge from "./MotorcycleStatusBadge";
 import PaginationControl from "./PaginationControl";
+
+// Definición de Props para MotorcycleTable
+interface MotorcycleTableProps {
+  initialData: MotorcycleWithFullDetails[];
+  clients: any[]; // DEUDA TÉCNICA: Usar un tipo más específico o el Client de Prisma y ajustar el origen.
+  activePromotions: BankingPromotionDisplay[];
+  onInitiateSale?: (motorcycle: MotorcycleWithFullDetails) => void; // Añadida prop opcional para iniciar venta
+}
 
 type SortableKey = keyof Pick<
   Motorcycle,
@@ -92,6 +101,7 @@ export default function MotorcycleTable({
   initialData,
   clients,
   activePromotions,
+  onInitiateSale,
 }: MotorcycleTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -346,39 +356,37 @@ export default function MotorcycleTable({
       setSelectedMotoToDelete(moto as MotorcycleWithFullDetails);
       setShowDeleteDialog(true);
     } else if (action === "vender") {
-      const newStatus = MotorcycleState.PROCESANDO;
-
-      startTransition(async () => {
-        addOptimisticUpdate({ motorcycleId: moto.id, newStatus });
-
-        try {
-          const result = await updateMotorcycleStatus(moto.id, newStatus);
-
-          if (result.success) {
-            setMotorcycles((current) =>
-              current.map((m) => (m.id === moto.id ? { ...m, state: newStatus } : m)),
-            );
-
-            router.push(`/sales/${moto.id}`);
-          } else {
+      if (onInitiateSale) {
+        onInitiateSale(moto as MotorcycleWithFullDetails);
+      } else {
+        const newStatus = MotorcycleState.PROCESANDO;
+        startTransition(async () => {
+          addOptimisticUpdate({ motorcycleId: moto.id, newStatus });
+          try {
+            const result = await updateMotorcycleStatus(moto.id, newStatus);
+            if (result.success) {
+              setMotorcycles((current) =>
+                current.map((m) => (m.id === moto.id ? { ...m, state: newStatus } : m)),
+              );
+              router.push(`/sales/${moto.id}`);
+            } else {
+              setMotorcycles((current) => [...current]);
+              toast({
+                variant: "destructive",
+                title: "Error al actualizar estado",
+                description: result.error || "No se pudo cambiar el estado a PROCESANDO.",
+              });
+            }
+          } catch (error) {
             setMotorcycles((current) => [...current]);
-
             toast({
               variant: "destructive",
-              title: "Error al actualizar estado",
-              description: result.error || "No se pudo cambiar el estado a PROCESANDO.",
+              title: "Error inesperado",
+              description: "Ocurrió un error al preparar la moto para venta.",
             });
           }
-        } catch (error) {
-          setMotorcycles((current) => [...current]);
-
-          toast({
-            variant: "destructive",
-            title: "Error inesperado",
-            description: "Ocurrió un error al preparar la moto para venta.",
-          });
-        }
-      });
+        });
+      }
     } else if (action === "reservar") {
       setSelectedReserveMoto(moto as MotorcycleWithFullDetails);
       setShowReserveModal(true);
@@ -398,30 +406,36 @@ export default function MotorcycleTable({
     reservationId: number;
     amount: number;
     clientId: string;
+    currency: string;
   }) => {
     startTransition(() => {
       setMotorcycles((prev) =>
-        prev.map((m) =>
-          m.id === updatedMoto.motorcycleId
-            ? {
-                ...m,
-                state: MotorcycleState.RESERVADO,
-                reservation: {
-                  id: updatedMoto.reservationId,
-                  amount: updatedMoto.amount,
-                  motorcycleId: updatedMoto.motorcycleId,
-                  clientId: updatedMoto.clientId,
-                  expirationDate: null,
-                  status: "active",
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  organizationId: m.organizationId,
-                  notes: null,
-                  paymentMethod: null,
-                },
-              }
-            : m,
-        ),
+        prev.map((m) => {
+          if (m.id !== updatedMoto.motorcycleId) {
+            return m;
+          }
+
+          const newReservationData: ReservationWithDetails = {
+            id: updatedMoto.reservationId,
+            amount: updatedMoto.amount,
+            currency: updatedMoto.currency,
+            motorcycleId: updatedMoto.motorcycleId,
+            clientId: updatedMoto.clientId,
+            expirationDate: null,
+            status: "active",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            organizationId: m.organizationId,
+            notes: null,
+            paymentMethod: null,
+          };
+
+          return {
+            ...m,
+            state: MotorcycleState.RESERVADO,
+            reservation: newReservationData,
+          };
+        }),
       );
 
       addOptimisticUpdate({
@@ -447,9 +461,9 @@ export default function MotorcycleTable({
             current.map((moto) =>
               moto.id === motoId
                 ? {
-                    ...moto,
-                    state: newStatus,
-                  }
+                  ...moto,
+                  state: newStatus,
+                }
                 : moto,
             ),
           );
@@ -481,9 +495,9 @@ export default function MotorcycleTable({
       ...moto,
       model: moto.model
         ? {
-            ...moto.model,
-            imageUrl: moto.model.imageUrl || null,
-          }
+          ...moto.model,
+          imageUrl: moto.model.imageUrl || null,
+        }
         : null,
     };
     console.log("handleOpenDetailModal - Moto data:", JSON.stringify(motoWithModelData, null, 2));
@@ -533,17 +547,19 @@ export default function MotorcycleTable({
         clients={clients}
         onSaleProcessCompleted={(data) => {
           if (data.type === "reservation") {
-            handleReserved(data.payload);
+            handleReserved(data.payload as { motorcycleId: number; reservationId: number; amount: number; clientId: string; currency: string });
           } else if (data.type === "current_account") {
             // Handle current account creation
             // We can update the motorcycle state similar to reservation
-            const updatedMoto = {
+            const currentAccountPayload = data.payload as CurrentAccount; // <<< TYPE ASSERTION MÁS ESPECÍFICO
+            const updatedMotoPayload = {
               motorcycleId: Number(selectedReserveMoto?.id || 0),
               reservationId: 0, // Not applicable for current account
               amount: selectedReserveMoto?.retailPrice || 0,
-              clientId: data.payload.clientId,
+              clientId: currentAccountPayload.clientId, // <<< USAR CLIENTID DEL PAYLOAD TIPADO
+              currency: selectedReserveMoto?.currency || "USD",
             };
-            handleReserved(updatedMoto);
+            handleReserved(updatedMotoPayload);
           }
         }}
       />
@@ -551,7 +567,6 @@ export default function MotorcycleTable({
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
         motorcycle={selectedMotoForModal}
-        clients={clients}
         onToggleStatus={handleToggleStatus}
         onSetEliminado={handleSetEliminado}
         onAction={handleAction}
@@ -596,7 +611,7 @@ export default function MotorcycleTable({
         />
 
         <div className="text-sm text-muted-foreground">
-          Mostrando {startIndex + 1} a {Math.min(startIndex + pageSize, sortedData.length)} de{" "}
+          Mostrando {startIndex + 1} a {Math.min(startIndex + pageSize, sortedData.length)} de
           {sortedData.length} motos
         </div>
       </div>
@@ -646,12 +661,12 @@ export default function MotorcycleTable({
             paginatedData.map((moto) => (
               <MotorcycleRow
                 key={moto.id}
-                moto={moto}
-                onAction={handleAction}
+                moto={moto as any}
+                onAction={handleAction as any}
                 onToggleStatus={handleToggleStatus}
                 onCancelProcess={handleCancelProcess}
                 onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                onRowDoubleClick={handleOpenDetailModal}
+                onRowDoubleClick={handleOpenDetailModal as any}
                 isPending={isPending}
               >
                 {visibleColumns.includes("brandModel") && (
@@ -704,15 +719,15 @@ export default function MotorcycleTable({
                   <TableCell>
                     <div className="flex items-center justify-end">
                       <ActionButtons
-                        moto={moto}
-                        onAction={handleAction}
+                        moto={moto as any}
+                        onAction={handleAction as any}
                         onToggleStatus={handleToggleStatus}
                         onCancelProcess={handleCancelProcess}
                         onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
                       />
                       <ActionMenu
-                        moto={moto}
-                        onAction={handleAction}
+                        moto={moto as any}
+                        onAction={handleAction as any}
                         onToggleStatus={handleToggleStatus}
                         onCancelProcess={handleCancelProcess}
                         onNavigateToDetail={(id) => router.push(`/sales/${id}`)}

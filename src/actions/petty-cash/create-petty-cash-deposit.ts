@@ -1,21 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "./getOrganizationIdFromSession";
-import {
-  createPettyCashDepositSchema,
-  type CreatePettyCashDepositInput,
-} from "@/zod/PettyCashZod";
 import { revalidatePath } from "next/cache";
-import type { PettyCashDeposit } from "@prisma/client";
 import { z } from "zod";
 import type { CreatePettyCashDepositState } from "@/types/action-states";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
-// Remove local state interface and initial state
-// export interface CreatePettyCashDepositState { ... }
-// const initialState: CreatePettyCashDepositState = { ... };
-
-// Define initial state according to the global type
 const initialState: CreatePettyCashDepositState = {
   status: "idle",
   message: "",
@@ -24,10 +14,6 @@ const initialState: CreatePettyCashDepositState = {
 
 const GENERAL_ACCOUNT_VALUE = "__general__"; // Make sure this is defined or imported if used
 
-// Schema para validar los campos que vienen en FormData
-// It seems createPettyCashDepositSchema from PettyCashZod.ts is intended for object validation, not direct FormData processing with preprocess.
-// The original code had a formDataDepositSchema that extended createPettyCashDepositSchema and added preprocess.
-// I will reconstruct a similar Zod schema here for FormData validation.
 const formDataSchema = z.object({
     description: z.string().min(1, "La descripción es requerida."),
     amount: z.preprocess(
@@ -56,8 +42,8 @@ export async function createPettyCashDeposit(
 ): Promise<CreatePettyCashDepositState> {
   
   const organizationIdFromForm = formData.get("organizationId") as string | null;
-  const sessionInfo = await getOrganizationIdFromSession();
-  const organizationIdFromSession = sessionInfo.organizationId;
+  const org = await getOrganizationIdFromSession();
+  const organizationIdFromSession = org.organizationId;
 
   let effectiveOrganizationId: string | null = organizationIdFromForm || organizationIdFromSession;
 

@@ -157,7 +157,7 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
           </Select>
         </div>
         <div className="text-sm text-muted-foreground">
-          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a{" "}
+          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a
           {Math.min(startIndex + pageSize, sortedData.length)} de {sortedData.length} clientes
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { getOrganization } from "@/actions/get-organization";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationDetailsById } from "@/actions";
 import type { Organization } from "@prisma/client";
 import { useEffect, useState } from "react";
 
@@ -18,23 +19,33 @@ export function useOrganization(): UseOrganizationReturn {
   useEffect(() => {
     let mounted = true;
 
-    const fetchOrganization = async () => {
+    const fetchOrganizationData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await getOrganization();
+        
+        const sessionData = await getOrganizationIdFromSession();
 
         if (!mounted) return;
 
-        if (!data) {
-          throw new Error("No organization found");
+        if (sessionData.error || !sessionData.organizationId) {
+          throw new Error(sessionData.error || "No organizationId found in session");
         }
 
-        setOrganization(data);
+        const orgDetails = await getOrganizationDetailsById(sessionData.organizationId);
+        
+        if (!mounted) return;
+
+        if (!orgDetails) {
+          throw new Error(`Organization details not found for ID: ${sessionData.organizationId}`);
+        }
+        
+        setOrganization(orgDetails);
+
       } catch (err) {
         if (!mounted) return;
-        console.error("Error fetching organization:", err);
-        setError(err instanceof Error ? err : new Error("Unknown error"));
+        console.error("Error fetching organization data:", err);
+        setError(err instanceof Error ? err : new Error("Unknown error fetching organization data"));
       } finally {
         if (mounted) {
           setLoading(false);
@@ -42,7 +53,7 @@ export function useOrganization(): UseOrganizationReturn {
       }
     };
 
-    fetchOrganization();
+    fetchOrganizationData();
 
     return () => {
       mounted = false;

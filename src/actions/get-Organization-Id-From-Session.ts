@@ -9,6 +9,8 @@ const urlCache = new Map<string, string>();
 interface SessionResult {
   organizationId: string | null;
   userId?: string | null;
+  userEmail?: string | null;
+  userRole?: string | null;
   error?: string;
 }
 
@@ -16,29 +18,58 @@ export async function getOrganizationIdFromSession(): Promise<SessionResult> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
 
-    // Original-style logging, focused on user.organizationId
-    console.log("🔍 DEBUG Session in getOrganizationIdFromSession:", {
-      sessionExists: !!session,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      userOrganizationId: session?.user?.organizationId,
-    });
-
     if (!session?.user?.organizationId) {
       console.error("❌ No organizationId found in session.user.organizationId");
       return {
         organizationId: null,
         userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userRole: session?.user?.role,
         error: "No se encontró el ID de la organización en la sesión.",
       };
     }
 
-    console.log("✅ Found organizationId in session.user:", session.user.organizationId);
-    return { organizationId: session.user.organizationId, userId: session.user.id };
+    if (!session.user.email) {
+      console.error("❌ No email found in session.user.email");
+      return {
+        organizationId: session.user.organizationId,
+        userId: session.user.id,
+        userEmail: null,
+        userRole: session.user.role,
+        error: "No se encontró el email del usuario en la sesión.",
+      };
+    }
+
+    if (!session.user.role) {
+      console.error("❌ No role found in session.user.role");
+      return {
+        organizationId: session.user.organizationId,
+        userId: session.user.id,
+        userEmail: session.user.email,
+        userRole: null,
+        error: "No se encontró el rol del usuario en la sesión.",
+      };
+    }
+
+    console.log("✅ Found organizationId, userId, userEmail, userRole in session.user:", 
+      session.user.organizationId, 
+      session.user.id, 
+      session.user.email,
+      session.user.role
+    );
+    return {
+      organizationId: session.user.organizationId,
+      userId: session.user.id,
+      userEmail: session.user.email,
+      userRole: session.user.role,
+    };
   } catch (error) {
     console.error("❌ Error in getOrganizationIdFromSession:", error);
     return {
       organizationId: null,
+      userId: null,
+      userEmail: null,
+      userRole: null,
       error: `Error al obtener la sesión: ${error instanceof Error ? error.message : String(error)}`,
     };
   }

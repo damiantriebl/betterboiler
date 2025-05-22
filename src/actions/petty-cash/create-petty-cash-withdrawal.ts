@@ -1,11 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "./getOrganizationIdFromSession";
 import { revalidatePath } from "next/cache";
 import type { PettyCashWithdrawal, PettyCashDepositStatus } from "@prisma/client";
 import { z } from "zod";
 import type { CreatePettyCashWithdrawalState } from "@/types/action-states"; // Importar el tipo de estado global
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 // Esquema Zod para la validación de FormData
 const formDataWithdrawalSchema = z.object({
@@ -35,8 +35,8 @@ export async function createPettyCashWithdrawal(
   formData: FormData,
 ): Promise<CreatePettyCashWithdrawalState> {
   const organizationIdFromForm = formData.get("organizationId") as string | null;
-  const sessionInfo = await getOrganizationIdFromSession();
-  const organizationIdFromSession = sessionInfo.organizationId;
+  const org = await getOrganizationIdFromSession();
+  const organizationIdFromSession = org.organizationId;
 
   let effectiveOrganizationId: string | null = null;
 

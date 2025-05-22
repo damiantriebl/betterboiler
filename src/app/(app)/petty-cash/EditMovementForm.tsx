@@ -30,7 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { PettyCashMovement } from "@prisma/client";
+import { PettyCashSpend } from "@prisma/client";
 import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement";
 import { UpdatePettyCashMovementSchema, type UpdatePettyCashMovementFormValues } from "@/zod/pettyCashSchema"; // Asegúrate que el schema se importa
 
@@ -40,27 +40,11 @@ const pettyCashMovementTypeEnum = {
 };
 
 interface EditMovementFormProps {
-    movement: PettyCashMovement;
+    movement: PettyCashSpend;
     onClose: () => void;
     users: { id: string; name: string; role: string }[]; // Esta prop parece no usarse, considerar eliminarla si no es necesaria.
 }
 
-// El tipo para el formulario se deriva del schema de Zod, no es necesario redefinirlo como EditMovementFormValues si ya existe UpdatePettyCashMovementFormValues
-// type EditMovementFormValues = z.infer<typeof UpdatePettyCashMovementSchema>; // Ya se importa UpdatePettyCashMovementFormValues
-
-// Esta interfaz local podría causar confusión con el tipo de retorno de la acción.
-// La acción ya define su tipo de retorno.
-/*
-interface UpdatePettyCashMovementResult {
-    success: boolean;
-    error?: string; // Error general
-    message?: string;
-    data?: UpdatePettyCashMovementFormValues;
-    // NO tiene fieldErrors directamente aquí.
-}
-*/
-
-// Definición del enum que falta
 const pettyCashMovementTypeEnumZod = z.enum(["DEPOSIT", "WITHDRAWAL", "SPEND"]);
 
 const EditMovementForm = ({

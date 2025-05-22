@@ -80,7 +80,7 @@ export function PriceDisplay({
     <div className={cn("flex flex-col", sizeClasses.container, className)}>
       {showCost() && costPrice !== undefined && costPrice !== null && (
         <div>
-          <span className={cn("text-muted-foreground text-base", sizeClasses.label)}>Costo:</span>{" "}
+          <span className={cn("text-muted-foreground text-base", sizeClasses.label)}>Costo:</span>
           <span className={cn(sizeClasses.value, "text-base")}>
             {formatPrice(costPrice, currency)}
           </span>
@@ -91,7 +91,7 @@ export function PriceDisplay({
         <div>
           <span className={cn("text-muted-foreground text-base", sizeClasses.label)}>
             Mayorista:
-          </span>{" "}
+          </span>
           <span className={cn(sizeClasses.value, "text-base")}>
             {formatPrice(wholesalePrice, currency)}
           </span>
@@ -102,7 +102,7 @@ export function PriceDisplay({
         <div>
           <span className={cn("text-muted-foreground text-base", sizeClasses.label)}>
             Minorista:
-          </span>{" "}
+          </span>
           <span className={cn(sizeClasses.value, "text-green-600 text-base")}>
             {formatPrice(retailPrice, currency)}
           </span>

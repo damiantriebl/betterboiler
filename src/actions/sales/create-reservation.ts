@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { type CreateReservationInput, createReservationSchema } from "@/zod/ReservationZod";
 import { MotorcycleState } from "@prisma/client";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 export async function createReservation(data: CreateReservationInput) {
   try {
@@ -11,13 +11,14 @@ export async function createReservation(data: CreateReservationInput) {
     const validatedData = createReservationSchema.parse(data);
 
     // Obtener el ID de la organización del usuario actual
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) {
+    const sessionInfo = await getOrganizationIdFromSession();
+    if (sessionInfo.error || !sessionInfo.organizationId) {
       return {
         success: false,
-        error: "No se encontró una organización asociada a la sesión actual",
+        error: sessionInfo.error || "No se pudo obtener el ID de la organización de la sesión.",
       };
     }
+    const organizationId = sessionInfo.organizationId; // organizationId es ahora un string
 
     // Iniciar una transacción para garantizar la consistencia
     const result = await prisma.$transaction(async (tx) => {

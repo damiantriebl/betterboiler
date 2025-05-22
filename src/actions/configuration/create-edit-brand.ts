@@ -13,15 +13,8 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
-// Helper para obtener organizationId de la sesión
-
-// ==============================================
-// Acciones para Marcas (Brands) - Modelo N:M
-// ==============================================
-
-// --- Acción: associateOrganizationBrand (Reemplaza createOrganizationBrand) ---
 export interface AssociateBrandState {
   success: boolean;
   error?: string | null;
@@ -33,8 +26,8 @@ export async function associateOrganizationBrand(
   prevState: AssociateBrandState | null,
   formData: FormData,
 ): Promise<AssociateBrandState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
 
   const validatedFields = associateBrandSchema.safeParse({

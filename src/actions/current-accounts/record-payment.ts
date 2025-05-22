@@ -10,7 +10,7 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 // Use the directly imported type
 type PaymentFrequency = PrismaPaymentFrequencyType;
@@ -163,7 +163,10 @@ export async function recordPayment(
   try {
     const parsed = recordPaymentSchema.safeParse(input);
     if (!parsed.success) {
-      return { success: false, error: parsed.error.flatten().fieldErrors };
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      const errorMessages = Object.values(fieldErrors).flat().filter(msg => msg !== undefined) as string[];
+      const errorMessage = errorMessages[0] || "Error de validación desconocido";
+      return { success: false, error: errorMessage };
     }
     const {
       currentAccountId,
@@ -176,8 +179,10 @@ export async function recordPayment(
       surplusAction,
     } = parsed.data;
 
-    const session = await getOrganizationIdFromSession();
-    if (!session.organizationId) throw new Error(session.error || "No org");
+    const org = await getOrganizationIdFromSession();
+    if (org.error || !org.organizationId) {
+      throw new Error(org.error || "No se pudo obtener la organización desde la sesión");
+    }
 
     const account = await db.currentAccount.findUnique({ where: { id: currentAccountId } });
     if (!account) return { success: false, error: "Cuenta no encontrada" };
@@ -214,7 +219,7 @@ export async function recordPayment(
         transactionReference,
         notes,
         installmentNumber: installmentNum,
-        organizationId: session.organizationId,
+        organizationId: org.organizationId,
       },
     });
 
@@ -283,7 +288,10 @@ export async function recordPayment(
   } catch (err) {
     console.error("recordPayment error", err);
     if (err instanceof z.ZodError) {
-      return { success: false, error: err.flatten().fieldErrors };
+      const fieldErrors = err.flatten().fieldErrors;
+      const errorMessages = Object.values(fieldErrors).flat().filter(msg => msg !== undefined) as string[];
+      const errorMessage = errorMessages[0] || "Error de validación desconocido";
+      return { success: false, error: errorMessage };
     }
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }

@@ -1,12 +1,13 @@
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
 import type { ReportFilters } from "@/types/reports";
 import { type NextRequest, NextResponse } from "next/server";
+import { pdf } from "@react-pdf/renderer";
 
 export async function POST(request: NextRequest) {
   try {
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) {
+    const org = await getOrganizationIdFromSession();
+    if (!org.organizationId) {
       return new NextResponse("No organization found", { status: 401 });
     }
 
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Preparar los filtros para el reporte
     const filters: ReportFilters = {
-      organizationId,
+      organizationId: org.organizationId,
       dateRange,
       branchId: branchId === "all" ? undefined : branchId,
       brandId: brandId === "all" ? undefined : brandId,

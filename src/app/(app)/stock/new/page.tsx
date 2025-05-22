@@ -123,14 +123,12 @@ export default async function NuevaMotoPage() {
       <h1 className="text-3xl font-bold mb-6">Ingresar Nueva Moto</h1>
 
       <div className="mb-12">
-        {" "}
-        {/* Añadir margen inferior */}
         <NewStockClientContainer
           availableBrands={availableBrands}
           availableColors={availableColors}
           availableBranches={sucursales}
           suppliers={availableSuppliers}
-          // initialData={{}} // Podemos pasar datos iniciales si es necesario
+        // initialData={{}} // Podemos pasar datos iniciales si es necesario
         />
       </div>
     </div>

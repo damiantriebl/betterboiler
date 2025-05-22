@@ -4,7 +4,7 @@ import type {
     PettyCashDepositStatus,
     PettyCashWithdrawalStatus
 } from "@prisma/client"; // Para los enums de estado
-import type { PettyCashData } from "@/actions/get-petty-cash-data"; // Tipos de datos jerárquicos
+import type { PettyCashData } from "@/actions/petty-cash/get-petty-cash-data"; // Tipos de datos jerárquicos
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, ChevronDown, ChevronRight, Paperclip, Users, Landmark, ShoppingCart } from "lucide-react";
+import { PlusCircle, ChevronDown, ChevronRight, Paperclip, Users, Landmark, ShoppingCart, Trash2 } from "lucide-react";
 
 // Definición local para UserData si no se importa una específica
 interface UserEntryData {
@@ -57,6 +57,9 @@ interface PettyCashTableProps {
     users: UserEntryData[]; // CAMBIO: usa UserEntryData
     onAddWithdrawal: (depositId: string) => void;
     onAddSpend: (withdrawalId: string) => void;
+    onDeleteSpend: (spendId: string) => void; // Nueva prop para manejar el borrado de gastos
+    onDeleteWithdrawal: (withdrawalId: string) => void; // Nueva prop
+    onDeleteDeposit: (depositId: string) => void; // Nueva prop
     userRole?: string;
     currentUserId?: string | null;
 }
@@ -66,6 +69,9 @@ const PettyCashTable = ({
     users,
     onAddWithdrawal,
     onAddSpend,
+    onDeleteSpend,
+    onDeleteWithdrawal,
+    onDeleteDeposit,
 }: PettyCashTableProps) => {
     if (!deposits || deposits.length === 0) {
         return (
@@ -92,6 +98,9 @@ const PettyCashTable = ({
                             users={users}
                             onAddWithdrawal={onAddWithdrawal}
                             onAddSpend={onAddSpend}
+                            onDeleteSpend={onDeleteSpend}
+                            onDeleteWithdrawal={onDeleteWithdrawal}
+                            onDeleteDeposit={onDeleteDeposit}
                         />
                     ))}
                 </TableBody>
@@ -105,9 +114,12 @@ interface DepositEntryProps {
     users: UserEntryData[]; // CAMBIO: usa UserEntryData
     onAddWithdrawal: (depositId: string) => void;
     onAddSpend: (withdrawalId: string) => void;
+    onDeleteSpend: (spendId: string) => void; // Nueva prop
+    onDeleteWithdrawal: (withdrawalId: string) => void;
+    onDeleteDeposit: (depositId: string) => void;
 }
 
-const DepositEntry = ({ deposit, users, onAddWithdrawal, onAddSpend }: DepositEntryProps) => {
+const DepositEntry = ({ deposit, users, onAddWithdrawal, onAddSpend, onDeleteSpend, onDeleteWithdrawal, onDeleteDeposit }: DepositEntryProps) => {
     const [isDepositOpen, setIsDepositOpen] = useState(false);
 
     const getDepositStatusBadge = (status: PettyCashDepositStatus) => {
@@ -139,15 +151,12 @@ const DepositEntry = ({ deposit, users, onAddWithdrawal, onAddSpend }: DepositEn
                 <TableCell className="text-xs text-gray-500 dark:text-gray-400">{deposit.reference || "N/A"}</TableCell>
                 <TableCell className="text-right font-semibold text-green-600 dark:text-green-400">{formatCurrency(deposit.amount)}</TableCell>
                 <TableCell className="text-center">{getDepositStatusBadge(deposit.status)}</TableCell>
-                <TableCell className="text-center">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onAddWithdrawal(deposit.id)}
-                        disabled={deposit.status !== "OPEN"}
-                        className="text-xs"
-                    >
+                <TableCell className="text-center space-x-1">
+                    <Button variant="outline" size="sm" onClick={() => onAddWithdrawal(deposit.id)} disabled={deposit.status !== "OPEN"} className="text-xs">
                         <Users className="mr-1 h-3 w-3" /> Retiro
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => onDeleteDeposit(deposit.id)} className="bg-pink-500 hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto">
+                        <Trash2 className="mr-1 h-3 w-3" /> Borrar
                     </Button>
                 </TableCell>
             </TableRow>
@@ -168,6 +177,8 @@ const DepositEntry = ({ deposit, users, onAddWithdrawal, onAddSpend }: DepositEn
                                                 withdrawal={withdrawal}
                                                 users={users}
                                                 onAddSpend={onAddSpend}
+                                                onDeleteSpend={onDeleteSpend}
+                                                onDeleteWithdrawal={onDeleteWithdrawal}
                                             />
                                         ))}
                                     </TableBody>
@@ -189,9 +200,11 @@ interface WithdrawalEntryProps {
     withdrawal: PettyCashData["withdrawals"][number];
     users: UserEntryData[];
     onAddSpend: (withdrawalId: string) => void;
+    onDeleteSpend: (spendId: string) => void;
+    onDeleteWithdrawal: (withdrawalId: string) => void;
 }
 
-const WithdrawalEntry = ({ withdrawal, users, onAddSpend }: WithdrawalEntryProps) => {
+const WithdrawalEntry = ({ withdrawal, users, onAddSpend, onDeleteSpend, onDeleteWithdrawal }: WithdrawalEntryProps) => {
     const [isWithdrawalOpen, setIsWithdrawalOpen] = useState(false);
 
     const getWithdrawalStatusBadge = (status: PettyCashWithdrawalStatus) => {
@@ -225,15 +238,12 @@ const WithdrawalEntry = ({ withdrawal, users, onAddSpend }: WithdrawalEntryProps
                 <TableCell className="text-right font-medium text-orange-600 dark:text-orange-400">{formatCurrency(withdrawal.amountGiven)}</TableCell>
                 <TableCell className="text-right font-medium text-red-600 dark:text-red-400">{formatCurrency(withdrawal.amountJustified)}</TableCell>
                 <TableCell className="text-center">{getWithdrawalStatusBadge(withdrawal.status)}</TableCell>
-                <TableCell className="text-center">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onAddSpend(withdrawal.id)}
-                        disabled={withdrawal.status === "JUSTIFIED"}
-                        className="text-xs"
-                    >
+                <TableCell className="text-center space-x-1">
+                    <Button variant="outline" size="sm" onClick={() => onAddSpend(withdrawal.id)} disabled={withdrawal.status === "JUSTIFIED"} className="text-xs">
                         <ShoppingCart className="mr-1 h-3 w-3" /> Gasto
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => onDeleteWithdrawal(withdrawal.id)} className="bg-pink-500 hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto">
+                        <Trash2 className="mr-1 h-3 w-3" /> Borrar
                     </Button>
                 </TableCell>
             </TableRow>
@@ -245,11 +255,17 @@ const WithdrawalEntry = ({ withdrawal, users, onAddSpend }: WithdrawalEntryProps
                             <div className="pl-10 pr-4 py-2"> {/* Indentation for spends table */}
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="text-xs bg-slate-50 dark:bg-slate-800"><TableHead>Fecha Gasto</TableHead><TableHead>Descripción Gasto</TableHead><TableHead className="text-right">Monto Gasto</TableHead><TableHead>Comprobante</TableHead></TableRow>
+                                        <TableRow className="text-xs bg-slate-50 dark:bg-slate-800">
+                                            <TableHead>Fecha Gasto</TableHead>
+                                            <TableHead>Descripción Gasto</TableHead>
+                                            <TableHead className="text-right">Monto Gasto</TableHead>
+                                            <TableHead>Comprobante</TableHead>
+                                            <TableHead className="text-center">Acciones</TableHead> {/* Nueva columna Acciones */}
+                                        </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {withdrawal.spends.map(spend => (
-                                            <SpendEntry key={spend.id} spend={spend} />
+                                            <SpendEntry key={spend.id} spend={spend} onDelete={onDeleteSpend} />
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -268,8 +284,9 @@ const WithdrawalEntry = ({ withdrawal, users, onAddSpend }: WithdrawalEntryProps
 
 interface SpendEntryProps {
     spend: PettyCashData["withdrawals"][number]["spends"][number];
+    onDelete: (spendId: string) => void;
 }
-const SpendEntry = ({ spend }: SpendEntryProps) => {
+const SpendEntry = ({ spend, onDelete }: SpendEntryProps) => {
     return (
         <TableRow className="text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
             <TableCell>{formatDate(spend.date)}</TableCell>
@@ -283,6 +300,17 @@ const SpendEntry = ({ spend }: SpendEntryProps) => {
                 ) : (
                     <span className="text-gray-400">N/A</span>
                 )}
+            </TableCell>
+            <TableCell className="text-center">
+                <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => onDelete(spend.id)}
+                    className="bg-pink-500 hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto"
+                    aria-label={`Borrar gasto ${spend.description || spend.id}`}
+                >
+                    <Trash2 className="mr-1 h-3 w-3" /> Borrar
+                </Button>
             </TableCell>
         </TableRow>
     );

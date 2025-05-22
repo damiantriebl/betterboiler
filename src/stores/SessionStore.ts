@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
-interface SessionState {
+export interface SessionState {
   // Datos de organización
   organizationName: string | null;
   organizationLogo: string | null;

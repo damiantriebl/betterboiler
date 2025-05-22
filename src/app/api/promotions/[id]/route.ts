@@ -1,12 +1,12 @@
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     // Obtener el ID de la organización desde la sesión
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) {
+    const org = await getOrganizationIdFromSession();
+    if (!org.organizationId) {
       return NextResponse.json(
         { error: "No se pudo obtener la organización del usuario" },
         { status: 401 },
@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const promotion = await prisma.bankingPromotion.findUnique({
       where: {
         id: promotionId,
-        organizationId,
+        organizationId: org.organizationId,
       },
       include: {
         installmentPlans: true,

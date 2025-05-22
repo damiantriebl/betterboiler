@@ -102,12 +102,12 @@ export default function CheckoutPage() {
       {paymentResult && !isProcessing && (
         <div>
           <p>
-            Resultado: {paymentResult.status || "N/A"} - ID Transacción (si aplica):{" "}
+            Resultado: {paymentResult.status || "N/A"} - ID Transacción (si aplica):
             {paymentResult.id || "N/A"}
           </p>
           {paymentResult.error && (
             <p className="error">
-              Error del backend: {paymentResult.error}{" "}
+              Error del backend: {paymentResult.error}
               {paymentResult.details ? JSON.stringify(paymentResult.details) : ""}
             </p>
           )}

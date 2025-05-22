@@ -1,8 +1,8 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "./getOrganizationIdFromSession";
 import type { PettyCashDeposit, PettyCashWithdrawal, PettyCashSpend } from "@prisma/client";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 // Definimos un tipo para la estructura de datos anidada que esperamos
 export interface PettyCashData extends PettyCashDeposit {
@@ -16,11 +16,11 @@ export async function getPettyCashData(): Promise<{
   error?: string;
 }> {
   try {
-    const sessionInfo = await getOrganizationIdFromSession();
-    if (sessionInfo.error || !sessionInfo.organizationId) {
-      return { error: sessionInfo.error || "Organization not found" };
+    const org = await getOrganizationIdFromSession();
+    if (org.error || !org.organizationId) {
+      return { error: org.error || "Organization not found" };
     }
-    const { organizationId } = sessionInfo;
+    const { organizationId } = org;
 
     const deposits = await prisma.pettyCashDeposit.findMany({
       where: {

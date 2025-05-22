@@ -50,7 +50,7 @@ async function CurrentAccountsContent() {
           {/* Optionally, provide a more prominent CTA to create one if list is empty and no error */}
           {result.success && (
             <Button variant="outline" className="mt-4" disabled>
-              {" "}
+
               {/* Will enable later */}
               <PlusCircle className="mr-2 h-5 w-5" />
               Crear la Primera Cuenta

@@ -1,6 +1,6 @@
 "use server";
 
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import prisma from "@/lib/prisma";
 
 /**
@@ -9,13 +9,13 @@ import prisma from "@/lib/prisma";
 export async function diagnoseBankingPromotionQueries() {
   try {
     // Obtener el ID de organización actual
-    const organizationIdResult = await getOrganizationIdFromSession();
-    if (!organizationIdResult) {
+    const org = await getOrganizationIdFromSession();
+    if (!org.organizationId) {
       return { success: false, error: "No se pudo obtener el ID de la organización" };
     }
 
     // Convertir el resultado a string para usarlo con Prisma
-    const organizationId = String(organizationIdResult);
+    const organizationId = String(org.organizationId);
 
     // Intentar una consulta básica para ver si funciona
     const bankingPromotionsCount = await prisma.bankingPromotion.count({

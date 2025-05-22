@@ -1,19 +1,15 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client"; // Para el tipo Decimal y errores
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session"; // Importar la función de sesión actualizada
+import { Prisma } from "@prisma/client"; // Para errores. Prisma.Decimal no se usa si el campo es Float.
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 
-const GENERAL_ACCOUNT_ID_DEPOSIT = "GENERAL_ACCOUNT"; // Mismo identificador que en el frontend
+const GENERAL_ACCOUNT_ID_DEPOSIT = "GENERAL_ACCOUNT";
 
 interface DepositPettyCashParams {
-  // organizationId no es necesario aquí, se obtendrá de la sesión
   branchIdReceived: string;
-  // userId no es necesario aquí, se obtendrá de la sesión si es el mismo que el que registra
-  // Si userId es para el "beneficiario" o un usuario específico, mantenerlo.
-  // Por ahora, asumiré que el userId del movimiento es el usuario que realiza la acción.
   amount: number;
   description?: string;
-  ticketNumber?: string;
+  ticketNumber?: string; // Mapeado a 'reference' en PettyCashDeposit
 }
 
 export async function depositPettyCash({
@@ -24,11 +20,11 @@ export async function depositPettyCash({
 }: DepositPettyCashParams) {
 
   const sessionData = await getOrganizationIdFromSession();
-  if (sessionData.error || !sessionData.organizationId || !sessionData.userId) {
-    throw new Error(sessionData.error || "No se pudo obtener la información de la sesión o falta información esencial (ID de organización, ID de usuario).");
+  if (sessionData.error || !sessionData.organizationId) {
+    throw new Error(sessionData.error || "No se pudo obtener la información de la sesión o falta el ID de organización.");
   }
 
-  const { organizationId, userId } = sessionData;
+  const { organizationId } = sessionData;
 
   if (amount <= 0) {
     throw new Error("El monto del depósito debe ser positivo.");
@@ -42,64 +38,32 @@ export async function depositPettyCash({
     }
     actualBranchIdForDb = parsedBranchId;
   }
-  // Si branchIdReceived es GENERAL_ACCOUNT_ID_DEPOSIT, actualBranchIdForDb será null.
 
   try {
-    let pettyCashAccount;
-
-    if (actualBranchIdForDb === null) {
-      // Búsqueda específica para Caja General donde branchId ES NULL
-      pettyCashAccount = await prisma.pettyCashAccount.findFirst({ 
-        where: {
-          organizationId: organizationId,
-          branchId: null, // Condición directa en branchId
-        },
-      });
-    } else {
-      // Búsqueda para sucursal específica usando el índice único
-      pettyCashAccount = await prisma.pettyCashAccount.findUnique({
-        where: {
-          organizationId_branchId: {
-            organizationId: organizationId,
-            branchId: actualBranchIdForDb, // Aquí actualBranchIdForDb es un número
-          },
-        },
-      });
-    }
-
-    // Si no se encuentra, crearla
-    if (!pettyCashAccount) {
-      pettyCashAccount = await prisma.pettyCashAccount.create({
-        data: {
-          organizationId: organizationId,
-          branchId: actualBranchIdForDb, // Esto es correcto para la creación (number | null)
-        },
-      });
-    }
-
-    // Crear el PettyCashMovement
-    const movement = await prisma.pettyCashMovement.create({
+    const deposit = await prisma.pettyCashDeposit.create({
       data: {
-        accountId: pettyCashAccount.id,
-        userId: userId,
-        type: "DEBE", // Depósito es DEBE
-        amount: new Prisma.Decimal(amount),
-        description: description,
-        ticketNumber: ticketNumber,
+        organizationId: organizationId,
+        branchId: actualBranchIdForDb,
+        amount: amount, // amount es 'number', Prisma maneja la conversión a Float.
+        date: new Date(),
+        description: description ?? "Depósito a caja chica",
+        reference: ticketNumber,
       },
     });
-    return {
-        ...movement,
-        amount: movement.amount.toNumber() // Devolver con amount como número
-    };
+
+    // El objeto 'deposit' devuelto por Prisma ya tiene 'amount' como 'number'.
+    return deposit;
+
   } catch (error) {
+    // Asegurarse de que el mensaje de error se maneje correctamente
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido";
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // Manejar errores conocidos de Prisma, ej. violación de constraint único
-      console.error("Error de Prisma al depositar en caja chica:", error.message);
+      console.error(`Error de Prisma al crear depósito en caja chica: ${errorMessage}`, error); // Log completo del error
     } else {
-      console.error("Error inesperado al depositar en caja chica:", error);
+      console.error(`Error inesperado al crear depósito en caja chica: ${errorMessage}`, error); // Log completo del error
     }
-    // Re-lanzar el error o devolver un objeto de error estructurado
-    throw new Error("No se pudo completar el depósito en la caja chica.");
+    // Es importante relanzar el error o devolver un objeto que indique el fallo
+    // para que el frontend pueda reaccionar.
+    throw new Error(`No se pudo completar el depósito en la caja chica: ${errorMessage}`);
   }
 }

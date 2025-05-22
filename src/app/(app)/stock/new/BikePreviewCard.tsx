@@ -73,13 +73,11 @@ export function MotoPreviewCard({
       style={{ borderColor: brandColor }}
     >
       <CardHeader className="pb-2 pt-4">
-        {" "}
+
         {/* Menos padding vertical */}
         <CardTitle className="text-lg">Vista Previa</CardTitle> {/* Título más pequeño */}
       </CardHeader>
       <CardContent className="space-y-2 text-sm pb-4">
-        {" "}
-        {/* Menos espacio y padding */}
         <div className="flex justify-between items-center">
           <span className="font-semibold text-muted-foreground">Marca:</span>
           <span className="font-medium">{getDisplayValue(selectedBrand?.name, "---")}</span>

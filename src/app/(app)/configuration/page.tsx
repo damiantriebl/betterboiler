@@ -10,6 +10,13 @@ import {
 import { auth } from "@/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import prisma from "@/lib/prisma";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
 import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
@@ -26,6 +33,9 @@ import ManageBankingPromotions from "./ManageBankingPromotions";
 import ManageBranches from "./ManageBranches";
 import ManageColors from "./ManageColors";
 import ManagePaymentMethods from "./ManagePaymentMethods";
+import SecuritySettings from "./SecuritySettings";
+import type { BankCardDisplay, BankWithCards, CardType as BankCardCardType } from "@/types/bank-cards";
+import type { Bank as BankType } from "@/types/banking-promotions"; // Asumiendo que BankType es compatible con la estructura de bank en BankWithCards
 
 // We'll use these default payment methods if the schema doesn't exist yet
 const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -280,54 +290,116 @@ async function getBankingPromotionsData(organizationId: string) {
 
 export default async function ConfigurationPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user?.organizationId) {
-    return redirect("/login");
+  if (!session?.user?.organizationId || !session.user.role) {
+    return <p>Error: Organización no encontrada, usuario no autenticado, o rol no definido.</p>;
   }
   const organizationId = session.user.organizationId;
+  const userRole = session.user.role;
 
-  const organizationBrandsData = await getOrganizationBrandsData(organizationId);
-  const motoColorsData = await getMotoColors(organizationId);
-  const organizationBranchesData = await getOrganizationBranches(organizationId);
-  const paymentMethodsData = await getPaymentMethodsData(organizationId);
-  const bankingPromotionsData = await getBankingPromotionsData(organizationId);
-  const banksWithCardsData = await getBanksWithCards(organizationId);
-  const allCardTypesData = await getAllCardTypes();
+  const [
+    brandsData,
+    colorsData,
+    branchesData,
+    paymentMethodsData,
+    bankingPromotionsData,
+    rawBanksWithCardsData,
+    allCardTypesData,
+    allBanksData
+  ] = await Promise.all([
+    getOrganizationBrandsData(organizationId),
+    getMotoColors(organizationId),
+    getOrganizationBranches(organizationId),
+    getPaymentMethodsData(organizationId),
+    getBankingPromotionsData(organizationId),
+    getBanksWithCards(organizationId),
+    getAllCardTypes(),
+    getAllBanks(),
+  ]);
+
+  // Transformar rawBanksWithCardsData a BankCardDisplay[] para ManageBankingPromotions
+  const bankCardsForPromotions: BankCardDisplay[] = rawBanksWithCardsData.flatMap(bwc => // bwc es un BankWithCards
+    bwc.cards.map(card => ({
+      // Propiedades de BankCard (que BankCardDisplay extiende)
+      id: card.id, // ID de la entidad BankCard (de la tabla intermedia)
+      bankId: bwc.bank.id,
+      cardTypeId: card.cardType.id,
+      organizationId: organizationId, // organizationId de la sesión
+      isEnabled: card.isEnabled,
+      order: card.order,
+      bank: { // Objeto bank completo según la definición de BankCard
+        id: bwc.bank.id,
+        name: bwc.bank.name,
+        logoUrl: bwc.bank.logoUrl,
+      },
+      cardType: { // Objeto cardType completo según la definición de BankCard
+        id: card.cardType.id,
+        name: card.cardType.name,
+        type: card.cardType.type, // Asegurarse que el tipo de 'type' coincida
+        logoUrl: card.cardType.logoUrl,
+      },
+      // Propiedad adicional específica de BankCardDisplay
+      displayName: `${card.cardType.name} - ${bwc.bank.name}`,
+    }))
+  );
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Configuración General</h1>
-
-      <Tabs defaultValue="marcas" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-4">
-          <TabsTrigger value="marcas">Marcas</TabsTrigger>
-          <TabsTrigger value="colores">Colores</TabsTrigger>
+    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+      <h1 className="text-3xl font-bold mb-6">Configuración de la Organización</h1>
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 mb-4">
+          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="branches">Sucursales</TabsTrigger>
-          <TabsTrigger value="metodos-pago">Métodos de Pago</TabsTrigger>
-          <TabsTrigger value="bancos-tarjetas">Bancos y Tarjetas</TabsTrigger>
-          <TabsTrigger value="promociones">Promociones</TabsTrigger>
+          <TabsTrigger value="brandsModels">Marcas y Modelos</TabsTrigger>
+          <TabsTrigger value="colors">Colores</TabsTrigger>
+          <TabsTrigger value="paymentMethods">Métodos de Pago</TabsTrigger>
+          <TabsTrigger value="bankCards">Tarjetas Bancarias</TabsTrigger>
+          <TabsTrigger value="bankingPromotions">Promociones</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="marcas">
-          <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-            <ClientManageBrands
-              initialOrganizationBrands={organizationBrandsData}
-              organizationId={organizationId}
-            />
-          </Suspense>
-        </TabsContent>
-
-        <TabsContent value="colores">
-          <ManageColors initialColorsData={motoColorsData} organizationId={organizationId} />
+        <TabsContent value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuración General</CardTitle>
+              <CardDescription>
+                Aquí podrás ajustar la configuración general de tu organización.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p>Próximamente: opciones de configuración general de la organización (nombre, logo, etc.).</p>
+                <p>ID de Organización: {organizationId}</p>
+                <p>Rol de Usuario: {userRole}</p>
+              </div>
+              <div className="mt-6 pt-6 border-t">
+                <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                  <SecuritySettings />
+                </Suspense>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="branches">
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-            <ManageBranches initialBranchesData={organizationBranchesData} />
+            <ManageBranches initialBranchesData={branchesData} />
           </Suspense>
         </TabsContent>
 
-        <TabsContent value="metodos-pago">
-          <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+        <TabsContent value="brandsModels">
+          <ClientManageBrands
+            initialOrganizationBrands={brandsData}
+            organizationId={organizationId}
+          />
+        </TabsContent>
+
+        <TabsContent value="colors">
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+            <ManageColors initialColorsData={colorsData} organizationId={organizationId} />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="paymentMethods">
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
             <ManagePaymentMethods
               initialOrganizationMethods={paymentMethodsData.organizationMethods}
               availableMethods={paymentMethodsData.availableMethods}
@@ -336,41 +408,28 @@ export default async function ConfigurationPage() {
           </Suspense>
         </TabsContent>
 
-        <TabsContent value="bancos-tarjetas">
-          <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+        <TabsContent value="bankCards">
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
             <ManageBankCards
-              initialBanksWithCards={banksWithCardsData}
+              initialBanksWithCards={rawBanksWithCardsData}
               availableCardTypes={allCardTypesData}
-              availableBanks={bankingPromotionsData.banks}
+              availableBanks={allBanksData}
               organizationId={organizationId}
             />
           </Suspense>
         </TabsContent>
 
-        <TabsContent value="promociones">
-          <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+        <TabsContent value="bankingPromotions">
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
             <ManageBankingPromotions
               promotions={bankingPromotionsData.promotions}
-              paymentMethods={paymentMethodsData.organizationMethods
-                .map((om) => om.card)
-                .filter((method): method is PaymentMethod => method !== undefined)}
-              bankCards={banksWithCardsData.flatMap((b) =>
-                b.cards.map((card) => ({
-                  id: card.id,
-                  bank: b.bank,
-                  cardType: card.cardType,
-                  bankId: b.bank.id,
-                  cardTypeId: card.cardType.id,
-                  organizationId,
-                  isEnabled: card.isEnabled,
-                  order: card.order,
-                  displayName: `${card.cardType.name} - ${b.bank.name}`,
-                })),
-              )}
+              paymentMethods={paymentMethodsData.availableMethods}
+              bankCards={bankCardsForPromotions}
               organizationId={organizationId}
             />
           </Suspense>
         </TabsContent>
+
       </Tabs>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { getPaymentMethodsAction } from "@/actions/get-payment-methods-action";
+import { getPaymentMethodsAction } from "@/actions/payment-methods/get-payment-methods-action";
 import { createReservation } from "@/actions/sales/create-reservation"; // Will be used for non-current-account for now
 import type { Client } from "@/app/(app)/clients/columns"; // Assuming this is Client from Prisma or a compatible type
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export function ReserveModal({
 }: SaleModalProps) {
   // States for general payment fields (used if not 'current_account')
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState<string>("USD");
+  const [currency, setCurrency] = useState<"USD" | "ARS">("USD");
   const [notes, setNotes] = useState<string>("");
 
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -184,7 +184,7 @@ export function ReserveModal({
             <SelectContent>
               {clients.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
-                  {client.firstName} {client.lastName}{" "}
+                  {client.firstName} {client.lastName}
                   {client.companyName ? `(${client.companyName})` : ""}
                 </SelectItem>
               ))}
@@ -248,7 +248,11 @@ export function ReserveModal({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="currency">Moneda</Label>
-                <Select value={currency} onValueChange={setCurrency} required>
+                <Select
+                  value={currency}
+                  onValueChange={(value) => setCurrency(value as "USD" | "ARS")}
+                  required
+                >
                   <SelectTrigger id="currency">
                     <SelectValue placeholder="Seleccionar moneda" />
                   </SelectTrigger>

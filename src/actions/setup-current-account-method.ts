@@ -1,20 +1,19 @@
 "use server";
 
 import db from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "./getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "./get-Organization-Id-From-Session";
 
 export async function setupCurrentAccountMethod() {
   try {
     // Obtener el ID de organización actual
-    const organizationIdResult = await getOrganizationIdFromSession();
-    if (!organizationIdResult) {
-      return { success: false, error: "No se pudo obtener el ID de la organización" };
+    const sessionInfo = await getOrganizationIdFromSession();
+    
+    if (sessionInfo.error || !sessionInfo.organizationId) {
+      return { success: false, error: sessionInfo.error || "No se pudo obtener el ID de la organización" };
     }
 
-    // Convertir el resultado a string para usarlo con Prisma
-    const organizationId = String(organizationIdResult);
+    const organizationId = sessionInfo.organizationId; // Ya es string | null, y hemos verificado que no es null
 
-    // 1. Verificar si el método de pago "cuenta_corriente" existe
     let paymentMethod = await db.paymentMethod.findFirst({
       where: { type: "current_account" },
     });
@@ -31,11 +30,19 @@ export async function setupCurrentAccountMethod() {
       });
     }
 
+    // Si después de intentar crearlo sigue sin existir, es un error crítico.
+    if (!paymentMethod) {
+      return {
+        success: false,
+        error: "No se pudo crear o encontrar el método de pago 'Cuenta Corriente'.",
+      };
+    }
+
     // 2. Verificar si ya está habilitado para la organización actual
     const existingOrgMethod = await db.organizationPaymentMethod.findFirst({
       where: {
         organizationId,
-        methodId: paymentMethod.id,
+        methodId: paymentMethod.id, // Seguro usar .id aquí porque paymentMethod no es null
       },
     });
 
@@ -53,7 +60,7 @@ export async function setupCurrentAccountMethod() {
       await db.organizationPaymentMethod.create({
         data: {
           organizationId,
-          methodId: paymentMethod.id,
+          methodId: paymentMethod.id, // Seguro usar .id aquí
           isEnabled: true,
           order: newOrder,
         },
@@ -63,7 +70,7 @@ export async function setupCurrentAccountMethod() {
     return {
       success: true,
       data: {
-        paymentMethod,
+        paymentMethod, // paymentMethod aquí no será null
         enabled: !!existingOrgMethod,
       },
     };

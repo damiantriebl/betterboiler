@@ -225,15 +225,15 @@ export default function CurrentAccountPaymentFields({
     return (
       <div className="space-y-2">
         <p className="text-sm">
-          <span className="font-medium">Monto por Cuota (aprox.):</span>{" "}
+          <span className="font-medium">Monto por Cuota (aprox.):</span>
           {formatRoundedCurrency(details.installmentAmount || 0, details.currency || "USD")}
         </p>
         <p className="text-sm">
-          <span className="font-medium">Total a Pagar Estimado:</span>{" "}
+          <span className="font-medium">Total a Pagar Estimado:</span>
           {formatRoundedCurrency(details.totalPayment || 0, details.currency || "USD")}
         </p>
         <p className="text-sm">
-          <span className="font-medium">Interés Total Estimado:</span>{" "}
+          <span className="font-medium">Interés Total Estimado:</span>
           {formatRoundedCurrency(details.totalInterest || 0, details.currency || "USD")}
         </p>
         {details.warning && <p className="text-xs text-amber-600 mt-1">{details.warning}</p>}

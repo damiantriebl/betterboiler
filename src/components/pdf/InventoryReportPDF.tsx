@@ -56,7 +56,7 @@ export function InventoryReportPDF({
 
         {dateRange && (
           <Text>
-            Período: {dateRange.from ? format(dateRange.from, "dd/MM/yyyy", { locale: es }) : "N/A"}{" "}
+            Período: {dateRange.from ? format(dateRange.from, "dd/MM/yyyy", { locale: es }) : "N/A"}
             - {dateRange.to ? format(dateRange.to, "dd/MM/yyyy", { locale: es }) : "N/A"}
           </Text>
         )}

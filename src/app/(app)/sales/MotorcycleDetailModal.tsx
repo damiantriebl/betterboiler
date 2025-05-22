@@ -1,6 +1,5 @@
 "use client";
 
-import { getOrganization } from "@/actions/get-organization";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { type PriceDisplayMode, usePriceDisplayStore } from "@/stores/price-display-store";
+import { usePriceDisplayStore } from "@/stores/price-display-store";
 import type { ModelFileWithUrl, MotorcycleWithDetails } from "@/types/motorcycle";
 import type {
   AmortizationScheduleEntry,
@@ -40,11 +39,9 @@ import {
   FileText,
   Info,
   Pause,
-  Pencil,
   Play,
   RotateCcw,
   Trash2,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientDetail } from "./ClientDetail";
@@ -67,7 +64,7 @@ interface Props {
 
 const DetailItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div>
-    <span className="text-sm font-medium text-muted-foreground">{label}:</span>{" "}
+    <span className="text-sm font-medium text-muted-foreground">{label}:</span>
     <span className="text-sm">{value ?? "N/A"}</span>
   </div>
 );
@@ -520,7 +517,7 @@ function PaymentQuoteSimulator({
                           name: "discountType",
                           value: checked ? "discount" : "surcharge",
                         },
-                      })
+                      } as any)
                     }
                   />
                   <Label
@@ -547,7 +544,7 @@ function PaymentQuoteSimulator({
                 }
               />
               <p className="text-xs text-muted-foreground">
-                {paymentData.discountType === "discount" ? "Descuento" : "Recargo"} del{" "}
+                {paymentData.discountType === "discount" ? "Descuento" : "Recargo"} del
                 {paymentData.discountValue}%
               </p>
             </div>

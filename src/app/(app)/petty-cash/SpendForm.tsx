@@ -208,12 +208,19 @@ export default function SpendForm({
                     variant: "destructive",
                 });
                 if (result.fieldErrors) {
-                    for (const [field, errors] of Object.entries(result.fieldErrors)) {
+                    for (const [fieldKeyString, errors] of Object.entries(result.fieldErrors)) {
                         if (errors && errors.length > 0) {
-                            form.setError(field as keyof UpdatePettyCashMovementFormValues, {
-                                type: "server",
-                                message: errors.join(", "),
-                            });
+                            if (form.control._fields && fieldKeyString in form.control._fields) {
+                                form.setError(fieldKeyString as keyof SpendFormData, {
+                                    type: "server",
+                                    message: errors.join(", "),
+                                });
+                            } else {
+                                form.setError("root", {
+                                    type: "server",
+                                    message: `Error en campo '${fieldKeyString}': ${errors.join(", ")}`,
+                                });
+                            }
                         }
                     }
                 }

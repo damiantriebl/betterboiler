@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 /**
  * Asocia un tipo de tarjeta a un banco para una organización
@@ -26,14 +26,14 @@ export async function associateBankWithCardType(
   try {
     // Si no se proporciona organizationId, obtenerlo de la sesión
     if (!organizationId) {
-      const orgId = await getOrganizationIdFromSession();
-      if (!orgId) {
+      const org = await getOrganizationIdFromSession();
+      if (!org.organizationId) {
         return {
           success: false,
           error: "No se pudo obtener la organización del usuario",
         };
       }
-      organizationId = orgId;
+      organizationId = org.organizationId;
     }
 
     // Verificar si ya existe esta asociación

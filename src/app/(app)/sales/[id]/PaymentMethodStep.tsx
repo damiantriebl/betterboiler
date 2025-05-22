@@ -1,13 +1,10 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -17,15 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { OrganizationPaymentMethodDisplay } from "@/types/payment-methods";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { Check, Loader2 } from "lucide-react";
-import { CalendarIcon } from "lucide-react";
-import { useEffect, useState } from "react";
 import CurrentAccountPaymentFields from "./CurrentAccountPaymentFields";
 import type { MotorcycleWithRelations, PaymentFormData } from "./types";
 import {
@@ -191,11 +182,20 @@ export default function PaymentMethodStep({
     selectedPromotions,
   );
 
-  const remainingAmount = calculateRemainingAmount(
+  // Calcula el monto restante después de la reserva
+  let amountAfterReservation = calculateRemainingAmount(
     finalPrice,
-    isReserved ? reservationAmount : 0,
-    paymentData.downPayment,
+    moto?.currency || "USD", // totalCurrency
+    isReserved ? reservationAmount : 0, // reservationAmount
+    reservationCurrency // reservationCurrency
+    // exchangeRate no se pasa, se usará undefined
   );
+
+  // Si hay un downPayment, réstalo del monto después de la reserva
+  if (paymentData.downPayment && paymentData.downPayment > 0) {
+    amountAfterReservation -= paymentData.downPayment;
+  }
+  const remainingAmount = Math.max(0, amountAfterReservation); // Asegurar que no sea negativo
 
   // Reemplazar los onFocus y onBlur con funciones separadas
   const handleDateFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -230,8 +230,6 @@ export default function PaymentMethodStep({
               {/* Columna Izquierda: Método de pago y campos específicos */}
               <div className="space-y-4">
                 <div>
-                  {" "}
-                  {/* Encapsulate Label and Select for main payment method */}
                   <Label htmlFor="metodoPago">Método de Pago</Label>
                   <Select
                     name="metodoPago"
@@ -337,7 +335,7 @@ export default function PaymentMethodStep({
                         <SelectItem value="1">1 cuota</SelectItem>
                         {availableInstallmentPlans.map((plan) => (
                           <SelectItem key={plan.installments} value={String(plan.installments)}>
-                            {plan.installments} cuotas{" "}
+                            {plan.installments} cuotas
                             {plan.interestRate === 0
                               ? "sin interés"
                               : `(${plan.interestRate}% interés)`}
@@ -412,7 +410,7 @@ export default function PaymentMethodStep({
                     onDateChange={onDateChange}
                   />
                 )}
-              </div>{" "}
+              </div>
               {/* End Columna Izquierda */}
               {/* Columna Derecha: Resumen de precios, promociones */}
               <div className="space-y-4">
@@ -445,7 +443,7 @@ export default function PaymentMethodStep({
                         >
                           <span>Descuento ({promo.name}):</span>
                           <span>
-                            -{" "}
+                            -
                             {formatPrice(
                               getBasePrice() * (promo.discountRate / 100),
                               moto?.currency,
@@ -459,7 +457,7 @@ export default function PaymentMethodStep({
                         >
                           <span>Recargo ({promo.name}):</span>
                           <span>
-                            +{" "}
+                            +
                             {formatPrice(
                               getBasePrice() * (promo.surchargeRate / 100),
                               moto?.currency,
@@ -515,7 +513,6 @@ export default function PaymentMethodStep({
                             }}
                             role="button"
                             tabIndex={isDisabled ? -1 : 0}
-                            aria-disabled={isDisabled}
                           >
                             <Checkbox
                               checked={isSelected}
@@ -530,7 +527,7 @@ export default function PaymentMethodStep({
                               >
                                 {promo.name}
                               </label>
-                              <p className="text-xs text-muted-foreground">
+                              <div className="text-xs text-muted-foreground">
                                 {promo.description || "Descripción no disponible"}
                                 {promo.discountRate && (
                                   <Badge variant="secondary" className="ml-2">
@@ -542,7 +539,7 @@ export default function PaymentMethodStep({
                                     +{promo.surchargeRate}%
                                   </Badge>
                                 )}
-                              </p>
+                              </div>
                               {paymentData.metodoPago === "tarjeta" &&
                                 promo.installmentPlans &&
                                 promo.installmentPlans.length > 0 && (
@@ -551,9 +548,8 @@ export default function PaymentMethodStep({
                                       .filter((p) => p.isEnabled)
                                       .map((plan) => (
                                         <Badge key={plan.id} variant="outline" className="text-xs">
-                                          {plan.installments}c{" "}
-                                          {bestRatesMap[plan.installments]?.interestRate ===
-                                          plan.interestRate ? (
+                                          {plan.installments}c
+                                          {bestRatesMap[plan.installments] === plan.interestRate ? (
                                             <Check className="h-3 w-3 ml-1 text-green-600" />
                                           ) : null}
                                           {plan.interestRate > 0
@@ -570,9 +566,9 @@ export default function PaymentMethodStep({
                     </div>
                   )}
                 </Card>
-              </div>{" "}
+              </div>
               {/* End Columna Derecha */}
-            </div>{" "}
+            </div>
             {/* End grid */}
           </>
         )}

@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     color: "#333333",
   },
   table: {
-    display: "table" as Display,
+    display: "table" as any,
     width: "auto",
     borderStyle: "solid",
     borderWidth: 1,
@@ -527,7 +527,7 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
               <Text style={styles.label}>Estado IVA:</Text> {client.vatStatus || "N/A"}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Tipo Cliente:</Text>{" "}
+              <Text style={styles.label}>Tipo Cliente:</Text>
               {client.type === "company" ? "Empresa" : "Particular"}
             </Text>
           </View>
@@ -563,7 +563,7 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                 <Text style={styles.label}>Nº Motor:</Text> {motorcycle.engineNumber || "N/A"}
               </Text>
               <Text style={styles.gridItem}>
-                <Text style={styles.label}>Precio Venta:</Text>{" "}
+                <Text style={styles.label}>Precio Venta:</Text>
                 {formatCurrencyForPdf(motorcycle.retailPrice, account.currency || "$")}
               </Text>
               <Text style={styles.gridItem}>
@@ -595,19 +595,19 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
               <Text style={styles.label}>ID Cuenta:</Text> {account.id}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Estado Cuenta:</Text>{" "}
+              <Text style={styles.label}>Estado Cuenta:</Text>
               {statusTranslations[account.status] || account.status}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Monto Total (c/Int.):</Text>{" "}
+              <Text style={styles.label}>Monto Total (c/Int.):</Text>
               {formatCurrencyForPdf(grandTotalObligation, account.currency || "$")}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Pago Inicial:</Text>{" "}
+              <Text style={styles.label}>Pago Inicial:</Text>
               {formatCurrencyForPdf(account.downPayment, account.currency || "$")}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Monto Financiado:</Text>{" "}
+              <Text style={styles.label}>Monto Financiado:</Text>
               {formatCurrencyForPdf(financialPrincipal, account.currency || "$")}
             </Text>
             <Text style={styles.gridItem}>
@@ -617,19 +617,19 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
               <Text style={styles.label}>Nº Cuotas:</Text> {account.numberOfInstallments}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Frecuencia:</Text>{" "}
+              <Text style={styles.label}>Frecuencia:</Text>
               {frequencyMap[account.paymentFrequency] || account.paymentFrequency}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Fecha Inicio (1er Venc.):</Text>{" "}
+              <Text style={styles.label}>Fecha Inicio (1er Venc.):</Text>
               {formatDateForPdf(account.startDate)}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Monto Total Pagado:</Text>{" "}
+              <Text style={styles.label}>Monto Total Pagado:</Text>
               {formatCurrencyForPdf(totalEffectivelyPaid, account.currency || "$")}
             </Text>
             <Text style={styles.gridItem}>
-              <Text style={styles.label}>Saldo Pendiente (c/Int.):</Text>{" "}
+              <Text style={styles.label}>Saldo Pendiente (c/Int.):</Text>
               {formatCurrencyForPdf(uiRemainingAmountDisplay, account.currency || "$")}
             </Text>
           </View>
@@ -692,8 +692,8 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                   style={{ ...styles.tableCol, ...styles.tableCellRight, width: colWidths.amort }}
                 >
                   {inst.amortization !== undefined &&
-                  inst.installmentVersion !== "D" &&
-                  inst.installmentVersion !== "H"
+                    inst.installmentVersion !== "D" &&
+                    inst.installmentVersion !== "H"
                     ? formatCurrencyForPdf(inst.amortization, "")
                     : "-"}
                 </Text>
@@ -705,8 +705,8 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                   }}
                 >
                   {inst.interestForPeriod !== undefined &&
-                  inst.installmentVersion !== "D" &&
-                  inst.installmentVersion !== "H"
+                    inst.installmentVersion !== "D" &&
+                    inst.installmentVersion !== "H"
                     ? formatCurrencyForPdf(inst.interestForPeriod, "")
                     : "-"}
                 </Text>
@@ -720,9 +720,9 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
                 >
                   {formatCurrencyForPdf(
                     (inst.installmentVersion === "H" ? -1 : 1) *
-                      (inst.isPaid && inst.originalPaymentAmount !== undefined
-                        ? inst.originalPaymentAmount
-                        : (inst.calculatedInstallmentAmount ?? inst.amount)),
+                    (inst.isPaid && inst.originalPaymentAmount !== undefined
+                      ? inst.originalPaymentAmount
+                      : (inst.calculatedInstallmentAmount ?? inst.amount)),
                     account.currency || "$",
                   )}
                 </Text>
@@ -741,7 +741,7 @@ const CurrentAccountReportDocument: React.FC<CurrentAccountReportDocumentProps> 
         </View>
 
         <Text style={styles.footer} fixed>
-          Reporte generado el {reportDate} por {account.organization?.name || "Sistema"}. Página{" "}
+          Reporte generado el {reportDate} por {account.organization?.name || "Sistema"}. Página
           {"{{pageNumber}}"} de {"{{totalPages}}"}
         </Text>
       </Page>
