@@ -389,7 +389,6 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           efectivo: "cash",
           transferencia: "transfer",
           tarjeta: "credit", // Map to both 'credit' and 'debit'
-          mercadopago: "mercadopago",
           todopago: "todopago",
           qr: "qr",
           cheque: "check",

@@ -27,7 +27,13 @@ export async function getInventoryStatusReport(dateRange?: {
   from?: Date;
   to?: Date;
 }): Promise<InventoryStatusReport> {
-  const organizationId = await getOrganizationIdFromSession();
+  const organizationResult = await getOrganizationIdFromSession();
+  
+  if (!organizationResult.organizationId) {
+    throw new Error("No organization found");
+  }
+
+  const organizationId = organizationResult.organizationId;
 
   // Obtener el conteo por estado
   const byState = await prisma.motorcycle.groupBy({
@@ -103,23 +109,23 @@ export async function getInventoryStatusReport(dateRange?: {
 
   // Calcular el resumen
   const summary = {
-    total: byState.reduce((acc, curr) => acc + curr._count._all, 0),
-    inStock: byState.find((s) => s.state === "STOCK")?._count._all ?? 0,
-    reserved: byState.find((s) => s.state === "RESERVADO")?._count._all ?? 0,
-    sold: byState.find((s) => s.state === "VENDIDO")?._count._all ?? 0,
+    total: byState.reduce((acc, curr) => acc + (curr._count?._all ?? 0), 0),
+    inStock: byState.find((s) => s.state === "STOCK")?._count?._all ?? 0,
+    reserved: byState.find((s) => s.state === "RESERVADO")?._count?._all ?? 0,
+    sold: byState.find((s) => s.state === "VENDIDO")?._count?._all ?? 0,
   };
 
   return {
     byState: byState.map((s) => ({
       state: s.state as MotorcycleState,
-      _count: s._count._all,
+      _count: s._count?._all ?? 0,
     })),
     valueByState: valueByState.map((v) => ({
       state: v.state as MotorcycleState,
       currency: v.currency,
       _sum: {
-        retailPrice: v._sum.retailPrice,
-        costPrice: v._sum.costPrice,
+        retailPrice: v._sum?.retailPrice ?? null,
+        costPrice: v._sum?.costPrice ?? null,
       },
     })),
     byBrand: Object.values(brandGroups),

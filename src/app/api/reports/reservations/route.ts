@@ -1,8 +1,8 @@
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
+import { generateReservationReportPDF, createReservationReportPDFResponse } from "@/lib/pdf-generators/reservation-report-pdf";
 import type { ReportFilters } from "@/types/reports";
 import { type NextRequest, NextResponse } from "next/server";
-import { pdf } from "@react-pdf/renderer";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,8 +21,13 @@ export async function POST(request: NextRequest) {
       brandId: brandId === "all" ? undefined : brandId,
     };
 
-    const report = await getReservationsReport(filters);
-    return NextResponse.json(report);
+    const report = await getReservationsReport(dateRange);
+
+    // Generar el PDF usando pdf-lib
+    const pdfBytes = await generateReservationReportPDF(report);
+
+    return createReservationReportPDFResponse(pdfBytes, "reporte-reservas.pdf");
+    
   } catch (error) {
     console.error("Error generating reservations report:", error);
     return new NextResponse("Error generating report", { status: 500 });

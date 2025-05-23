@@ -70,7 +70,7 @@ async function StockTableContent() {
             <MotorcycleTable
                 initialData={motorcycleData}
                 clients={clients as Client[]}
-                activePromotions={bankingPromotions as BankingPromotionDisplay[]}
+                activePromotions={bankingPromotions as unknown as BankingPromotionDisplay[]}
             />
         );
     } catch (error) {

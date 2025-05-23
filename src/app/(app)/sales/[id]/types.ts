@@ -35,7 +35,6 @@ export interface PaymentFormData {
   chequeEmisor?: string;
   chequeBanco?: string;
   // Digital payment options
-  mercadoPagoCheckout?: boolean;
   todoPagoWidget?: boolean;
   rapipagoCodigo?: string;
   qrCode?: string;

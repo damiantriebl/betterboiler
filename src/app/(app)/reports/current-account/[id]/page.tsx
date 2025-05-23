@@ -4,9 +4,7 @@ import {
   type CurrentAccountForReport,
   getCurrentAccountForReport,
 } from "@/actions/current-accounts/get-current-account-for-report";
-import CurrentAccountReportDocument from "@/components/pdf/CurrentAccountReportDocument";
 import { Button } from "@/components/ui/button";
-import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 import { Eye, FileDown, Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -19,7 +17,9 @@ export default function CurrentAccountReportPage() {
   const [accountData, setAccountData] = useState<CurrentAccountForReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showViewer, setShowViewer] = useState(false); // Optional: for toggling viewer vs download link
+  const [showViewer, setShowViewer] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (accountId) {
@@ -49,6 +49,79 @@ export default function CurrentAccountReportPage() {
       setLoading(false);
     }
   }, [accountId]);
+
+  const handleDownloadPDF = async () => {
+    if (!accountId) return;
+
+    setPdfLoading(true);
+    try {
+      const response = await fetch(`/api/reports/current-account/${accountId}`);
+
+      if (!response.ok) {
+        throw new Error('Error al generar el PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Crear elemento de descarga
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_CC_${accountData?.client.lastName || "Cliente"}_${accountData?.motorcycle?.chassisNumber || accountId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+
+      // Limpiar
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Error descargando PDF:', error);
+      setError('Error al descargar el PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handlePreviewPDF = async () => {
+    if (!accountId) return;
+
+    setPdfLoading(true);
+    try {
+      if (pdfUrl) {
+        // Si ya tenemos un URL, simplemente toggle la vista
+        setShowViewer(!showViewer);
+        setPdfLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/reports/current-account/${accountId}`);
+
+      if (!response.ok) {
+        throw new Error('Error al generar el PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setShowViewer(true);
+
+    } catch (error) {
+      console.error('Error generando preview PDF:', error);
+      setError('Error al generar la previsualización del PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  // Limpiar URL cuando el componente se desmonta
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        window.URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
 
   if (loading) {
     return (
@@ -81,8 +154,6 @@ export default function CurrentAccountReportPage() {
     );
   }
 
-  const fileName = `Reporte_CC_${accountData.client.lastName || "Cliente"}_${accountData.motorcycle?.chassisNumber || accountData.id}.pdf`;
-
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-6 flex justify-between items-center">
@@ -107,37 +178,43 @@ export default function CurrentAccountReportPage() {
         <div className="flex-grow p-6 border rounded-lg">
           <h3 className="text-lg font-medium mb-4">Descargar o Visualizar PDF</h3>
           <div className="flex gap-4 mb-4">
-            <PDFDownloadLink
-              document={<CurrentAccountReportDocument account={accountData} />}
-              fileName={fileName}
+            <Button
+              onClick={handleDownloadPDF}
+              disabled={pdfLoading}
+              size="lg"
+              className="w-full md:w-auto"
             >
-              {({ blob, url, loading: pdfLoading, error: pdfError }: {
-                blob: Blob | null;
-                url: string | null;
-                loading: boolean;
-                error: Error | null;
-              }) =>
-                pdfLoading ? (
-                  <Button disabled size="lg" className="w-full md:w-auto">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generando PDF...
-                  </Button>
-                ) : (
-                  <Button size="lg" className="w-full md:w-auto">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Descargar PDF
-                  </Button>
-                )
-              }
-            </PDFDownloadLink>
+              {pdfLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generando PDF...
+                </>
+              ) : (
+                <>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Descargar PDF
+                </>
+              )}
+            </Button>
+
             <Button
               variant="outline"
               size="lg"
-              onClick={() => setShowViewer(!showViewer)}
+              onClick={handlePreviewPDF}
+              disabled={pdfLoading}
               className="w-full md:w-auto"
             >
-              <Eye className="mr-2 h-4 w-4" />
-              {showViewer ? "Ocultar Previsualización" : "Previsualizar PDF"}
+              {pdfLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cargando...
+                </>
+              ) : (
+                <>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {showViewer ? "Ocultar Previsualización" : "Previsualizar PDF"}
+                </>
+              )}
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -147,11 +224,15 @@ export default function CurrentAccountReportPage() {
         </div>
       </div>
 
-      {showViewer && (
-        <div style={{ height: "100vh", marginTop: "20px" }}>
-          <PDFViewer width="100%" height="100%" style={{ border: "none" }}>
-            <CurrentAccountReportDocument account={accountData} />
-          </PDFViewer>
+      {showViewer && pdfUrl && (
+        <div className="mt-6">
+          <iframe
+            src={pdfUrl}
+            width="100%"
+            height="800px"
+            style={{ border: "1px solid #ccc", borderRadius: "8px" }}
+            title="Previsualización del PDF"
+          />
         </div>
       )}
     </div>

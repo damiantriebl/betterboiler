@@ -1,5 +1,5 @@
 import Link from "next/link";
-import LogoutButton from "./LogoutButton";
+import { UserButton } from "./UserButton";
 
 import type { Session } from "@/auth";
 import { headers } from "next/headers";
@@ -39,7 +39,7 @@ export default async function Navbar({ session, organization }: NavbarProps) {
             <Link href={"/admin"}>Administracion</Link>
           </Button>
         )}
-        {session ? <LogoutButton /> : <SessionButtons />}
+        {session ? <UserButton /> : <SessionButtons />}
       </div>
     </nav>
   );

@@ -133,13 +133,13 @@ export default function PaymentMethodStep({
 
   // Helper function to get payment method type from DB value
   const getPaymentMethodValue = (dbType?: string) => {
-    if (!dbType) return "";
+    if (!dbType) return "cash"; // Fallback to cash if type is not defined
     const typeMap: Record<string, string> = {
       cash: "efectivo",
       transfer: "transferencia",
+      deposit: "deposito",
       credit: "tarjeta",
       debit: "tarjeta",
-      mercadopago: "mercadopago",
       todopago: "todopago",
       rapipago: "rapipago",
       qr: "qr",

@@ -187,5 +187,4 @@ export interface MotorcycleWithRelations extends Motorcycle {
   branch?: {
     name: string;
   } | null;
-  soldAt?: Date | null;
 }

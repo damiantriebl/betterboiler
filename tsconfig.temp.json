@@ -25,10 +25,6 @@
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/types", "src", "src/types", ".next/types/**/*.ts"],
   "exclude": [
-    "node_modules", 
-    "**/*pdf*", 
-    "**/QuoteBrigePdf.tsx",
-    "**/*Pdf*",
-    "**/react-pdf/**"
+    "node_modules",   
   ]
 } 

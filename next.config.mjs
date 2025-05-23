@@ -7,8 +7,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  // Configuración para manejar paquetes externos 
-  serverExternalPackages: ['@react-pdf/renderer'],
+
   // Corregir configuración de Turbopack
   turbopack: {},
 };

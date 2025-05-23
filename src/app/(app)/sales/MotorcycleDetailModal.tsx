@@ -47,7 +47,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientDetail } from "./ClientDetail";
 import QuoteBridgePdf from "./components/QuoteBrigePdf";
 import { Switch } from "@/components/ui/switch";
-import { useSessionStore } from "@/stores/session-store";
+import { useSessionStore } from "@/stores/SessionStore";
 
 interface Props {
   isOpen: boolean;
@@ -967,9 +967,9 @@ export function MotorcycleDetailModal({
             () =>
               rawReservationData
                 ? {
-                    ...rawReservationData,
-                    currency: rawReservationData.currency || "USD",
-                  }
+                  ...rawReservationData,
+                  currency: rawReservationData.currency || "USD",
+                }
                 : undefined,
             [],
           )}

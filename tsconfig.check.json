@@ -23,7 +23,6 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/types/react-pdf.d.ts"
   ],
   "exclude": [
     "node_modules",

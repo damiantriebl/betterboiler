@@ -1,9 +1,8 @@
 "use server";
 
 import { auth } from "@/auth";
-import { InventoryReportPDF } from "@/components/pdf/InventoryReportPDF";
+import { generateInventoryReportPDF, createInventoryReportPDFResponse } from "@/lib/pdf-generators/inventory-report-pdf";
 import { getInventoryStatusReport } from "@/lib/reports/inventory";
-import { renderToBuffer } from "@react-pdf/renderer";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -14,12 +13,7 @@ export async function generateInventoryPDF(dateRange?: { from?: Date; to?: Date 
   }
 
   const data = await getInventoryStatusReport(dateRange);
-  const pdf = await renderToBuffer(<InventoryReportPDF data={data} dateRange={dateRange} />);
+  const pdfBytes = await generateInventoryReportPDF(data, dateRange);
 
-  return new Response(pdf, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": "attachment; filename=inventory-report.pdf",
-    },
-  });
+  return createInventoryReportPDFResponse(pdfBytes, 'reporte-inventario.pdf');
 }

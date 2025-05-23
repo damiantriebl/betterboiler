@@ -10,7 +10,7 @@ import {
 
 // Mock the Date
 const mockDate = new Date(2023, 5, 16); // A Friday
-vi.spyOn(global, "Date").mockImplementation(() => mockDate as unknown);
+vi.spyOn(global, "Date").mockImplementation(() => mockDate as any);
 
 describe("Promotion Utilities", () => {
   let mockPromotionAllDays: BankingPromotionDisplay;
@@ -28,7 +28,7 @@ describe("Promotion Utilities", () => {
       activeDays: [],
       paymentMethod: { id: 1, name: "Credit Card", type: "credit", description: "" },
       bank: null,
-      card: null,
+      bankCard: null,
       installmentPlans: [],
     };
 
@@ -41,7 +41,7 @@ describe("Promotion Utilities", () => {
       activeDays: ["viernes", "sábado", "domingo"],
       paymentMethod: { id: 1, name: "Credit Card", type: "credit", description: "" },
       bank: null,
-      card: null,
+      bankCard: null,
       installmentPlans: [],
     };
 
@@ -54,7 +54,7 @@ describe("Promotion Utilities", () => {
       activeDays: ["lunes", "martes", "miércoles", "jueves"],
       paymentMethod: { id: 1, name: "Credit Card", type: "credit", description: "" },
       bank: null,
-      card: null,
+      bankCard: null,
       installmentPlans: [],
     };
   });

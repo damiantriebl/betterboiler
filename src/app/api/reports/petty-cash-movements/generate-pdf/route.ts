@@ -1,12 +1,9 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { renderToStream, renderToBuffer, Font } from "@react-pdf/renderer";
-import PettyCashActivityReportPDF from "@/components/custom/reports/PettyCashActivityReportPDF";
+import { generatePettyCashActivityPDF, createPettyCashActivityPDFResponse } from "@/lib/pdf-generators/petty-cash-activity-pdf";
 import type { ReportDataForPdf } from "@/types/PettyCashActivity";
-import React, { type ReactElement } from "react";
 import prisma from "@/lib/prisma";
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
-import type { PettyCashActivityReportPDFProps } from "@/types/PettyCashActivity";
 
 // branchId puede ser un string (ID numérico o "general_account") o no estar definido.
 const querySchema = z.object({
@@ -95,52 +92,21 @@ export async function GET(request: Request) {
       orderBy: { date: "asc" },
     })) as ReportDataForPdf[];
 
-    if (!pettyCashDeposits || pettyCashDeposits.length === 0) {
-      const pdfDocProps = {
-        data: [],
-        fromDate: startDate,
-        toDate: new Date(toDate),
-      };
-      const pdfDoc = React.createElement(
-        PettyCashActivityReportPDF,
-        pdfDocProps as PettyCashActivityReportPDFProps,
-      );
-
-      const pdfBuffer = await renderToBuffer(
-        pdfDoc as ReactElement<typeof PettyCashActivityReportPDF>,
-      );
-
-      return new NextResponse(Buffer.from(pdfBuffer).buffer, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="reporte_actividad_caja_chica_vacio.pdf"`,
-        },
-      });
-    }
-
-    const pdfDocPropsFilled = {
-      data: pettyCashDeposits,
-      fromDate: startDate,
-      toDate: new Date(toDate),
-    };
-    const pdfDoc = React.createElement(
-      PettyCashActivityReportPDF,
-      pdfDocPropsFilled as PettyCashActivityReportPDFProps,
-    );
-
-    const pdfBuffer = await renderToBuffer(
-      pdfDoc as ReactElement<typeof PettyCashActivityReportPDF>,
+    // Generar el PDF usando pdf-lib
+    const pdfBytes = await generatePettyCashActivityPDF(
+      pettyCashDeposits || [],
+      startDate,
+      new Date(toDate)
     );
 
     const safeFromDate = startDate.toISOString().split("T")[0];
     const safeToDate = new Date(toDate).toISOString().split("T")[0];
+    const filename = pettyCashDeposits.length === 0 
+      ? "reporte_actividad_caja_chica_vacio.pdf"
+      : `reporte_actividad_caja_chica_${safeFromDate}_a_${safeToDate}.pdf`;
 
-    return new NextResponse(Buffer.from(pdfBuffer).buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="reporte_actividad_caja_chica_${safeFromDate}_a_${safeToDate}.pdf"`,
-      },
-    });
+    return createPettyCashActivityPDFResponse(pdfBytes, filename);
+
   } catch (error) {
     console.error("Error generando el PDF de actividad de caja chica:", error);
     return NextResponse.json(

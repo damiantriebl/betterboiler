@@ -21,8 +21,6 @@ import { createAuthClient } from "better-auth/react";
 import { useRouter } from "next/navigation";
 import AvatarUser from "./AvatarUser";
 import { useSessionStore } from "@/stores/SessionStore";
-import { Image } from "@react-pdf/renderer";
-import { Text } from "@react-pdf/renderer";
 
 const { useSession } = createAuthClient();
 

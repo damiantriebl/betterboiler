@@ -10,7 +10,6 @@ export interface PaymentMethod {
     | "transfer"
     | "check"
     | "deposit"
-    | "mercadopago"
     | "qr"
     | string;
   description: string;
