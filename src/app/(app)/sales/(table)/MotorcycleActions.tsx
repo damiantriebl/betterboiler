@@ -46,7 +46,10 @@ export interface MotorcycleWithActions {
 
 interface MotorcycleActionButtonsProps {
   moto: MotorcycleWithFullDetails;
-  onAction: (action: "vender" | "reservar" | "eliminarLogico", moto: MotorcycleWithFullDetails) => void;
+  onAction: (
+    action: "vender" | "reservar" | "eliminarLogico",
+    moto: MotorcycleWithFullDetails,
+  ) => void;
   onToggleStatus: (motoId: number, currentStatus: MotorcycleState) => void;
   onCancelProcess: (motoId: number) => void;
   onNavigateToDetail: (motoId: string) => void;

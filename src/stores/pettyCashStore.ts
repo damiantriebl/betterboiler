@@ -18,7 +18,7 @@ export const usePettyCash = create<PettyCashState>()(
         setMovements: (data) => set({ movements: data }),
         setBalance: (balance) => set({ balance }),
       }),
-      { name: "petty-cash" }
-    )
-  )
+      { name: "petty-cash" },
+    ),
+  ),
 );

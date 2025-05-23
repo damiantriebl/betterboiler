@@ -24,11 +24,15 @@ interface SalesClientComponentProps {
 }
 
 // Estado para la moto seleccionada para la venta
-interface SelectedMotorcycleForSale extends Omit<MotorcycleTableRowData, "id" | "retailPrice"> {
+interface SelectedMotorcycleForSale extends Omit<MotorcycleTableRowData, "id" | "retailPrice" | "model"> {
   // Omitir para redefinir con tipos correctos
   id: number; // Asegurar que id es number si MotorcycleTableRowData lo tiene como string o diferente
   name: string; // Nombre compuesto para mostrar
   retailPrice: number; // Asegurar que retailPrice es number
+  model: {
+    name: string;
+    files?: any[] | undefined; // Permitir files opcional
+  } | null;
 }
 
 export default function SalesClientComponent({
@@ -111,19 +115,25 @@ export default function SalesClientComponent({
       engineNumber: motorcycle.engineNumber, // Correcto
       currency: motorcycle.currency,
       state: motorcycle.state,
-      brand: motorcycle.brand ? {
-        name: motorcycle.brand.name,
-        organizationBrands: motorcycle.brand?.organizationBrands || [],
-      } : null,
-      model: motorcycle.model ? {
-        name: motorcycle.model.name,
-        files: motorcycle.model.files || undefined,
-      } : null,
-      color: motorcycle.color ? {
-        name: motorcycle.color.name,
-        colorOne: motorcycle.color.colorOne,
-        colorTwo: motorcycle.color.colorTwo,
-      } : null,
+      brand: motorcycle.brand
+        ? {
+          name: motorcycle.brand.name,
+          organizationBrands: motorcycle.brand?.organizationBrands || [],
+        }
+        : null,
+      model: motorcycle.model
+        ? {
+          name: motorcycle.model.name,
+          files: motorcycle.model.files || undefined,
+        }
+        : null,
+      color: motorcycle.color
+        ? {
+          name: motorcycle.color.name,
+          colorOne: motorcycle.color.colorOne,
+          colorTwo: motorcycle.color.colorTwo,
+        }
+        : null,
       branch: motorcycle.branch ? { name: motorcycle.branch.name } : null,
       costPrice: motorcycle.costPrice,
       wholesalePrice: motorcycle.wholesalePrice,

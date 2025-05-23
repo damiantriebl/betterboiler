@@ -5,7 +5,8 @@ import type { QuotePDFProps } from "@/types/quote";
 import { useEffect, useState } from "react";
 import { useSessionStore } from "@/stores/session-store";
 
-interface QuoteBridgePdfProps extends Omit<QuotePDFProps, "organizationLogo" | "organizationName" | "userName" | "userImage"> {
+interface QuoteBridgePdfProps
+  extends Omit<QuotePDFProps, "organizationLogo" | "organizationName" | "userName" | "userImage"> {
   organizationLogoKey?: string | null;
   fileName?: string;
   onReady?: () => void;
@@ -57,7 +58,14 @@ export default function QuoteBridgePdf({
           motorcycleImageBase64 = await convertImageToPngBase64(motoImageUrl).catch(() => "");
         }
 
-        const payload = { ...pdfProps, organizationLogo: logoBase64, motorcycleImage: motorcycleImageBase64, organizationName, userName, userImage };
+        const payload = {
+          ...pdfProps,
+          organizationLogo: logoBase64,
+          motorcycleImage: motorcycleImageBase64,
+          organizationName,
+          userName,
+          userImage,
+        };
         const res = await fetch("/api/generate-quote-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

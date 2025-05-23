@@ -22,8 +22,7 @@ export const useSessionStore = create<SessionState>()(
         userName: null,
         userEmail: null,
         userImage: null,
-        setSession: (data) =>
-          set((state) => ({ ...state, ...data }), false, "setSession"),
+        setSession: (data) => set((state) => ({ ...state, ...data }), false, "setSession"),
         clearSession: () =>
           set(
             {
@@ -35,11 +34,11 @@ export const useSessionStore = create<SessionState>()(
               userImage: null,
             },
             false,
-            "clearSession"
+            "clearSession",
           ),
       }),
-      { name: "session-store" }
+      { name: "session-store" },
     ),
-    { name: "SessionStore" }
-  )
+    { name: "SessionStore" },
+  ),
 );

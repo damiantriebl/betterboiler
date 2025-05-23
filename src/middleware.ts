@@ -5,8 +5,8 @@ import { type NextRequest, NextResponse } from "next/server";
 const authRoutes = ["/sign-in", "/sign-up"];
 const passwordRoutes = ["/reset-password", "/forgot-password"];
 const adminRoutes = ["/admin"];
-const protectedRoutes = ["/", "/dashboard", "/profile"];
 const rootRoutes = ["/root"];
+const publicRoutes = ["/public", "/api/health"]; // Rutas que NO requieren autenticación
 
 export default async function authMiddleware(request: NextRequest) {
   const pathName = request.nextUrl.pathname;
@@ -14,8 +14,11 @@ export default async function authMiddleware(request: NextRequest) {
   const isAuth = authRoutes.includes(pathName);
   const isPassword = passwordRoutes.includes(pathName);
   const isAdmin = adminRoutes.includes(pathName) || pathName.startsWith("/admin");
-  const isProtected = protectedRoutes.includes(pathName);
   const isRoot = rootRoutes.includes(pathName) || pathName.startsWith("/root");
+  const isPublic = publicRoutes.includes(pathName) || pathName.startsWith("/public");
+  
+  // 🔐 TODAS las rutas requieren autenticación por defecto, excepto auth, password, y public
+  const requiresAuth = !isAuth && !isPassword && !isPublic;
 
   const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
     baseURL: process.env.BETTER_AUTH_URL,
@@ -31,7 +34,7 @@ export default async function authMiddleware(request: NextRequest) {
     return session ? NextResponse.redirect(new URL("/", request.url)) : response;
   }
 
-  if (!session && (isProtected || isAdmin || isRoot)) {
+  if (!session && requiresAuth) {
     return NextResponse.redirect(new URL("/sign-in?error=not-logged", request.url));
   }
 

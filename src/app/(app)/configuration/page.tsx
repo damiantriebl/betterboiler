@@ -10,13 +10,7 @@ import {
 import { auth } from "@/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import prisma from "@/lib/prisma";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
 import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
@@ -34,7 +28,11 @@ import ManageBranches from "./ManageBranches";
 import ManageColors from "./ManageColors";
 import ManagePaymentMethods from "./ManagePaymentMethods";
 import SecuritySettings from "./SecuritySettings";
-import type { BankCardDisplay, BankWithCards, CardType as BankCardCardType } from "@/types/bank-cards";
+import type {
+  BankCardDisplay,
+  BankWithCards,
+  CardType as BankCardCardType,
+} from "@/types/bank-cards";
 import type { Bank as BankType } from "@/types/banking-promotions"; // Asumiendo que BankType es compatible con la estructura de bank en BankWithCards
 
 // We'll use these default payment methods if the schema doesn't exist yet
@@ -132,9 +130,7 @@ async function getOrganizationBrandsData(
         },
       },
     });
-    console.log("getOrganizationBrandsData: orgBrandAssociations FROM PRISMA:", JSON.stringify(orgBrandAssociations, null, 2));
 
-    // Define the expected type for association with includes
     type OrgBrandWithIncludes = Prisma.OrganizationBrandGetPayload<{
       include: {
         brand: {
@@ -168,7 +164,6 @@ async function getOrganizationBrandsData(
     const formattedData: OrganizationBrandDisplayData[] = orgBrandAssociations.map(
       (assoc: OrgBrandWithIncludes) => {
         // Filter models: Keep only those configured AND visible for this organization
-        console.log(`getOrganizationBrandsData: Procesando asociación de marca: ${assoc.brand.name} (ID: ${assoc.brand.id})`);
         const orgVisibleModels = assoc.brand.models
           .filter(
             (m) =>
@@ -177,7 +172,6 @@ async function getOrganizationBrandsData(
               m.organizationModelConfigs[0].isVisible,
           )
           .map((m) => {
-            console.log(`getOrganizationBrandsData: Modelo original de Prisma ANTES de mapear (Marca ${assoc.brand.name}):`, JSON.stringify(m, null, 2));
             const modelData = {
               id: m.id,
               name: m.name,
@@ -187,7 +181,6 @@ async function getOrganizationBrandsData(
               orgOrder: m.organizationModelConfigs[0].order,
               isVisible: m.organizationModelConfigs[0].isVisible,
             };
-            console.log(`getOrganizationBrandsData: Modelo TRANSFORMADO para Display (Marca ${assoc.brand.name}):`, JSON.stringify(modelData, null, 2));
             return modelData;
           })
           // Sort the models based on their organization-specific order
@@ -205,8 +198,6 @@ async function getOrganizationBrandsData(
         };
       },
     );
-
-    console.log("getOrganizationBrandsData: formattedData FINAL:", JSON.stringify(formattedData, null, 2));
     return formattedData;
   } catch (error) {
     console.error("🚨 ERROR fetching Organization Brands N:M:", error);
@@ -275,8 +266,15 @@ async function getPaymentMethodsData(organizationId: string) {
 async function getBankingPromotionsData(organizationId: string) {
   try {
     // Get banking promotions and banks data
-    const promotions = await getOrganizationBankingPromotions(organizationId);
+    const promotionsRaw = await getOrganizationBankingPromotions(organizationId);
     const banks = await getAllBanks();
+
+    // Transform to BankingPromotionDisplay format by mapping card to bankCard
+    const promotions: BankingPromotionDisplay[] = promotionsRaw.map((promo: any) => ({
+      ...promo,
+      bankCard: promo.card, // Map card to bankCard
+      activeDays: promo.activeDays as any[], // Cast activeDays
+    }));
 
     return { promotions, banks };
   } catch (error) {
@@ -304,7 +302,7 @@ export default async function ConfigurationPage() {
     bankingPromotionsData,
     rawBanksWithCardsData,
     allCardTypesData,
-    allBanksData
+    allBanksData,
   ] = await Promise.all([
     getOrganizationBrandsData(organizationId),
     getMotoColors(organizationId),
@@ -317,29 +315,34 @@ export default async function ConfigurationPage() {
   ]);
 
   // Transformar rawBanksWithCardsData a BankCardDisplay[] para ManageBankingPromotions
-  const bankCardsForPromotions: BankCardDisplay[] = rawBanksWithCardsData.flatMap(bwc => // bwc es un BankWithCards
-    bwc.cards.map(card => ({
-      // Propiedades de BankCard (que BankCardDisplay extiende)
-      id: card.id, // ID de la entidad BankCard (de la tabla intermedia)
-      bankId: bwc.bank.id,
-      cardTypeId: card.cardType.id,
-      organizationId: organizationId, // organizationId de la sesión
-      isEnabled: card.isEnabled,
-      order: card.order,
-      bank: { // Objeto bank completo según la definición de BankCard
-        id: bwc.bank.id,
-        name: bwc.bank.name,
-        logoUrl: bwc.bank.logoUrl,
-      },
-      cardType: { // Objeto cardType completo según la definición de BankCard
-        id: card.cardType.id,
-        name: card.cardType.name,
-        type: card.cardType.type, // Asegurarse que el tipo de 'type' coincida
-        logoUrl: card.cardType.logoUrl,
-      },
-      // Propiedad adicional específica de BankCardDisplay
-      displayName: `${card.cardType.name} - ${bwc.bank.name}`,
-    }))
+  const bankCardsForPromotions: BankCardDisplay[] = rawBanksWithCardsData.flatMap(
+    (
+      bwc, // bwc es un BankWithCards
+    ) =>
+      bwc.cards.map((card) => ({
+        // Propiedades de BankCard (que BankCardDisplay extiende)
+        id: card.id, // ID de la entidad BankCard (de la tabla intermedia)
+        bankId: bwc.bank.id,
+        cardTypeId: card.cardType.id,
+        organizationId: organizationId, // organizationId de la sesión
+        isEnabled: card.isEnabled,
+        order: card.order,
+        bank: {
+          // Objeto bank completo según la definición de BankCard
+          id: bwc.bank.id,
+          name: bwc.bank.name,
+          logoUrl: bwc.bank.logoUrl,
+        },
+        cardType: {
+          // Objeto cardType completo según la definición de BankCard
+          id: card.cardType.id,
+          name: card.cardType.name,
+          type: card.cardType.type, // Asegurarse que el tipo de 'type' coincida
+          logoUrl: card.cardType.logoUrl,
+        },
+        // Propiedad adicional específica de BankCardDisplay
+        displayName: `${card.cardType.name} - ${bwc.bank.name}`,
+      })),
   );
 
   return (
@@ -366,7 +369,10 @@ export default async function ConfigurationPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p>Próximamente: opciones de configuración general de la organización (nombre, logo, etc.).</p>
+                <p>
+                  Próximamente: opciones de configuración general de la organización (nombre, logo,
+                  etc.).
+                </p>
                 <p>ID de Organización: {organizationId}</p>
                 <p>Rol de Usuario: {userRole}</p>
               </div>
@@ -429,7 +435,6 @@ export default async function ConfigurationPage() {
             />
           </Suspense>
         </TabsContent>
-
       </Tabs>
     </div>
   );

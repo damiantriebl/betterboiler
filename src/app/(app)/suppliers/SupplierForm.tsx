@@ -4,31 +4,22 @@ import { createSupplier, updateSupplier } from "@/actions/suppliers/manage-suppl
 import LoadingButton from "@/components/custom/LoadingButton"; // Asumo que tienes este componente
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importar Tabs
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast"; // Añadir import para toast
 import { type SupplierFormData, supplierSchema } from "@/zod/SuppliersZod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Supplier } from "@prisma/client"; // Importar tipo Supplier
 import React, { useTransition, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
+import { AdicionalSection } from "./form-sections/AdicionalSection";
+import { BancariaSection } from "./form-sections/BancariaSection";
+import { ComercialSection } from "./form-sections/ComercialSection";
+import { ContactoSection } from "./form-sections/ContactoSection";
+import { DireccionesSection } from "./form-sections/DireccionesSection";
+import { FiscalSection } from "./form-sections/FiscalSection";
+import { IdentificacionSection } from "./form-sections/IdentificacionSection";
+import { LogisticaSection } from "./form-sections/LogisticaSection";
 
 interface SupplierFormProps {
   onSuccess?: (data: SupplierFormData) => void; // Use imported type
@@ -56,7 +47,7 @@ export default function SupplierForm({
   supplierId,
 }: SupplierFormProps) {
   const [isPending, startTransition] = useTransition(); // Hook para manejar estado pendiente
-  const isEditing = !!supplierId; // Determinar si estamos editando
+  const isEditing = !!supplierId; // ✅ Detecta automáticamente si es edición
 
   // Obtener los valores permitidos de los enums Zod para usarlos en la comprobación
   const allowedVatConditions = supplierSchema.shape.vatCondition._def.values;
@@ -168,8 +159,8 @@ export default function SupplierForm({
     startTransition(async () => {
       const result =
         isEditing && supplierId
-          ? await updateSupplier(supplierId, data)
-          : await createSupplier(data);
+          ? await updateSupplier(supplierId, data) // ✅ Actualizar existente
+          : await createSupplier(data); // ✅ Crear nuevo
 
       if (result.success) {
         toast({
@@ -206,7 +197,6 @@ export default function SupplierForm({
 
   return (
     <Card className="w-full border-0 shadow-none">
-      {" "}
       {/* Quitar bordes/sombra si está en modal */}
       <CardHeader>
         <CardTitle>{isEditing ? "Editar Proveedor" : "Nuevo Proveedor"}</CardTitle>
@@ -218,7 +208,6 @@ export default function SupplierForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Tabs defaultValue="identificacion" className="w-full">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 mb-4">
-
                 {tabsConfig.map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value}>
                     {tab.label}
@@ -229,595 +218,49 @@ export default function SupplierForm({
               {/* --- CONTENIDO DE CADA PESTAÑA --- */}
 
               {/* Pestaña Identificación */}
-              <TabsContent value="identificacion" className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="legalName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Razón Social</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nombre legal completo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="commercialName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre Comercial</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nombre de fantasía (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="taxIdentification"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Identificación Tributaria (CUIT/CUIL/etc.)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: 20-12345678-9" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="identificacion">
+                <IdentificacionSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
 
               {/* Pestaña Fiscal */}
-              <TabsContent value="fiscal" className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="vatCondition"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Condición frente al IVA</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Responsable Inscripto">
-                            Responsable Inscripto
-                          </SelectItem>
-                          <SelectItem value="Monotributista">Monotributista</SelectItem>
-                          <SelectItem value="Exento">Exento</SelectItem>
-                          <SelectItem value="Consumidor Final">Consumidor Final</SelectItem>
-                          <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="voucherType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Comprobante Emitido</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Factura A">Factura A</SelectItem>
-                          <SelectItem value="Factura B">Factura B</SelectItem>
-                          <SelectItem value="Factura C">Factura C</SelectItem>
-                          <SelectItem value="Recibo X">Recibo X</SelectItem>
-                          <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="grossIncome"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ingresos Brutos (Nro./Convenio)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Número o 'Convenio Multilateral'" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="localTaxRegistration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Inscripción Tributaria Local</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Número de inscripción municipal/provincial (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="fiscal">
+                <FiscalSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
 
               {/* Pestaña Contacto */}
-              <TabsContent
-                value="contacto"
-                className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                {" "}
-                {/* Grid para mejor layout */}
-                <FormField
-                  control={form.control}
-                  name="contactName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Persona de Contacto</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nombre completo (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contactPosition"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cargo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Cargo (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="landlineNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono Fijo</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="Ej: +54 11 4... (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="mobileNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono Móvil</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="Ej: +54 9 11 5... (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Correo Electrónico</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="proveedor@email.com (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="website"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sitio Web</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="url"
-                          placeholder="https://www.proveedor.com (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="contacto">
+                <ContactoSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
 
               {/* Pestaña Direcciones */}
-              <TabsContent value="direcciones" className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="legalAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Domicilio Legal</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Dirección legal completa (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="commercialAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Domicilio Comercial/Oficina</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Dirección de la oficina (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="deliveryAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Domicilio de Entrega</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Dirección donde se recibe mercadería (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="direcciones">
+                <DireccionesSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
 
               {/* Pestaña Bancaria */}
-              <TabsContent
-                value="bancaria"
-                className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="bank"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Banco</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nombre del banco (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="accountTypeNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo y Número de Cuenta</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Caja de Ahorro 123... (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="cbu"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CBU/IBAN</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Número CBU/IBAN (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bankAlias"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Alias Bancario</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Alias (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="swiftBic"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SWIFT/BIC</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Código SWIFT/BIC (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="bancaria">
+                <BancariaSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
 
               {/* Pestaña Comercial */}
-              <TabsContent
-                value="comercial"
-                className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="paymentCurrency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Moneda de Pago Preferida</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: ARS, USD (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="paymentMethods"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Formas de Pago Aceptadas</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Transferencia, Cheque (opcional)" {...field} />
-                      </FormControl>
-                      <FormDescription>Separar por comas o describir</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="paymentTermDays"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Plazo de Pago (días)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Ej: 30 (opcional)"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="creditLimit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Límite de Crédito ($)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Ej: 50000 (opcional)"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="discountsConditions"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Descuentos o Condiciones Especiales</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Detallar descuentos por pronto pago, volumen, etc. (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="returnPolicy"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Política de Devoluciones y Garantías</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Describir política (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="comercial">
+                <ComercialSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
 
               {/* Pestaña Logística */}
-              <TabsContent
-                value="logistica"
-                className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="shippingMethods"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Métodos de Envío</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Ej: Correo Argentino, Flete propio (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="shippingCosts"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Costos de Envío</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Detallar costos o 'Según cotización' (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="deliveryTimes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tiempos de Entrega Promedio</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: 24-72hs hábiles (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="transportConditions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Condiciones de Transporte</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Requiere cadena de frío (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="logistica">
+                <LogisticaSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
 
               {/* Pestaña Adicional */}
-              <TabsContent value="adicional" className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="itemsCategories"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rubros / Categorías</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Productos o servicios ofrecidos (opcional)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="certifications"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Certificaciones</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ISO 9001, etc. (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="commercialReferences"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Referencias Comerciales</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Otros clientes (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estado</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="activo">Activo</SelectItem>
-                          <SelectItem value="inactivo">Inactivo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="notesObservations"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notas / Observaciones Internas</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Cualquier nota adicional (opcional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="adicional">
+                <AdicionalSection control={form.control} isSubmitting={isPending} />
               </TabsContent>
             </Tabs>
 
             <div className="flex justify-end gap-2 pt-4">
-              {" "}
-              {/* Añadir gap y padding top */}
               {/* Botón Cancelar */}
-              {onCancel && ( // Mostrar solo si se proporciona onCancel
+              {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
                   Cancelar
                 </Button>

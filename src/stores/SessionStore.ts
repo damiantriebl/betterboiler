@@ -8,14 +8,14 @@ export interface SessionState {
   organizationName: string | null;
   organizationLogo: string | null;
   organizationId: string | null;
-  
+
   // Datos de usuario
   userId: string | null;
   userName: string | null;
   userEmail: string | null;
   userImage: string | null;
   userRole: string | null;
-  
+
   // Acciones
   setSession: (data: Partial<Omit<SessionState, "setSession" | "clearSession">>) => void;
   clearSession: () => void;
@@ -27,7 +27,7 @@ const initialState = {
   organizationName: null,
   organizationLogo: null,
   organizationId: null,
-  
+
   // Datos de usuario
   userId: null,
   userName: null,
@@ -41,13 +41,11 @@ export const useSessionStore = create<SessionState>()(
     persist(
       (set) => ({
         ...initialState,
-        setSession: (data) =>
-          set((state) => ({ ...state, ...data }), false, 'setSession'),
-        clearSession: () =>
-          set(() => ({ ...initialState }), false, 'clearSession'),
+        setSession: (data) => set((state) => ({ ...state, ...data }), false, "setSession"),
+        clearSession: () => set(() => ({ ...initialState }), false, "clearSession"),
       }),
-      { name: "session-store" }
+      { name: "session-store" },
     ),
-    { name: "SessionStore" }
-  )
-); 
+    { name: "SessionStore" },
+  ),
+);

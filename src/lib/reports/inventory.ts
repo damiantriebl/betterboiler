@@ -1,4 +1,4 @@
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import prisma from "@/lib/prisma";
 import type { InventoryStatusReport } from "@/types/reports";
 import type { Motorcycle, MotorcycleState } from "@prisma/client";

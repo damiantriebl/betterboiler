@@ -8,10 +8,28 @@ import {
 } from "@/zod/banking-promotion-schemas";
 import { revalidatePath } from "next/cache";
 import type { BankingPromotion } from "@prisma/client";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import type { BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { Prisma } from "@prisma/client";
+import { z } from "zod";
+
+// Tipos inferidos de los esquemas de Zod
+type CreateBankingPromotionInput = z.infer<typeof bankingPromotionSchema> & {
+  organizationId: string;
+};
+type UpdateBankingPromotionInput = z.infer<typeof updateBankingPromotionSchema>;
+type ToggleBankingPromotionInput = {
+  id: number;
+  isEnabled: boolean;
+};
+type ToggleInstallmentPlanInput = {
+  id: number;
+  isEnabled: boolean;
+};
 
 // Create a new banking promotion
 export async function createBankingPromotion(
-  data: CreateBankingPromotionInput, // Reemplazar any con un tipo específico
+  data: CreateBankingPromotionInput,
 ) {
   try {
     // Validate the data - include organizationId in validation
@@ -138,9 +156,9 @@ export async function updateBankingPromotion(data: UpdateBankingPromotionInput) 
     };
 
     // Update promotion and installment plans in a transaction
-    const updatedPromotion = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // Update promotion data
-      const promotion = await tx.bankingPromotion.update({
+      await tx.bankingPromotion.update({
         where: { id },
         data: processedData,
       });
@@ -180,8 +198,6 @@ export async function updateBankingPromotion(data: UpdateBankingPromotionInput) 
           }
         }
       }
-
-      return promotion;
     });
 
     // Obtener la promoción completa con sus planes de cuotas
@@ -264,8 +280,16 @@ export async function toggleInstallmentPlan(data: ToggleInstallmentPlanInput) {
 // Delete a banking promotion
 export async function deleteBankingPromotion(id: string) {
   try {
+    const promotionId = Number.parseInt(id);
+    if (Number.isNaN(promotionId)) {
+      return {
+        success: false,
+        error: "ID de promoción inválido",
+      };
+    }
+
     await prisma.bankingPromotion.delete({
-      where: { id },
+      where: { id: promotionId },
     });
 
     revalidatePath("/configuration");
@@ -283,13 +307,26 @@ export async function deleteBankingPromotion(id: string) {
   }
 }
 
-// Get promotion details with installment plans
+// Get banking promotion details for editing
 export async function getBankingPromotionDetails(id: string) {
   try {
+    const promotionId = Number.parseInt(id);
+    if (Number.isNaN(promotionId)) {
+      return {
+        success: false,
+        error: "ID de promoción inválido",
+      };
+    }
+
     const promotion = await prisma.bankingPromotion.findUnique({
-      where: { id },
+      where: { id: promotionId },
       include: {
-        installmentPlans: true,
+        paymentMethod: true,
+        card: true,
+        bank: true,
+        installmentPlans: {
+          orderBy: { installments: "asc" },
+        },
       },
     });
 

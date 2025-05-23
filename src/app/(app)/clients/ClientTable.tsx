@@ -39,7 +39,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp, ChevronsUpDown, MoreHorizontal } from "lucide-react";
 import React, { useState, useTransition } from "react";
-import type { Client } from "./columns";
+import type { Client } from "@prisma/client";
 
 interface ClientTableProps {
   initialData: Client[];

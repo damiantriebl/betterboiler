@@ -59,12 +59,6 @@ export async function getOrganizationIdFromSession(): Promise<SessionResult> {
       };
     }
 
-    console.log("✅ Found organizationId, userId, userEmail, userRole in session.user:", 
-      session.user.organizationId, 
-      session.user.id, 
-      session.user.email,
-      session.user.role
-    );
     return {
       organizationId: session.user.organizationId,
       userId: session.user.id,
@@ -83,8 +77,8 @@ export async function getOrganizationIdFromSession(): Promise<SessionResult> {
   }
 }
 
-// Modificada para devolver null en caso de error en lugar de lanzar excepciones
-export async function getLogoUrl(input: string): Promise<string | null> { // Devuelve string | null
+export async function getLogoUrl(input: string): Promise<string | null> {
+  // Devuelve string | null
   if (!input) {
     console.error("getLogoUrl: No logo input provided");
     return null; // Devuelve null si no hay input
@@ -99,14 +93,19 @@ export async function getLogoUrl(input: string): Promise<string | null> { // Dev
   }
 
   try {
-    const res = await fetch(`/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`);
-    
+    const res = await fetch(
+      `/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`,
+    );
+
     let data: S3SignedUrlResponse;
     try {
       data = await res.json();
     } catch (e) {
-      console.error("Error parsing JSON from S3 signed URL response (getOrganizationIdFromSession):", e);
-      return null; 
+      console.error(
+        "Error parsing JSON from S3 signed URL response (getOrganizationIdFromSession):",
+        e,
+      );
+      return null;
     }
 
     if (data.success?.url) {
@@ -114,7 +113,7 @@ export async function getLogoUrl(input: string): Promise<string | null> { // Dev
       return data.success.url;
     }
     console.error(
-      `Error fetching signed URL for logo ${input} (getOrganizationIdFromSession): ${data.error || data.message || 'Unknown error from S3 API'}`,
+      `Error fetching signed URL for logo ${input} (getOrganizationIdFromSession): ${data.error || data.message || "Unknown error from S3 API"}`,
     );
     return null;
   } catch (error) {

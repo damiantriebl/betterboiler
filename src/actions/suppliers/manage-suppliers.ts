@@ -1,6 +1,6 @@
 "use server";
 
-import type { MotorcycleWithDetails } from "@/actions/sales/get-motorcycles";
+import type { MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
 import { auth } from "@/auth"; // Ajusta la ruta si es diferente
 import prisma from "@/lib/prisma";
 import { type SupplierFormData, supplierSchema } from "@/zod/SuppliersZod";

@@ -1,11 +1,15 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type {  
-  CreatePettyCashSpendInput,
-} from "@/zod/PettyCashZod";
+import type { CreatePettyCashSpendInput } from "@/zod/PettyCashZod";
 import { revalidatePath } from "next/cache";
-import type { PettyCashSpend, PettyCashWithdrawal, PettyCashWithdrawalStatus, PettyCashDepositStatus, Prisma } from "@prisma/client";
+import type {
+  PettyCashSpend,
+  PettyCashWithdrawal,
+  PettyCashWithdrawalStatus,
+  PettyCashDepositStatus,
+  Prisma,
+} from "@prisma/client";
 import { z } from "zod";
 import type { CreatePettyCashSpendState } from "@/types/action-states"; // Import global state type
 import { uploadGenericFileToS3 } from "../S3/uploadToS3"; // Usar la nueva función
@@ -30,16 +34,21 @@ const formDataSchema = z.object({
   motive: z.string().min(1, "El motivo es requerido."), // Added motive
   description: z.string().max(255).optional().nullable(), // Description can be optional now
   amount: z.preprocess(
-    (a) => Number.parseFloat(z.string({ required_error: "El monto es requerido."}).trim().parse(a)),
-    z.number({ invalid_type_error: "El monto debe ser un número."}).positive("El monto del gasto debe ser positivo.")
+    (a) =>
+      Number.parseFloat(z.string({ required_error: "El monto es requerido." }).trim().parse(a)),
+    z
+      .number({ invalid_type_error: "El monto debe ser un número." })
+      .positive("El monto del gasto debe ser positivo."),
   ),
   date: z.preprocess(
     (d) => {
-        const parsedDate = new Date(z.string({required_error: "La fecha es requerida."}).trim().parse(d));
-        if (Number.isNaN(parsedDate.getTime())) throw new Error("Fecha inválida.");
-        return parsedDate;
+      const parsedDate = new Date(
+        z.string({ required_error: "La fecha es requerida." }).trim().parse(d),
+      );
+      if (Number.isNaN(parsedDate.getTime())) throw new Error("Fecha inválida.");
+      return parsedDate;
     },
-    z.date({invalid_type_error: "Formato de fecha inválido."})
+    z.date({ invalid_type_error: "Formato de fecha inválido." }),
   ),
   // ticketFile is handled separately from FormData, not in this schema for Zod direct parse
 });
@@ -47,14 +56,16 @@ const formDataSchema = z.object({
 export async function createPettyCashSpendWithTicket(
   prevState: CreatePettyCashSpendState, // Use global state type
   formData: FormData,
-): Promise<CreatePettyCashSpendState> { // Use global state type
-  
+): Promise<CreatePettyCashSpendState> {
+  // Use global state type
+
   const organizationIdFromForm = formData.get("organizationId") as string | null;
 
-  const org = await getOrganizationIdFromSession(); 
+  const org = await getOrganizationIdFromSession();
   const organizationIdFromSession = org.organizationId;
 
-  const effectiveOrganizationId: string | null = organizationIdFromForm || organizationIdFromSession;
+  const effectiveOrganizationId: string | null =
+    organizationIdFromForm || organizationIdFromSession;
 
   if (!effectiveOrganizationId) {
     return {
@@ -87,12 +98,15 @@ export async function createPettyCashSpendWithTicket(
   }
 
   // If motive is 'otros', description becomes mandatory at this stage if not handled by client Zod refine
-  if (validatedFields.data.motive === "otros" && (!validatedFields.data.description || validatedFields.data.description.trim() === "")) {
+  if (
+    validatedFields.data.motive === "otros" &&
+    (!validatedFields.data.description || validatedFields.data.description.trim() === "")
+  ) {
     return {
-        ...initialStateGlobal,
-        status: "error",
-        message: "La descripción es requerida cuando el motivo es 'Otros'.",
-        errors: { description: ["La descripción es requerida cuando el motivo es 'Otros'."] },
+      ...initialStateGlobal,
+      status: "error",
+      message: "La descripción es requerida cuando el motivo es 'Otros'.",
+      errors: { description: ["La descripción es requerida cuando el motivo es 'Otros'."] },
     };
   }
 
@@ -111,15 +125,15 @@ export async function createPettyCashSpendWithTicket(
     }
 
     try {
-      const s3Key = `uploads/tickets/petty-cash/${finalOrganizationId}/${withdrawalId}/${Date.now()}-${ticketFile.name.replace(/\s+/g, '_')}`;
+      const s3Key = `uploads/tickets/petty-cash/${finalOrganizationId}/${withdrawalId}/${Date.now()}-${ticketFile.name.replace(/\s+/g, "_")}`;
       const arrayBuffer = await ticketFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      
-      ticketUrl = await uploadGenericFileToS3(buffer, s3Key, ticketFile.type);
 
+      ticketUrl = await uploadGenericFileToS3(buffer, s3Key, ticketFile.type);
     } catch (error) {
       console.error("Error al procesar o subir archivo a S3:", error);
-      const errorMessage = error instanceof Error ? error.message : "Error desconocido al subir el archivo.";
+      const errorMessage =
+        error instanceof Error ? error.message : "Error desconocido al subir el archivo.";
       return {
         ...initialStateGlobal,
         status: "error",
@@ -143,7 +157,7 @@ export async function createPettyCashSpendWithTicket(
     await prisma.$transaction(async (tx) => {
       const targetWithdrawal = await tx.pettyCashWithdrawal.findUnique({
         where: { id: withdrawalId, organizationId: finalOrganizationId }, // Ensure spend is for the correct org
-        include: { deposit: true }
+        include: { deposit: true },
       });
 
       if (!targetWithdrawal) {
@@ -171,7 +185,7 @@ export async function createPettyCashSpendWithTicket(
       if (newAmountJustified > targetWithdrawal.amountGiven) {
         throw new Error("El monto justificado excede el monto entregado en el retiro.");
       }
-      
+
       if (newAmountJustified === targetWithdrawal.amountGiven) {
         newWithdrawalStatus = "JUSTIFIED";
       } else if (newAmountJustified > 0) {
@@ -189,16 +203,19 @@ export async function createPettyCashSpendWithTicket(
       const deposit = targetWithdrawal.deposit;
       if (newWithdrawalStatus === "JUSTIFIED" && deposit.status === "OPEN") {
         const withdrawalsOfDeposit = await tx.pettyCashWithdrawal.findMany({
-          where: { depositId: deposit.id }
+          where: { depositId: deposit.id },
         });
-        
-        const allWithdrawalsJustified = withdrawalsOfDeposit.every(w => w.status === "JUSTIFIED");
-        const totalWithdrawnFromDeposit = withdrawalsOfDeposit.reduce((sum, w) => sum + w.amountGiven, 0);
+
+        const allWithdrawalsJustified = withdrawalsOfDeposit.every((w) => w.status === "JUSTIFIED");
+        const totalWithdrawnFromDeposit = withdrawalsOfDeposit.reduce(
+          (sum, w) => sum + w.amountGiven,
+          0,
+        );
 
         if (allWithdrawalsJustified && totalWithdrawnFromDeposit >= deposit.amount) {
           await tx.pettyCashDeposit.update({
             where: { id: deposit.id },
-            data: { status: "CLOSED" }
+            data: { status: "CLOSED" },
           });
         }
       }
@@ -206,20 +223,20 @@ export async function createPettyCashSpendWithTicket(
     });
 
     revalidatePath("/(app)/petty-cash", "page");
-    return { 
-        ...initialStateGlobal, 
-        status: "success", 
-        message: "Gasto creado exitosamente." 
+    return {
+      ...initialStateGlobal,
+      status: "success",
+      message: "Gasto creado exitosamente.",
     };
-
   } catch (error: unknown) {
     console.error("Error creating petty cash spend:", error);
-    const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear el gasto.";
-    return { 
-        ...initialStateGlobal, 
-        status: "error", 
-        message: errorMessage, 
-        errors: { _form: [errorMessage] } 
+    const errorMessage =
+      error instanceof Error ? error.message : "Error desconocido al crear el gasto.";
+    return {
+      ...initialStateGlobal,
+      status: "error",
+      message: errorMessage,
+      errors: { _form: [errorMessage] },
     };
   }
 }
@@ -231,4 +248,4 @@ export async function createPettyCashSpend(
 ): Promise<CreatePettyCashSpendResult> {
   // ...código original...
 }
-*/ 
+*/

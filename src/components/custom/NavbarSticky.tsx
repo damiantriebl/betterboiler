@@ -20,15 +20,13 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
     return {
       logo: storeOrgLogo,
       thumbnail: null, // No tenemos thumbnail en el store todavía
-      name: storeOrgName || "Organización"
+      name: storeOrgName || "Organización",
     };
   }, [organization, storeOrgLogo, storeOrgName]);
 
   const logoKey = useMemo(() => {
     if (!orgData.logo && !orgData.thumbnail) return null;
-    return scrollAmount > 0.5 && orgData.thumbnail
-      ? orgData.thumbnail
-      : orgData.logo;
+    return scrollAmount > 0.5 && orgData.thumbnail ? orgData.thumbnail : orgData.logo;
   }, [orgData.logo, orgData.thumbnail, scrollAmount]);
 
   // Todos los hooks useMemo deben llamarse ANTES del retorno condicional.

@@ -3,6 +3,14 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
+
+// Esquema de validación para disociar marca
+const dissociateBrandSchema = z.object({
+  organizationBrandId: z.string().min(1, "ID de asociación requerido"),
+});
 
 export const associateOrganizationBrand = async ({
   organizationId,
@@ -28,7 +36,10 @@ export const associateOrganizationBrand = async ({
       console.log("associateOrganizationBrand: No se encontró la marca global con ID:", brandId);
       return { success: false, error: "La marca global no fue encontrada." };
     }
-    console.log("associateOrganizationBrand: globalBrandWithModels encontrado:", JSON.stringify(globalBrandWithModels, null, 2));
+    console.log(
+      "associateOrganizationBrand: globalBrandWithModels encontrado:",
+      JSON.stringify(globalBrandWithModels, null, 2),
+    );
 
     // Use a transaction to ensure atomicity
     await prisma.$transaction(async (tx) => {
@@ -49,7 +60,10 @@ export const associateOrganizationBrand = async ({
           isVisible: true,
           order: index,
         }));
-        console.log("associateOrganizationBrand: modelConfigs a crear:", JSON.stringify(modelConfigs, null, 2));
+        console.log(
+          "associateOrganizationBrand: modelConfigs a crear:",
+          JSON.stringify(modelConfigs, null, 2),
+        );
         await tx.organizationModelConfig.createMany({
           data: modelConfigs,
           skipDuplicates: true,
@@ -75,7 +89,10 @@ export const associateOrganizationBrand = async ({
     console.error("Error associating brand:", error); // Log the actual error
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al asociar la marca y configurar sus modelos.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error al asociar la marca y configurar sus modelos.",
     };
   }
 };
@@ -90,8 +107,8 @@ export async function dissociateOrganizationBrand(
   prevState: DissociateBrandState | null,
   formData: FormData,
 ): Promise<DissociateBrandState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const orgResult = await getOrganizationIdFromSession();
+  if (!orgResult.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
 
   const validatedFields = dissociateBrandSchema.safeParse({
@@ -102,11 +119,17 @@ export async function dissociateOrganizationBrand(
   const { organizationBrandId } = validatedFields.data;
 
   try {
+    // Convertir organizationBrandId a número
+    const brandId = Number.parseInt(organizationBrandId);
+    if (Number.isNaN(brandId)) {
+      return { success: false, error: "ID de asociación inválido." };
+    }
+
     // Verificar que la asociación pertenece a la organización actual
     const associationToDelete = await prisma.organizationBrand.findUnique({
-      where: { id: organizationBrandId },
+      where: { id: brandId },
     });
-    if (!associationToDelete || associationToDelete.organizationId !== organizationId) {
+    if (!associationToDelete || associationToDelete.organizationId !== orgResult.organizationId) {
       return {
         success: false,
         error: "Asociación no encontrada o no pertenece a tu organización.",
@@ -114,7 +137,7 @@ export async function dissociateOrganizationBrand(
     }
 
     // Borrar solo la entrada en OrganizationBrand
-    await prisma.organizationBrand.delete({ where: { id: organizationBrandId } }); // <--- PUNTO CLAVE 1
+    await prisma.organizationBrand.delete({ where: { id: brandId } });
 
     revalidatePath("/configuracion"); // Asumo que es /configuration como en otros lados
     return { success: true };
@@ -126,4 +149,3 @@ export async function dissociateOrganizationBrand(
     return { success: false, error: "Error al desasociar la marca." };
   }
 }
-

@@ -196,9 +196,7 @@ export default function ManageBankingPromotions({
 
     startTransition(async () => {
       try {
-        const updatedPromotions = promotions.filter(
-          (promo) => promo.id !== deletingPromotion.id,
-        );
+        const updatedPromotions = promotions.filter((promo) => promo.id !== deletingPromotion.id);
         setPromotions(updatedPromotions);
         updateOptimisticPromotions(updatedPromotions);
 
@@ -225,7 +223,9 @@ export default function ManageBankingPromotions({
         toast({
           title: "Error",
           description:
-            error instanceof Error ? error.message : "Ha ocurrido un error al eliminar la promoción",
+            error instanceof Error
+              ? error.message
+              : "Ha ocurrido un error al eliminar la promoción",
           variant: "destructive",
         });
       } finally {
@@ -372,9 +372,9 @@ export default function ManageBankingPromotions({
                         <div className="flex flex-wrap gap-2 mt-1">
                           <Badge variant="outline">{promotion.paymentMethod.name}</Badge>
 
-                          {promotion.card && (
+                          {promotion.bankCard && (
                             <Badge variant="outline" className="border-blue-200">
-                              {promotion.card.name}
+                              {promotion.bankCard.cardType.name}
                             </Badge>
                           )}
 

@@ -73,7 +73,6 @@ export function MotoPreviewCard({
       style={{ borderColor: brandColor }}
     >
       <CardHeader className="pb-2 pt-4">
-
         {/* Menos padding vertical */}
         <CardTitle className="text-lg">Vista Previa</CardTitle> {/* Título más pequeño */}
       </CardHeader>

@@ -13,7 +13,7 @@ import type { CurrentAccount } from "@prisma/client";
 
 export async function updateCurrentAccount(
   input: UpdateCurrentAccountInput,
-): Promise<ActionState & { data?: CurrentAccount | null }> {
+): Promise<ActionState<CurrentAccount | null>> {
   // Adjust data type as needed
   try {
     const validatedInput = updateCurrentAccountSchema.safeParse(input);
@@ -41,16 +41,13 @@ export async function updateCurrentAccount(
     // For simplicity, this basic update doesn't automatically recalculate all dependent dates
     // if only some fields like notes or reminderLeadTimeDays are updated.
     // A more robust solution would handle cascading changes to due dates if startDate or paymentFrequency changes.
-    if (updateData.startDate) {
-      updateData.startDate = new Date(updateData.startDate);
-      // Potentially add logic here to recalculate nextDueDate and finalPaymentDate if status is ACTIVE
-      // and no payments have been made yet, or based on business rules.
-    }
 
     const updatedAccount = await db.currentAccount.update({
       where: { id },
       data: {
         ...updateData,
+        // Convert startDate string to Date if provided
+        startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
         // Ensure `paymentFrequency` and `status` are correctly typed if they come from enums
         paymentFrequency: updateData.paymentFrequency ? updateData.paymentFrequency : undefined,
         status: updateData.status ? updateData.status : undefined,

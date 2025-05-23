@@ -7,6 +7,7 @@ import { getSuppliersReport } from "@/actions/reports/get-suppliers-report";
 import { InventoryReport } from "@/components/custom/reports/InventoryReport";
 import { SalesReport } from "@/components/custom/reports/SalesReport";
 import { ReservationsReport } from "@/components/reports/ReservationsReport";
+import { ReportTabContent } from "@/components/custom/reports/ReportTabContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
@@ -35,7 +36,7 @@ import {
   subMonths,
   subYears,
 } from "date-fns";
-import { Download, LineChart, Loader2, FileText } from "lucide-react";
+import { Download, Loader2, FileText } from "lucide-react";
 import { useState, useEffect, startTransition } from "react";
 import type { DateRange } from "react-day-picker";
 import { getBranchesForOrganizationAction } from "@/actions/get-Branches-For-Organization-Action";
@@ -96,13 +97,13 @@ export default function ReportsPage() {
     currentMonth: { from: startOfMonth(now), to: endOfMonth(now) },
     lastMonth: {
       from: startOfMonth(subMonths(now, 1)),
-      to: endOfMonth(subMonths(now, 1))
+      to: endOfMonth(subMonths(now, 1)),
     },
     ytd: { from: startOfYear(now), to: endOfDay(now) },
     lastYear: {
       from: startOfYear(subYears(now, 1)),
-      to: endOfYear(subYears(now, 1))
-    }
+      to: endOfYear(subYears(now, 1)),
+    },
   };
 
   const getDateRangeFromPreset = (rangeKey: string): DateRange | undefined => {
@@ -115,9 +116,9 @@ export default function ReportsPage() {
   const updateDateFilters = (rangeKey: string) => {
     setSelectedDateRange(rangeKey);
     const newDateRange = getDateRangeFromPreset(rangeKey);
-    setFilters(prev => ({ ...prev, dateRange: newDateRange }));
-    setPettyCashFilters(prev => ({ ...prev, dateRange: newDateRange }));
-    if (rangeKey !== 'custom') {
+    setFilters((prev) => ({ ...prev, dateRange: newDateRange }));
+    setPettyCashFilters((prev) => ({ ...prev, dateRange: newDateRange }));
+    if (rangeKey !== "custom") {
       setCustomDateRange(undefined);
     }
   };
@@ -132,10 +133,10 @@ export default function ReportsPage() {
       setIsLoadingBranches(true);
       startTransition(() => {
         getBranchesForOrganizationAction(organization.id)
-          .then(branchesData => {
+          .then((branchesData) => {
             setBranches(branchesData || []);
           })
-          .catch(error => {
+          .catch((error) => {
             console.error("Error cargando sucursales con getBranchesForOrganizationAction:", error);
             setBranches([]);
           })
@@ -351,14 +352,12 @@ export default function ReportsPage() {
       }
 
       const response = await fetch(
-        `/api/reports/petty-cash-movements/generate-pdf?${params.toString()}`
+        `/api/reports/petty-cash-movements/generate-pdf?${params.toString()}`,
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.error || "Error al generar el reporte PDF de caja chica"
-        );
+        throw new Error(errorData.error || "Error al generar el reporte PDF de caja chica");
       }
 
       const blob = await response.blob();
@@ -397,414 +396,92 @@ export default function ReportsPage() {
           <TabsTrigger value="petty-cash">Caja Chica</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="inventory-status" className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <Button
-              variant={selectedDateRange === "today" ? "default" : "outline"}
-              onClick={() => updateDateFilters("today")}
-            >
-              Hoy
-            </Button>
-            <Button
-              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("currentMonth")}
-            >
-              Este Mes
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastMonth")}
-            >
-              Mes Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "ytd" ? "default" : "outline"}
-              onClick={() => updateDateFilters("ytd")}
-            >
-              Este Año
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastYear")}
-            >
-              Año Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "custom" ? "default" : "outline"}
-              onClick={() => updateDateFilters("custom")}
-            >
-              Personalizado
-            </Button>
-          </div>
-
-          {selectedDateRange === "custom" && (
-            <DatePickerWithRange
-              value={customDateRange}
-              onChange={handleCustomDateRangeChange}
-            />
-          )}
-
-          <div className="flex flex-wrap gap-4">
-            <Select value={filters.branchId} onValueChange={handleBranchChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.brandId} onValueChange={handleBrandChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Marca" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              onClick={() =>
-                setFilters({
-                  organizationId: orgId,
-                  branchId: "all",
-                  brandId: "all",
-                  modelId: "all",
-                  dateRange: undefined,
-                })
-              }
-            >
-              Limpiar Filtros
-            </Button>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <Button
-              onClick={() => handleGenerateReport("inventory-status")}
-              disabled={reportLoading}
-            >
-              {reportLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generando...
-                </>
-              ) : (
-                <>
-                  <LineChart className="mr-2 h-4 w-4" />
-                  Generar Reporte
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleExportInventoryPDF}
-              disabled={reportLoading || !inventoryReport}
-              variant="outline"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
-            </Button>
-          </div>
-
-          {inventoryReport && <InventoryReport data={inventoryReport} />}
+        <TabsContent value="inventory-status">
+          <ReportTabContent
+            selectedDateRange={selectedDateRange}
+            customDateRange={customDateRange}
+            onDateRangeChange={updateDateFilters}
+            onCustomDateRangeChange={handleCustomDateRangeChange}
+            branchId={filters.branchId}
+            brandId={filters.brandId}
+            onBranchChange={handleBranchChange}
+            onBrandChange={handleBrandChange}
+            onClearFilters={handleClearFilters}
+            branches={branches}
+            onGenerateReport={() => handleGenerateReport("inventory-status")}
+            onExportPDF={handleExportInventoryPDF}
+            isGenerating={reportLoading}
+            hasData={!!inventoryReport}
+          >
+            {inventoryReport && <InventoryReport data={inventoryReport} />}
+          </ReportTabContent>
         </TabsContent>
 
-        <TabsContent value="sales" className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <Button
-              variant={selectedDateRange === "today" ? "default" : "outline"}
-              onClick={() => updateDateFilters("today")}
-            >
-              Hoy
-            </Button>
-            <Button
-              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("currentMonth")}
-            >
-              Este Mes
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastMonth")}
-            >
-              Mes Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "ytd" ? "default" : "outline"}
-              onClick={() => updateDateFilters("ytd")}
-            >
-              Este Año
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastYear")}
-            >
-              Año Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "custom" ? "default" : "outline"}
-              onClick={() => updateDateFilters("custom")}
-            >
-              Personalizado
-            </Button>
-          </div>
-
-          {selectedDateRange === "custom" && (
-            <DatePickerWithRange
-              value={customDateRange}
-              onChange={handleCustomDateRangeChange}
-            />
-          )}
-
-          <div className="flex flex-wrap gap-4">
-            <Select value={filters.branchId} onValueChange={handleBranchChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.brandId} onValueChange={handleBrandChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Marca" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              onClick={() =>
-                setFilters({
-                  organizationId: orgId,
-                  branchId: "all",
-                  brandId: "all",
-                  modelId: "all",
-                  dateRange: undefined,
-                })
-              }
-            >
-              Limpiar Filtros
-            </Button>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <Button
-              onClick={() => handleGenerateReport("sales-by-period")}
-              disabled={reportLoading}
-            >
-              {reportLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generando...
-                </>
-              ) : (
-                <>
-                  <LineChart className="mr-2 h-4 w-4" />
-                  Generar Reporte
-                </>
-              )}
-            </Button>
-            <Button onClick={handleExportSalesPDF} disabled={reportLoading} variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
-            </Button>
-          </div>
-
-          <div className="mt-4">
+        <TabsContent value="sales">
+          <ReportTabContent
+            selectedDateRange={selectedDateRange}
+            customDateRange={customDateRange}
+            onDateRangeChange={updateDateFilters}
+            onCustomDateRangeChange={handleCustomDateRangeChange}
+            branchId={filters.branchId}
+            brandId={filters.brandId}
+            onBranchChange={handleBranchChange}
+            onBrandChange={handleBrandChange}
+            onClearFilters={handleClearFilters}
+            branches={branches}
+            onGenerateReport={() => handleGenerateReport("sales-by-period")}
+            onExportPDF={handleExportSalesPDF}
+            isGenerating={reportLoading}
+            hasData={!!salesReport}
+          >
             <SalesReport data={salesReport} dateRange={filters.dateRange} />
-          </div>
+          </ReportTabContent>
         </TabsContent>
 
-        <TabsContent value="reservations" className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <Button
-              variant={selectedDateRange === "today" ? "default" : "outline"}
-              onClick={() => updateDateFilters("today")}
-            >
-              Hoy
-            </Button>
-            <Button
-              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("currentMonth")}
-            >
-              Este Mes
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastMonth")}
-            >
-              Mes Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "ytd" ? "default" : "outline"}
-              onClick={() => updateDateFilters("ytd")}
-            >
-              Este Año
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastYear")}
-            >
-              Año Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "custom" ? "default" : "outline"}
-              onClick={() => updateDateFilters("custom")}
-            >
-              Personalizado
-            </Button>
-          </div>
-
-          {selectedDateRange === "custom" && (
-            <DatePickerWithRange value={customDateRange} onChange={handleCustomDateRangeChange} />
-          )}
-
-          <div className="flex justify-end gap-4">
-            <Button
-              onClick={() => handleGenerateReport("reservations")}
-              disabled={reportLoading}
-            >
-              {reportLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generando...
-                </>
-              ) : (
-                <>
-                  <LineChart className="mr-2 h-4 w-4" />
-                  Generar Reporte
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleExportReservationsPDF}
-              disabled={reportLoading}
-              variant="outline"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
-            </Button>
-          </div>
-
-          <div className="mt-4">
+        <TabsContent value="reservations">
+          <ReportTabContent
+            selectedDateRange={selectedDateRange}
+            customDateRange={customDateRange}
+            onDateRangeChange={updateDateFilters}
+            onCustomDateRangeChange={handleCustomDateRangeChange}
+            branchId={filters.branchId}
+            brandId={filters.brandId}
+            onBranchChange={handleBranchChange}
+            onBrandChange={handleBrandChange}
+            onClearFilters={handleClearFilters}
+            branches={branches}
+            onGenerateReport={() => handleGenerateReport("reservations")}
+            onExportPDF={handleExportReservationsPDF}
+            isGenerating={reportLoading}
+            hasData={!!reservationsReport}
+          >
             {reservationsReport ? (
               <ReservationsReport data={reservationsReport} />
             ) : (
               <div>Seleccione un rango de fechas y genere el reporte</div>
             )}
-          </div>
+          </ReportTabContent>
         </TabsContent>
 
-        <TabsContent value="suppliers" className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <Button
-              variant={selectedDateRange === "today" ? "default" : "outline"}
-              onClick={() => updateDateFilters("today")}
-            >
-              Hoy
-            </Button>
-            <Button
-              variant={selectedDateRange === "currentMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("currentMonth")}
-            >
-              Este Mes
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastMonth" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastMonth")}
-            >
-              Mes Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "ytd" ? "default" : "outline"}
-              onClick={() => updateDateFilters("ytd")}
-            >
-              Este Año
-            </Button>
-            <Button
-              variant={selectedDateRange === "lastYear" ? "default" : "outline"}
-              onClick={() => updateDateFilters("lastYear")}
-            >
-              Año Anterior
-            </Button>
-            <Button
-              variant={selectedDateRange === "custom" ? "default" : "outline"}
-              onClick={() => updateDateFilters("custom")}
-            >
-              Personalizado
-            </Button>
-          </div>
-
-          {selectedDateRange === "custom" && (
-            <DatePickerWithRange value={customDateRange} onChange={handleCustomDateRangeChange} />
-          )}
-
-          <div className="flex flex-wrap gap-4">
-            <Select value={filters.branchId} onValueChange={handleBranchChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.brandId} onValueChange={handleBrandChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Marca" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              onClick={() =>
-                setFilters({
-                  organizationId: orgId,
-                  branchId: "all",
-                  brandId: "all",
-                  modelId: "all",
-                  dateRange: undefined,
-                })
-              }
-            >
-              Limpiar Filtros
-            </Button>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <Button
-              onClick={() => handleGenerateReport("purchases-by-supplier")}
-              disabled={reportLoading}
-            >
-              {reportLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generando...
-                </>
-              ) : (
-                <>
-                  <LineChart className="mr-2 h-4 w-4" />
-                  Generar Reporte
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleExportInventoryPDF}
-              disabled={reportLoading || !inventoryReport}
-              variant="outline"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
-            </Button>
-          </div>
-
-          <div className="mt-4">
+        <TabsContent value="suppliers">
+          <ReportTabContent
+            selectedDateRange={selectedDateRange}
+            customDateRange={customDateRange}
+            onDateRangeChange={updateDateFilters}
+            onCustomDateRangeChange={handleCustomDateRangeChange}
+            branchId={filters.branchId}
+            brandId={filters.brandId}
+            onBranchChange={handleBranchChange}
+            onBrandChange={handleBrandChange}
+            onClearFilters={handleClearFilters}
+            branches={branches}
+            onGenerateReport={() => handleGenerateReport("purchases-by-supplier")}
+            onExportPDF={handleExportInventoryPDF}
+            isGenerating={reportLoading}
+            hasData={!!inventoryReport}
+          >
             <div>Reporte de Proveedores (En desarrollo)</div>
-          </div>
+          </ReportTabContent>
         </TabsContent>
 
         <TabsContent value="petty-cash" className="mt-4">
@@ -824,7 +501,7 @@ export default function ReportsPage() {
                   { label: "Este Año", value: "ytd" },
                   { label: "Año Anterior", value: "lastYear" },
                   { label: "Personalizado", value: "custom" },
-                ].map(preset => (
+                ].map((preset) => (
                   <Button
                     key={preset.value}
                     variant={selectedDateRange === preset.value ? "default" : "outline"}
@@ -840,10 +517,7 @@ export default function ReportsPage() {
                   <span className="block text-sm font-medium text-gray-700 mb-1">
                     Seleccione Rango Personalizado
                   </span>
-                  <DatePickerWithRange
-                    value={customDateRange}
-                    onChange={setCustomDateRange}
-                  />
+                  <DatePickerWithRange value={customDateRange} onChange={setCustomDateRange} />
                 </div>
               )}
 
@@ -863,7 +537,9 @@ export default function ReportsPage() {
                     disabled={isLoadingBranches}
                   >
                     <SelectTrigger id="pettyCashBranch" className="w-full">
-                      <SelectValue placeholder={isLoadingBranches ? "Cargando..." : "Seleccionar sucursal"} />
+                      <SelectValue
+                        placeholder={isLoadingBranches ? "Cargando..." : "Seleccionar sucursal"}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas las sucursales</SelectItem>

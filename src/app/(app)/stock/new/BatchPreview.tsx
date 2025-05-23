@@ -121,11 +121,9 @@ export function BatchPreview({
         </CardHeader>
         <CardContent>
           <div className="max-h-[450px] overflow-y-auto border rounded-md">
-
             {/* Contenedor scrollable con borde */}
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
-
                 {/* Header fijo */}
                 <TableRow>
                   <TableHead className="w-[40px]">#</TableHead>

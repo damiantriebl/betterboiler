@@ -29,7 +29,9 @@ export async function getLogoUrl(input: string): Promise<string> {
     return input;
   }
   try {
-    const res = await fetch(`/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`);
+    const res = await fetch(
+      `/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`,
+    );
     const data = await res.json();
     if (res.ok && data.success?.url) {
       urlCache.set(input, data.success.url);
@@ -163,7 +165,7 @@ export default function OrganizationLogo({
 
   // preload thumbnail
   useEffect(() => {
-    if (thumbnail) getLogoUrl(thumbnail).catch(() => { });
+    if (thumbnail) getLogoUrl(thumbnail).catch(() => {});
   }, [thumbnail]);
 
   const fetchLogoUrl = useCallback(

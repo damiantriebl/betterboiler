@@ -44,7 +44,10 @@ export async function createPettyCashWithdrawal(
     effectiveOrganizationId = organizationIdFromForm;
     // Opcional: advertir si hay discrepancia con la sesión
     if (organizationIdFromSession && organizationIdFromForm !== organizationIdFromSession) {
-        console.warn("Discrepancia de Organization ID en createPettyCashWithdrawal: Formulario vs Sesión", {form: organizationIdFromForm, session: organizationIdFromSession });
+      console.warn(
+        "Discrepancia de Organization ID en createPettyCashWithdrawal: Formulario vs Sesión",
+        { form: organizationIdFromForm, session: organizationIdFromSession },
+      );
     }
   } else if (organizationIdFromSession) {
     effectiveOrganizationId = organizationIdFromSession;
@@ -58,7 +61,7 @@ export async function createPettyCashWithdrawal(
       errors: { _form: ["ID de Organización no encontrado."] },
     };
   }
-  
+
   const finalOrganizationId = effectiveOrganizationId;
 
   const validatedFields = formDataWithdrawalSchema.safeParse({
@@ -125,7 +128,9 @@ export async function createPettyCashWithdrawal(
         ...initialState,
         status: "error",
         message: `Fondos insuficientes en el depósito. Disponible: ${availableAmount.toFixed(2)}. Solicitado: ${amountGiven.toFixed(2)}`,
-        errors: { amountGiven: [`Fondos insuficientes. Disponible: ${availableAmount.toFixed(2)}`] },
+        errors: {
+          amountGiven: [`Fondos insuficientes. Disponible: ${availableAmount.toFixed(2)}`],
+        },
       };
     }
 
@@ -147,8 +152,9 @@ export async function createPettyCashWithdrawal(
         _sum: { amountGiven: true },
       });
       const newTotalWithdrawn = totalWithdrawalsAfterCurrent._sum.amountGiven || 0;
-      
-      let newDepositStatus: PettyCashDepositStatus = targetDeposit?.status as PettyCashDepositStatus;
+
+      let newDepositStatus: PettyCashDepositStatus =
+        targetDeposit?.status as PettyCashDepositStatus;
       if (newTotalWithdrawn >= (targetDeposit?.amount ?? Number.POSITIVE_INFINITY)) {
         newDepositStatus = "CLOSED";
       }
@@ -159,7 +165,7 @@ export async function createPettyCashWithdrawal(
           data: { status: newDepositStatus },
         });
       }
-      
+
       return createdWithdrawal;
     });
 
@@ -170,10 +176,10 @@ export async function createPettyCashWithdrawal(
       message: "Retiro creado exitosamente.",
       // data: newWithdrawal, // El tipo CreatePettyCashWithdrawalState no define data
     };
-
   } catch (error) {
     console.error("Error creating petty cash withdrawal:", error);
-    const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear el retiro.";
+    const errorMessage =
+      error instanceof Error ? error.message : "Error desconocido al crear el retiro.";
     return {
       ...initialState,
       status: "error",
@@ -181,4 +187,4 @@ export async function createPettyCashWithdrawal(
       errors: { _form: [errorMessage] },
     };
   }
-} 
+}

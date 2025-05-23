@@ -1,22 +1,27 @@
 "use server";
 import prisma from "@/lib/prisma";
-import type { serverMessage } from "@/types/ServerMessageType";
 import { revalidatePath } from "next/cache";
-// import sharp from "sharp"; // Comentado si no se usa en esta action
-// import { getSignedS3Url } from "../S3/get-signed-url"; // Comentado si no se usa en esta action
+
+interface UpdateUserActionResult {
+  success: boolean;
+  error?: string;
+}
 
 export async function updateUserAction(
-  prevState: serverMessage,
+  prevState: UpdateUserActionResult,
   formData: FormData,
-): Promise<serverMessage> {
+): Promise<UpdateUserActionResult> {
   try {
     const userId = formData.get("userId")?.toString();
     const name = formData.get("name")?.toString();
     const email = formData.get("email")?.toString();
-    const profileImageKey = formData.get("profileImageKey")?.toString();
+    const phone = formData.get("phone")?.toString();
+    const address = formData.get("address")?.toString();
+    const profileOriginalKey = formData.get("profileOriginalKey")?.toString();
+    const profileCropKey = formData.get("profileCropKey")?.toString();
 
     if (!userId || !name || !email) {
-      return { success: false, error: "Todos los campos son obligatorios" };
+      return { success: false, error: "Los campos nombre y email son obligatorios" };
     }
 
     const existingUser = await prisma.user.findFirst({
@@ -34,15 +39,17 @@ export async function updateUserAction(
       data: {
         name,
         email,
-        profileOriginal: profileImageKey || null,
+        phone: phone || null,
+        address: address || null,
+        profileOriginal: profileOriginalKey || null,
+        profileCrop: profileCropKey || null,
       },
     });
 
     revalidatePath("/profile");
 
     return {
-      success: "Perfil actualizado correctamente",
-      error: false,
+      success: true,
     };
   } catch (error) {
     console.error("Error al actualizar el perfil:", error);

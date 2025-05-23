@@ -32,8 +32,7 @@ export function DatePickerWithRange({ value, onChange }: DatePickerWithRangeProp
             {value?.from ? (
               value.to ? (
                 <>
-                  {format(value.from, "P", { locale: es })} -
-                  {format(value.to, "P", { locale: es })}
+                  {format(value.from, "P", { locale: es })} -{format(value.to, "P", { locale: es })}
                 </>
               ) : (
                 format(value.from, "P", { locale: es })

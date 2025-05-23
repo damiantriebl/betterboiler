@@ -19,10 +19,7 @@ export async function getOrganizationDetailsById(
     });
     return organization;
   } catch (error) {
-    console.error(
-      `Error fetching organization details for ID ${organizationId}:`,
-      error,
-    );
+    console.error(`Error fetching organization details for ID ${organizationId}:`, error);
     return null;
   }
-} 
+}

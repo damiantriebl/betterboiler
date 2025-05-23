@@ -1,20 +1,7 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 import prisma from "@/lib/prisma";
-import { headers } from "next/headers";
-
-// Helper para obtener organizationId (asumiendo que está disponible o puedes crearlo)
-async function getOrganizationIdFromSession(): Promise<string | null> {
-  // Implementación basada en tu helper existente en create-edit-brand.ts
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    return session?.user?.organizationId ?? null;
-  } catch (error) {
-    console.error("Error getting session:", error);
-    return null;
-  }
-}
 
 // Tipo de retorno para las sucursales
 export type BranchData = {
@@ -23,12 +10,15 @@ export type BranchData = {
 };
 
 // Acción para obtener sucursales por organización
-export async function getBranchesForOrg(): Promise<{ data?: BranchData[]; error?: string }> {
-  const organizationId = await getOrganizationIdFromSession();
+export async function getBranches(): Promise<BranchData[]> {
+  const org = await getOrganizationIdFromSession();
 
-  if (!organizationId) {
-    return { error: "Usuario no autenticado o sin organización." };
+  if (!org.organizationId) {
+    console.error("[getBranches] No organizationId found.");
+    return [];
   }
+
+  const organizationId = org.organizationId;
 
   try {
     const branchesFromDb = await prisma.branch.findMany({
@@ -47,9 +37,9 @@ export async function getBranchesForOrg(): Promise<{ data?: BranchData[]; error?
       nombre: branch.name,
     }));
 
-    return { data: branches };
+    return branches;
   } catch (error) {
-    console.error("🔥 ERROR SERVER ACTION (getBranchesForOrg):", error);
-    return { error: "Error al obtener las sucursales." };
+    console.error("🔥 ERROR SERVER ACTION (getBranches):", error);
+    return [];
   }
 }

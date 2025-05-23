@@ -2,8 +2,10 @@
 
 import prisma from "@/lib/prisma";
 import { unstable_noStore as noStore } from "next/cache";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
-import { getBranchesForOrg } from "./get-branch";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getBranches } from "./get-branch";
+import { auth } from "@/auth";
+import { headers } from "next/headers";
 
 // Tipos
 import type { BrandForCombobox } from "@/app/(app)/stock/new/page";
@@ -13,19 +15,28 @@ import type { BranchData } from "./get-branch";
 
 export async function getFormData() {
   noStore();
-  const organizationId = await getOrganizationIdFromSession();
+  const org = await getOrganizationIdFromSession();
 
-  if (!organizationId) {
+  if (!org.organizationId) {
     throw new Error("Usuario no autenticado o sin organización.");
   }
 
+  const organizationId = org.organizationId;
+
   try {
     const [brandsData, colorsData, branchesResult, suppliers] = await Promise.all([
-      prisma.brand.findMany({
-        where: { organizationBrands: { some: { organizationId } } },
-        // Seleccionar solo id y name para modelos
-        select: { id: true, name: true, models: { select: { id: true, name: true } } },
-        orderBy: { name: "asc" },
+      prisma.organizationBrand.findMany({
+        where: { organizationId },
+        include: {
+          brand: {
+            select: { 
+              id: true, 
+              name: true, 
+              models: { select: { id: true, name: true } } 
+            }
+          }
+        },
+        orderBy: { order: "asc" },
       }),
       prisma.motoColor.findMany({
         where: { organizationId },
@@ -33,29 +44,23 @@ export async function getFormData() {
         select: { id: true, name: true, colorOne: true, colorTwo: true, type: true },
         orderBy: { name: "asc" },
       }),
-      getBranchesForOrg(),
+      getBranches(),
       prisma.supplier.findMany({
         where: { organizationId },
         orderBy: { legalName: "asc" },
       }),
     ]);
 
-    // Formatear marcas
-    // Usar tipo inferido por Prisma para brand en map
-    const availableBrands: BrandForCombobox[] = brandsData.map((brand) => ({
-      id: brand.id,
-      name: brand.name,
-      // Usar tipo inferido por Prisma para model en map
-      models: brand.models.map((model) => ({ id: model.id, name: model.name })),
-      color: null, // BrandForCombobox requiere 'color'
+    // Formatear marcas usando la nueva estructura
+    const availableBrands: BrandForCombobox[] = brandsData.map((orgBrand) => ({
+      id: orgBrand.brand.id,
+      name: orgBrand.brand.name,
+      models: orgBrand.brand.models.map((model) => ({ id: model.id, name: model.name })),
+      color: orgBrand.color, // Color personalizado de la organización
     }));
 
-    // Validar resultado de getBranchesForOrg
-    if (branchesResult.error || !branchesResult.data) {
-      console.error("Error en getBranchesForOrg:", branchesResult.error);
-      throw new Error("No se pudieron cargar las sucursales.");
-    }
-    const availableBranches: BranchData[] = branchesResult.data;
+    // branchesResult ahora es directamente un array
+    const availableBranches: BranchData[] = branchesResult;
 
     // Mapear datos de Prisma a ColorConfig
     const availableColors: ColorConfig[] = colorsData.map((color) => ({

@@ -9,19 +9,23 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { type ClientFormData } from "@/zod/ClientsZod";
+import type { Client } from "@prisma/client";
 import { PlusCircle } from "lucide-react";
 import React, { useState } from "react";
 import ClientForm from "./ClientForm";
 import ClientTable from "./ClientTable";
-import type { Client } from "./columns";
 
 interface Props {
   initialData: Client[];
 }
 
+// Tipo que combina ClientFormData con id para edición
+type ClientForForm = Partial<ClientFormData & { id?: string }>;
+
 export default function ClientComponent({ initialData }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Partial<Client> | null>(null);
+  const [editingClient, setEditingClient] = useState<ClientForForm | null>(null);
 
   const handleOpenModal = () => {
     setEditingClient(null); // Reset editing client for a new one
@@ -34,7 +38,23 @@ export default function ClientComponent({ initialData }: Props) {
   };
 
   const handleEditClient = (client: Client) => {
-    setEditingClient(client);
+    // Convertir Client de Prisma a ClientForForm
+    const clientForForm: ClientForForm = {
+      id: client.id,
+      firstName: client.firstName,
+      lastName: client.lastName ?? undefined,
+      companyName: client.companyName ?? undefined,
+      email: client.email,
+      phone: client.phone ?? undefined,
+      mobile: client.mobile ?? undefined,
+      taxId: client.taxId,
+      address: client.address ?? undefined,
+      vatStatus: client.vatStatus ?? undefined,
+      type: client.type as "Individual" | "LegalEntity",
+      status: client.status as "active" | "inactive",
+      notes: client.notes ?? undefined,
+    };
+    setEditingClient(clientForForm);
     setIsModalOpen(true);
   };
 

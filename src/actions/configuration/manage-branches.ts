@@ -7,12 +7,11 @@ import {
   deleteBranchSchema,
   updateBranchOrderSchema,
   updateBranchSchema,
-} from "@/zod/BranchZod"; 
+} from "@/zod/BranchZod";
 // LOS ZOD SCHEMAS YA USAN "Branch", LO CUAL ES BUENO.
 import { Prisma, type Branch } from "@prisma/client"; // CAMBIADO Sucursal a Branch
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { z } from "zod";
 
 // Helper para obtener organizationId de la sesión (sin cambios)
 async function getOrganizationIdFromSession(): Promise<string | null> {
@@ -21,16 +20,19 @@ async function getOrganizationIdFromSession(): Promise<string | null> {
 }
 
 // --- Acción: createBranch ---
-export interface CreateBranchState { // CAMBIADO
+export interface CreateBranchState {
+  // CAMBIADO
   success: boolean;
   error?: string | null;
   branch?: Branch | null; // CAMBIADO y tipo Branch
 }
 
-export async function createBranch( // CAMBIADO
+export async function createBranch(
+  // CAMBIADO
   prevState: CreateBranchState | null,
   formData: FormData,
-): Promise<CreateBranchState> { // CAMBIADO
+): Promise<CreateBranchState> {
+  // CAMBIADO
   const organizationId = await getOrganizationIdFromSession();
   if (!organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
@@ -50,13 +52,15 @@ export async function createBranch( // CAMBIADO
   const normalizedName = name.trim();
 
   try {
-    const maxOrderResult = await prisma.branch.aggregate({ // CAMBIADO
+    const maxOrderResult = await prisma.branch.aggregate({
+      // CAMBIADO
       _max: { order: true },
       where: { organizationId },
     });
     const nextOrder = (maxOrderResult._max.order ?? -1) + 1;
 
-    const newBranch = await prisma.branch.create({ // CAMBIADO
+    const newBranch = await prisma.branch.create({
+      // CAMBIADO
       data: {
         name: normalizedName,
         order: nextOrder,
@@ -80,16 +84,19 @@ export async function createBranch( // CAMBIADO
 }
 
 // --- Acción: updateBranch ---
-export interface UpdateBranchState { // CAMBIADO
+export interface UpdateBranchState {
+  // CAMBIADO
   success: boolean;
   error?: string | null;
   branch?: Branch | null; // CAMBIADO y tipo Branch
 }
 
-export async function updateBranch( // CAMBIADO
+export async function updateBranch(
+  // CAMBIADO
   prevState: UpdateBranchState | null,
   formData: FormData,
-): Promise<UpdateBranchState> { // CAMBIADO
+): Promise<UpdateBranchState> {
+  // CAMBIADO
   const organizationId = await getOrganizationIdFromSession();
   if (!organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
@@ -115,8 +122,9 @@ export async function updateBranch( // CAMBIADO
       return { success: false, error: "Sucursal no encontrada o no pertenece a tu organización." };
     }
 
-    const updatedBranch = await prisma.branch.update({ // CAMBIADO
-      where: { id: id }, 
+    const updatedBranch = await prisma.branch.update({
+      // CAMBIADO
+      where: { id: id },
       data: { name: normalizedName },
     });
 
@@ -136,15 +144,18 @@ export async function updateBranch( // CAMBIADO
 }
 
 // --- Acción: deleteBranch ---
-export interface DeleteBranchState { // CAMBIADO
+export interface DeleteBranchState {
+  // CAMBIADO
   success: boolean;
   error?: string | null;
 }
 
-export async function deleteBranch( // CAMBIADO
+export async function deleteBranch(
+  // CAMBIADO
   prevState: DeleteBranchState | null,
   formData: FormData,
-): Promise<DeleteBranchState> { // CAMBIADO
+): Promise<DeleteBranchState> {
+  // CAMBIADO
   const organizationId = await getOrganizationIdFromSession();
   if (!organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
@@ -177,27 +188,32 @@ export async function deleteBranch( // CAMBIADO
 }
 
 // --- Acción: updateBranchesOrder ---
-export interface UpdateBranchesOrderState { // CAMBIADO
+export interface UpdateBranchesOrderState {
+  // CAMBIADO
   success: boolean;
   error?: string | null;
 }
 
-export async function updateBranchesOrder( // CAMBIADO
+export async function updateBranchesOrder(
+  // CAMBIADO
   prevState: UpdateBranchesOrderState | null,
   orderedItems: { id: number; order: number }[],
-): Promise<UpdateBranchesOrderState> { // CAMBIADO
+): Promise<UpdateBranchesOrderState> {
+  // CAMBIADO
   const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId) 
+  if (!organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
 
   // Validación del array de items con Zod (esquema definido en BranchZod.ts)
   const validatedItems = updateBranchOrderSchema.safeParse(orderedItems);
 
   if (!validatedItems.success) {
-    const errors = validatedItems.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join("; ");
+    const errors = validatedItems.error.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join("; ");
     return { success: false, error: `Datos de orden inválidos: ${errors}` };
   }
-  
+
   try {
     // Iniciar una transacción para asegurar atomicidad
     await prisma.$transaction(async (tx) => {
@@ -221,4 +237,4 @@ export async function updateBranchesOrder( // CAMBIADO
     const message = error instanceof Error ? error.message : "Error inesperado.";
     return { success: false, error: `Error al actualizar el orden: ${message}` };
   }
-} 
+}

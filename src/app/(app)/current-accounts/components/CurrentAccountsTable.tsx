@@ -831,17 +831,17 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               const amortizationPlanForTotals =
                 (account.interestRate ?? 0) > 0 && financialPrincipalForSchedule > 0
                   ? calculateFrenchAmortizationSchedule(
-                    financialPrincipalForSchedule,
-                    account.interestRate ?? 0,
-                    account.numberOfInstallments,
-                    account.paymentFrequency as PaymentFrequency,
-                  )
+                      financialPrincipalForSchedule,
+                      account.interestRate ?? 0,
+                      account.numberOfInstallments,
+                      account.paymentFrequency as PaymentFrequency,
+                    )
                   : calculateFrenchAmortizationSchedule(
-                    financialPrincipalForSchedule,
-                    0, // No interest
-                    account.numberOfInstallments,
-                    account.paymentFrequency as PaymentFrequency,
-                  );
+                      financialPrincipalForSchedule,
+                      0, // No interest
+                      account.numberOfInstallments,
+                      account.paymentFrequency as PaymentFrequency,
+                    );
 
               // Obtener las cuotas generadas incluyendo pagos realizados
               const currentInstallments = generateInstallments(
@@ -1103,7 +1103,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                       <TableCell className="font-medium">
                                         {installment.number}
                                         {installment.installmentVersion &&
-                                          installment.installmentVersion !== "Original (Anulado)"
+                                        installment.installmentVersion !== "Original (Anulado)"
                                           ? String(installment.installmentVersion).toUpperCase()
                                           : ""}
                                       </TableCell>
@@ -1188,10 +1188,10 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                       </TableCell>
                                       <TableCell className="text-center">
                                         {installment.installmentVersion === "D" ||
-                                          installment.installmentVersion === "H" ||
-                                          installment.installmentVersion ===
+                                        installment.installmentVersion === "H" ||
+                                        installment.installmentVersion ===
                                           "Original (Anulado)" ? null : installment.isPaid &&
-                                            installment.paymentId ? (
+                                          installment.paymentId ? (
                                           <AnnulPaymentButton
                                             paymentId={installment.paymentId}
                                             onAnnulmentSuccess={() =>
@@ -1213,7 +1213,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
                                                 account.id,
                                                 installment.number,
                                                 installment.calculatedInstallmentAmount ??
-                                                installment.amount,
+                                                  installment.amount,
                                               )
                                             }
                                           >

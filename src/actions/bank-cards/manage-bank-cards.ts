@@ -210,11 +210,11 @@ export async function associateMultipleCardTypesToBank(
 ) {
   try {
     if (!organizationId) {
-      const orgId = await getOrganizationIdFromSession();
-      if (!orgId) {
+      const orgResult = await getOrganizationIdFromSession();
+      if (!orgResult.organizationId) {
         return { success: false, error: "No se pudo obtener la organización del usuario" };
       }
-      organizationId = orgId;
+      organizationId = orgResult.organizationId;
     }
 
     if (!cardTypeIds || cardTypeIds.length === 0) {
@@ -256,7 +256,7 @@ export async function associateMultipleCardTypesToBank(
       data: idsToCreate.map((cardTypeId, index) => ({
         bankId,
         cardTypeId,
-        organizationId, // Ya validamos que existe
+        organizationId: organizationId!, // Ya validamos que existe
         isEnabled: true, // Default
         order: index, // Podrías querer una lógica de orden más sofisticada
       })),

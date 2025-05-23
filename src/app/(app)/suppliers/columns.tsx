@@ -76,7 +76,9 @@ export const columns: SimpleColumn[] = [
     cell: ({ row }) => {
       const proveedor = row.original;
       return (
-        <div className="text-right"> {/* Alineación a la derecha para acciones */}
+        <div className="text-right">
+          {" "}
+          {/* Alineación a la derecha para acciones */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -86,9 +88,7 @@ export const columns: SimpleColumn[] = [
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(proveedor.id)}
-              >
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(proveedor.id)}>
                 Copiar ID Proveedor
               </DropdownMenuItem>
               <DropdownMenuSeparator />

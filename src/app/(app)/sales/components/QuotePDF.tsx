@@ -197,7 +197,9 @@ export const QuotePDFDocument = ({
             <Text>Logo</Text>
           )}
           {organizationName && (
-            <Text style={{ fontSize: 10, marginTop: 4, textAlign: "center" }}>{organizationName}</Text>
+            <Text style={{ fontSize: 10, marginTop: 4, textAlign: "center" }}>
+              {organizationName}
+            </Text>
           )}
         </View>
       </View>
@@ -248,7 +250,10 @@ export const QuotePDFDocument = ({
       <View>
         <Text>Presupuesto generado por: {userName}</Text>
         {userImage?.startsWith("data:image") && (
-          <Image src={userImage} style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }} />
+          <Image
+            src={userImage}
+            style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }}
+          />
         )}
       </View>
       <View style={styles.section}>
@@ -414,11 +419,12 @@ export const QuotePDFDocument = ({
       <View style={styles.footer}>
         <Text>Este presupuesto es válido por 7 días desde la fecha de emisión.</Text>
         <Text>Todos los precios incluyen IVA.</Text>
-        {userName && (
-          <Text>Presupuesto generado por: {userName}</Text>
-        )}
+        {userName && <Text>Presupuesto generado por: {userName}</Text>}
         {userImage?.startsWith("data:image") && (
-          <Image src={userImage} style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }} />
+          <Image
+            src={userImage}
+            style={{ width: 40, height: 40, borderRadius: 20, margin: "0 auto" }}
+          />
         )}
       </View>
     </Page>

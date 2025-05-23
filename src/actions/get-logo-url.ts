@@ -1,11 +1,10 @@
-'use server';
+"use server";
 
-import { auth } from "@/auth";
+import { getOrganizationIdFromSession } from "./get-Organization-Id-From-Session";
+import prisma from "@/lib/prisma";
 
 // Definición de urlCache a nivel de módulo, específica para getLogoUrl
 const urlCache = new Map<string, string>();
-
-const GENERAL_ACCOUNT_ID_LOGO_URL = "GENERAL_ACCOUNT";
 
 interface S3SignedUrlResponse {
   success?: {
@@ -16,13 +15,7 @@ interface S3SignedUrlResponse {
 }
 
 // Modificada para devolver null en caso de error en lugar de lanzar excepciones
-export async function getLogoUrl(input: string): Promise<string | null> { // Devuelve string | null
-  const session = await auth.api.getSession({
-    headers: {
-      // ... existing code ...
-    }
-  });
-
+export async function getLogoUrl(input: string): Promise<string | null> {
   if (!input) {
     console.error("getLogoUrl: No logo input provided");
     return null; // Devuelve null si no hay input
@@ -37,8 +30,10 @@ export async function getLogoUrl(input: string): Promise<string | null> { // Dev
   }
 
   try {
-    const res = await fetch(`/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`);
-    
+    const res = await fetch(
+      `/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`,
+    );
+
     let data: S3SignedUrlResponse;
     try {
       data = await res.json();
@@ -51,16 +46,36 @@ export async function getLogoUrl(input: string): Promise<string | null> { // Dev
       urlCache.set(input, data.success.url);
       return data.success.url;
     }
-    
+
     // Usar data.error o data.message si existen, en lugar de data.failure
     console.error(
-      `Error fetching signed URL for ${input}: ${data.error || data.message || 'Unknown error from S3 API'}`,
+      `Error fetching signed URL for ${input}: ${data.error || data.message || "Unknown error from S3 API"}`,
     );
     return null;
-
   } catch (error) {
     // Este catch es para errores inesperados durante el fetch mismo (ej. red)
     console.error(`getLogoUrl: Error de fetch para input: ${input}:`, error);
     return null; // Devuelve null en caso de error de fetch
   }
-} 
+}
+
+export async function getLogoUrlFromOrganization(): Promise<string | null> {
+  const organizationResult = await getOrganizationIdFromSession();
+  
+  if (!organizationResult.organizationId) {
+    console.error("No se pudo obtener el ID de la organización");
+    return null;
+  }
+
+  try {
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationResult.organizationId },
+      select: { logo: true },
+    });
+
+    return organization?.logo || null;
+  } catch (error) {
+    console.error("Error al obtener el logo de la organización:", error);
+    return null;
+  }
+}

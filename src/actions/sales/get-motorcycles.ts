@@ -18,16 +18,7 @@ export type MotorcycleTableRowData = {
   } | null;
   model: {
     name: string;
-    files?: {
-      id: string;
-      name: string;
-      type: string;
-      s3Key: string;
-      s3KeySmall: string | null;
-      size: number;
-      createdAt: Date;
-      updatedAt: Date;
-    }[];
+    // files removido para optimización - lazy loading
   } | null;
   color: { name: string; colorOne: string; colorTwo: string | null } | null;
   branch: { name: string } | null;
@@ -73,10 +64,15 @@ export async function getMotorcycles(
   }
 
   try {
+    // 🚀 OPTIMIZACIÓN 1: Query más eficiente con menos joins
     const motorcycles = await prisma.motorcycle.findMany({
-      where: { organizationId: organizationId },
+      where: { 
+        organizationId: organizationId,
+        // Filtrar estados eliminados desde la query si es necesario
+        ...(options.filter?.state && { state: { in: options.filter.state } })
+      },
       select: {
-        // Seleccionar explícitamente
+        // 🚀 OPTIMIZACIÓN 2: Solo campos esenciales para la vista inicial
         id: true,
         year: true,
         displacement: true,
@@ -88,36 +84,28 @@ export async function getMotorcycles(
         state: true,
         chassisNumber: true,
         engineNumber: true,
+        createdAt: true, // Para ordenamiento
+        // Joins optimizados con menos campos
         brand: {
           select: {
             name: true,
             organizationBrands: {
               where: { organizationId: organizationId },
               select: { color: true },
+              take: 1, // Solo uno por organización
             },
           },
         },
         model: {
           select: {
             name: true,
-            files: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                s3Key: true,
-                s3KeySmall: true,
-                size: true,
-                createdAt: true,
-                updatedAt: true,
-              },
-            },
+            // 🚀 OPTIMIZACIÓN 3: Remover files de query inicial (lazy loading)
           },
         },
         color: { select: { name: true, colorOne: true, colorTwo: true } },
         branch: { select: { name: true } },
         supplier: { select: { legalName: true, commercialName: true } },
-        // Cambiar "reservation" por "reservations" y obtener solo la reserva activa
+        // 🚀 OPTIMIZACIÓN 4: Query más específica para reservaciones
         reservations: {
           select: {
             id: true,
@@ -130,10 +118,17 @@ export async function getMotorcycles(
           where: {
             status: "active",
           },
-          take: 1, // Tomar solo la primera reserva activa
+          take: 1,
+          orderBy: { createdAt: "desc" }, // Más reciente primero
         },
       },
-      orderBy: { createdAt: "desc" },
+      // 🚀 OPTIMIZACIÓN 5: Ordenamiento en base de datos
+      orderBy: [
+        { state: "asc" }, // Estados activos primero
+        { createdAt: "desc" }
+      ],
+      // 🚀 OPTIMIZACIÓN 6: Límite inicial (paginación del lado servidor)
+      take: options.filter?.state ? undefined : 100, // Limite inicial para performance
     });
 
     // Mapear cuidadosamente para asegurar el tipo final
@@ -172,7 +167,7 @@ export async function getMotorcycles(
         model: moto.model
           ? {
               name: moto.model.name,
-              files: moto.model.files || [],
+              // files removido para optimización - se carga bajo demanda
             }
           : null,
         color: moto.color ?? null,

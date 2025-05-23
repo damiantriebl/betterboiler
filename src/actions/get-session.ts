@@ -20,8 +20,6 @@ export async function getSession(): Promise<FullSessionResult> {
         error: "No se encontró la sesión.",
       };
     }
-
-    console.log("✅ Full session retrieved:", session);
     return {
       session,
     };
@@ -32,4 +30,4 @@ export async function getSession(): Promise<FullSessionResult> {
       error: `Error al obtener la sesión: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
-} 
+}

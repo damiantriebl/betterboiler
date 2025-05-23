@@ -111,7 +111,12 @@ export default function CurrentAccountReportPage() {
               document={<CurrentAccountReportDocument account={accountData} />}
               fileName={fileName}
             >
-              {({ blob, url, loading: pdfLoading, error: pdfError }) =>
+              {({ blob, url, loading: pdfLoading, error: pdfError }: {
+                blob: Blob | null;
+                url: string | null;
+                loading: boolean;
+                error: Error | null;
+              }) =>
                 pdfLoading ? (
                   <Button disabled size="lg" className="w-full md:w-auto">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

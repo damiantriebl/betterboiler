@@ -1,8 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
-import { promotionCalculationSchema } from "@/zod/banking-promotion-schemas";
+import type { Bank } from "@/types/banking-promotions";
+import { unstable_cache } from "next/cache";
+
+// Tipo inferido de Prisma para las promociones bancarias
+type PrismaBankingPromotionWithRelations = Awaited<ReturnType<typeof prisma.bankingPromotion.findMany>>[0];
 
 // Get all banks for selecting in forms
 export async function getAllBanks(): Promise<Bank[]> {
@@ -21,13 +24,13 @@ export async function getAllBanks(): Promise<Bank[]> {
 // Get banking promotions for an organization
 export async function getOrganizationBankingPromotions(
   organizationId: string,
-): Promise<BankingPromotionDisplay[]> {
+): Promise<PrismaBankingPromotionWithRelations[]> {
   try {
     const bankingPromotions = await prisma.bankingPromotion.findMany({
       where: { organizationId },
       include: {
         paymentMethod: true,
-        card: true,
+        bankCard: true,
         bank: true,
         installmentPlans: {
           orderBy: { installments: "asc" },
@@ -36,7 +39,7 @@ export async function getOrganizationBankingPromotions(
       orderBy: { createdAt: "desc" },
     });
 
-    return bankingPromotions as BankingPromotionDisplay[];
+    return bankingPromotions;
   } catch (error) {
     console.error("Error fetching banking promotions:", error);
     return [];
@@ -44,13 +47,13 @@ export async function getOrganizationBankingPromotions(
 }
 
 // Get a single banking promotion with all details
-export async function getBankingPromotionById(id: number): Promise<BankingPromotionDisplay | null> {
+export async function getBankingPromotionById(id: number): Promise<PrismaBankingPromotionWithRelations | null> {
   try {
     const promotion = await prisma.bankingPromotion.findUnique({
       where: { id },
       include: {
         paymentMethod: true,
-        card: true,
+        bankCard: true,
         bank: true,
         installmentPlans: {
           orderBy: { installments: "asc" },
@@ -58,7 +61,7 @@ export async function getBankingPromotionById(id: number): Promise<BankingPromot
       },
     });
 
-    return promotion as BankingPromotionDisplay | null;
+    return promotion;
   } catch (error) {
     console.error(`Error fetching banking promotion with id ${id}:`, error);
     return null;
@@ -152,7 +155,7 @@ export async function getEnabledBankingPromotions(organizationId: string) {
       include: {
         paymentMethod: true,
         bank: true,
-        card: true,
+        bankCard: true,
         installmentPlans: true,
       },
       orderBy: {

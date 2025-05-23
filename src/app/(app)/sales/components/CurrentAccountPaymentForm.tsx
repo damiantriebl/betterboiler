@@ -1,6 +1,6 @@
 "use client";
 
-import { createCurrentAccountAction } from "@/actions/current-accounts/create-current-account-action";
+import { createCurrentAccount } from "@/actions/current-accounts/create-current-account";
 import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
 import { Button } from "@/components/ui/button";
 import {
@@ -217,7 +217,9 @@ export function CurrentAccountPaymentForm({
     // Obtener organizationId de la sesión
     const sessionInfo = await getOrganizationIdFromSession();
     if (sessionInfo.error || !sessionInfo.organizationId) {
-      setGeneralError(sessionInfo.error || "No se pudo obtener el ID de la organización. Intente nuevamente.");
+      setGeneralError(
+        sessionInfo.error || "No se pudo obtener el ID de la organización. Intente nuevamente.",
+      );
       // setError("organizationId" as any, { message: sessionInfo.error || "Organization ID es requerido." }); // Comentado o eliminado
       setActionIsLoading(false);
       return;
@@ -239,7 +241,7 @@ export function CurrentAccountPaymentForm({
       notes: data.notes,
     };
 
-    const result = await createCurrentAccountAction(submissionData);
+    const result = await createCurrentAccount(submissionData);
     setActionIsLoading(false);
 
     if (result.success && result.data) {
@@ -248,14 +250,6 @@ export function CurrentAccountPaymentForm({
         onSuccess(result.data);
       }
     } else {
-      if (result.errors) {
-        for (const err of result.errors) {
-          setError(err.path as keyof CurrentAccountFormValues, {
-            type: "manual",
-            message: err.message,
-          });
-        }
-      }
       if (result.error) {
         setGeneralError(result.error);
       }

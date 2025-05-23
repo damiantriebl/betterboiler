@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupplierById } from "@/actions/suppliers/manage-suppliers";
+import { DisplayData } from "@/components/custom/DisplayData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,31 +21,6 @@ import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import SupplierForm from "../SupplierForm";
-
-// Helper para mostrar datos opcionales o un placeholder
-const DisplayData = ({
-  label,
-  value,
-}: { label: string; value: string | number | string[] | null | undefined }) => {
-  const displayValue =
-    value === null ||
-    value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    value === "" ? (
-      <span className="text-muted-foreground italic">N/A</span>
-    ) : Array.isArray(value) ? (
-      value.join(", ")
-    ) : (
-      value
-    );
-
-  return (
-    <div className="grid grid-cols-3 gap-2 py-1 border-b border-dashed last:border-b-0">
-      <span className="font-medium text-sm col-span-1">{label}:</span>
-      <span className="text-sm col-span-2">{displayValue}</span>
-    </div>
-  );
-};
 
 export default function SupplierDetailPage() {
   const params = useParams();
@@ -141,7 +117,10 @@ export default function SupplierDetailPage() {
             <SupplierForm
               initialData={supplier}
               supplierId={supplier.id}
-              onSuccess={() => handleCloseEditModal()}
+              onSuccess={(updatedData) => {
+                setSupplier((prev) => (prev ? { ...prev, ...updatedData } : null));
+                handleCloseEditModal();
+              }}
               onCancel={handleCloseEditModal}
             />
           </DialogContent>
@@ -181,69 +160,113 @@ export default function SupplierDetailPage() {
 
             {/* Pestaña Identificación */}
             <TabsContent value="identificacion" className="space-y-1">
-              <DisplayData label="Razón Social" value={supplier.legalName} />
-              <DisplayData label="Nombre Comercial" value={supplier.commercialName} />
-              <DisplayData label="CUIT/CUIL" value={supplier.taxIdentification} />
+              <DisplayData label="Razón Social" value={supplier.legalName} variant="grid" />
+              <DisplayData
+                label="Nombre Comercial"
+                value={supplier.commercialName}
+                variant="grid"
+              />
+              <DisplayData label="CUIT/CUIL" value={supplier.taxIdentification} variant="grid" />
             </TabsContent>
 
             {/* Pestaña Fiscal */}
             <TabsContent value="fiscal" className="space-y-1">
-              <DisplayData label="Condición IVA" value={supplier.vatCondition} />
-              <DisplayData label="Tipo Comprobante" value={supplier.voucherType} />
-              <DisplayData label="Ingresos Brutos" value={supplier.grossIncome} />
-              <DisplayData label="Insc. Tributaria Local" value={supplier.localTaxRegistration} />
+              <DisplayData label="Condición IVA" value={supplier.vatCondition} variant="grid" />
+              <DisplayData label="Tipo Comprobante" value={supplier.voucherType} variant="grid" />
+              <DisplayData label="Ingresos Brutos" value={supplier.grossIncome} variant="grid" />
+              <DisplayData
+                label="Insc. Tributaria Local"
+                value={supplier.localTaxRegistration}
+                variant="grid"
+              />
             </TabsContent>
 
             {/* Pestaña Contacto */}
             <TabsContent value="contacto" className="space-y-1">
-              <DisplayData label="Nombre Contacto" value={supplier.contactName} />
-              <DisplayData label="Cargo Contacto" value={supplier.contactPosition} />
-              <DisplayData label="Teléfono Fijo" value={supplier.landlineNumber} />
-              <DisplayData label="Teléfono Móvil" value={supplier.mobileNumber} />
-              <DisplayData label="Email" value={supplier.email} />
-              <DisplayData label="Sitio Web" value={supplier.website} />
+              <DisplayData label="Nombre Contacto" value={supplier.contactName} variant="grid" />
+              <DisplayData label="Cargo Contacto" value={supplier.contactPosition} variant="grid" />
+              <DisplayData label="Teléfono Fijo" value={supplier.landlineNumber} variant="grid" />
+              <DisplayData label="Teléfono Móvil" value={supplier.mobileNumber} variant="grid" />
+              <DisplayData label="Email" value={supplier.email} variant="grid" />
+              <DisplayData label="Sitio Web" value={supplier.website} variant="grid" />
             </TabsContent>
 
             {/* Pestaña Direcciones */}
             <TabsContent value="direcciones" className="space-y-1">
-              <DisplayData label="Domicilio Legal" value={supplier.legalAddress} />
-              <DisplayData label="Domicilio Comercial" value={supplier.commercialAddress} />
-              <DisplayData label="Domicilio Entrega" value={supplier.deliveryAddress} />
+              <DisplayData label="Domicilio Legal" value={supplier.legalAddress} variant="grid" />
+              <DisplayData
+                label="Domicilio Comercial"
+                value={supplier.commercialAddress}
+                variant="grid"
+              />
+              <DisplayData
+                label="Domicilio Entrega"
+                value={supplier.deliveryAddress}
+                variant="grid"
+              />
             </TabsContent>
 
             {/* Pestaña Bancaria */}
             <TabsContent value="bancaria" className="space-y-1">
-              <DisplayData label="Banco" value={supplier.bank} />
-              <DisplayData label="Tipo/Nro Cuenta" value={supplier.accountTypeNumber} />
-              <DisplayData label="CBU/IBAN" value={supplier.cbu} />
-              <DisplayData label="Alias Bancario" value={supplier.bankAlias} />
-              <DisplayData label="SWIFT/BIC" value={supplier.swiftBic} />
+              <DisplayData label="Banco" value={supplier.bank} variant="grid" />
+              <DisplayData
+                label="Tipo/Nro Cuenta"
+                value={supplier.accountTypeNumber}
+                variant="grid"
+              />
+              <DisplayData label="CBU/IBAN" value={supplier.cbu} variant="grid" />
+              <DisplayData label="Alias Bancario" value={supplier.bankAlias} variant="grid" />
+              <DisplayData label="SWIFT/BIC" value={supplier.swiftBic} variant="grid" />
             </TabsContent>
 
             {/* Pestaña Comercial */}
             <TabsContent value="comercial" className="space-y-1">
-              <DisplayData label="Moneda Pago" value={supplier.paymentCurrency} />
-              <DisplayData label="Formas Pago" value={supplier.paymentMethods} />
-              <DisplayData label="Plazo Pago (días)" value={supplier.paymentTermDays} />
-              <DisplayData label="Límite Crédito" value={supplier.creditLimit} />
-              <DisplayData label="Descuentos/Cond." value={supplier.discountsConditions} />
-              <DisplayData label="Política Devol." value={supplier.returnPolicy} />
+              <DisplayData label="Moneda Pago" value={supplier.paymentCurrency} variant="grid" />
+              <DisplayData label="Formas Pago" value={supplier.paymentMethods} variant="grid" />
+              <DisplayData
+                label="Plazo Pago (días)"
+                value={supplier.paymentTermDays}
+                variant="grid"
+              />
+              <DisplayData label="Límite Crédito" value={supplier.creditLimit} variant="grid" />
+              <DisplayData
+                label="Descuentos/Cond."
+                value={supplier.discountsConditions}
+                variant="grid"
+              />
+              <DisplayData label="Política Devol." value={supplier.returnPolicy} variant="grid" />
             </TabsContent>
 
             {/* Pestaña Logística */}
             <TabsContent value="logistica" className="space-y-1">
-              <DisplayData label="Métodos Envío" value={supplier.shippingMethods} />
-              <DisplayData label="Costos Envío" value={supplier.shippingCosts} />
-              <DisplayData label="Tiempos Entrega" value={supplier.deliveryTimes} />
-              <DisplayData label="Cond. Transporte" value={supplier.transportConditions} />
+              <DisplayData label="Métodos Envío" value={supplier.shippingMethods} variant="grid" />
+              <DisplayData label="Costos Envío" value={supplier.shippingCosts} variant="grid" />
+              <DisplayData label="Tiempos Entrega" value={supplier.deliveryTimes} variant="grid" />
+              <DisplayData
+                label="Cond. Transporte"
+                value={supplier.transportConditions}
+                variant="grid"
+              />
             </TabsContent>
 
             {/* Pestaña Adicional */}
             <TabsContent value="adicional" className="space-y-1">
-              <DisplayData label="Rubros/Categorías" value={supplier.itemsCategories} />
-              <DisplayData label="Certificaciones" value={supplier.certifications} />
-              <DisplayData label="Referencias" value={supplier.commercialReferences} />
-              <DisplayData label="Notas Internas" value={supplier.notesObservations} />
+              <DisplayData
+                label="Rubros/Categorías"
+                value={supplier.itemsCategories}
+                variant="grid"
+              />
+              <DisplayData label="Certificaciones" value={supplier.certifications} variant="grid" />
+              <DisplayData
+                label="Referencias"
+                value={supplier.commercialReferences}
+                variant="grid"
+              />
+              <DisplayData
+                label="Notas Internas"
+                value={supplier.notesObservations}
+                variant="grid"
+              />
             </TabsContent>
           </Tabs>
         </CardContent>

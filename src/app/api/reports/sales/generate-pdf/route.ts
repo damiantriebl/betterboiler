@@ -7,9 +7,12 @@ import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From
 export async function POST(request: NextRequest) {
   try {
     const org = await getOrganizationIdFromSession();
-    
+
     if (org.error || !org.organizationId) {
-      return NextResponse.json({ error: org.error || "Organization ID not found in session" }, { status: 401 });
+      return NextResponse.json(
+        { error: org.error || "Organization ID not found in session" },
+        { status: 401 },
+      );
     }
 
     const filters = (await request.json()) as ReportFilters;

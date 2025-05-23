@@ -222,11 +222,10 @@ export async function uploadGenericFileToS3(
     const bucketDomain =
       process.env.AWS_CLOUDFRONT_DOMAIN ||
       `${params.Bucket}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com`;
-    
+
     // Si se usa CloudFront, es preferible no incluir el nombre del bucket en la ruta si CloudFront está configurado para el bucket raíz.
     // Pero para S3 directo, sí se necesita. La URL base actual es correcta para S3 directo o CloudFront apuntando al bucket.
     return `https://${bucketDomain}/${s3Key}`;
-
   } catch (error) {
     console.error("Error al subir archivo genérico a S3:", error);
     // Asegúrate de que el error se propague para que la función que llama pueda manejarlo.

@@ -92,7 +92,7 @@ export async function getOrganizationPaymentMethods(
     });
 
     const formattedMethods: OrganizationPaymentMethodDisplay[] = organizationMethods.map(
-      (orgMethod: OrganizationPaymentMethod) => ({
+      (orgMethod) => ({
         id: orgMethod.id,
         order: orgMethod.order,
         isEnabled: orgMethod.isEnabled,

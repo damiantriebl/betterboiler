@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { motorcycleBatchSchema } from "@/zod/MotorcycleBatchSchema"; // Corregir ruta y nombre schema
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession"; // Helper para obtener orgId
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session"; // Helper para obtener orgId
 
 export async function updateMotorcycle(
   id: number, // ID de la moto a actualizar
@@ -23,10 +23,12 @@ export async function updateMotorcycle(
     };
   }
 
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId) {
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId) {
     return { success: false, message: "Error de autenticación." };
   }
+
+  const organizationId = org.organizationId;
 
   // Extraer los datos validados
   // IMPORTANTE: Ajustar esto según la estructura exacta de MotorcycleBatchSchema

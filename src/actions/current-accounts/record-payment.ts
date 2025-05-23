@@ -164,7 +164,9 @@ export async function recordPayment(
     const parsed = recordPaymentSchema.safeParse(input);
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
-      const errorMessages = Object.values(fieldErrors).flat().filter(msg => msg !== undefined) as string[];
+      const errorMessages = Object.values(fieldErrors)
+        .flat()
+        .filter((msg) => msg !== undefined) as string[];
       const errorMessage = errorMessages[0] || "Error de validación desconocido";
       return { success: false, error: errorMessage };
     }
@@ -289,7 +291,9 @@ export async function recordPayment(
     console.error("recordPayment error", err);
     if (err instanceof z.ZodError) {
       const fieldErrors = err.flatten().fieldErrors;
-      const errorMessages = Object.values(fieldErrors).flat().filter(msg => msg !== undefined) as string[];
+      const errorMessages = Object.values(fieldErrors)
+        .flat()
+        .filter((msg) => msg !== undefined) as string[];
       const errorMessage = errorMessages[0] || "Error de validación desconocido";
       return { success: false, error: errorMessage };
     }

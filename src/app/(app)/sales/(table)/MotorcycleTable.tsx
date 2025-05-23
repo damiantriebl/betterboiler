@@ -1,3 +1,5 @@
+"use client";
+
 import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status";
 import { Button } from "@/components/ui/button";
 import { PriceDisplay } from "@/components/ui/price-display";
@@ -19,19 +21,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import { estadoVentaConfig } from "@/types/motorcycle";
-import type {
-  MotorcycleWithFullDetails,
-  ReservationWithDetails,
-} from "@/types/motorcycle";
-import {
-  type Client,
-  type Motorcycle,
-  MotorcycleState,
-  type CurrentAccount,
-} from "@prisma/client";
+import type { MotorcycleWithFullDetails, ReservationWithDetails } from "@/types/motorcycle";
+import { type Client, type Motorcycle, MotorcycleState, type CurrentAccount } from "@prisma/client";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition, useMemo } from "react";
 import DeleteConfirmationDialog from "../DeleteDialog";
 import { MotorcycleDetailModal } from "../MotorcycleDetailModal";
 import { ReserveModal } from "../ReserveModal";
@@ -138,21 +132,18 @@ export default function MotorcycleTable({
     },
   );
 
-  // --- Datos para Filtros (Simplificado) ---
-  const availableBrands = [
-    ...new Set(optimisticMotorcycles.map((m) => m.brand?.name).filter(Boolean)),
-  ].sort() as string[];
-  const availableModels = [
-    ...new Set(optimisticMotorcycles.map((m) => m.model?.name).filter(Boolean)),
-  ].sort() as string[];
-  const availableBranches = [
-    ...new Set(optimisticMotorcycles.map((m) => m.branch?.name).filter(Boolean)),
-  ].sort() as string[];
-  const availableYears = [
-    ...new Set(optimisticMotorcycles.map((m) => m.year).filter((y) => typeof y === "number")),
-  ].sort((a, b) => b - a) as number[];
+  // 🚀 OPTIMIZACIÓN 1: Memoizar datos computacionales pesados
+  const { availableBrands, availableModels, availableBranches, availableYears } = useMemo(() => {
+    const brands = [...new Set(optimisticMotorcycles.map((m) => m.brand?.name).filter(Boolean))].sort() as string[];
+    const models = [...new Set(optimisticMotorcycles.map((m) => m.model?.name).filter(Boolean))].sort() as string[];
+    const branches = [...new Set(optimisticMotorcycles.map((m) => m.branch?.name).filter(Boolean))].sort() as string[];
+    const years = [...new Set(optimisticMotorcycles.map((m) => m.year).filter((y) => typeof y === "number"))].sort((a, b) => b - a) as number[];
 
-  const getFilteredData = () => {
+    return { availableBrands: brands, availableModels: models, availableBranches: branches, availableYears: years };
+  }, [optimisticMotorcycles]);
+
+  // 🚀 OPTIMIZACIÓN 2: Memoizar filtrado de datos
+  const filteredData = useMemo(() => {
     let filtered = [...optimisticMotorcycles];
 
     if (filters.search) {
@@ -184,10 +175,10 @@ export default function MotorcycleTable({
     }
 
     return filtered;
-  };
+  }, [optimisticMotorcycles, filters]);
 
-  const getSortedData = () => {
-    const filteredData = getFilteredData();
+  // 🚀 OPTIMIZACIÓN 3: Memoizar ordenamiento
+  const sortedData = useMemo(() => {
     const { key, direction } = sortConfig;
 
     if (!key || !direction) return filteredData;
@@ -206,20 +197,34 @@ export default function MotorcycleTable({
       if (typeof aValue === "number" && typeof bValue === "number") {
         return direction === "asc" ? aValue - bValue : bValue - aValue;
       }
-      if (aValue instanceof Date && bValue instanceof Date) {
-        return direction === "asc"
-          ? aValue.getTime() - bValue.getTime()
-          : bValue.getTime() - aValue.getTime();
-      }
-      if (key === "state") {
-        return direction === "asc"
-          ? String(aValue).localeCompare(String(bValue))
-          : String(bValue).localeCompare(String(aValue));
-      }
 
       return 0;
     });
-  };
+  }, [filteredData, sortConfig]);
+
+  // 🚀 OPTIMIZACIÓN 4: Paginación eficiente
+  const { paginatedData, totalPages, totalItems } = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginated = sortedData.slice(startIndex, endIndex);
+    const pages = Math.ceil(sortedData.length / pageSize);
+
+    return {
+      paginatedData: paginated,
+      totalPages: pages,
+      totalItems: sortedData.length
+    };
+  }, [sortedData, currentPage, pageSize]);
+
+  // 🚀 OPTIMIZACIÓN 5: Sincronizar con initialData cuando cambie
+  useEffect(() => {
+    setMotorcycles(initialData);
+  }, [initialData]);
+
+  // Remover las funciones antigas getFilteredData y getSortedData
+  // que ahora son reemplazadas por los useMemo optimizados
+
+  const getTableData = () => paginatedData;
 
   const handleSort = (column: ManualColumnDefinition) => {
     if (!column.isSortable || !column.sortKey) return;
@@ -236,7 +241,7 @@ export default function MotorcycleTable({
   };
 
   const handlePageChange = (page: number) => {
-    const totalPages = Math.ceil((getSortedData() ?? []).length / pageSize);
+    const totalPages = Math.ceil((getTableData() ?? []).length / pageSize);
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
@@ -503,11 +508,6 @@ export default function MotorcycleTable({
     setSelectedMotoForModal(null);
   };
 
-  const sortedData = getSortedData();
-  const totalPages = Math.ceil(sortedData.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedData = sortedData.slice(startIndex, startIndex + pageSize);
-
   const getSortIcon = (columnKey: SortableKey | undefined) => {
     if (!columnKey || sortConfig.key !== columnKey) {
       return <ChevronsUpDown className="h-4 w-4 ml-1 text-muted-foreground opacity-50" />;
@@ -540,7 +540,15 @@ export default function MotorcycleTable({
         clients={clients}
         onSaleProcessCompleted={(data) => {
           if (data.type === "reservation") {
-            handleReserved(data.payload as { motorcycleId: number; reservationId: number; amount: number; clientId: string; currency: string });
+            handleReserved(
+              data.payload as {
+                motorcycleId: number;
+                reservationId: number;
+                amount: number;
+                clientId: string;
+                currency: string;
+              },
+            );
           } else if (data.type === "current_account") {
             // Handle current account creation
             // We can update the motorcycle state similar to reservation
@@ -604,8 +612,8 @@ export default function MotorcycleTable({
         />
 
         <div className="text-sm text-muted-foreground">
-          Mostrando {startIndex + 1} a {Math.min(startIndex + pageSize, sortedData.length)} de
-          {sortedData.length} motos
+          Mostrando {(currentPage - 1) * pageSize + 1} a {Math.min(currentPage * pageSize, totalItems)} de
+          {totalItems} motos
         </div>
       </div>
 
@@ -735,7 +743,7 @@ export default function MotorcycleTable({
       <PaginationControl
         currentPage={currentPage}
         pageSize={pageSize}
-        totalItems={sortedData.length}
+        totalItems={totalItems}
         pageSizeOptions={PAGE_SIZE_OPTIONS}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}

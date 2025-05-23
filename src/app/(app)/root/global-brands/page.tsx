@@ -1,14 +1,7 @@
 import { getRootBrands } from "@/actions/root/global-brand-actions"; // Import the real action
-import type { Brand, Model } from "@prisma/client"; // Use real Prisma types
-// src/app/root/global-brands/page.tsx
 import React from "react";
 import ManageGlobalBrands from "./components/ManageGlobalBrands"; // Ajusta el path si es necesario
-// TODO: Importar la acción real
-// import { getRootBrands } from '@/actions/root/brand-actions';
 
-// Placeholder types if prisma types are unavailable
-// type Brand = { id: number; name: string; order?: number };
-// type Model = { id: number; name: string; brandId: number; order?: number };
 
 export default async function GlobalBrandsPage() {
   // Fetch initial data using the real action

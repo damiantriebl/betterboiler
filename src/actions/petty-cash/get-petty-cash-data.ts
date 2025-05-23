@@ -48,4 +48,4 @@ export async function getPettyCashData(): Promise<{
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return { error: `Failed to fetch petty cash data: ${errorMessage}` };
   }
-} 
+}

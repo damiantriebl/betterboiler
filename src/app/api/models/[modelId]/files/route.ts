@@ -44,9 +44,10 @@ async function processImage(file: File): Promise<{ original: Buffer; thumbnail: 
   };
 }
 
-export async function GET(request: NextRequest, context: { params: { modelId: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ modelId: string }> }) {
   try {
-    const modelId = Number.parseInt(context.params.modelId);
+    const params = await context.params;
+    const modelId = Number.parseInt(params.modelId);
     if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID de modelo inválido" }, { status: 400 });
     }
@@ -99,9 +100,10 @@ export async function GET(request: NextRequest, context: { params: { modelId: st
   }
 }
 
-export async function POST(request: NextRequest, context: { params: { modelId: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ modelId: string }> }) {
   try {
-    const modelId = Number.parseInt(context.params.modelId);
+    const params = await context.params;
+    const modelId = Number.parseInt(params.modelId);
     if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID de modelo inválido" }, { status: 400 });
     }

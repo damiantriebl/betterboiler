@@ -7,9 +7,12 @@ export async function setupCurrentAccountMethod() {
   try {
     // Obtener el ID de organización actual
     const sessionInfo = await getOrganizationIdFromSession();
-    
+
     if (sessionInfo.error || !sessionInfo.organizationId) {
-      return { success: false, error: sessionInfo.error || "No se pudo obtener el ID de la organización" };
+      return {
+        success: false,
+        error: sessionInfo.error || "No se pudo obtener el ID de la organización",
+      };
     }
 
     const organizationId = sessionInfo.organizationId; // Ya es string | null, y hemos verificado que no es null

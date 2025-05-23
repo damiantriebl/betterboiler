@@ -1,6 +1,6 @@
 "use server";
 
-import type { serverMessage } from "@/app/(auth)/forgot-password/page";
+import type { serverMessage } from "@/types/ServerMessageType";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -10,9 +10,17 @@ export async function createOrganization(
   prevState: { success: string | false; error: string | false },
   formData: FormData,
 ): Promise<serverMessage> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  
+  if (!session?.user) {
+    return {
+      success: false,
+      error: "Usuario no autenticado",
+    };
+  }
+
   const name = formData.get("name") as string | null;
   const logo = formData.get("logo") as string | null;
-  const session = await auth.api.getSession({ headers: await headers() });
 
   if (!name) return { error: "Formato invalido", success: false };
 

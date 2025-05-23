@@ -1,16 +1,35 @@
 "use server";
 
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 import prisma from "@/lib/prisma";
 import type { ReportFilters } from "@/types/reports";
 import type { InventoryStatusReport } from "@/types/reports";
 import { MotorcycleState } from "@prisma/client";
 
-export async function getInventoryStatusReport(
-  filters: ReportFilters,
-): Promise<InventoryStatusReport> {
-  const organizationId = filters.organizationId;
-  const dateRange = filters.dateRange;
+export async function getInventoryStatusReport(dateRange?: {
+  from?: Date;
+  to?: Date;
+}): Promise<InventoryStatusReport> {
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId) {
+    console.error(
+      "Error en getInventoryStatusReport: No se pudo obtener el ID de la organización. Mensaje de sesión:",
+      org.error,
+    );
+    // Devolver una estructura InventoryStatusReport vacía/por defecto
+    return {
+      summary: {
+        total: 0,
+        inStock: 0,
+        reserved: 0,
+        sold: 0,
+      },
+      byState: [],
+      byBrand: [],
+      valueByState: [],
+    };
+  }
+  const organizationId = org.organizationId;
 
   // Obtener conteos por estado
   const byState = await prisma.motorcycle.groupBy({

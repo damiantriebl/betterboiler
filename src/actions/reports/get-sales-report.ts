@@ -8,7 +8,10 @@ import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Sessio
 export async function getSalesReport(dateRange?: { from?: Date; to?: Date }): Promise<SalesReport> {
   const org = await getOrganizationIdFromSession();
   if (!org.organizationId) {
-    console.error("Error en getSalesReport: No se pudo obtener el ID de la organización. Mensaje de sesión:", org.error);
+    console.error(
+      "Error en getSalesReport: No se pudo obtener el ID de la organización. Mensaje de sesión:",
+      org.error,
+    );
     // Devolver una estructura SalesReport vacía/por defecto que coincida con el tipo
     return {
       summary: {

@@ -1,20 +1,8 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client"; // Para tipos, si es necesario
-import { headers } from "next/headers";
-
-// Helper para obtener organizationId (reutilizado)
-async function getOrganizationIdFromSession(): Promise<string | null> {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    return session?.user?.organizationId ?? null;
-  } catch (error) {
-    console.error("Error getting session:", error);
-    return null;
-  }
-}
 
 // Tipo de datos para las motos en progreso que se pasarán al frontend
 export type MotoEnProgresoData = {
@@ -27,29 +15,28 @@ export type MotoEnProgresoData = {
 
 // Acción para obtener las motos en progreso
 export async function getMotosEnProgreso(): Promise<MotoEnProgresoData[]> {
-  const organizationId = await getOrganizationIdFromSession();
+  const org = await getOrganizationIdFromSession();
 
-  if (!organizationId) {
+  if (!org.organizationId) {
     console.error("[getMotosEnProgreso] No organizationId found.");
     return []; // Devuelve vacío si no hay organización
   }
+
+  const organizationId = org.organizationId;
 
   try {
     const motorcycles = await prisma.motorcycle.findMany({
       where: {
         organizationId: organizationId,
-        state: "IN_PROGRESS",
+        state: "PROCESANDO",
       },
-      select: {
-        id: true,
-        chassisNumber: true,
+      include: {
         brand: {
           select: { name: true },
         },
         model: {
           select: { name: true },
         },
-        // Selecciona otros campos si los necesitas
       },
       orderBy: {
         createdAt: "desc", // Mostrar las más recientes primero

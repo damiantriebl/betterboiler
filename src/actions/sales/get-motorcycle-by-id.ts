@@ -10,7 +10,7 @@ import type {
   MotoColor,
   Motorcycle,
   Reservation,
-  Sucursal,
+  Branch,
 } from "@prisma/client";
 import { headers } from "next/headers";
 
@@ -22,7 +22,7 @@ export type MotorcycleWithRelations = Motorcycle & {
         files?: ModelFile[];
       })
     | null;
-  branch?: Sucursal | null;
+  branch?: Branch | null;
   color?: MotoColor | null;
   client?: Client | null;
   reservations?: (Reservation & { client: Client | null })[];

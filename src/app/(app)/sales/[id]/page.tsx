@@ -1,7 +1,7 @@
 "use client";
 
 import { getEnabledBankingPromotions } from "@/actions/banking-promotions/get-banking-promotions";
-import { getClients } from "@/actions/clients/get-clients";
+import { getClients } from "@/actions/clients/manage-clients";
 import { createCurrentAccount } from "@/actions/current-accounts/create-current-account";
 import { recordCurrentAccountPayment } from "@/actions/current-accounts/record-current-account-payment";
 import { completeSale } from "@/actions/sales/complete-sale";
@@ -412,14 +412,14 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
             return promotion.bankId.toString() === saleState.paymentData.banco;
           }
 
-          if (promotion.cardId && saleState.paymentData.tarjetaTipo) {
+          if (promotion.bankCardId && saleState.paymentData.tarjetaTipo) {
             const cardMap: Record<string, number> = {
               visa: 1,
               mastercard: 2,
               amex: 3,
             };
             const cardId = cardMap[saleState.paymentData.tarjetaTipo];
-            return promotion.cardId === cardId;
+            return promotion.bankCardId === cardId;
           }
         } else {
           // For other payment methods, check direct match with type

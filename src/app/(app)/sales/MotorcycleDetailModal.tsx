@@ -967,9 +967,9 @@ export function MotorcycleDetailModal({
             () =>
               rawReservationData
                 ? {
-                  ...rawReservationData,
-                  currency: rawReservationData.currency || "USD",
-                }
+                    ...rawReservationData,
+                    currency: rawReservationData.currency || "USD",
+                  }
                 : undefined,
             [],
           )}
@@ -1009,7 +1009,7 @@ export function MotorcycleDetailModal({
                 <div className="flex items-center gap-2">
                   <img
                     src={userImage}
-                    alt={userName || 'Usuario'}
+                    alt={userName || "Usuario"}
                     className="w-10 h-10 rounded-full object-cover border"
                   />
                   <span className="text-sm font-medium">{userName}</span>

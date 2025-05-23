@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  type State as BrandActionState,
-  createOrEditBrand,
-} from "@/actions/configuration/create-edit-brand"; // Importar la acción y el tipo State
+  type AssociateBrandState as BrandActionState,
+  associateOrganizationBrand,
+} from "@/actions/configuration/create-edit-brand"; // Importar la acción y el tipo correcto
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,7 +65,7 @@ export default function CreateOrEditBrand({
   const { toast } = useToast();
   // --- Usar useActionState ---
   const [state, formAction, isPending] = useActionState<BrandActionState, FormData>(
-    createOrEditBrand,
+    associateOrganizationBrand,
     initialState,
   );
   // --- Fin useActionState ---

@@ -9,7 +9,6 @@ import type { SessionState } from "@/stores/SessionStore";
 import { useSessionStore } from "@/stores/SessionStore";
 import { useEffect, useRef, useState } from "react";
 
-
 interface Org {
   logo: string | null;
   thumbnail: string | null;
@@ -24,31 +23,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const setSession = useSessionStore((state) => state.setSession);
 
   useEffect(() => {
-    getSession().then((sessionDataResponse) => {
-      if (sessionDataResponse.session) {
-        const currentSession = sessionDataResponse.session;
+    getSession()
+      .then((sessionDataResponse) => {
+        if (sessionDataResponse.session) {
+          const currentSession = sessionDataResponse.session;
 
-        const sessionToStore: Partial<Omit<SessionState, "setSession" | "clearSession">> = {
-          userId: currentSession.user?.id ?? null,
-          userName: currentSession.user?.name ?? null,
-          userEmail: currentSession.user?.email ?? null,
-          userImage: currentSession.user?.image ?? null,
-          userRole: currentSession.user?.role ?? null,
-          organizationId: currentSession.user?.organizationId ?? null,
-          organizationName: null,
-          organizationLogo: null,
-        };
-        setSession(sessionToStore);
+          const sessionToStore: Partial<Omit<SessionState, "setSession" | "clearSession">> = {
+            userId: currentSession.user?.id ?? null,
+            userName: currentSession.user?.name ?? null,
+            userEmail: currentSession.user?.email ?? null,
+            userImage: currentSession.user?.image ?? null,
+            userRole: currentSession.user?.role ?? null,
+            organizationId: currentSession.user?.organizationId ?? null,
+            organizationName: null,
+            organizationLogo: null,
+          };
+          setSession(sessionToStore);
 
-        if (sessionToStore.organizationLogo || sessionToStore.organizationName) {
-          setOrg({
-            logo: sessionToStore.organizationLogo || null,
-            thumbnail: null,
-            name: sessionToStore.organizationName || "Organización",
-          });
+          if (sessionToStore.organizationLogo || sessionToStore.organizationName) {
+            setOrg({
+              logo: sessionToStore.organizationLogo || null,
+              thumbnail: null,
+              name: sessionToStore.organizationName || "Organización",
+            });
+          }
         }
-      }
-    }).catch(console.error);
+      })
+      .catch(console.error);
   }, [setSession]);
 
   useEffect(() => {

@@ -23,7 +23,7 @@ export function useOrganization(): UseOrganizationReturn {
       try {
         setLoading(true);
         setError(null);
-        
+
         const sessionData = await getOrganizationIdFromSession();
 
         if (!mounted) return;
@@ -33,19 +33,20 @@ export function useOrganization(): UseOrganizationReturn {
         }
 
         const orgDetails = await getOrganizationDetailsById(sessionData.organizationId);
-        
+
         if (!mounted) return;
 
         if (!orgDetails) {
           throw new Error(`Organization details not found for ID: ${sessionData.organizationId}`);
         }
-        
-        setOrganization(orgDetails);
 
+        setOrganization(orgDetails);
       } catch (err) {
         if (!mounted) return;
         console.error("Error fetching organization data:", err);
-        setError(err instanceof Error ? err : new Error("Unknown error fetching organization data"));
+        setError(
+          err instanceof Error ? err : new Error("Unknown error fetching organization data"),
+        );
       } finally {
         if (mounted) {
           setLoading(false);

@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import type { serverMessage } from "@/types/ServerMessageType";
-import { resetPasswordSchema } from "@/zod/authZod";
+import { resetPasswordSchema } from "@/zod/AuthZod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -44,7 +44,7 @@ function ResetPasswordContent() {
       toast({
         title: "Éxito",
         description: state.success,
-        variant: "success",
+        variant: "default",
       });
       startTransition(() => {
         router.push("/sign-in");

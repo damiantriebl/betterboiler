@@ -30,8 +30,8 @@ export function UserButton() {
   const router = useRouter();
   const userName = useSessionStore((state) => state.userName);
   const userImage = useSessionStore((state) => state.userImage);
-  console.log(userImage, 'user image');
-  console.log(userName, 'user name');
+  console.log(userImage, "user image");
+  console.log(userName, "user name");
   const handleSignOut = async () => {
     await authClient.signOut({
       fetchOptions: {
@@ -47,9 +47,7 @@ export function UserButton() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="size-16 rounded-full">
           <div className="flex items-center gap-2">
-            {userName &&
-              <AvatarUser name={userName} src={userImage} />
-            }
+            {userName && <AvatarUser name={userName} src={userImage} />}
           </div>
         </Button>
       </DropdownMenuTrigger>

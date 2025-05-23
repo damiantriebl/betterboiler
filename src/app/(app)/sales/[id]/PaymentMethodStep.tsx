@@ -187,7 +187,7 @@ export default function PaymentMethodStep({
     finalPrice,
     moto?.currency || "USD", // totalCurrency
     isReserved ? reservationAmount : 0, // reservationAmount
-    reservationCurrency // reservationCurrency
+    reservationCurrency, // reservationCurrency
     // exchangeRate no se pasa, se usará undefined
   );
 

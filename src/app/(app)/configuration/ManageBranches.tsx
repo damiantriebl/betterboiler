@@ -160,7 +160,10 @@ export default function ManageBranches({ initialBranchesData }: ManageBranchesPr
 
       if (orderedItemsForAction.length > 0) {
         startTransition(async () => {
-          const result: UpdateBranchesOrderState = await updateBranchesOrder(null, orderedItemsForAction);
+          const result: UpdateBranchesOrderState = await updateBranchesOrder(
+            null,
+            orderedItemsForAction,
+          );
           if (!result.success) {
             setBranches(previousBranches);
             toast({
@@ -190,10 +193,7 @@ export default function ManageBranches({ initialBranchesData }: ManageBranchesPr
         modifiers={[restrictToVerticalAxis]}
       >
         <div className="flex flex-col gap-3">
-          <SortableContext
-            items={branches.map((b) => b.id)}
-            strategy={verticalListSortingStrategy}
-          >
+          <SortableContext items={branches.map((b) => b.id)} strategy={verticalListSortingStrategy}>
             {branches.map((branch) => (
               <BranchItem
                 key={branch.id}

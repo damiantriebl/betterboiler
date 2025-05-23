@@ -1,15 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-
-interface SuppliersReportFilters {
-  organizationId: string;
-  dateRange?: {
-    from?: Date;
-    to?: Date;
-  };
-  supplierId?: string;
-}
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 interface SupplierSummary {
   totalSuppliers: number;
@@ -20,8 +12,30 @@ interface SupplierSummary {
   };
 }
 
-export async function getSuppliersReport(filters: SuppliersReportFilters) {
-  const { organizationId, dateRange, supplierId } = filters;
+export async function getSuppliersReport(
+  dateRange?: { from?: Date; to?: Date },
+  supplierId?: string,
+) {
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId) {
+    console.error(
+      "Error en getSuppliersReport: No se pudo obtener el ID de la organización. Mensaje de sesión:",
+      org.error,
+    );
+    // Devolver una estructura SuppliersReport vacía/por defecto
+    return {
+      summary: {
+        totalSuppliers: 0,
+        activeSuppliers: 0,
+        inactiveSuppliers: 0,
+        totalPurchases: {},
+      },
+      purchasesBySupplier: {},
+      purchasesByMonth: {},
+      supplierDetails: [],
+    };
+  }
+  const organizationId = org.organizationId;
 
   // Base query conditions for suppliers
   const whereConditions = {
@@ -49,8 +63,10 @@ export async function getSuppliersReport(filters: SuppliersReportFilters) {
         select: {
           id: true,
           costPrice: true,
+          retailPrice: true,
           currency: true,
           state: true,
+          createdAt: true,
         },
       },
     },
@@ -111,11 +127,11 @@ export async function getSuppliersReport(filters: SuppliersReportFilters) {
             };
           }
           acc[monthYear].count += 1;
-          if (motorcycle.purchasePrice) {
-            acc[monthYear].totalInvestment += motorcycle.purchasePrice;
+          if (motorcycle.costPrice) {
+            acc[monthYear].totalInvestment += motorcycle.costPrice;
           }
-          if (motorcycle.status === "SOLD" && motorcycle.salePrice) {
-            acc[monthYear].totalSales += motorcycle.salePrice;
+          if (motorcycle.state === "VENDIDO" && motorcycle.retailPrice) {
+            acc[monthYear].totalSales += motorcycle.retailPrice;
             acc[monthYear].soldCount += 1;
           }
         }

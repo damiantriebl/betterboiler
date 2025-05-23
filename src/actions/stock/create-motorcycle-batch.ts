@@ -31,20 +31,18 @@ export interface CreateBatchState {
   createdCount?: number;
 }
 
-// Helper function to get organizationId
-async function getOrganizationIdFromSession(): Promise<string | null> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  return session?.user?.organizationId ?? null;
-}
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 // Use the imported type MotorcycleBatchFormData
 export async function createMotorcycleBatch(
   prevState: CreateBatchState | null,
   data: MotorcycleBatchFormData,
 ): Promise<CreateBatchState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "User not authenticated or without organization." };
+
+  const organizationId = org.organizationId;
 
   // Validate received data using the imported schema
   const validatedFields = motorcycleBatchSchema.safeParse(data);
@@ -110,7 +108,6 @@ export async function createMotorcycleBatch(
               wholesalePrice: commonData.wholesalePrice, // Use correct English name
               supplierId: commonData.supplierId, // Use correct English name
               imageUrl: commonData.imageUrl, // Use correct English name
-              licensePlate: commonData.licensePlate, // Use correct English name
               currency: commonData.currency, // Add currency
 
               // --- Specific Unit Data (Directly use validated English names) ---
@@ -119,6 +116,7 @@ export async function createMotorcycleBatch(
               colorId: unitData.colorId,
               mileage: unitData.mileage, // Use correct English name
               branchId: unitData.branchId, // Use correct English name
+              licensePlate: unitData.licensePlate, // Use correct field location
               state: unitData.state,
 
               // --- Other Required Data ---

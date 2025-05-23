@@ -1,4 +1,4 @@
-import { type BranchData, getBranchesForOrg } from "@/actions/stock/get-branch";
+import { type BranchData, getBranches } from "@/actions/stock/get-branch";
 import { getSuppliers } from "@/actions/suppliers/manage-suppliers";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
@@ -108,13 +108,13 @@ export default async function NuevaMotoPage() {
     const [brandsResult, colorsResult, sucursalesResult, suppliersResult] = await Promise.all([
       getAvailableBrandsAndModels(organizationId),
       getAvailableColors(organizationId),
-      getBranchesForOrg(),
+      getBranches(),
       getSuppliers(),
     ]);
 
     availableBrands = brandsResult;
     availableColors = colorsResult;
-    sucursales = sucursalesResult.data ?? [];
+    sucursales = sucursalesResult;
     availableSuppliers = suppliersResult;
   }
 
@@ -128,7 +128,6 @@ export default async function NuevaMotoPage() {
           availableColors={availableColors}
           availableBranches={sucursales}
           suppliers={availableSuppliers}
-        // initialData={{}} // Podemos pasar datos iniciales si es necesario
         />
       </div>
     </div>

@@ -1,21 +1,9 @@
 "use server";
 
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { MotorcycleState, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-
-// Helper para obtener organizationId (asumiendo que está disponible)
-async function getOrganizationIdFromSession(): Promise<string | null> {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    return session?.user?.organizationId ?? null;
-  } catch (error) {
-    console.error("Error getting session:", error);
-    return null;
-  }
-}
+import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
 
 // Tipo para el retorno de la acción
 interface UpdateStatusState {
@@ -23,21 +11,26 @@ interface UpdateStatusState {
   error?: string | null;
 }
 
+// Definir tipo de estados permitidos (excluyendo VENDIDO)
+type AllowedMotorcycleStates = Exclude<MotorcycleState, "VENDIDO">;
+
 // Acción para actualizar el estado (permite STOCK, PAUSADO, PROCESANDO o ELIMINADO)
 export async function updateMotorcycleStatus(
   motorcycleId: number,
-  newStatus: MotorcycleState,
+  newStatus: AllowedMotorcycleStates,
 ): Promise<UpdateStatusState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId) return { success: false, error: "Usuario no autenticado." };
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId) return { success: false, error: "Usuario no autenticado." };
+
+  const organizationId = org.organizationId;
 
   // Estados permitidos a los que esta acción puede cambiar
   const validTargetStates = Object.values(MotorcycleState).filter(
-    (state) => state !== MotorcycleState.VENDIDO, // Excluir VENDIDO
-  );
+    (state) => state !== "VENDIDO", // Excluir VENDIDO
+  ) as AllowedMotorcycleStates[];
 
   // Validar que el nuevo estado sea uno de los permitidos
-  if (!validTargetStates.includes(newStatus as MotorcycleState)) {
+  if (!validTargetStates.includes(newStatus)) {
     return { success: false, error: `Estado objetivo inválido: ${newStatus}` };
   }
 
@@ -57,35 +50,35 @@ export async function updateMotorcycleStatus(
 
     // Lógica específica al cambiar de estado
     if (
-      newStatus === MotorcycleState.STOCK &&
-      (moto.state === MotorcycleState.RESERVADO ||
-        moto.state === MotorcycleState.PROCESANDO ||
-        moto.state === MotorcycleState.ELIMINADO)
+      newStatus === "STOCK" &&
+      (moto.state === "RESERVADO" ||
+        moto.state === "PROCESANDO" ||
+        moto.state === "ELIMINADO")
     ) {
-      data.clientId = null;
+      data.client = { disconnect: true }; // Desconectar cliente
     }
 
     let allowedCurrentStates: Prisma.MotorcycleWhereInput[] = [];
 
     switch (newStatus) {
-      case MotorcycleState.STOCK:
+      case "STOCK":
         allowedCurrentStates = [
-          { state: MotorcycleState.PAUSADO },
-          { state: MotorcycleState.RESERVADO },
-          { state: MotorcycleState.PROCESANDO },
-          { state: MotorcycleState.ELIMINADO },
+          { state: "PAUSADO" },
+          { state: "RESERVADO" },
+          { state: "PROCESANDO" },
+          { state: "ELIMINADO" },
         ];
         break;
-      case MotorcycleState.PAUSADO:
-        allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
+      case "PAUSADO":
+        allowedCurrentStates = [{ state: "STOCK" }];
         break;
-      case MotorcycleState.PROCESANDO:
-        allowedCurrentStates = [{ state: MotorcycleState.STOCK }];
+      case "PROCESANDO":
+        allowedCurrentStates = [{ state: "STOCK" }];
         break;
-      case MotorcycleState.ELIMINADO:
+      case "ELIMINADO":
         allowedCurrentStates = [
-          { state: MotorcycleState.STOCK },
-          { state: MotorcycleState.PAUSADO },
+          { state: "STOCK" },
+          { state: "PAUSADO" },
         ];
         break;
       default:

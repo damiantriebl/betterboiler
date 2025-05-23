@@ -15,7 +15,7 @@ export interface ModelData {
 interface ApiResult {
   success: boolean;
   models?: ModelData[]; // models es un array de ModelData en caso de éxito
-  error?: string;      // error es un string en caso de fallo
+  error?: string; // error es un string en caso de fallo
 }
 
 interface ModelsStore {

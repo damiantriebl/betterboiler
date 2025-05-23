@@ -1,8 +1,9 @@
 "use client";
 
-import { getPaymentMethodsAction } from "@/actions/payment-methods/get-payment-methods-action";
+import { getAllPaymentMethods } from "@/actions/payment-methods/get-payment-methods";
 import { createReservation } from "@/actions/sales/create-reservation"; // Will be used for non-current-account for now
-import type { Client, CurrentAccount, PaymentMethod } from "@prisma/client";
+import type { Client, CurrentAccount } from "@prisma/client";
+import type { PaymentMethod } from "@/types/payment-methods";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -80,11 +81,11 @@ export function ReserveModal({
       // Fetch payment methods
       const fetchMethods = async () => {
         setIsLoadingPaymentMethods(true);
-        const result = await getPaymentMethodsAction();
-        if (result.success && result.data) {
-          setPaymentMethods(result.data);
-        } else {
-          setPaymentMethodError(result.error || "No se pudieron cargar los métodos de pago.");
+        try {
+          const paymentMethods = await getAllPaymentMethods();
+          setPaymentMethods(paymentMethods);
+        } catch (error) {
+          setPaymentMethodError("No se pudieron cargar los métodos de pago.");
         }
         setIsLoadingPaymentMethods(false);
       };

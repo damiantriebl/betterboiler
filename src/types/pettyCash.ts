@@ -19,11 +19,11 @@ export interface PettyCashMovement {
 }
 
 export interface UserProfile {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    phone?: string | null;
-    address?: string | null;
-    profileOriginal?: string | null;
-    profileCrop?: string | null;
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  profileOriginal?: string | null;
+  profileCrop?: string | null;
 }

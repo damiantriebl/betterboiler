@@ -8,7 +8,7 @@ export async function GET() {
     if (session.error || !session.organizationId) {
       return NextResponse.json(
         { error: session.error || "Organización no encontrada" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -26,7 +26,7 @@ export async function GET() {
     console.error("[BRANCHES_GET]", error);
     return NextResponse.json(
       { error: "Error interno del servidor al obtener sucursales" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

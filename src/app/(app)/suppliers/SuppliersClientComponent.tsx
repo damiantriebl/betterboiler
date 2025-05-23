@@ -21,30 +21,31 @@ interface SuppliersClientComponentProps {
 }
 
 export default function SuppliersClientComponent({ initialData }: SuppliersClientComponentProps) {
-  // Estado local solo para controlar el modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  // Ya no necesitamos estado para los proveedores `const [suppliers, setSuppliers] = useState<Supplier[]>(initialData);`
-  // ni para `editingSupplier` por ahora.
+  // Estados para modales
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
+  const handleOpenCreateModal = () => {
+    setIsCreateModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
   };
 
-  // Ya no necesitamos handleAddSupplier, el form llama a la acción directamente
-  // La revalidación de la caché actualizará los datos en la tabla.
+  const handleOpenEditModal = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setIsEditModalOpen(true);
+  };
 
-  // Placeholder para handlers de edición y borrado que se pasarían a la tabla
-  // ¡IMPORTANTE! handleDeleteSupplier ahora necesita llamar a la Server Action
+  const handleCloseEditModal = () => {
+    setEditingSupplier(null);
+    setIsEditModalOpen(false);
+  };
+
   const handleEditSupplier = (supplier: Supplier) => {
-    console.log("Editar Supplier (Placeholder):", supplier);
-    // Aquí iría la lógica para abrir el modal con los datos del proveedor a editar
-    // Se necesitaría pasar `supplier` a `SupplierForm` como `initialData`
-    // y SupplierForm necesitaría llamar a `updateSupplier` en lugar de `createSupplier`.
-    alert("Funcionalidad Editar no implementada aún.");
+    handleOpenEditModal(supplier);
   };
 
   // handleDeleteSupplier se pasará a la tabla, pero la lógica de llamada a la acción
@@ -59,22 +60,35 @@ export default function SuppliersClientComponent({ initialData }: SuppliersClien
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Proveedores</h1>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        {/* Modal para crear proveedor */}
+        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleOpenModal}>
+            <Button onClick={handleOpenCreateModal}>
               <PlusCircle className="mr-2 h-4 w-4" /> Agregar Proveedor
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[80%] lg:max-w-[60%] xl:max-w-4xl">
             <DialogHeader>
-              {/* Título visible opcional o mantener sr-only */}
               <DialogTitle>Agregar Nuevo Proveedor</DialogTitle>
             </DialogHeader>
             <SupplierForm
-              // onSuccess ya no es necesario aquí si el form resetea y cierra modal
-              // Podríamos pasar una función onSuccess para cerrar el modal si el form no lo hace
-              onSuccess={() => handleCloseModal()} // Cerrar modal en éxito
-              onCancel={handleCloseModal}
+              onSuccess={() => handleCloseCreateModal()}
+              onCancel={handleCloseCreateModal}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para editar proveedor */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="sm:max-w-[80%] lg:max-w-[60%] xl:max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Editar Proveedor</DialogTitle>
+            </DialogHeader>
+            <SupplierForm
+              initialData={editingSupplier}
+              supplierId={editingSupplier?.id}
+              onSuccess={() => handleCloseEditModal()}
+              onCancel={handleCloseEditModal}
             />
           </DialogContent>
         </Dialog>

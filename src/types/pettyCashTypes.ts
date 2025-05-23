@@ -25,4 +25,4 @@ export interface Deposit {
   createdAt: Date;
   color: string;
   withdrawals: Withdrawal[];
-} 
+}

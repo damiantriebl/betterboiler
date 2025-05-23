@@ -404,7 +404,7 @@ export default function SingleBrandColumn({
           onRenameDuplicateBlur={handleRenameDuplicateBlur}
           onDelete={() => onAssociationDelete(organizationBrandId)}
           renderColorButton={renderColorButton}
-          dragAttributes={attributes as DraggableAttributes}
+          dragAttributes={attributes as unknown as Record<string, unknown>}
           dragListeners={listeners}
           isPending={isPending}
           isDragging={isColumnDragging}
@@ -436,8 +436,8 @@ export default function SingleBrandColumn({
                   <ModelItem
                     model={activeModel}
                     isOverlay
-                    onUpdate={() => {}}
-                    onDissociate={() => {}}
+                    onUpdate={() => { }}
+                    onDissociate={() => { }}
                   />
                 ) : null}
               </DragOverlay>

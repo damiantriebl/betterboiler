@@ -35,7 +35,7 @@ export type CreatePettyCashDepositState = {
     reference?: string[];
     _form?: string[];
   };
-  status: 'success' | 'error' | 'idle';
+  status: "success" | "error" | "idle";
 };
 
 export type CreatePettyCashWithdrawalState = {
@@ -47,7 +47,7 @@ export type CreatePettyCashWithdrawalState = {
     organizationId?: string[];
     _form?: string[];
   };
-  status: 'success' | 'error' | 'idle';
+  status: "success" | "error" | "idle";
 };
 
 export type CreatePettyCashSpendState = {
@@ -60,5 +60,5 @@ export type CreatePettyCashSpendState = {
     organizationId?: string[];
     _form?: string[];
   };
-  status: 'success' | 'error' | 'idle';
+  status: "success" | "error" | "idle";
 };
