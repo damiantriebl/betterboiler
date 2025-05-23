@@ -94,6 +94,7 @@ export async function calculatePromotionAmount(params: {
     let surchargeAmount = 0;
     let installmentAmount = 0;
     let totalInterest = 0;
+    let hasValidInstallmentPlan = false;
 
     // Apply discount or surcharge
     if (promotion.discountRate && promotion.discountRate > 0) {
@@ -111,6 +112,8 @@ export async function calculatePromotionAmount(params: {
       );
 
       if (installmentPlan) {
+        hasValidInstallmentPlan = true;
+        
         if (installmentPlan.interestRate > 0) {
           // Apply interest to final amount
           totalInterest = finalAmount * (installmentPlan.interestRate / 100);
@@ -127,9 +130,9 @@ export async function calculatePromotionAmount(params: {
       finalAmount,
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
       surchargeAmount: surchargeAmount > 0 ? surchargeAmount : undefined,
-      installmentAmount: installmentAmount > 0 ? installmentAmount : undefined,
-      totalInterest: totalInterest > 0 ? totalInterest : undefined,
-      installments: installments && installments > 1 ? installments : undefined,
+      installmentAmount: hasValidInstallmentPlan && installmentAmount > 0 ? installmentAmount : undefined,
+      totalInterest: hasValidInstallmentPlan && totalInterest > 0 ? totalInterest : undefined,
+      installments: hasValidInstallmentPlan ? installments : undefined,
     };
   } catch (error) {
     console.error("Error calculating promotion amount:", error);

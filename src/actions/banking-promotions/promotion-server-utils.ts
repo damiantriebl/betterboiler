@@ -67,16 +67,18 @@ export async function getPromotionsForDay(
 
     console.log(`Se encontraron ${allPromotions.length} promociones`);
 
-    // Filter promotions based on the day
-    return allPromotions.filter((promotion) => {
-      // If activeDays is empty or not defined, the promotion is active every day
-      if (!promotion.activeDays || promotion.activeDays.length === 0) {
-        return true;
-      }
+    // Filter promotions based on the day and ensure they are enabled (defensive programming)
+    return allPromotions
+      .filter((promotion) => promotion.isEnabled) // Extra safety filter
+      .filter((promotion) => {
+        // If activeDays is empty or not defined, the promotion is active every day
+        if (!promotion.activeDays || promotion.activeDays.length === 0) {
+          return true;
+        }
 
-      // Check if the day is in the activeDays array
-      return promotion.activeDays.includes(day);
-    });
+        // Check if the day is in the activeDays array
+        return promotion.activeDays.includes(day);
+      });
   } catch (error) {
     console.error("Error getting promotions for day:", error);
     return [];

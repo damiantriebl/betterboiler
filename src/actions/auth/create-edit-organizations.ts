@@ -1,14 +1,27 @@
 "use server";
 import prisma from "@/lib/prisma";
 import type { serverMessage } from "@/types/ServerMessageType";
+import { auth } from "@/auth";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
 import { uploadBufferToS3 } from "../S3/upload-buffer-to-s3";
 
 export async function createOrUpdateOrganization(formData: FormData): Promise<serverMessage> {
+  // Verificar autenticación
+  const session = await auth.api.getSession({ headers: await headers() });
+  
+  if (!session?.user) {
+    return {
+      success: false,
+      error: "Usuario no autenticado",
+    };
+  }
+
   const id = formData.get("id") as string | null;
   const name = formData.get("name") as string | null;
+  const logo = formData.get("logo") as string | null; // Para compatibilidad con URLs
   const logoFile = formData.get("logoFile") as File | null;
   const thumbnailFile = formData.get("thumbnailFile") as File | null;
 
@@ -26,6 +39,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
       if (exists) slug += `-${uuidv4().slice(0, 8)}`;
       const org = await prisma.organization.create({ data: { name, slug } });
       organizationId = org.id;
+      console.log("new organization", org);
     }
 
     // Validar que organizationId existe
@@ -56,6 +70,9 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
       } else {
         console.error("Error uploading 400px logo:", result400);
       }
+    } else if (logo) {
+      // Si no hay archivo pero sí URL, usar la URL
+      logoUrl = logo;
     }
 
     // --- Subida de la Miniatura (si existe) ---
@@ -98,4 +115,34 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
     console.error("🔥 ERROR SERVER ACTION:", error);
     return { error: (error as Error).message || "Ocurrió un error inesperado.", success: false };
   }
+}
+
+// Función wrapper para crear organizaciones (compatibilidad con create-organizations.ts)
+export async function createOrganization(
+  prevState: { success: string | false; error: string | false },
+  formData: FormData,
+): Promise<serverMessage> {
+  // Remover el ID para forzar creación
+  const newFormData = new FormData();
+  for (const [key, value] of formData.entries()) {
+    if (key !== 'id') {
+      newFormData.append(key, value);
+    }
+  }
+  
+  return await createOrUpdateOrganization(newFormData);
+}
+
+// Función wrapper para actualizar organizaciones (compatibilidad con update-organizations.ts)
+export async function updateOrganization(
+  prevState: { success: string | false; error: string | false },
+  formData: FormData,
+): Promise<serverMessage> {
+  // Verificar que tenga ID para forzar actualización
+  const id = formData.get("id");
+  if (!id) {
+    return { error: "ID de organización requerido para actualización", success: false };
+  }
+  
+  return await createOrUpdateOrganization(formData);
 }

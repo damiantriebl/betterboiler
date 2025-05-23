@@ -12,6 +12,11 @@ export async function resetPasswordAction(
   const passwordConfirm = formData.get("passwordConfirm");
   const token = formData.get("token");
 
+  // Validate required fields
+  if (password === null || passwordConfirm === null || token === null) {
+    return { error: "Todos los campos son obligatorios.", success: false };
+  }
+
   if (password !== passwordConfirm) {
     return { error: "Las contraseñas no coinciden.", success: false };
   }
