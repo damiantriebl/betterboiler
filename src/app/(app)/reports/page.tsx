@@ -1,6 +1,6 @@
 "use client";
 
-import { getInventoryStatusReport } from "@/actions/reports/get-inventory-report";
+import { getInventoryStatusReport } from "@/actions/reports/get-inventory-report-unified";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
 import { getSalesReport } from "@/actions/reports/get-sales-report";
 import { getSuppliersReport } from "@/actions/reports/get-suppliers-report";
@@ -39,7 +39,7 @@ import {
 import { Download, Loader2, FileText } from "lucide-react";
 import { useState, useEffect, startTransition } from "react";
 import type { DateRange } from "react-day-picker";
-import { getBranchesForOrganizationAction } from "@/actions/get-Branches-For-Organization-Action";
+import { getBranchesForOrganizationAction } from "@/actions/util";
 
 type LocalFilters = {
   organizationId: string;

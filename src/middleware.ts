@@ -2,6 +2,10 @@ import type { Session } from "@/auth";
 import { betterFetch } from "@better-fetch/fetch";
 import { type NextRequest, NextResponse } from "next/server";
 
+// Cache de sesiones en memoria para reducir llamadas a la DB
+const sessionCache = new Map<string, { session: Session | null; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
 const authRoutes = ["/sign-in", "/sign-up"];
 const passwordRoutes = ["/reset-password", "/forgot-password"];
 const adminRoutes = ["/admin"];
@@ -20,12 +24,50 @@ export default async function authMiddleware(request: NextRequest) {
   // 🔐 TODAS las rutas requieren autenticación por defecto, excepto auth, password, y public
   const requiresAuth = !isAuth && !isPassword && !isPublic;
 
-  const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
-    baseURL: process.env.BETTER_AUTH_URL,
-    headers: {
-      cookie: request.headers.get("cookie") || "",
-    },
-  });
+  // Extraer el token de la cookie para usar como clave de cache
+  const cookieHeader = request.headers.get("cookie") || "";
+  const sessionToken = cookieHeader.match(/better-auth\.session_token=([^;]+)/)?.[1];
+  
+  let session: Session | null = null;
+  
+  // Verificar cache primero
+  if (sessionToken) {
+    const cached = sessionCache.get(sessionToken);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      session = cached.session;
+    } else {
+      // Si no está en cache o expiró, hacer la llamada
+      const { data } = await betterFetch<Session>("/api/auth/get-session", {
+        baseURL: process.env.BETTER_AUTH_URL,
+        headers: {
+          cookie: cookieHeader,
+        },
+      });
+      session = data;
+      
+      // Guardar en cache
+      sessionCache.set(sessionToken, { session, timestamp: Date.now() });
+      
+      // Limpiar cache antiguo periódicamente
+      if (sessionCache.size > 1000) {
+        const now = Date.now();
+        for (const [key, value] of sessionCache.entries()) {
+          if (now - value.timestamp > CACHE_TTL) {
+            sessionCache.delete(key);
+          }
+        }
+      }
+    }
+  } else {
+    // Si no hay token, hacer la llamada normal
+    const { data } = await betterFetch<Session>("/api/auth/get-session", {
+      baseURL: process.env.BETTER_AUTH_URL,
+      headers: {
+        cookie: cookieHeader,
+      },
+    });
+    session = data;
+  }
 
   const response = NextResponse.next();
   response.headers.set("x-session", session ? "true" : "false");

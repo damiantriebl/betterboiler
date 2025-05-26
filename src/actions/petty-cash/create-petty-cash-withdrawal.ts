@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { PettyCashWithdrawal, PettyCashDepositStatus } from "@prisma/client";
 import { z } from "zod";
 import type { CreatePettyCashWithdrawalState } from "@/types/action-states"; // Importar el tipo de estado global
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 // Esquema Zod para la validación de FormData
 const formDataWithdrawalSchema = z.object({
@@ -86,7 +86,7 @@ export async function createPettyCashWithdrawal(
   const { depositId, userId, userName, amountGiven, date, description } = validatedFields.data;
 
   try {
-    let targetDeposit = null;
+    let targetDeposit: any = null;
     if (depositId) {
       targetDeposit = await prisma.pettyCashDeposit.findFirst({
         where: { id: depositId, organizationId: finalOrganizationId },

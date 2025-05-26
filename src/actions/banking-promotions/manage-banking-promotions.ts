@@ -8,7 +8,7 @@ import {
 } from "@/zod/banking-promotion-schemas";
 import { revalidatePath } from "next/cache";
 import type { BankingPromotion } from "@prisma/client";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";

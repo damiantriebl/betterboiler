@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getPettyCashData, type PettyCashData } from '../get-petty-cash-data';
 import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../get-Organization-Id-From-Session';
+import { getOrganizationIdFromSession } from '../../util';
 
 // Mock de Prisma
 vi.mock('@/lib/prisma', () => ({
@@ -13,7 +13,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../get-Organization-Id-From-Session', () => ({
+vi.mock('../../util', () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 

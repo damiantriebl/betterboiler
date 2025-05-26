@@ -1,7 +1,7 @@
 "use client"; // <-- ¡Importante! Este es el Client Component
 
-import type { MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import type { MotorcycleTableData } from "@/actions/sales/get-motorcycles-unified";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
@@ -16,7 +16,7 @@ import type { Client as ClientType } from "@/types/client";
 
 // Definir las props que espera este componente
 interface SalesClientComponentProps {
-  initialData: MotorcycleTableRowData[]; // Datos obtenidos de getMotorcycles
+  initialData: MotorcycleTableData[]; // Datos obtenidos de getMotorcycles
   clients?: Client[]; // Clientes para mostrar en dropdowns
   promotions?: BankingPromotionDisplay[]; // Promociones bancarias para el día actual (ahora opcional)
   allPromotions?: BankingPromotionDisplay[]; // Todas las promociones bancarias habilitadas (ahora opcional)
@@ -24,9 +24,9 @@ interface SalesClientComponentProps {
 }
 
 // Estado para la moto seleccionada para la venta
-interface SelectedMotorcycleForSale extends Omit<MotorcycleTableRowData, "id" | "retailPrice" | "model"> {
+interface SelectedMotorcycleForSale extends Omit<MotorcycleTableData, "id" | "retailPrice" | "model"> {
   // Omitir para redefinir con tipos correctos
-  id: number; // Asegurar que id es number si MotorcycleTableRowData lo tiene como string o diferente
+  id: number; // Asegurar que id es number si MotorcycleTableData lo tiene como string o diferente
   name: string; // Nombre compuesto para mostrar
   retailPrice: number; // Asegurar que retailPrice es number
   model: {
@@ -106,7 +106,7 @@ export default function SalesClientComponent({
     // y asegurando la compatibilidad de tipos para brand y model.
     const selectedMotoData: SelectedMotorcycleForSale = {
       id: motorcycleIdAsNumber,
-      name: motorcycleName, // Esta es una propiedad compuesta, no está en MotorcycleTableRowData
+      name: motorcycleName, // Esta es una propiedad compuesta, no está en MotorcycleTableData
       retailPrice: motorcycle.retailPrice,
       year: motorcycle.year,
       mileage: motorcycle.mileage,
@@ -118,7 +118,7 @@ export default function SalesClientComponent({
       brand: motorcycle.brand
         ? {
           name: motorcycle.brand.name,
-          organizationBrands: motorcycle.brand?.organizationBrands || [],
+          color: motorcycle.brand?.color || null,
         }
         : null,
       model: motorcycle.model

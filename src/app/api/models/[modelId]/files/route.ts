@@ -1,4 +1,4 @@
-import { uploadBufferToS3 } from "@/actions/S3/upload-buffer-to-s3";
+import { uploadToS3 } from "@/lib/s3-unified";
 import prisma from "@/lib/prisma";
 import type { ModelFileWithUrl } from "@/types/motorcycle";
 import { type NextRequest, NextResponse } from "next/server";
@@ -142,8 +142,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ mo
 
       // Upload both versions
       const [originalUpload, thumbnailUpload] = await Promise.all([
-        uploadBufferToS3({ buffer: original, path: originalPath }),
-        uploadBufferToS3({ buffer: thumbnail, path: thumbnailPath }),
+        uploadToS3(original, originalPath, "image/webp"),
+        uploadToS3(thumbnail, thumbnailPath, "image/webp"),
       ]);
 
       console.log("Upload results:", { originalUpload, thumbnailUpload });
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ mo
       console.log("Uploading non-image file:", { path });
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      uploadResult = await uploadBufferToS3({ buffer, path });
+      uploadResult = await uploadToS3(buffer, path);
 
       console.log("Upload result:", uploadResult);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { getSupplierById } from "@/actions/suppliers/manage-suppliers";
+import { getSupplierById } from "@/actions/suppliers/suppliers-unified";
 import { DisplayData } from "@/components/custom/DisplayData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

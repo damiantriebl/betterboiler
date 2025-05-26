@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { revalidatePath } from 'next/cache';
 import { recordPayment } from '../record-payment';
 import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../get-Organization-Id-From-Session';
+import { getOrganizationIdFromSession } from '../../util';
 import type { RecordPaymentInput } from '@/zod/current-account-schemas';
 import type { ActionState } from '@/types/action-states';
 
@@ -26,7 +26,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../get-Organization-Id-From-Session', () => ({
+vi.mock('../../util', () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 

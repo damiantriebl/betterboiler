@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { type PaymentFrequency, Prisma, type PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 const undoPaymentSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required."),

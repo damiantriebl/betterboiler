@@ -5,7 +5,7 @@ import { isPromotionActiveOnDay } from "@/utils/promotion-utils";
 import type { Day } from "@/zod/banking-promotion-schemas";
 
 // Tipo inferido de Prisma para las promociones bancarias
-type PrismaBankingPromotionWithRelations = Awaited<ReturnType<typeof prisma.bankingPromotion.findMany>>[0];
+type PrismaBankingPromotionWithRelations = any;
 
 // Days of the week in Spanish (matches the schema definition)
 const DAYS_OF_WEEK: Day[] = [

@@ -1,5 +1,5 @@
-import { type BranchData, getBranches } from "@/actions/stock/get-branch";
-import { getSuppliers } from "@/actions/suppliers/manage-suppliers";
+import { getBranches, type BranchData } from "@/actions/stock/form-data-unified";
+import { getSuppliers } from "@/actions/suppliers/suppliers-unified";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
@@ -40,10 +40,6 @@ async function getAvailableBrandsAndModels(organizationId: string): Promise<Bran
         },
       },
     });
-    console.log(
-      "[getAvailableBrandsAndModels] Datos crudos de DB:",
-      JSON.stringify(orgBrands, null, 2),
-    );
 
     // Transformación a BrandForCombobox (ahora brand está incluido)
     const transformedBrands: BrandForCombobox[] = orgBrands.map((orgBrand) => ({
@@ -55,10 +51,6 @@ async function getAvailableBrandsAndModels(organizationId: string): Promise<Bran
         name: model.name,
       })),
     }));
-    console.log(
-      "[getAvailableBrandsAndModels] Datos transformados:",
-      JSON.stringify(transformedBrands, null, 2),
-    );
     return transformedBrands;
   } catch (error) {
     console.error("Error fetching brands/models:", error);
@@ -73,8 +65,6 @@ async function getAvailableColors(organizationId: string): Promise<ColorConfig[]
       where: { organizationId: organizationId },
       orderBy: { order: "asc" },
     });
-    console.log("[getAvailableColors] Datos crudos de DB:", JSON.stringify(colorsFromDb, null, 2));
-
     // Transformación a ColorConfig usando nombres en INGLÉS
     const transformedColors: ColorConfig[] = colorsFromDb.map((c) => ({
       id: c.id.toString(),
@@ -85,10 +75,6 @@ async function getAvailableColors(organizationId: string): Promise<ColorConfig[]
       colorTwo: c.colorTwo ?? undefined,
       order: c.order,
     }));
-    console.log(
-      "[getAvailableColors] Datos transformados:",
-      JSON.stringify(transformedColors, null, 2),
-    );
     return transformedColors;
   } catch (error) {
     console.error("Error fetching colors:", error);
@@ -115,7 +101,7 @@ export default async function NuevaMotoPage() {
     availableBrands = brandsResult;
     availableColors = colorsResult;
     sucursales = sucursalesResult;
-    availableSuppliers = suppliersResult;
+    availableSuppliers = suppliersResult.suppliers;
   }
 
   return (

@@ -1,5 +1,5 @@
 // app/api/s3/get-signed-url/route.ts
-import { getSignedS3Url } from "@/actions/S3/get-signed-url";
+import { getSignedUrl } from "@/lib/s3-unified";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ failure: "Parámetros inválidos" }, { status: 400 });
   }
 
-  const result = await getSignedS3Url({ name, operation: operation as "put" | "get" });
+  const result = await getSignedUrl(name, operation as "put" | "get");
 
   if ("failure" in result) {
     return NextResponse.json(result, { status: 400 });

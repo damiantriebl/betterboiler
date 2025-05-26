@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { type CreateReservationInput, createReservationSchema } from "@/zod/ReservationZod";
 import { MotorcycleState } from "@prisma/client";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 export async function createReservation(data: CreateReservationInput) {
   try {

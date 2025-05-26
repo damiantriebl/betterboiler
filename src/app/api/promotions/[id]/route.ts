@@ -1,4 +1,4 @@
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 

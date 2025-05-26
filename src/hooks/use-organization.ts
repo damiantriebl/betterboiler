@@ -1,7 +1,6 @@
 "use client";
 
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
-import { getOrganizationDetailsById } from "@/actions";
+import { getOrganizationIdFromSession, getOrganizationDetailsById } from "@/actions/util";
 import type { Organization } from "@prisma/client";
 import { useEffect, useState } from "react";
 

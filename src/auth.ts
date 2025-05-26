@@ -11,11 +11,11 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   session: {
-    expiresIn: 60 * 60 * 24 * 7,
-    updateAge: 60 * 60 * 24,
+    expiresIn: 60 * 60 * 24 * 7, // 7 días
+    updateAge: 60 * 60 * 24, // 1 día
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60,
+      maxAge: 10 * 60, // Aumentar a 10 minutos
     },
   },
 

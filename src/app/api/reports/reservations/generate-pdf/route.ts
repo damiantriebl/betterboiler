@@ -1,4 +1,4 @@
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
 import { generateReservationReportPDF, createReservationReportPDFResponse } from "@/lib/pdf-generators/reservation-report-pdf";
 import type { ReservationsReport } from "@/types/reports";

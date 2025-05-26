@@ -1,6 +1,5 @@
 "use client";
 
-import { updateMotorcycleStatus } from "@/actions/stock/update-motorcycle-status";
 import { Button } from "@/components/ui/button";
 import { PriceDisplay } from "@/components/ui/price-display";
 import {
@@ -35,6 +34,7 @@ import { ActionButtons, ActionMenu } from "./MotorcycleActions";
 import MotorcycleRow from "./MotorcycleRow";
 import MotorcycleStatusBadge from "./MotorcycleStatusBadge";
 import PaginationControl from "./PaginationControl";
+import { updateMotorcycleStatus } from "@/actions/stock";
 
 // Definición de Props para MotorcycleTable
 interface MotorcycleTableProps {

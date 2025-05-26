@@ -1,6 +1,6 @@
 // Layout.tsx
 "use client";
-import { getSession } from "@/actions/get-session";
+import { getSession } from "@/actions/util";
 import NavbarSticky from "@/components/custom/NavbarSticky";
 import AppSidebar from "@/components/ui/app-sidebar";
 import { PriceModeSelector } from "@/components/ui/price-mode-selector";

@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { uploadToS3 } from "@/lib/s3-upload";
+import { uploadToFolder } from "@/lib/s3-unified";
 import { revalidatePath } from "next/cache";
 
 type ModelInput = {
@@ -58,21 +58,21 @@ export const createModel = async (input: ModelInput | FormData) => {
     };
 
     if (productImage) {
-      const result = await uploadToS3(productImage, `models/${brandId}/images`);
+      const result = await uploadToFolder(productImage, `models/${brandId}/images`);
       if (result.success) {
         uploadResults.imageUrl = result.url || null;
       }
     }
 
     if (specSheet) {
-      const result = await uploadToS3(specSheet, `models/${brandId}/specs`);
+      const result = await uploadToFolder(specSheet, `models/${brandId}/specs`);
       if (result.success) {
         uploadResults.specSheetUrl = result.url || null;
       }
     }
 
     for (const file of additionalFiles) {
-      const result = await uploadToS3(file, `models/${brandId}/additional`);
+      const result = await uploadToFolder(file, `models/${brandId}/additional`);
       if (result.success && result.url) {
         uploadResults.additionalFiles.push({
           url: result.url,

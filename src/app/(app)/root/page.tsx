@@ -4,6 +4,7 @@ import UsersTable from "@/components/admin/userTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { headers } from "next/headers";
 import CreateOrganization from "./CreateOrEditOrganization";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,12 @@ export default async function RootDashboard() {
             <CardTitle>Usuarios</CardTitle>
           </CardHeader>
           <CardContent>
-            <OrganizationTable />
-            <UsersTable />
+            <Suspense fallback={<div>Cargando organizaciones...</div>}>
+              <OrganizationTable />
+            </Suspense>
+            <Suspense fallback={<div>Cargando usuarios...</div>}>
+              <UsersTable />
+            </Suspense>
             <p className="w-full text-center text-lime-500 text-xl pt-10">
               Los cambios realizados se realizaran luego de volverse a loguear
             </p>

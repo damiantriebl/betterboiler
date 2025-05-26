@@ -1,7 +1,6 @@
 "use client";
 
 import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
-import type { BranchData } from "@/actions/stock/get-branch";
 import { BrandModelCombobox } from "@/components/custom/BrandModelCombobox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -43,6 +42,7 @@ import { IdentificacionSection } from "./form-sections/IdentificacionSection";
 import { LegalSection } from "./form-sections/LegalSection";
 import { MultimediaSection } from "./form-sections/MultimediaSection";
 import { PreciosSection } from "./form-sections/PreciosSection";
+import { BranchData } from "@/actions/stock/form-data-unified";
 
 // Constantes para pestañas
 const TABS_ORDER = ["producto", "identificacion", "precios", "multimedia", "legal"] as const;
@@ -55,9 +55,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-    value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    value === "" ? (
+      value === undefined ||
+      (Array.isArray(value) && value.length === 0) ||
+      value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -143,18 +143,18 @@ export function NewMotoFormRefactored({
         displacement: initialData.displacement,
         units: initialData.id
           ? [
-              {
-                idTemporal: initialData.id,
-                chassisNumber: initialData.chassisNumber,
-                engineNumber: initialData.engineNumber ?? "",
-                colorId: initialData.colorId,
-                mileage: initialData.mileage,
-                branchId: initialData.branchId,
-                state: initialData.state,
-                licensePlate: initialData.licensePlate ?? "",
-                observations: initialData.observations ?? "",
-              },
-            ]
+            {
+              idTemporal: initialData.id,
+              chassisNumber: initialData.chassisNumber,
+              engineNumber: initialData.engineNumber ?? "",
+              colorId: initialData.colorId,
+              mileage: initialData.mileage,
+              branchId: initialData.branchId,
+              state: initialData.state,
+              licensePlate: initialData.licensePlate ?? "",
+              observations: initialData.observations ?? "",
+            },
+          ]
           : [],
         currency: initialData.currency,
         costPrice: initialData.costPrice,

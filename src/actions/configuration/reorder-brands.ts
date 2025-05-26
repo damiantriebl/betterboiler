@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 // Tipo simple para el estado de esta acción específica
 interface ReorderState {

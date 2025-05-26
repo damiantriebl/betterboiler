@@ -1,6 +1,5 @@
 import { getClients } from "@/actions/clients/manage-clients";
-import { type MotorcycleTableOptimized, getMotorcyclesOptimized } from "@/actions/sales/get-motorcycles-optimized";
-import { type MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
+import { type MotorcycleTableData, getMotorcyclesOptimized } from "@/actions/sales/get-motorcycles-unified";
 import { getOrganizationBankingPromotions } from "@/actions/banking-promotions/get-banking-promotions";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
@@ -11,16 +10,9 @@ import { AlertCircle } from "lucide-react";
 import { Suspense } from "react";
 import SalesClientComponent from "./SalesClientComponent";
 
-// 🚀 ADAPTADOR: Convertir MotorcycleTableOptimized a MotorcycleTableRowData
-function adaptOptimizedToRowData(optimized: MotorcycleTableOptimized[]): MotorcycleTableRowData[] {
-  return optimized.map((moto) => ({
-    ...moto,
-    // Adaptar el formato de brand
-    brand: moto.brand ? {
-      name: moto.brand.name,
-      organizationBrands: [{ color: moto.brand.color }]
-    } : null
-  }));
+// 🚀 ADAPTADOR: Convertir MotorcycleTableData a formato compatible
+function adaptOptimizedToRowData(optimized: MotorcycleTableData[]): MotorcycleTableData[] {
+  return optimized;
 }
 
 // 🚀 OPTIMIZACIÓN 1: Componente de Loading específico para sales
@@ -72,9 +64,7 @@ async function SalesContent() {
     const [motorcyclesRawData, clientsData, promotionsData] = await Promise.all([
       // Solo motos disponibles para venta usando cache optimizado
       getMotorcyclesOptimized({
-        filter: {
-          state: ['STOCK', 'RESERVADO'] // Solo estados relevantes para ventas
-        }
+        state: ['STOCK', 'RESERVADO'] // Solo estados relevantes para ventas
       }),
       getClients(),
       // Promociones solo si son necesarias

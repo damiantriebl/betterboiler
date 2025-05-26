@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { deleteFromS3 } from "@/lib/s3";
+import { deleteFromS3 } from "@/lib/s3-unified";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(

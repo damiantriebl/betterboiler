@@ -1,6 +1,5 @@
 "use client";
 
-import type { BranchData } from "@/actions/stock/get-branch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -17,6 +16,7 @@ import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
 import type { Supplier } from "@prisma/client";
 import React from "react";
 import type { BrandForCombobox } from "./page"; // Asume que este tipo está en page.tsx
+import { BranchData } from "@/actions/stock/form-data-unified";
 
 // Interfaz para las props del Preview
 interface BatchPreviewProps {

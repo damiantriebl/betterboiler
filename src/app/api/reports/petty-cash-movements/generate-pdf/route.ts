@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { generatePettyCashActivityPDF, createPettyCashActivityPDFResponse } from "@/lib/pdf-generators/petty-cash-activity-pdf";
 import type { ReportDataForPdf } from "@/types/PettyCashActivity";
 import prisma from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "@/actions/util";
 
 // branchId puede ser un string (ID numérico o "general_account") o no estar definido.
 const querySchema = z.object({

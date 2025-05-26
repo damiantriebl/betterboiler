@@ -10,7 +10,7 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 // Use the directly imported type
 type PaymentFrequency = PrismaPaymentFrequencyType;

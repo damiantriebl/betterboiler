@@ -77,7 +77,7 @@ export type UpdatePettyCashSpendInput = z.infer<typeof updatePettyCashSpendSchem
 
 // --- Update Movement Schema (for general movement updates) ---
 export const updatePettyCashMovementSchema = z.object({
-  movementId: z.string(),
+  movementId: z.string().min(1, "El ID del movimiento es requerido."),
   amount: z.coerce
     .number({ invalid_type_error: "El monto debe ser un número." })
     .positive({ message: "El monto debe ser positivo." })

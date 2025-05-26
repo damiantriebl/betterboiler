@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 import { MotorcycleState } from "@prisma/client";
 
 export async function getReservationsReport(dateRange?: { from?: Date; to?: Date }) {

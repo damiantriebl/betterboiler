@@ -1,6 +1,6 @@
 "use client"; // Asegurarse de que es un Client Component por los hooks
 
-import { createSupplier, updateSupplier } from "@/actions/suppliers/manage-suppliers"; // Importar ambas acciones
+import { createSupplier, updateSupplier } from "@/actions/suppliers/suppliers-unified"; // Importar ambas acciones
 import LoadingButton from "@/components/custom/LoadingButton"; // Asumo que tienes este componente
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

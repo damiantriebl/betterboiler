@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { CreatePettyCashDepositState } from "@/types/action-states";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 const initialState: CreatePettyCashDepositState = {
   status: "idle",

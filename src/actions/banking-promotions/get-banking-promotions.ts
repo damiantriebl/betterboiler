@@ -4,8 +4,8 @@ import prisma from "@/lib/prisma";
 import type { Bank } from "@/types/banking-promotions";
 import { unstable_cache } from "next/cache";
 
-// Tipo inferido de Prisma para las promociones bancarias
-type PrismaBankingPromotionWithRelations = Awaited<ReturnType<typeof prisma.bankingPromotion.findMany>>[0];
+// Tipo para las promociones bancarias con relaciones
+type PrismaBankingPromotionWithRelations = any;
 
 // Get all banks for selecting in forms
 export async function getAllBanks(): Promise<Bank[]> {

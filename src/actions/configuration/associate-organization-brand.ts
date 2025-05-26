@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 

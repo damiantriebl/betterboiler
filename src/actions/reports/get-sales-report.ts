@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma";
 import type { SalesReport } from "@/types/reports";
 import { MotorcycleState } from "@prisma/client";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 export async function getSalesReport(dateRange?: { from?: Date; to?: Date }): Promise<SalesReport> {
   const org = await getOrganizationIdFromSession();

@@ -1,7 +1,7 @@
 import { getMotorcycleById } from "@/actions/sales/get-motorcycle-by-id";
-import { getFormData } from "@/actions/stock/get-form-data";
 import { notFound } from "next/navigation";
 import { EditMotorcycleForm } from "./EditMotorcycleForm";
+import { getFormData } from "@/actions/stock";
 
 interface EditMotorcyclePageProps {
   params: Promise<{

@@ -45,10 +45,11 @@ vi.mock('sharp', () => {
 });
 
 // Mock de S3 upload
-vi.mock('../../S3/upload-buffer-to-s3', () => ({
-  uploadBufferToS3: vi.fn().mockResolvedValue({
+vi.mock('@/lib/s3-unified', () => ({
+  uploadToS3: vi.fn().mockResolvedValue({
     success: true,
-    path: 'mock-s3-path',
+    key: 'mock-s3-key',
+    url: 'https://s3.example.com/mock-s3-key',
   }),
 }));
 

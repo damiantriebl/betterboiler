@@ -1,5 +1,6 @@
 import UsersTable from "@/components/admin/userTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Suspense } from "react";
 
 export default async function AdminDashboard() {
   return (
@@ -15,7 +16,9 @@ export default async function AdminDashboard() {
             <CardTitle>Usuarios</CardTitle>
           </CardHeader>
           <CardContent>
-            <UsersTable />
+            <Suspense fallback={<div>Cargando usuarios...</div>}>
+              <UsersTable />
+            </Suspense>
           </CardContent>
         </Card>
       </div>

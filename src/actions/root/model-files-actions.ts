@@ -1,14 +1,20 @@
 "use server";
 
-import { auth } from "@/auth";
-import { deleteFromS3, uploadToS3 } from "@/lib/s3";
+import { getSession } from "@/actions/util";
+import { deleteFromS3, uploadToS3 } from "@/lib/s3-unified";
 import type { ActionState } from "@/types/action-states";
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import sharp from "sharp";
 
-const prisma = new PrismaClient();
+// Singleton pattern para PrismaClient
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 interface FileUploadResult {
   id: string;
@@ -21,14 +27,30 @@ interface FileUploadResult {
 
 // Helper function to get and validate session
 async function _getAuthenticatedSession() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  const sessionResult = await getSession();
+  if (!sessionResult.session?.user) {
     return {
       success: false,
       error: "No autorizado. Debe iniciar sesión para realizar esta acción.",
     };
   }
-  return { success: true, session };
+  return { success: true, session: sessionResult.session };
+}
+
+// Helper function to validate and parse modelId
+function _validateModelId(
+  modelId: unknown,
+): { success: true; id: number } | { success: false; error: string } {
+  if (!modelId || typeof modelId !== "string") {
+    return { success: false, error: "ID de modelo no válido" };
+  }
+
+  const parsedId = Number.parseInt(modelId, 10);
+  if (Number.isNaN(parsedId) || parsedId <= 0) {
+    return { success: false, error: "ID de modelo no válido" };
+  }
+
+  return { success: true, id: parsedId };
 }
 
 export async function uploadModelFiles(
@@ -40,13 +62,15 @@ export async function uploadModelFiles(
       return authResult;
     }
 
-    const modelId = formData.get("modelId");
-    if (!modelId || typeof modelId !== "string") {
-      return { success: false, error: "ID de modelo no válido" };
+    const modelIdValidation = _validateModelId(formData.get("modelId"));
+    if (!modelIdValidation.success) {
+      return { success: false, error: modelIdValidation.error };
     }
 
+    const modelId = modelIdValidation.id;
+
     const model = await prisma.model.findUnique({
-      where: { id: Number.parseInt(modelId) },
+      where: { id: modelId },
       include: { brand: true },
     });
 
@@ -58,8 +82,7 @@ export async function uploadModelFiles(
     const modelNameSanitized = model.name.toLowerCase().replace(/[^a-z0-9-]/g, "-");
     const basePath = `models/${brandNameSanitized}/${modelNameSanitized}`;
 
-    const uploadedFiles: FileUploadResult[] = [];
-    const uploadPromises: Promise<void>[] = [];
+    const uploadPromises: Promise<FileUploadResult | null>[] = [];
 
     for (const [key, value] of formData.entries()) {
       if (!(value instanceof File) || key === "modelId") continue;
@@ -71,96 +94,16 @@ export async function uploadModelFiles(
         (file.name.toLowerCase().endsWith(".pdf") && file.type === "application/octet-stream");
 
       if (isImage) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const fileName = file.name.split(".")[0];
-
-        // Crear versión grande (800px)
-        const largeBuffer = await sharp(buffer)
-          .resize(800, null, { withoutEnlargement: true })
-          .webp({ quality: 80 })
-          .toBuffer();
-
-        // Crear versión pequeña (400px)
-        const smallBuffer = await sharp(buffer)
-          .resize(400, null, { withoutEnlargement: true })
-          .webp({ quality: 75 })
-          .toBuffer();
-
-        const uploadPromise = Promise.all([
-          uploadToS3(largeBuffer, `${basePath}/images/${fileName}_800.webp`, "image/webp"),
-          uploadToS3(smallBuffer, `${basePath}/images/${fileName}_400.webp`, "image/webp"),
-        ]).then(async ([largeResult, smallResult]) => {
-          if (largeResult.success) {
-            const createdFile = await prisma.modelFile.create({
-              data: {
-                modelId: Number.parseInt(modelId),
-                name: file.name,
-                type: "image",
-                url: largeResult.url,
-                size: largeBuffer.length,
-                s3Key: largeResult.key,
-                s3KeySmall: smallResult.success ? smallResult.key : null,
-              },
-            });
-
-            uploadedFiles.push({
-              id: createdFile.id,
-              url: createdFile.url,
-              name: createdFile.name,
-              type: createdFile.type,
-              size: createdFile.size,
-              createdAt: createdFile.createdAt,
-            });
-          }
-        });
-
+        const uploadPromise = _processImageFile(file, modelId, basePath);
         uploadPromises.push(uploadPromise);
       } else if (isPDF) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-
-        // Verificación adicional del tipo MIME para PDF
-        if (file.type !== "application/pdf") {
-          if (file.type === "application/octet-stream") {
-            throw new Error(`MIME desconocido para archivo: ${file.name}`);
-          }
-          throw new Error(
-            `Tipo de archivo no válido para PDF: ${file.type}. Solo se aceptan archivos PDF.`,
-          );
-        }
-
-        const uploadPromise = uploadToS3(
-          buffer,
-          `${basePath}/specs/${file.name}`,
-          "application/pdf",
-        ).then(async (result) => {
-          if (result.success) {
-            const createdFile = await prisma.modelFile.create({
-              data: {
-                modelId: Number.parseInt(modelId),
-                name: file.name,
-                type: "spec",
-                url: result.url,
-                size: file.size,
-                s3Key: result.key,
-              },
-            });
-
-            uploadedFiles.push({
-              id: createdFile.id,
-              url: createdFile.url,
-              name: createdFile.name,
-              type: createdFile.type,
-              size: createdFile.size,
-              createdAt: createdFile.createdAt,
-            });
-          }
-        });
-
+        const uploadPromise = _processPDFFile(file, modelId, basePath);
         uploadPromises.push(uploadPromise);
       }
     }
 
-    await Promise.all(uploadPromises);
+    const results = await Promise.all(uploadPromises);
+    const uploadedFiles = results.filter((result): result is FileUploadResult => result !== null);
 
     revalidatePath("/root/global-brands");
     return {
@@ -177,6 +120,111 @@ export async function uploadModelFiles(
   }
 }
 
+async function _processImageFile(
+  file: File,
+  modelId: number,
+  basePath: string,
+): Promise<FileUploadResult | null> {
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileName = file.name.split(".")[0];
+
+    // Crear versión grande (800px)
+    const largeBuffer = await sharp(buffer)
+      .resize(800, null, { withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    // Crear versión pequeña (400px)
+    const smallBuffer = await sharp(buffer)
+      .resize(400, null, { withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toBuffer();
+
+    const [largeResult, smallResult] = await Promise.all([
+      uploadToS3(largeBuffer, `${basePath}/images/${fileName}_800.webp`, "image/webp"),
+      uploadToS3(smallBuffer, `${basePath}/images/${fileName}_400.webp`, "image/webp"),
+    ]);
+
+    if (largeResult.success) {
+      const createdFile = await prisma.modelFile.create({
+        data: {
+          modelId,
+          name: file.name,
+          type: "image",
+          url: largeResult.url,
+          size: largeBuffer.length,
+          s3Key: largeResult.key,
+          s3KeySmall: smallResult.success ? smallResult.key : null,
+        },
+      });
+
+      return {
+        id: createdFile.id,
+        url: createdFile.url,
+        name: createdFile.name,
+        type: createdFile.type,
+        size: createdFile.size,
+        createdAt: createdFile.createdAt,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error procesando imagen ${file.name}:`, error);
+    return null;
+  }
+}
+
+async function _processPDFFile(
+  file: File,
+  modelId: number,
+  basePath: string,
+): Promise<FileUploadResult | null> {
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Validación mejorada para PDFs
+    if (
+      file.type !== "application/pdf" &&
+      !(file.type === "application/octet-stream" && file.name.toLowerCase().endsWith(".pdf"))
+    ) {
+      throw new Error(
+        `Tipo de archivo no válido para PDF: ${file.type}. Solo se aceptan archivos PDF.`,
+      );
+    }
+
+    const result = await uploadToS3(buffer, `${basePath}/specs/${file.name}`, "application/pdf");
+
+    if (result.success) {
+      const createdFile = await prisma.modelFile.create({
+        data: {
+          modelId,
+          name: file.name,
+          type: "spec",
+          url: result.url,
+          size: file.size,
+          s3Key: result.key,
+        },
+      });
+
+      return {
+        id: createdFile.id,
+        url: createdFile.url,
+        name: createdFile.name,
+        type: createdFile.type,
+        size: createdFile.size,
+        createdAt: createdFile.createdAt,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error procesando PDF ${file.name}:`, error);
+    return null;
+  }
+}
+
 export async function getModelFiles(
   modelId: number,
 ): Promise<ActionState & { files?: FileUploadResult[] }> {
@@ -184,6 +232,10 @@ export async function getModelFiles(
     const authResult = await _getAuthenticatedSession();
     if (!authResult.success) {
       return authResult;
+    }
+
+    if (!modelId || modelId <= 0 || Number.isNaN(modelId)) {
+      return { success: false, error: "ID de modelo no válido" };
     }
 
     const files = await prisma.modelFile.findMany({
@@ -218,6 +270,10 @@ export async function deleteModelFile(fileId: string): Promise<ActionState> {
       return authResult;
     }
 
+    if (!fileId || fileId.trim() === "") {
+      return { success: false, error: "ID de archivo no válido" };
+    }
+
     const file = await prisma.modelFile.findUnique({
       where: { id: fileId },
     });
@@ -226,12 +282,22 @@ export async function deleteModelFile(fileId: string): Promise<ActionState> {
       return { success: false, error: "Archivo no encontrado" };
     }
 
-    // Eliminar archivo principal de S3
-    await deleteFromS3(file.s3Key);
+    // Eliminar archivos de S3
+    const s3DeletionPromises: Promise<void>[] = [deleteFromS3(file.s3Key)];
 
     // Si es una imagen, eliminar también la versión pequeña
     if (file.type === "image" && file.s3KeySmall) {
-      await deleteFromS3(file.s3KeySmall);
+      s3DeletionPromises.push(deleteFromS3(file.s3KeySmall));
+    }
+
+    try {
+      await Promise.all(s3DeletionPromises);
+    } catch (s3Error) {
+      console.error("Error al eliminar archivo(s) de S3:", s3Error);
+      return {
+        success: false,
+        error: `Error al eliminar archivo de S3: ${s3Error instanceof Error ? s3Error.message : String(s3Error)}`,
+      };
     }
 
     // Eliminar registro de la base de datos

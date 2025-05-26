@@ -1,7 +1,7 @@
 "use client";
 
 import { createCurrentAccount } from "@/actions/current-accounts/create-current-account";
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import { Button } from "@/components/ui/button";
 import {
   Card,

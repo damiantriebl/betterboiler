@@ -9,7 +9,7 @@ import {
   getBankingPromotionDetails,
 } from '../manage-banking-promotions';
 import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../get-Organization-Id-From-Session';
+import { getOrganizationIdFromSession } from '../../util';
 import type { Day } from '@/zod/banking-promotion-schemas';
 
 // Mock de Next.js cache
@@ -37,7 +37,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../get-Organization-Id-From-Session', () => ({
+vi.mock('../../util', () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 

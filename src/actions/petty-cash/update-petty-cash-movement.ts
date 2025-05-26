@@ -6,7 +6,7 @@ import {
   updatePettyCashMovementSchema,
   type UpdatePettyCashMovementInput,
 } from "@/zod/PettyCashZod";
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import type { Prisma } from "@prisma/client";
 
 interface UpdatePettyCashMovementResult {
@@ -80,13 +80,13 @@ export async function updatePettyCashMovement(
       amount: amount,
     };
 
-    if (description !== undefined && description !== null) {
+    if (description !== undefined && description !== null && description !== '') {
       dataForUpdate.description = description;
     }
-    if (ticketNumber !== undefined && ticketNumber !== null) {
+    if (ticketNumber !== undefined && ticketNumber !== null && ticketNumber !== '') {
       dataForUpdate.motive = ticketNumber;
     }
-    if (receiptUrl !== undefined && receiptUrl !== null) {
+    if (receiptUrl !== undefined && receiptUrl !== null && receiptUrl !== '') {
       dataForUpdate.ticketUrl = receiptUrl;
     }
 

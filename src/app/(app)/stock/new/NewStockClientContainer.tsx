@@ -1,7 +1,5 @@
 "use client";
 
-import { createMotorcycleBatch } from "@/actions/stock/create-motorcycle-batch";
-import type { BranchData } from "@/actions/stock/get-branch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { ColorConfig } from "@/types/ColorType";
@@ -14,7 +12,8 @@ import { useForm } from "react-hook-form";
 import { BatchPreview } from "./BatchPreview";
 import { NewMotoFormRefactored } from "./NewMotoForm";
 import type { BrandForCombobox } from "./page";
-import { CreateBatchState } from "@/actions/stock/create-motorcycle-batch";
+import { BranchData } from "@/actions/stock/form-data-unified";
+import { createMotorcycleBatch } from "@/actions/stock";
 
 interface NewStockClientContainerProps {
   availableColors: ColorConfig[];

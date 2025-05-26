@@ -39,7 +39,7 @@ import {
 import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
 // Import types
 import type { SaleProcessState } from "./types";
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "@/actions/util";
 
 // For TypeScript with Next.js params
 type PageParams = {

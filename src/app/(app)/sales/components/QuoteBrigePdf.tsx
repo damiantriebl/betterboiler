@@ -1,5 +1,5 @@
 "use client";
-import { fetchImageAsBase64 } from "@/actions/fetch-Image-As-Base64";
+import { fetchImageAsBase64 } from "@/actions/util";
 import { getLogoUrl } from "@/components/custom/OrganizationLogo";
 import type { QuotePDFProps } from "@/types/quote";
 import { useEffect, useState } from "react";
@@ -47,7 +47,7 @@ export default function QuoteBridgePdf({
           if (imgFile) {
             if (imgFile.url) {
               motoImageUrl = imgFile.url;
-            } else if (imgFile.s3Key) {
+            } else if (imgFile.s3Key && typeof imgFile.s3Key === 'string') {
               motoImageUrl = await getLogoUrl(imgFile.s3Key);
             }
           }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { undoPayment } from '../undo-payment';
 import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../get-Organization-Id-From-Session';
+import { getOrganizationIdFromSession } from '../../util';
 import type { UndoPaymentFormState } from '../undo-payment';
 import { Prisma } from '@prisma/client';
 
@@ -13,7 +13,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../get-Organization-Id-From-Session', () => ({
+vi.mock('../../util', () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 

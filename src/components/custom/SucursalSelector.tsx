@@ -1,7 +1,7 @@
 "use client";
 
+import { BranchData } from "@/actions/stock/form-data-unified";
 // Importar el tipo BranchData definido en la acción
-import type { BranchData } from "@/actions/stock/get-branch";
 import { Button } from "@/components/ui/button";
 import {
   Command,

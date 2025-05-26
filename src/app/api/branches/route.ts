@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import { withPerformanceOptimization, optimizedJsonResponse } from "@/lib/api-optimizer";
 import { CACHE_TTL } from "@/lib/response-cache";
 

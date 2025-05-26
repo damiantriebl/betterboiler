@@ -2,7 +2,7 @@
 
 import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
 import { getFormData } from "@/actions/stock/get-form-data";
-import { updateMotorcycle } from "@/actions/stock/update-motorcycle";
+import { updateMotorcycle } from "@/actions/stock";
 import { NewMotoFormRefactored } from "@/app/(app)/stock/new/NewMotoForm";
 import { toast } from "@/hooks/use-toast";
 import { type MotorcycleBatchFormData, motorcycleBatchSchema } from "@/zod/NewBikeZod";
@@ -36,20 +36,11 @@ export function EditMotorcycleForm({ motorcycle, formData }: EditMotorcycleFormP
             // Redirigir o actualizar de alguna manera si es necesario
         } else if (state?.success === false && state.message) {
             toast({ variant: "destructive", title: "Error", description: state.message });
-            // Si hay errores de validación, pasarlos al form
-            if (state.errors) {
-                for (const key of Object.keys(state.errors)) {
-                    const field = key as keyof MotorcycleBatchFormData;
-                    if (state.errors[field]) {
-                        const errorMessage = state.errors[field];
-                        if (errorMessage) {
-                            form.setError(field, {
-                                type: "manual",
-                                message: Array.isArray(errorMessage) ? errorMessage[0] : errorMessage,
-                            });
-                        }
-                    }
-                }
+            // Si hay error de validación general, mostrarlo
+            if (state.error) {
+                console.error("Error de validación:", state.error);
+                // El error viene como string concatenado, no como objeto de errores individuales
+                // Para manejar errores de campo individual, necesitaríamos modificar el tipo OperationResult
             }
         }
     }, [state, form]);

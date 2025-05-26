@@ -1,6 +1,6 @@
 "use client"; // Necesario por los hooks
 
-import { deleteSupplier } from "@/actions/suppliers/manage-suppliers";
+import { deleteSupplier } from "@/actions/suppliers/suppliers-unified";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

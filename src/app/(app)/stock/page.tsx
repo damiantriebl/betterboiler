@@ -1,4 +1,4 @@
-import { getMotorcycles, type MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
+import { getMotorcycles, type MotorcycleTableData } from "@/actions/sales/get-motorcycles-unified";
 import { getClients } from "@/actions/clients/manage-clients";
 import { getOrganizationBankingPromotions } from "@/actions/banking-promotions/get-banking-promotions";
 import MotorcycleTable from "@/app/(app)/sales/(table)/MotorcycleTable";

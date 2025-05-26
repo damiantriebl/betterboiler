@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { generateInventoryReportPDF as generateInventoryPDF, createInventoryReportPDFResponse } from "@/lib/pdf-generators/inventory-report-pdf";
-import { getInventoryStatusReport } from "@/lib/reports/inventory";
+import { getInventoryStatusReport } from "@/actions/reports/get-inventory-report-unified";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 

@@ -1,4 +1,5 @@
 import PettyCashDataFetcher from "./PettyCashDataFetcher";
+import { Suspense } from "react";
 
 // Ya no es necesario 'use client' aquí si toda la lógica de cliente está en PettyCashClientPage
 // y PettyCashDataFetcher es el Server Component que obtiene los datos.
@@ -6,7 +7,11 @@ import PettyCashDataFetcher from "./PettyCashDataFetcher";
 
 export default function PettyCashPage() {
   // Toda la lógica de obtención de datos se ha movido a PettyCashDataFetcher
-  return <PettyCashDataFetcher />;
+  return (
+    <Suspense fallback={<div>Cargando datos de caja chica...</div>}>
+      <PettyCashDataFetcher />
+    </Suspense>
+  );
 }
 
 // Las funciones getBranchesForOrganization y getUsersForOrganization

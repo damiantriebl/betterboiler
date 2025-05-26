@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import type { PettyCashDeposit, PettyCashWithdrawal, PettyCashSpend } from "@prisma/client";
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { getOrganizationIdFromSession } from "../util";
 
 // Definimos un tipo para la estructura de datos anidada que esperamos
 export interface PettyCashData extends PettyCashDeposit {

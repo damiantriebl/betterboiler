@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { revalidatePath } from 'next/cache';
 import { reorderBrands } from '../reorder-brands';
 import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../get-Organization-Id-From-Session';
+import { getOrganizationIdFromSession } from '../../util';
 
 // Mock de Next.js cache
 vi.mock('next/cache', () => ({
@@ -20,7 +20,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../get-Organization-Id-From-Session', () => ({
+vi.mock('../../util', () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 

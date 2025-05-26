@@ -8,7 +8,7 @@ import {
   associateMultipleCardTypesToBank,
 } from '../manage-bank-cards';
 import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../get-Organization-Id-From-Session';
+import { getOrganizationIdFromSession } from '../../util';
 
 // Mock de Next.js cache
 vi.mock('next/cache', () => ({
@@ -34,7 +34,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../get-Organization-Id-From-Session', () => ({
+vi.mock('../../util', () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 

@@ -6,18 +6,10 @@ import {
 } from "@/actions";
 import PettyCashClientPage from "./PettyCashClientPage";
 import type { Branch } from "@prisma/client";
-import { getBranchesForOrganizationAction } from "@/actions/get-Branches-For-Organization-Action";
-import { getUsersForOrganizationAction } from "@/actions/get-Users-For-Organization-Action";
-import { getOrganizationIdFromSession } from "@/actions/get-Organization-Id-From-Session";
+import { getBranchesForOrganizationAction, getUsersForOrganizationAction, getOrganizationIdFromSession } from "@/actions/util";
 
-// La definición del tipo User se puede mover a un archivo global /types/User.ts
-// y ser importada tanto aquí como en getUsersForOrganizationAction.ts y en PettyCashClientPage.tsx
-// para asegurar consistencia.
-interface User {
-  id: string;
-  name: string;
-  role: string;
-}
+// Importar el tipo correcto desde util
+import type { OrganizationUser } from "@/actions/util";
 
 export default async function PettyCashDataFetcher() {
   const org = await getOrganizationIdFromSession();
@@ -41,7 +33,14 @@ export default async function PettyCashDataFetcher() {
   }
 
   const branches: Branch[] = await getBranchesForOrganizationAction(organizationId);
-  const users: User[] = await getUsersForOrganizationAction(organizationId);
+  const organizationUsers: OrganizationUser[] = await getUsersForOrganizationAction(organizationId);
+
+  // Convertir OrganizationUser a User para compatibilidad con el componente
+  const users = organizationUsers.map(user => ({
+    id: user.id,
+    name: user.name || "Sin nombre", // Manejar el caso null
+    role: user.role || "user"
+  }));
 
   return (
     <PettyCashClientPage

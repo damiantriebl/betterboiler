@@ -12,8 +12,8 @@ import type {
 } from "@prisma/client";
 import { z } from "zod";
 import type { CreatePettyCashSpendState } from "@/types/action-states"; // Import global state type
-import { uploadGenericFileToS3 } from "../S3/uploadToS3"; // Usar la nueva función
-import { getOrganizationIdFromSession } from "../get-Organization-Id-From-Session";
+import { uploadToS3 } from "@/lib/s3-unified"; // Usar la nueva función
+import { getOrganizationIdFromSession } from "../util";
 
 interface CreatePettyCashSpendResult {
   data?: PettyCashSpend;
@@ -129,7 +129,12 @@ export async function createPettyCashSpendWithTicket(
       const arrayBuffer = await ticketFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      ticketUrl = await uploadGenericFileToS3(buffer, s3Key, ticketFile.type);
+      const uploadResult = await uploadToS3(buffer, s3Key, ticketFile.type);
+      if (uploadResult.success) {
+        ticketUrl = uploadResult.url;
+      } else {
+        throw new Error(uploadResult.error);
+      }
     } catch (error) {
       console.error("Error al procesar o subir archivo a S3:", error);
       const errorMessage =

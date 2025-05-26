@@ -1,4 +1,5 @@
 import { generateQuotePDF, createQuotePDFResponse, type QuotePDFProps } from '@/lib/pdf-generators/quote-pdf';
+import { NextResponse } from 'next/server';
 
 export const config = {
   api: {
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
     const pdfProps: QuotePDFProps = await req.json();
 
     if (!pdfProps.motorcycle) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'No se pudo crear el documento PDF (faltan datos de motocicleta)' },
         { status: 400 },
       );
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error('Error en la generación del PDF:', error);
-    return Response.json(
+    return NextResponse.json(
       {
         error: 'No se pudo generar el PDF',
         details: error instanceof Error ? error.message : 'Error desconocido',

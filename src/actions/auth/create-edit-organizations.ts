@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
-import { uploadBufferToS3 } from "../S3/upload-buffer-to-s3";
+import { uploadToS3 } from "@/lib/s3-unified";
 
 export async function createOrUpdateOrganization(formData: FormData): Promise<serverMessage> {
   // Verificar autenticación
@@ -59,14 +59,14 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
             .webp({ quality: 80 })
             .toBuffer();
           const path = `organization/${organizationId}/logo_${size}`;
-          return uploadBufferToS3({ buffer: resizedBuffer, path });
+          return uploadToS3(resizedBuffer, path, "image/webp");
         }),
       );
       // Use the result of the 400px upload (first in sizes array)
       const result400 = uploadResults[0];
-      if (result400.success && result400.path) {
+      if (result400.success && result400.key) {
         // Store the S3 key in the database
-        logoUrl = result400.path;
+        logoUrl = result400.key;
       } else {
         console.error("Error uploading 400px logo:", result400);
       }
@@ -83,12 +83,13 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
         .webp({ quality: 75 })
         .toBuffer();
       const thumbnailPath = `organization/${organizationId}/thumbnail_200`;
-      const thumbnailUploadResult = await uploadBufferToS3({
-        buffer: resizedThumbnailBuffer,
-        path: thumbnailPath,
-      });
-      if (thumbnailUploadResult.success && thumbnailUploadResult.path) {
-        thumbnailUrl = thumbnailUploadResult.path; // Guardar KEY del thumbnail
+      const thumbnailUploadResult = await uploadToS3(
+        resizedThumbnailBuffer,
+        thumbnailPath,
+        "image/webp"
+      );
+      if (thumbnailUploadResult.success && thumbnailUploadResult.key) {
+        thumbnailUrl = thumbnailUploadResult.key; // Guardar KEY del thumbnail
       } else {
         console.error("Error uploading 200px thumbnail:", thumbnailUploadResult);
       }

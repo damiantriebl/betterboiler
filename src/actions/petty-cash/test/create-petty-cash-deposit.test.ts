@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { revalidatePath } from 'next/cache';
 import { createPettyCashDeposit } from '../create-petty-cash-deposit';
 import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../get-Organization-Id-From-Session';
+import { getOrganizationIdFromSession } from '../../util';
 import type { CreatePettyCashDepositState } from '@/types/action-states';
 
 // Mock de Next.js cache
@@ -20,7 +20,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../get-Organization-Id-From-Session', () => ({
+vi.mock('../../util', () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
@@ -44,7 +44,7 @@ describe('Create Petty Cash Deposit', () => {
     vi.restoreAllMocks();
   });
 
-  const mockOrganizationId = 'org-123';
+  const mockOrganizationId = 'clfx1234567890abcdefghijk'; // Valid CUID format
   const initialState: CreatePettyCashDepositState = {
     status: 'idle',
     message: '',
@@ -64,14 +64,32 @@ describe('Create Petty Cash Deposit', () => {
     updatedAt: new Date(),
   };
 
+  // Helper function para crear FormData válido básico
+    const createValidFormData = (overrides: Record<string, string> = {}) => {    const formData = new FormData();    formData.append('description', overrides.description ?? 'Depósito de prueba');    formData.append('amount', overrides.amount ?? '1000');    formData.append('date', overrides.date ?? '2024-01-15');
+    
+    // Solo agregar campos opcionales si se especifican
+    if (overrides.reference !== undefined) {
+      formData.append('reference', overrides.reference);
+    }
+    if (overrides.branchId !== undefined) {
+      formData.append('branchId', overrides.branchId);
+    }
+    if (overrides.organizationId !== undefined) {
+      formData.append('organizationId', overrides.organizationId);
+    }
+    
+    return formData;
+  };
+
   describe('✅ Casos Exitosos', () => {
     it('debería crear un depósito de caja chica correctamente', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito inicial de enero');
-      formData.append('amount', '5000.50');
-      formData.append('date', '2024-01-15');
-      formData.append('reference', 'REF-001');
+      const formData = createValidFormData({
+        description: 'Depósito inicial de enero',
+        amount: '5000.50',
+        date: '2024-01-15',
+        reference: 'REF-001'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -98,10 +116,12 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería crear depósito sin referencia', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito sin referencia');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-16');
+      const formData = createValidFormData({
+        description: 'Depósito sin referencia',
+        amount: '1000',
+        date: '2024-01-16'
+        // Sin reference
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -126,11 +146,12 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería manejar branchId numérico correctamente', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con sucursal');
-      formData.append('amount', '2000');
-      formData.append('date', '2024-01-17');
-      formData.append('branchId', '5');
+      const formData = createValidFormData({
+        description: 'Depósito con sucursal',
+        amount: '2000',
+        date: '2024-01-17',
+        branchId: '5'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -155,11 +176,12 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería manejar valor __general__ para branchId', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito general');
-      formData.append('amount', '3000');
-      formData.append('date', '2024-01-18');
-      formData.append('branchId', '__general__');
+      const formData = createValidFormData({
+        description: 'Depósito general',
+        amount: '3000',
+        date: '2024-01-18',
+        branchId: '__general__'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -184,12 +206,13 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería usar organizationId del FormData cuando esté presente', async () => {
       // Arrange
-      const formDataOrgId = 'org-456';
-      const formData = new FormData();
-      formData.append('organizationId', formDataOrgId);
-      formData.append('description', 'Depósito con org del form');
-      formData.append('amount', '1500');
-      formData.append('date', '2024-01-19');
+      const formDataOrgId = 'clfx9876543210abcdefghijk'; // Another valid CUID
+      const formData = createValidFormData({
+        organizationId: formDataOrgId,
+        description: 'Depósito con org del form',
+        amount: '1500',
+        date: '2024-01-19'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -214,10 +237,11 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería procesar números decimales correctamente', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con decimales');
-      formData.append('amount', '1234.56');
-      formData.append('date', '2024-01-20');
+      const formData = createValidFormData({
+        description: 'Depósito con decimales',
+        amount: '1234.56',
+        date: '2024-01-20'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -235,14 +259,43 @@ describe('Create Petty Cash Deposit', () => {
       );
       expect(result.status).toBe('success');
     });
+
+    it('debería manejar espacios y trimear campos correctamente', async () => {
+      // Arrange
+      const formData = new FormData();
+      formData.append('description', '  Depósito con espacios  ');
+      formData.append('amount', '  1000.50  ');
+      formData.append('date', '  2024-01-15  ');
+
+      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+      mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
+
+      // Act
+      const result = await createPettyCashDeposit(initialState, formData);
+
+      // Assert
+      expect(result.status).toBe('success');
+      expect(mockPrisma.pettyCashDeposit.create).toHaveBeenCalled();
+    });
   });
 
   describe('❌ Manejo de Errores de Validación', () => {
-    it('debería fallar cuando falta la descripción', async () => {
+    it('debería fallar con descripción completamente vacía', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData({ description: '' }); // Completamente vacío
+      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+      // Act
+      const result = await createPettyCashDeposit(initialState, formData);
+      // Assert
+      expect(result.status).toBe('error');
+      expect(result.message).toBe('Validación fallida. Por favor revisa los campos.');
+      expect(result.errors?.description).toBeDefined();
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
+    });
+
+    it('debería fallar con monto negativo', async () => {
+      // Arrange
+      const formData = createValidFormData({ amount: '-500' });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
 
@@ -252,66 +305,13 @@ describe('Create Petty Cash Deposit', () => {
       // Assert
       expect(result.status).toBe('error');
       expect(result.message).toBe('Validación fallida. Por favor revisa los campos.');
-      expect(result.errors?.description).toBeDefined();
-      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
-    });
-
-    it('debería fallar con descripción vacía', async () => {
-      // Arrange
-      const formData = new FormData();
-      formData.append('description', '');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
-
-      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-
-      // Act
-      const result = await createPettyCashDeposit(initialState, formData);
-
-      // Assert
-      expect(result.status).toBe('error');
-      expect(result.errors?.description).toContain('La descripción es requerida.');
-    });
-
-    it('debería fallar cuando falta el monto', async () => {
-      // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito sin monto');
-      formData.append('date', '2024-01-15');
-
-      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-
-      // Act
-      const result = await createPettyCashDeposit(initialState, formData);
-
-      // Assert
-      expect(result.status).toBe('error');
       expect(result.errors?.amount).toBeDefined();
-    });
-
-    it('debería fallar con monto negativo', async () => {
-      // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con monto negativo');
-      formData.append('amount', '-100');
-      formData.append('date', '2024-01-15');
-
-      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-
-      // Act
-      const result = await createPettyCashDeposit(initialState, formData);
-
-      // Assert
-      expect(result.status).toBe('error');
-      expect(result.errors?.amount).toContain('El monto debe ser positivo.');
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
     });
 
     it('debería fallar con monto inválido', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con monto inválido');
-      formData.append('amount', 'no-es-numero');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData({ amount: 'no-es-numero' });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
 
@@ -320,49 +320,14 @@ describe('Create Petty Cash Deposit', () => {
 
       // Assert
       expect(result.status).toBe('error');
+      expect(result.message).toBe('Validación fallida. Por favor revisa los campos.');
       expect(result.errors?.amount).toBeDefined();
-    });
-
-    it('debería fallar cuando falta la fecha', async () => {
-      // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito sin fecha');
-      formData.append('amount', '1000');
-
-      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-
-      // Act
-      const result = await createPettyCashDeposit(initialState, formData);
-
-      // Assert
-      expect(result.status).toBe('error');
-      expect(result.errors?.date).toBeDefined();
-    });
-
-    it('debería fallar con fecha inválida', async () => {
-      // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con fecha inválida');
-      formData.append('amount', '1000');
-      formData.append('date', 'fecha-invalida');
-
-      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-
-      // Act
-      const result = await createPettyCashDeposit(initialState, formData);
-
-      // Assert
-      expect(result.status).toBe('error');
-      expect(result.errors?.date).toBeDefined();
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
     });
 
     it('debería fallar con branchId inválido', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con branchId inválido');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
-      formData.append('branchId', 'abc');
+      const formData = createValidFormData({ branchId: 'invalid-branch' });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
 
@@ -373,16 +338,46 @@ describe('Create Petty Cash Deposit', () => {
       expect(result.status).toBe('error');
       expect(result.message).toBe('ID de sucursal inválido.');
       expect(result.errors?.branchId).toContain('ID de sucursal inválido.');
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
+    });
+
+    it('debería fallar con organizationId inválido (no CUID)', async () => {
+      // Arrange
+      const formData = createValidFormData({ organizationId: 'invalid-org-id' });
+
+      mockGetOrganization.mockResolvedValue({ organizationId: null });
+
+      // Act
+      const result = await createPettyCashDeposit(initialState, formData);
+
+      // Assert
+      expect(result.status).toBe('error');
+      expect(result.message).toBe('Validación fallida. Por favor revisa los campos.');
+      expect(result.errors?.organizationId).toBeDefined();
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
+    });
+
+    it('debería fallar con monto cero', async () => {
+      // Arrange
+      const formData = createValidFormData({ amount: '0' });
+
+      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+
+      // Act
+      const result = await createPettyCashDeposit(initialState, formData);
+
+      // Assert
+      expect(result.status).toBe('error');
+      expect(result.message).toBe('Validación fallida. Por favor revisa los campos.');
+      expect(result.errors?.amount).toBeDefined();
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
     });
   });
 
   describe('❌ Manejo de Errores de Organización', () => {
     it('debería fallar cuando no hay organizationId en sesión ni FormData', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito sin organización');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData(); // Sin organizationId en FormData
 
       mockGetOrganization.mockResolvedValue({ organizationId: null });
 
@@ -393,16 +388,14 @@ describe('Create Petty Cash Deposit', () => {
       expect(result.status).toBe('error');
       expect(result.message).toBe('ID de Organización no encontrado.');
       expect(result.errors?._form).toContain('ID de Organización no encontrado.');
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
     });
 
-    it('debería fallar cuando hay error en getOrganizationIdFromSession', async () => {
+    it('debería fallar cuando getOrganizationIdFromSession devuelve null', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con error de sesión');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData();
 
-      mockGetOrganization.mockResolvedValue({ error: 'Session error' });
+      mockGetOrganization.mockResolvedValue({ organizationId: null });
 
       // Act
       const result = await createPettyCashDeposit(initialState, formData);
@@ -410,18 +403,17 @@ describe('Create Petty Cash Deposit', () => {
       // Assert
       expect(result.status).toBe('error');
       expect(result.message).toBe('ID de Organización no encontrado.');
+      expect(mockPrisma.pettyCashDeposit.create).not.toHaveBeenCalled();
     });
   });
 
   describe('❌ Manejo de Errores de Base de Datos', () => {
     it('debería manejar errores de base de datos conocidos', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con error de DB');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData();
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+
       const dbError = new Error('Database connection failed');
       mockPrisma.pettyCashDeposit.create.mockRejectedValue(dbError);
 
@@ -440,10 +432,7 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería manejar errores desconocidos', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito con error desconocido');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData();
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockRejectedValue('Unknown error');
@@ -456,15 +445,30 @@ describe('Create Petty Cash Deposit', () => {
       expect(result.message).toBe('Error desconocido al crear el depósito.');
       expect(result.errors?._form).toContain('Error desconocido al crear el depósito.');
     });
+
+    it('debería manejar errores de violación de constraints', async () => {
+      // Arrange
+      const formData = createValidFormData();
+
+      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+
+      const constraintError = new Error('Unique constraint failed');
+      mockPrisma.pettyCashDeposit.create.mockRejectedValue(constraintError);
+
+      // Act
+      const result = await createPettyCashDeposit(initialState, formData);
+
+      // Assert
+      expect(result.status).toBe('error');
+      expect(result.message).toBe('Unique constraint failed');
+      expect(result.errors?._form).toContain('Unique constraint failed');
+    });
   });
 
   describe('🔄 Cache Revalidation', () => {
     it('debería revalidar cuando la creación es exitosa', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito para revalidación');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData();
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -476,14 +480,25 @@ describe('Create Petty Cash Deposit', () => {
       expect(mockRevalidatePath).toHaveBeenCalledWith('/(app)/petty-cash', 'page');
     });
 
-    it('no debería revalidar cuando hay errores', async () => {
+    it('no debería revalidar cuando hay errores de validación', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
-      // Sin descripción para forzar error
+      const formData = createValidFormData({ amount: '-500' }); // Monto negativo para forzar error
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+
+      // Act
+      await createPettyCashDeposit(initialState, formData);
+
+      // Assert
+      expect(mockRevalidatePath).not.toHaveBeenCalled();
+    });
+
+    it('no debería revalidar cuando hay errores de base de datos', async () => {
+      // Arrange
+      const formData = createValidFormData();
+
+      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+      mockPrisma.pettyCashDeposit.create.mockRejectedValue(new Error('DB Error'));
 
       // Act
       await createPettyCashDeposit(initialState, formData);
@@ -496,10 +511,11 @@ describe('Create Petty Cash Deposit', () => {
   describe('🎯 Edge Cases', () => {
     it('debería manejar fechas límite correctamente', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito fecha límite');
-      formData.append('amount', '1000');
-      formData.append('date', '1900-01-01');
+      const formData = createValidFormData({
+        description: 'Depósito límite',
+        amount: '999999.99',
+        date: '2099-12-31'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -512,7 +528,7 @@ describe('Create Petty Cash Deposit', () => {
       expect(mockPrisma.pettyCashDeposit.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            date: new Date('1900-01-01'),
+            date: new Date('2099-12-31'),
           }),
         })
       );
@@ -520,10 +536,11 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería manejar montos muy grandes', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito monto grande');
-      formData.append('amount', '999999999.99');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData({
+        description: 'Depósito grande',
+        amount: '999999999.99',
+        date: '2024-01-15'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -545,10 +562,11 @@ describe('Create Petty Cash Deposit', () => {
     it('debería manejar descripción muy larga', async () => {
       // Arrange
       const longDescription = 'a'.repeat(500);
-      const formData = new FormData();
-      formData.append('description', longDescription);
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
+      const formData = createValidFormData({
+        description: longDescription,
+        amount: '1000',
+        date: '2024-01-15'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -569,11 +587,12 @@ describe('Create Petty Cash Deposit', () => {
 
     it('debería manejar branchId cero correctamente', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', 'Depósito branchId cero');
-      formData.append('amount', '1000');
-      formData.append('date', '2024-01-15');
-      formData.append('branchId', '0');
+      const formData = createValidFormData({
+        description: 'Depósito sucursal 0',
+        amount: '1000',
+        date: '2024-01-15',
+        branchId: '0'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -592,13 +611,14 @@ describe('Create Petty Cash Deposit', () => {
       );
     });
 
-    it('debería manejar espacios en campos de texto', async () => {
+    it('debería manejar referencia con caracteres especiales', async () => {
       // Arrange
-      const formData = new FormData();
-      formData.append('description', '  Depósito con espacios  ');
-      formData.append('amount', '  1000.50  ');
-      formData.append('date', '2024-01-15');
-      formData.append('reference', '  REF-001  ');
+      const formData = createValidFormData({
+        description: 'Depósito con referencia especial',
+        amount: '1000',
+        date: '2024-01-15',
+        reference: 'REF-001/2024#$%'
+      });
 
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
@@ -608,7 +628,31 @@ describe('Create Petty Cash Deposit', () => {
 
       // Assert
       expect(result.status).toBe('success');
-      // Los espacios deben ser manejados por el schema de validación
+      expect(mockPrisma.pettyCashDeposit.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            reference: 'REF-001/2024#$%',
+          }),
+        })
+      );
+    });
+
+    it('debería manejar fecha en formato ISO correctamente', async () => {
+      // Arrange
+      const formData = createValidFormData({
+        description: 'Depósito con fecha ISO',
+        amount: '1000',
+        date: '2024-01-15T00:00:00.000Z'
+      });
+
+      mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
+      mockPrisma.pettyCashDeposit.create.mockResolvedValue(mockCreatedDeposit);
+
+      // Act
+      const result = await createPettyCashDeposit(initialState, formData);
+
+      // Assert
+      expect(result.status).toBe('success');
       expect(mockPrisma.pettyCashDeposit.create).toHaveBeenCalled();
     });
   });

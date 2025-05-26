@@ -1,5 +1,5 @@
 "use client";
-import { getSignedS3Url } from "@/actions/S3/get-signed-url";
+import { getSignedUrl } from "@/lib/s3-unified";
 import Image from "next/image";
 import { useState } from "react";
 import { Input } from "../ui/input";
@@ -34,10 +34,7 @@ const UploadButton = () => {
 
       // Generar un nombre único para el archivo
       const fileName = `${Date.now()}-${file.name}`;
-      const signedUrlRequest = await getSignedS3Url({
-        name: fileName,
-        operation: "put"
-      });
+      const signedUrlRequest = await getSignedUrl(fileName, "put");
       console.log("signed", signedUrlRequest);
       if ("failure" in signedUrlRequest) {
         setStatusMessage("failed");
