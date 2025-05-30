@@ -121,9 +121,7 @@ describe("model-files-actions", () => {
       };
 
       vi.mocked(getSession).mockResolvedValue(mockSession);
-      vi.mocked(prisma.modelFile.findUnique).mockRejectedValue(
-        new Error("Archivo no encontrado")
-      );
+      vi.mocked(prisma.modelFile.findUnique).mockResolvedValue(null);
 
       const result = await deleteModelFile("nonexistent");
 

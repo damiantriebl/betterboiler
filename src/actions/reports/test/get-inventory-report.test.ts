@@ -241,7 +241,7 @@ describe("getInventoryStatusReport", () => {
 
   describe("Casos de error", () => {
     it("debería devolver reporte vacío cuando no se puede obtener la organización", async () => {
-      const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
       mockGetOrganization.mockResolvedValue({
         organizationId: null,
         error: "Sesión no válida",
@@ -265,7 +265,7 @@ describe("getInventoryStatusReport", () => {
         "Error en getInventoryStatusReport: No se pudo obtener el ID de la organización. Mensaje de sesión:",
         "Sesión no válida",
       );
-      
+
       mockConsoleError.mockRestore();
     });
 

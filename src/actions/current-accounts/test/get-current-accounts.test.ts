@@ -322,7 +322,7 @@ describe("getCurrentAccounts", () => {
   describe("❌ Error Handling", () => {
     it("should handle database errors during count", async () => {
       // Arrange
-      const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const mockConsoleErrorCount = vi.spyOn(console, "error").mockImplementation(() => {});
       const dbError = new Error("Database connection failed");
       mockPrisma.currentAccount.count.mockRejectedValue(dbError);
 
@@ -332,14 +332,17 @@ describe("getCurrentAccounts", () => {
       // Assert
       expect(result.success).toBe(false);
       expect(result.error).toBe("Database connection failed");
-      expect(mockConsoleError).toHaveBeenCalledWith("Error fetching current accounts:", dbError);
-      
-      mockConsoleError.mockRestore();
+      expect(mockConsoleErrorCount).toHaveBeenCalledWith(
+        "Error fetching current accounts:",
+        dbError,
+      );
+
+      mockConsoleErrorCount.mockRestore();
     });
 
     it("should handle database errors during findMany", async () => {
       // Arrange
-      const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const mockConsoleErrorFindMany = vi.spyOn(console, "error").mockImplementation(() => {});
       mockPrisma.currentAccount.count.mockResolvedValue(5);
       const dbError = new Error("Query execution failed");
       mockPrisma.currentAccount.findMany.mockRejectedValue(dbError);
@@ -350,9 +353,12 @@ describe("getCurrentAccounts", () => {
       // Assert
       expect(result.success).toBe(false);
       expect(result.error).toBe("Query execution failed");
-      expect(mockConsoleError).toHaveBeenCalledWith("Error fetching current accounts:", dbError);
-      
-      mockConsoleError.mockRestore();
+      expect(mockConsoleErrorFindMany).toHaveBeenCalledWith(
+        "Error fetching current accounts:",
+        dbError,
+      );
+
+      mockConsoleErrorFindMany.mockRestore();
     });
 
     it("should handle Prisma validation errors", async () => {
@@ -682,7 +688,7 @@ describe("getCurrentAccounts", () => {
   describe("📝 Console Logging", () => {
     it("should log errors when database operations fail", async () => {
       // Arrange
-      const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const mockConsoleErrorLog1 = vi.spyOn(console, "error").mockImplementation(() => {});
       const dbError = new Error("Connection timeout");
       mockPrisma.currentAccount.count.mockRejectedValue(dbError);
 
@@ -690,30 +696,32 @@ describe("getCurrentAccounts", () => {
       await getCurrentAccounts();
 
       // Assert
-      expect(mockConsoleError).toHaveBeenCalledWith("Error fetching current accounts:", dbError);
-      
-      mockConsoleError.mockRestore();
+      expect(mockConsoleErrorLog1).toHaveBeenCalledWith(
+        "Error fetching current accounts:",
+        dbError,
+      );
+
+      mockConsoleErrorLog1.mockRestore();
     });
 
     it("should log Prisma validation errors", async () => {
       // Arrange
-      const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const mockConsoleErrorLog2 = vi.spyOn(console, "error").mockImplementation(() => {});
       const validationError = new Prisma.PrismaClientValidationError("Invalid where clause", {
         clientVersion: "4.0.0",
       });
-      mockPrisma.currentAccount.count.mockResolvedValue(5);
-      mockPrisma.currentAccount.findMany.mockRejectedValue(validationError);
+      mockPrisma.currentAccount.count.mockRejectedValue(validationError);
 
       // Act
       await getCurrentAccounts();
 
       // Assert
-      expect(mockConsoleError).toHaveBeenCalledWith(
+      expect(mockConsoleErrorLog2).toHaveBeenCalledWith(
         "Error fetching current accounts:",
         validationError,
       );
-      
-      mockConsoleError.mockRestore();
+
+      mockConsoleErrorLog2.mockRestore();
     });
   });
 
