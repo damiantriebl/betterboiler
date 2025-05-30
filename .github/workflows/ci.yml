@@ -18,7 +18,7 @@ jobs:
     name: ${{ matrix.task }}
     env:
       # Variables de entorno necesarias para testing
-      DATABASE_URL: "file:./test.db"
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test_db"
       NEXTAUTH_SECRET: "test-secret-for-ci"
       NEXTAUTH_URL: "http://localhost:3000"
       NODE_ENV: "test"

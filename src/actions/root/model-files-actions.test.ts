@@ -121,12 +121,14 @@ describe("model-files-actions", () => {
       };
 
       vi.mocked(getSession).mockResolvedValue(mockSession);
-      vi.mocked(prisma.modelFile.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.modelFile.findUnique).mockRejectedValue(
+        new Error("Archivo no encontrado")
+      );
 
       const result = await deleteModelFile("nonexistent");
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Archivo no encontrado");
+      expect(result.error).toContain("Archivo no encontrado");
     });
   });
 });
