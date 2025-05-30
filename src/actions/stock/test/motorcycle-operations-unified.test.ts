@@ -11,6 +11,11 @@ import {
   updateMotorcycle,
   updateMotorcycleStatus,
 } from "../motorcycle-operations-unified";
+import { getOrganizationIdFromSession } from "../../util";
+import { motorcycleBatchSchema } from "@/zod/MotorcycleBatchSchema";
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 // Mock de dependencias
 vi.mock("@/lib/prisma", () => ({
@@ -40,6 +45,11 @@ vi.mock("@/zod/MotorcycleBatchSchema", () => ({
     safeParse: vi.fn(),
   },
 }));
+
+const mockGetOrganizationIdFromSession = getOrganizationIdFromSession as any;
+const mockMotorcycleBatchSchema = motorcycleBatchSchema as any;
+const mockPrisma = prisma as any;
+const mockRevalidatePath = revalidatePath as any;
 
 describe("motorcycle-operations-unified", () => {
   const mockOrganizationId = "org-123";
@@ -79,19 +89,15 @@ describe("motorcycle-operations-unified", () => {
   describe("createMotorcycleBatch", () => {
     it("debería crear un lote de motocicletas exitosamente", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: true,
         data: mockMotorcycleData,
       });
-      (prisma.default.motorcycle.findMany as any).mockResolvedValue([]);
-      (prisma.default.$transaction as any).mockResolvedValue([{ id: 1, chassisNumber: "ABC123" }]);
+      mockPrisma.motorcycle.findMany.mockResolvedValue([]);
+      mockPrisma.$transaction.mockResolvedValue([{ id: 1, chassisNumber: "ABC123" }]);
 
       // Act
       const result = await createMotorcycleBatch(null, mockMotorcycleData as any);
@@ -104,9 +110,7 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería fallar cuando no hay autenticación", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({ organizationId: null });
+      mockGetOrganizationIdFromSession.mockResolvedValue({ organizationId: null });
 
       // Act
       const result = await createMotorcycleBatch(null, mockMotorcycleData as any);
@@ -118,13 +122,10 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería fallar cuando hay errores de validación", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: false,
         error: {
           flatten: () => ({
@@ -148,9 +149,6 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería detectar números de chasis duplicados en el lote", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-
       const duplicateData = {
         ...mockMotorcycleData,
         units: [
@@ -159,10 +157,10 @@ describe("motorcycle-operations-unified", () => {
         ],
       };
 
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: true,
         data: duplicateData,
       });
@@ -177,18 +175,14 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería detectar números de chasis existentes en la base de datos", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: true,
         data: mockMotorcycleData,
       });
-      (prisma.default.motorcycle.findMany as any).mockResolvedValue([{ chassisNumber: "ABC123" }]);
+      mockPrisma.motorcycle.findMany.mockResolvedValue([{ chassisNumber: "ABC123" }]);
 
       // Act
       const result = await createMotorcycleBatch(null, mockMotorcycleData as any);
@@ -203,16 +197,13 @@ describe("motorcycle-operations-unified", () => {
   describe("updateMotorcycleStatus", () => {
     it("debería actualizar el estado de una motocicleta exitosamente", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (prisma.default.motorcycle.findUnique as any).mockResolvedValue({
+      mockPrisma.motorcycle.findUnique.mockResolvedValue({
         state: MotorcycleState.STOCK,
       });
-      (prisma.default.motorcycle.update as any).mockResolvedValue({
+      mockPrisma.motorcycle.update.mockResolvedValue({
         id: 1,
         state: MotorcycleState.PAUSADO,
       });
@@ -229,37 +220,31 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería fallar cuando la transición de estado no es válida", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (prisma.default.motorcycle.findUnique as any).mockResolvedValue({
+      mockPrisma.motorcycle.findUnique.mockResolvedValue({
         state: MotorcycleState.VENDIDO,
       });
 
-      // Act
-      const result = await updateMotorcycleStatus(1, MotorcycleState.STOCK);
+      // Act - VENDIDO → PAUSADO no está permitida (solo VENDIDO → STOCK)
+      const result = await updateMotorcycleStatus(1, MotorcycleState.PAUSADO);
 
       // Assert
       expect(result.success).toBe(false);
       expect(result.error).toContain("Transición de estado no permitida");
-      expect(result.error).toContain("VENDIDO → STOCK");
+      expect(result.error).toContain("VENDIDO → PAUSADO");
     });
 
     it("debería desconectar cliente cuando se cambia a STOCK desde estados específicos", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (prisma.default.motorcycle.findUnique as any).mockResolvedValue({
+      mockPrisma.motorcycle.findUnique.mockResolvedValue({
         state: MotorcycleState.RESERVADO,
       });
-      (prisma.default.motorcycle.update as any).mockResolvedValue({
+      mockPrisma.motorcycle.update.mockResolvedValue({
         id: 1,
         state: MotorcycleState.STOCK,
       });
@@ -268,7 +253,7 @@ describe("motorcycle-operations-unified", () => {
       await updateMotorcycleStatus(1, MotorcycleState.STOCK);
 
       // Assert
-      expect(prisma.default.motorcycle.update).toHaveBeenCalledWith({
+      expect(mockPrisma.motorcycle.update).toHaveBeenCalledWith({
         where: {
           id: 1,
           organizationId: mockOrganizationId,
@@ -282,13 +267,10 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería fallar cuando la motocicleta no existe", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (prisma.default.motorcycle.findUnique as any).mockResolvedValue(null);
+      mockPrisma.motorcycle.findUnique.mockResolvedValue(null);
 
       // Act
       const result = await updateMotorcycleStatus(999, MotorcycleState.PAUSADO);
@@ -308,16 +290,13 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería reservar una motocicleta exitosamente", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (prisma.default.motorcycle.findUnique as any).mockResolvedValue({
+      mockPrisma.motorcycle.findUnique.mockResolvedValue({
         state: MotorcycleState.STOCK,
       });
-      (prisma.default.motorcycle.update as any).mockResolvedValue({
+      mockPrisma.motorcycle.update.mockResolvedValue({
         id: 1,
         state: MotorcycleState.RESERVADO,
         clientId: "client-123",
@@ -334,13 +313,10 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería fallar cuando la motocicleta no se puede reservar", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (prisma.default.motorcycle.findUnique as any).mockResolvedValue({
+      mockPrisma.motorcycle.findUnique.mockResolvedValue({
         state: MotorcycleState.VENDIDO,
       });
 
@@ -354,9 +330,7 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería fallar cuando no hay autenticación", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({ organizationId: null });
+      mockGetOrganizationIdFromSession.mockResolvedValue({ organizationId: null });
 
       // Act
       const result = await reserveMotorcycle(reserveParams);
@@ -370,22 +344,18 @@ describe("motorcycle-operations-unified", () => {
   describe("updateMotorcycle", () => {
     it("debería actualizar una motocicleta exitosamente", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-      const prisma = await import("@/lib/prisma");
-
       const formData = new FormData();
       formData.append("brandId", "1");
       formData.append("modelId", "1");
 
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: true,
         data: mockMotorcycleData,
       });
-      (prisma.default.motorcycle.update as any).mockResolvedValue({
+      mockPrisma.motorcycle.update.mockResolvedValue({
         id: 1,
         brandId: 1,
       });
@@ -400,15 +370,12 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería fallar cuando faltan datos de unidad", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-
       const dataWithoutUnits = { ...mockMotorcycleData, units: [] };
 
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: true,
         data: dataWithoutUnits,
       });
@@ -423,29 +390,23 @@ describe("motorcycle-operations-unified", () => {
   });
 
   describe("getAvailableStateTransitions", () => {
-    it("debería retornar transiciones válidas para STOCK", () => {
+    it("debería retornar transiciones válidas para STOCK", async () => {
       // Act
-      const transitions = getAvailableStateTransitions(MotorcycleState.STOCK);
+      const transitions = await getAvailableStateTransitions(MotorcycleState.STOCK);
 
       // Assert
       expect(transitions).toEqual([
         MotorcycleState.PAUSADO,
         MotorcycleState.PROCESANDO,
         MotorcycleState.RESERVADO,
+        MotorcycleState.EN_TRANSITO,
+        MotorcycleState.ELIMINADO,
       ]);
     });
 
-    it("debería retornar array vacío para VENDIDO", () => {
+    it("debería retornar transición a STOCK para VENDIDO", async () => {
       // Act
-      const transitions = getAvailableStateTransitions(MotorcycleState.VENDIDO);
-
-      // Assert
-      expect(transitions).toEqual([]);
-    });
-
-    it("debería retornar transiciones válidas para ELIMINADO", () => {
-      // Act
-      const transitions = getAvailableStateTransitions(MotorcycleState.ELIMINADO);
+      const transitions = await getAvailableStateTransitions(MotorcycleState.VENDIDO);
 
       // Assert
       expect(transitions).toEqual([MotorcycleState.STOCK]);
@@ -455,26 +416,21 @@ describe("motorcycle-operations-unified", () => {
   describe("Manejo de errores de Prisma", () => {
     it("debería manejar errores P2002 (duplicidad) en createMotorcycleBatch", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: true,
         data: mockMotorcycleData,
       });
-      (prisma.default.motorcycle.findMany as any).mockResolvedValue([]);
+      mockPrisma.motorcycle.findMany.mockResolvedValue([]);
 
-      const { Prisma } = await import("@prisma/client");
       const prismaError = new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
         code: "P2002",
         clientVersion: "5.0.0",
         meta: { target: ["chassisNumber"] },
       });
-      (prisma.default.$transaction as any).mockRejectedValue(prismaError);
+      mockPrisma.$transaction.mockRejectedValue(prismaError);
 
       // Act
       const result = await createMotorcycleBatch(null, mockMotorcycleData as any);
@@ -487,20 +443,15 @@ describe("motorcycle-operations-unified", () => {
 
     it("debería manejar errores P2003 (referencia) en createMotorcycleBatch", async () => {
       // Arrange
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const { motorcycleBatchSchema } = await import("@/zod/MotorcycleBatchSchema");
-      const prisma = await import("@/lib/prisma");
-
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: mockOrganizationId,
       });
-      (motorcycleBatchSchema.safeParse as any).mockReturnValue({
+      mockMotorcycleBatchSchema.safeParse.mockReturnValue({
         success: true,
         data: mockMotorcycleData,
       });
-      (prisma.default.motorcycle.findMany as any).mockResolvedValue([]);
+      mockPrisma.motorcycle.findMany.mockResolvedValue([]);
 
-      const { Prisma } = await import("@prisma/client");
       const prismaError = new Prisma.PrismaClientKnownRequestError(
         "Foreign key constraint failed",
         {
@@ -508,7 +459,7 @@ describe("motorcycle-operations-unified", () => {
           clientVersion: "5.0.0",
         },
       );
-      (prisma.default.$transaction as any).mockRejectedValue(prismaError);
+      mockPrisma.$transaction.mockRejectedValue(prismaError);
 
       // Act
       const result = await createMotorcycleBatch(null, mockMotorcycleData as any);

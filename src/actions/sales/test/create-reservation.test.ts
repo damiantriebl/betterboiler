@@ -2,6 +2,9 @@ import type { CreateReservationInput } from "@/zod/ReservationZod";
 import { MotorcycleState } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createReservation } from "../create-reservation";
+import { createReservationSchema } from "@/zod/ReservationZod";
+import { getOrganizationIdFromSession } from "../../util";
+import prisma from "@/lib/prisma";
 
 // Mock de dependencias
 vi.mock("@/lib/prisma", () => ({
@@ -19,6 +22,14 @@ vi.mock("@/zod/ReservationZod", () => ({
 vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
+
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
+const mockCreateReservationSchema = createReservationSchema as any;
+const mockGetOrganizationIdFromSession = getOrganizationIdFromSession as any;
+const mockPrisma = prisma as any;
 
 describe("createReservation", () => {
   const validReservationData: CreateReservationInput = {
@@ -59,8 +70,14 @@ describe("createReservation", () => {
     updatedAt: new Date(),
   };
 
+  let consoleErrorSpy: any;
+  let consoleLogSpy: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Suprimir console.error y console.log durante los tests
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -70,12 +87,8 @@ describe("createReservation", () => {
   describe("Casos exitosos", () => {
     it("debería crear una reserva exitosamente", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -100,7 +113,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);
@@ -108,18 +121,14 @@ describe("createReservation", () => {
       // Assert
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockReservation);
-      expect(createReservationSchema.parse).toHaveBeenCalledWith(validReservationData);
-      expect(getOrganizationIdFromSession).toHaveBeenCalled();
+      expect(mockCreateReservationSchema.parse).toHaveBeenCalledWith(validReservationData);
+      expect(mockGetOrganizationIdFromSession).toHaveBeenCalled();
     });
 
     it("debería crear reserva aunque ya exista una activa (múltiples reservas permitidas)", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -145,10 +154,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
-
-      // Spy en console.log para verificar el mensaje informativo
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);
@@ -156,24 +162,17 @@ describe("createReservation", () => {
       // Assert
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockReservation);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining("La moto 1 ya tiene una reserva activa"),
       );
-
-      // Cleanup
-      consoleSpy.mockRestore();
     });
 
     it("debería manejar motocicleta en estado PAUSADO", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
       const pausedMotorcycle = { ...mockMotorcycle, state: MotorcycleState.PAUSADO };
 
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -197,7 +196,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);
@@ -211,10 +210,8 @@ describe("createReservation", () => {
   describe("Errores de validación", () => {
     it("debería fallar con datos inválidos", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-
       const invalidData = { ...validReservationData, amount: -100 };
-      (createReservationSchema.parse as any).mockImplementation(() => {
+      mockCreateReservationSchema.parse.mockImplementation(() => {
         throw new Error("Monto debe ser positivo");
       });
 
@@ -228,9 +225,7 @@ describe("createReservation", () => {
 
     it("debería manejar error de validación de Zod", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-
-      (createReservationSchema.parse as any).mockImplementation(() => {
+      mockCreateReservationSchema.parse.mockImplementation(() => {
         const error = new Error("Required field missing");
         error.name = "ZodError";
         throw error;
@@ -248,11 +243,8 @@ describe("createReservation", () => {
   describe("Errores de autenticación", () => {
     it("debería fallar cuando no se puede obtener organizationId", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: null,
         error: "Usuario no autenticado",
       });
@@ -267,11 +259,8 @@ describe("createReservation", () => {
 
     it("debería fallar cuando getOrganizationIdFromSession retorna error", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: "Sesión expirada",
       });
@@ -288,12 +277,8 @@ describe("createReservation", () => {
   describe("Errores de negocio", () => {
     it("debería fallar cuando la motocicleta no existe", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -307,7 +292,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);
@@ -319,14 +304,10 @@ describe("createReservation", () => {
 
     it("debería fallar cuando la motocicleta está vendida", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
       const soldMotorcycle = { ...mockMotorcycle, state: MotorcycleState.VENDIDO };
 
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -340,7 +321,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);
@@ -353,14 +334,10 @@ describe("createReservation", () => {
 
     it("debería fallar cuando la motocicleta está reservada", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
       const reservedMotorcycle = { ...mockMotorcycle, state: MotorcycleState.RESERVADO };
 
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -374,7 +351,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);
@@ -387,12 +364,8 @@ describe("createReservation", () => {
 
     it("debería fallar cuando el cliente no existe", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -409,7 +382,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);
@@ -423,22 +396,15 @@ describe("createReservation", () => {
   describe("Errores de base de datos", () => {
     it("debería manejar errores de transacción", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
 
-      (prisma.default.$transaction as any).mockRejectedValue(
+      mockPrisma.$transaction.mockRejectedValue(
         new Error("Database connection failed"),
       );
-
-      // Spy en console.error
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // Act
       const result = await createReservation(validReservationData);
@@ -446,28 +412,18 @@ describe("createReservation", () => {
       // Assert
       expect(result.success).toBe(false);
       expect(result.error).toBe("Database connection failed");
-      expect(consoleSpy).toHaveBeenCalledWith("Error al crear la reserva:", expect.any(Error));
-
-      // Cleanup
-      consoleSpy.mockRestore();
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error al crear la reserva:", expect.any(Error));
     });
 
     it("debería manejar errores desconocidos", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
 
-      (prisma.default.$transaction as any).mockRejectedValue("String error");
-
-      // Spy en console.error
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockPrisma.$transaction.mockRejectedValue("String error");
 
       // Act
       const result = await createReservation(validReservationData);
@@ -475,22 +431,15 @@ describe("createReservation", () => {
       // Assert
       expect(result.success).toBe(false);
       expect(result.error).toBe("Error desconocido al crear la reserva");
-      expect(consoleSpy).toHaveBeenCalled();
-
-      // Cleanup
-      consoleSpy.mockRestore();
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
   });
 
   describe("Flujo completo de transacción", () => {
     it("debería ejecutar todos los pasos de la transacción en orden correcto", async () => {
       // Arrange
-      const { createReservationSchema } = await import("@/zod/ReservationZod");
-      const { getOrganizationIdFromSession } = await import("../../util");
-      const prisma = await import("@/lib/prisma");
-
-      (createReservationSchema.parse as any).mockReturnValue(validReservationData);
-      (getOrganizationIdFromSession as any).mockResolvedValue({
+      mockCreateReservationSchema.parse.mockReturnValue(validReservationData);
+      mockGetOrganizationIdFromSession.mockResolvedValue({
         organizationId: "org-123",
         error: null,
       });
@@ -520,7 +469,7 @@ describe("createReservation", () => {
         return await callback(tx);
       });
 
-      (prisma.default.$transaction as any).mockImplementation(mockTransaction);
+      mockPrisma.$transaction.mockImplementation(mockTransaction);
 
       // Act
       const result = await createReservation(validReservationData);

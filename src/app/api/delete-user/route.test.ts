@@ -11,7 +11,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/actions/util", () => ({
-  getOrganizationIdFromSession: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({
@@ -21,7 +21,7 @@ vi.mock("next/server", () => ({
   },
 }));
 
-import { getOrganizationIdFromSession } from "@/actions/util";
+import { getSession } from "@/actions/util";
 import prisma from "@/lib/prisma";
 import { POST } from "./route";
 
@@ -43,8 +43,14 @@ describe("/api/delete-user", () => {
     // Arrange
     const mockUserId = "user-1";
 
-    vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
-      organizationId: "org-1",
+    vi.mocked(getSession).mockResolvedValue({
+      session: {
+        user: {
+          id: "admin-user",
+          role: "admin",
+        },
+      },
+      error: null,
     } as any);
     vi.mocked(prisma.user.delete).mockResolvedValue({} as any);
 
@@ -69,7 +75,8 @@ describe("/api/delete-user", () => {
 
   it("debería manejar errores de autenticación", async () => {
     // Arrange
-    vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
+    vi.mocked(getSession).mockResolvedValue({
+      session: null,
       error: "No autorizado",
     } as any);
 

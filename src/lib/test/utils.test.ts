@@ -176,22 +176,22 @@ describe("utils", () => {
     });
 
     it("formatea fechas de diferentes meses", () => {
-      const dates = [
-        { date: new Date("2024-03-05"), expected: "05/03/2024" },
-        { date: new Date("2024-06-15"), expected: "15/06/2024" },
-        { date: new Date("2024-09-25"), expected: "25/09/2024" },
-        { date: new Date("2024-11-08"), expected: "08/11/2024" },
+      // Test cases from different months
+      const testCases = [
+        { input: new Date(2024, 0, 15), expected: "15/01/2024" }, // January
+        { input: new Date(2024, 3, 5), expected: "05/04/2024" }, // April (month 3 = April)
+        { input: new Date(2024, 11, 31), expected: "31/12/2024" }, // December
       ];
 
-      for (const { date, expected } of dates) {
-        const result = formatDate(date);
-
-        // Convertir el resultado a formato español
-        const [day, month, year] = expected.split("/");
-        const expectedFormatted = `${day}/${month}/${year}`;
-
-        expect(result).toBe(expectedFormatted);
+      for (const { input, expected } of testCases) {
+        const result = formatDate(input);
+        expect(result).toBe(expected);
       }
+
+      // Test the problematic case specifically
+      const date = new Date(2024, 4, 5); // May 5, 2024 (month 4 = May in 0-indexed)
+      const result = formatDate(date);
+      expect(result).toBe("05/05/2024"); // Should be May (05), not April (04)
     });
 
     it("maneja fechas en el pasado", () => {

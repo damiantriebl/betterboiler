@@ -7,7 +7,7 @@ import { getOrganizationIdFromSession } from "../util";
 
 const undoPaymentSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required."),
-  otp: z.string().optional(),
+  otp: z.string().nullable().optional().transform(val => val === null ? undefined : val),
   secureMode: z.boolean().optional(),
 });
 

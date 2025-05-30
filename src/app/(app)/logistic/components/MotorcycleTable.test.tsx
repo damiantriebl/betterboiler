@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import MotorcycleTable from "./MotorcycleTable";
 
-// Mock de Next.js Image
+// Mock de Next.js Image - ya no se usa en este componente pero mantenemos el mock por compatibilidad
 vi.mock("next/image", () => ({
   // biome-ignore lint/a11y/useAltText: Mock de test para Next.js Image
   default: ({ src, alt = "Imagen de motocicleta", ...props }: any) => (
@@ -161,18 +161,18 @@ describe("MotorcycleTable", () => {
     expect(checkboxes[1]).not.toBeChecked();
   });
 
-  it("muestra imágenes cuando están disponibles", () => {
+  it("muestra información de marca y modelo correctamente", () => {
     render(<MotorcycleTable motorcycles={mockMotorcycles} />);
 
-    const image = screen.getByAltText("Honda CG 150");
-    expect(image).toBeInTheDocument();
-    expect(image).toHaveAttribute("src", "https://example.com/image1.jpg");
+    expect(screen.getByText("Honda CG 150")).toBeInTheDocument();
+    expect(screen.getByText("Yamaha YBR 125")).toBeInTheDocument();
   });
 
-  it("muestra placeholder cuando no hay imagen", () => {
+  it("muestra información de chasis", () => {
     render(<MotorcycleTable motorcycles={mockMotorcycles} />);
 
-    expect(screen.getByText("Sin imagen")).toBeInTheDocument();
+    expect(screen.getByText(/Chasis: ABC123456789/)).toBeInTheDocument();
+    expect(screen.getByText(/Chasis: XYZ987654321/)).toBeInTheDocument();
   });
 
   it("abre modal de detalles al hacer clic en 'Ver detalles'", async () => {

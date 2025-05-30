@@ -11,18 +11,17 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/actions/util", () => ({
-  getOrganizationIdFromSession: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({
   NextRequest: vi.fn(),
   NextResponse: {
     json: vi.fn(),
-    error: vi.fn(),
   },
 }));
 
-import { getOrganizationIdFromSession } from "@/actions/util";
+import { getSession } from "@/actions/util";
 import prisma from "@/lib/prisma";
 import { POST } from "./route";
 
@@ -41,28 +40,26 @@ describe("/api/update-organization", () => {
           status: init?.status || 200,
         }) as any,
     );
-
-    // Mock de NextResponse.error por defecto
-    vi.mocked(NextResponse.error).mockImplementation(
-      () =>
-        ({
-          status: 500,
-        }) as any,
-    );
   });
 
   it("debería actualizar la organización del usuario", async () => {
     // Arrange
     const mockUserId = "user-1";
-    const mockOrganizationId = "org-1";
+    const mockOrganizationId = "org-2";
     const mockUser = {
       id: mockUserId,
       organizationId: mockOrganizationId,
       email: "test@example.com",
     };
 
-    vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
-      organizationId: "org-1",
+    vi.mocked(getSession).mockResolvedValue({
+      session: {
+        user: {
+          id: "root-user",
+          role: "root",
+        },
+      },
+      error: null,
     } as any);
     vi.mocked(prisma.user.update).mockResolvedValue(mockUser as any);
 
@@ -89,12 +86,13 @@ describe("/api/update-organization", () => {
 
   it("debería manejar errores de autenticación", async () => {
     // Arrange
-    vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
+    vi.mocked(getSession).mockResolvedValue({
+      session: null,
       error: "No autorizado",
     } as any);
 
     const mockRequest = {
-      json: vi.fn().mockResolvedValue({ userId: "user-1", organizationId: "org-1" }),
+      json: vi.fn().mockResolvedValue({ userId: "user-1", organizationId: "org-2" }),
     } as unknown as Request;
 
     // Act

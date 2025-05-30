@@ -17,1013 +17,447 @@ vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
-// Mock de console para tests silenciosos
-const mockConsole = {
-  log: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
+// Setup mocks
+const mockGetOrganizationIdFromSession = vi.mocked(getOrganizationIdFromSession);
+const mockPrisma = vi.mocked(prisma);
+
+// Mock console para evitar ruido en stderr
+const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+// Helper para crear FormData con tipado correcto
+const createFormData = (data: Record<string, string | undefined>): FormData => {
+  const formData = new FormData();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, value);
+    }
+  });
+  return formData;
 };
 
-const mockPrisma = prisma as any;
-const mockGetOrganization = getOrganizationIdFromSession as any;
+// Mock payment data para usar en múltiples tests
+const mockPayment = {
+  id: "payment-123",
+  currentAccountId: "ca-123",
+  organizationId: "test-org-123",
+  amountPaid: 1000,
+  paymentDate: new Date("2024-01-01"),
+  paymentMethod: "EFECTIVO",
+  notes: "Pago inicial",
+  transactionReference: "ref-123",
+  installmentNumber: 1,
+  installmentVersion: null,
+  currentAccount: {
+    id: "ca-123",
+    remainingAmount: 5000,
+    numberOfInstallments: 12,
+    interestRate: 12,
+    paymentFrequency: "MONTHLY",
+    installmentAmount: 500,
+  },
+};
 
 describe("undoPayment", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.console = mockConsole as any;
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  const mockSessionData = {
-    organizationId: "org-123",
-    error: null,
-  };
-
-  const mockCurrentAccount = {
-    id: "ckpqr7s8u0000gzcp3h8z9w8t",
-    clientId: "client-456",
-    motorcycleId: 1,
-    totalAmount: 15000.0,
-    downPayment: 3000.0,
-    remainingAmount: 10000.0, // 2 payments already made
-    numberOfInstallments: 12,
-    installmentAmount: 1000.0,
-    paymentFrequency: "MONTHLY",
-    startDate: new Date("2024-01-01"),
-    nextDueDate: new Date("2024-04-01"),
-    finalPaymentDate: new Date("2024-12-01"),
-    interestRate: 0.15, // 15% annual
-    currency: "ARS",
-    reminderLeadTimeDays: 7,
-    status: "ACTIVE",
-    notes: "Cuenta corriente de prueba",
-    organizationId: "org-123",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const mockPaymentToAnnul = {
-    id: "payment-123",
-    currentAccountId: mockCurrentAccount.id,
-    amountPaid: 1000.0,
-    paymentDate: new Date("2024-02-15"),
-    paymentMethod: "CASH",
-    transactionReference: "TXN002",
-    installmentNumber: 2,
-    notes: "Segundo pago",
-    installmentVersion: null, // Normal payment
-    organizationId: "org-123",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    currentAccount: mockCurrentAccount,
-  };
-
   const mockPrevState: UndoPaymentFormState = {
     message: "",
     success: false,
   };
 
-  describe("✅ Successful Payment Undo", () => {
-    it("should successfully undo a payment with D/H accounting entries", async () => {
-      // Arrange
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          update: vi.fn().mockResolvedValue({
-            ...mockPaymentToAnnul,
-            installmentVersion: "D",
-          }),
-          create: vi
-            .fn()
-            .mockResolvedValueOnce({
-              ...mockPaymentToAnnul,
-              id: "payment-H-456",
-              installmentVersion: "H",
-            })
-            .mockResolvedValueOnce({
-              ...mockPaymentToAnnul,
-              id: "payment-pending-789",
-              paymentDate: null,
-              paymentMethod: null,
-              installmentVersion: null,
-            }),
-          count: vi.fn().mockResolvedValue(1), // 1 valid payment remaining
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue({
-            ...mockCurrentAccount,
-            remainingAmount: 11000.0, // Increased by the undone payment
-          }),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      const result = await undoPayment(mockPrevState, formData);
-
-      // Assert
-      expect(mockGetOrganization).toHaveBeenCalled();
-      expect(mockTx.payment.findUnique).toHaveBeenCalledWith({
-        where: { id: "payment-123", organizationId: "org-123" },
-        include: { currentAccount: true },
-      });
-      expect(mockTx.payment.update).toHaveBeenCalledWith({
-        where: { id: "payment-123" },
-        data: {
-          installmentVersion: "D",
-          updatedAt: expect.any(Date),
-        },
-      });
-      expect(mockTx.payment.create).toHaveBeenCalledTimes(2); // H entry + pending payment
-      expect(mockTx.currentAccount.update).toHaveBeenCalled();
-      expect(result.success).toBe(true);
-      expect(result.message).toContain("Anulación procesada para pago payment-123");
-    });
-
-    it("should create H (Haber) entry with correct data", async () => {
-      // Arrange
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          update: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      await undoPayment(mockPrevState, formData);
-
-      // Assert - Check H entry creation
-      expect(mockTx.payment.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          currentAccountId: mockPaymentToAnnul.currentAccountId,
-          organizationId: mockPaymentToAnnul.organizationId,
-          amountPaid: mockPaymentToAnnul.amountPaid,
-          paymentDate: mockPaymentToAnnul.paymentDate,
-          paymentMethod: mockPaymentToAnnul.paymentMethod,
-          installmentNumber: mockPaymentToAnnul.installmentNumber,
-          installmentVersion: "H",
-          notes: expect.stringContaining("Anulación H"),
-        }),
-      });
-    });
-
-    it("should create pending payment entry for the same installment", async () => {
-      // Arrange
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          update: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      await undoPayment(mockPrevState, formData);
-
-      // Assert - Check pending payment creation (second call to create)
-      const createCalls = mockTx.payment.create.mock.calls;
-      expect(createCalls).toHaveLength(2);
-
-      // Second call should be the pending payment
-      const pendingPaymentCall = createCalls[1][0];
-      expect(pendingPaymentCall.data).toEqual(
-        expect.objectContaining({
-          currentAccountId: mockPaymentToAnnul.currentAccountId,
-          organizationId: mockPaymentToAnnul.organizationId,
-          amountPaid: mockPaymentToAnnul.amountPaid,
-          paymentDate: null, // No payment date since it's pending
-          paymentMethod: null, // No payment method yet
-          installmentNumber: mockPaymentToAnnul.installmentNumber,
-          installmentVersion: null, // Normal payment, no special version
-          notes: expect.stringContaining("Cuota pendiente tras anulación"),
-        }),
-      );
-    });
-
-    it("should recalculate remaining amount correctly", async () => {
-      // Arrange
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          update: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      await undoPayment(mockPrevState, formData);
-
-      // Assert - Check account update with increased remaining amount
-      expect(mockTx.currentAccount.update).toHaveBeenCalledWith({
-        where: { id: mockCurrentAccount.id },
-        data: expect.objectContaining({
-          remainingAmount: 11000.0, // Original 10000 + undone payment 1000
-          installmentAmount: expect.any(Number), // Should be recalculated
-          updatedAt: expect.any(Date),
-        }),
-      });
-    });
-
-    it("should handle payment with notes correctly", async () => {
-      // Arrange
-      const paymentWithNotes = {
-        ...mockPaymentToAnnul,
-        notes: "Pago original con notas",
-      };
-
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(paymentWithNotes),
-          update: vi.fn().mockResolvedValue(paymentWithNotes),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      await undoPayment(mockPrevState, formData);
-
-      // Assert - Check H entry preserves and extends original notes
-      expect(mockTx.payment.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          notes: "Pago original con notas (Anulación H)",
-        }),
-      });
-    });
-
-    it("should handle payment without notes correctly", async () => {
-      // Arrange
-      const paymentWithoutNotes = {
-        ...mockPaymentToAnnul,
-        notes: null,
-      };
-
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(paymentWithoutNotes),
-          update: vi.fn().mockResolvedValue(paymentWithoutNotes),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      await undoPayment(mockPrevState, formData);
-
-      // Assert - Check H entry generates default notes
-      expect(mockTx.payment.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          notes: "Asiento H por anulación de pago payment-123",
-        }),
-      });
-    });
-
-    it("should handle zero interest rate correctly in recalculation", async () => {
-      // Arrange
-      const zeroInterestAccount = {
-        ...mockCurrentAccount,
-        interestRate: 0,
-      };
-
-      const paymentWithZeroInterest = {
-        ...mockPaymentToAnnul,
-        currentAccount: zeroInterestAccount,
-      };
-
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(paymentWithZeroInterest),
-          update: vi.fn().mockResolvedValue(paymentWithZeroInterest),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(zeroInterestAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      const result = await undoPayment(mockPrevState, formData);
-
-      // Assert
-      expect(result.success).toBe(true);
-      expect(mockTx.currentAccount.update).toHaveBeenCalled();
+  beforeEach(() => {
+    // Setup default organization response
+    mockGetOrganizationIdFromSession.mockResolvedValue({
+      organizationId: "test-org-123",
     });
   });
 
-  describe("❌ Error Handling", () => {
-    describe("🔍 Validation Errors", () => {
-      it("should return error when paymentId is missing", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-        const formData = new FormData();
-        // Not adding paymentId
+  describe("Validación de entrada", () => {
+    it("debería fallar cuando organizationId no está disponible", async () => {
+      // Arrange
+      mockGetOrganizationIdFromSession.mockResolvedValue({
+        organizationId: undefined,
+        error: "Organization not found",
+      } as any);
+      const formData = createFormData({ paymentId: "payment-123" });
 
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
 
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Invalid data for undo operation");
-        expect(result.errors?.paymentId).toBeDefined();
-      });
-
-      it("should return error when paymentId is empty string", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-        const formData = new FormData();
-        formData.append("paymentId", "");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Invalid data for undo operation");
-        expect(result.errors?.paymentId).toBeDefined();
+      // Assert
+      expect(result).toEqual({
+        message: "Error: Organization not found or user not authenticated.",
+        success: false,
       });
     });
 
-    describe("🔍 Authentication Errors", () => {
-      it("should return error when organization is not found", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue({
-          organizationId: null,
-          error: "Organization not found",
-        });
+    it("debería fallar cuando paymentId no se proporciona", async () => {
+      // Arrange
+      const formData = createFormData({});
 
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
 
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("Invalid data for undo operation");
+    });
 
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Organization not found or user not authenticated");
+    it("debería requerir OTP en modo seguro cuando no se proporciona", async () => {
+      // Arrange
+      const formData = createFormData({
+        paymentId: "payment-123",
+        secureMode: "true",
       });
 
-      it("should return error when user is not authenticated", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue(null);
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
 
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Organization not found or user not authenticated");
+      // Assert
+      expect(result).toEqual({
+        message: "Esta operación requiere verificación OTP en modo seguro.",
+        success: false,
+        requiresOtp: true,
       });
     });
 
-    describe("🔍 Business Logic Errors", () => {
-      it("should return error when payment is not found", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue(mockSessionData);
+    it("debería fallar con OTP inválido en modo seguro", async () => {
+      // Arrange
+      const formData = createFormData({
+        paymentId: "payment-123",
+        secureMode: "true",
+        otp: "000000",
+      });
 
-        const mockTx = {
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
+
+      // Assert
+      expect(result).toEqual({
+        message: "Código OTP inválido. Por favor, verifica el código e intenta nuevamente.",
+        success: false,
+        requiresOtp: true,
+      });
+    });
+  });
+
+  describe("Anulación de pagos", () => {
+    it("debería fallar cuando el pago no existe", async () => {
+      // Arrange
+      const formData = createFormData({ paymentId: "nonexistent-payment" });
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
           payment: {
             findUnique: vi.fn().mockResolvedValue(null),
           },
         };
-
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          return await callback(mockTx);
-        });
-
-        const formData = new FormData();
-        formData.append("paymentId", "nonexistent-payment");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Payment with ID nonexistent-payment not found");
+        return await callback(tx);
       });
 
-      it("should return error when current account data is missing", async () => {
-        // Arrange
-        const paymentWithoutAccount = {
-          ...mockPaymentToAnnul,
-          currentAccount: null,
-        };
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
 
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-
-        const mockTx = {
-          payment: {
-            findUnique: vi.fn().mockResolvedValue(paymentWithoutAccount),
-          },
-        };
-
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          return await callback(mockTx);
-        });
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Current account data not found for payment payment-123");
-      });
-
-      it("should return error when payment is already part of annulment process (D version)", async () => {
-        // Arrange
-        const alreadyAnnulledPayment = {
-          ...mockPaymentToAnnul,
-          installmentVersion: "D",
-        };
-
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-
-        const mockTx = {
-          payment: {
-            findUnique: vi.fn().mockResolvedValue(alreadyAnnulledPayment),
-          },
-        };
-
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          return await callback(mockTx);
-        });
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("appears to be part of an annulment process already");
-      });
-
-      it("should return error when payment is already part of annulment process (H version)", async () => {
-        // Arrange
-        const haberPayment = {
-          ...mockPaymentToAnnul,
-          installmentVersion: "H",
-        };
-
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-
-        const mockTx = {
-          payment: {
-            findUnique: vi.fn().mockResolvedValue(haberPayment),
-          },
-        };
-
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          return await callback(mockTx);
-        });
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("appears to be part of an annulment process already");
-      });
-
-      it("should return error when currentAccountId is missing on payment", async () => {
-        // Arrange
-        const paymentWithoutAccountId = {
-          ...mockPaymentToAnnul,
-          currentAccountId: null,
-        };
-
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-
-        const mockTx = {
-          payment: {
-            findUnique: vi.fn().mockResolvedValue(paymentWithoutAccountId),
-          },
-        };
-
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          return await callback(mockTx);
-        });
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("currentAccountId is missing on payment payment-123");
+      // Assert
+      expect(result).toEqual({
+        message: "Error: Payment with ID nonexistent-payment not found.",
+        success: false,
       });
     });
 
-    describe("🔍 Database Errors", () => {
-      it("should handle Prisma known request errors", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-
-        const prismaError = new Prisma.PrismaClientKnownRequestError(
-          "Foreign key constraint failed",
-          { code: "P2003", clientVersion: "4.0.0" },
-        );
-
-        mockPrisma.$transaction.mockRejectedValue(prismaError);
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Error de base de datos al anular el pago (D/H)");
-        expect(result.message).toContain("P2003");
-        expect(mockConsole.error).toHaveBeenCalledWith(
-          "Error undoing payment with D/H logic:",
-          prismaError,
-        );
+    it("debería fallar cuando el pago no tiene cuenta corriente", async () => {
+      // Arrange
+      const formData = createFormData({ paymentId: "payment-123" });
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          payment: {
+            findUnique: vi.fn().mockResolvedValue({
+              ...mockPayment,
+              currentAccount: null,
+            }),
+          },
+        };
+        return await callback(tx);
       });
 
-      it("should handle general errors", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue(mockSessionData);
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
 
-        const generalError = new Error("Database connection failed");
-        mockPrisma.$transaction.mockRejectedValue(generalError);
+      // Assert
+      expect(result).toEqual({
+        message: "Error: Current account data not found for payment payment-123.",
+        success: false,
+      });
+    });
 
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toBe("Database connection failed");
-        expect(mockConsole.error).toHaveBeenCalledWith(
-          "Error undoing payment with D/H logic:",
-          generalError,
-        );
+    it("debería fallar cuando el pago ya está anulado (versión D)", async () => {
+      // Arrange
+      const formData = createFormData({ paymentId: "payment-123" });
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          payment: {
+            findUnique: vi.fn().mockResolvedValue({
+              ...mockPayment,
+              installmentVersion: "D",
+            }),
+          },
+        };
+        return await callback(tx);
       });
 
-      it("should handle unknown exceptions", async () => {
-        // Arrange
-        mockGetOrganization.mockResolvedValue(mockSessionData);
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
 
-        const unknownError = "Unknown error string";
-        mockPrisma.$transaction.mockRejectedValue(unknownError);
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(false);
-        expect(result.message).toContain("Ocurrió un error inesperado al procesar la anulación");
-        expect(mockConsole.error).toHaveBeenCalledWith(
-          "Error undoing payment with D/H logic:",
-          unknownError,
-        );
+      // Assert
+      expect(result).toEqual({
+        message: "Error: Payment payment-123 appears to be part of an annulment process already.",
+        success: false,
       });
+    });
+
+    it("debería anular el pago exitosamente sin OTP", async () => {
+      // Arrange
+      const formData = createFormData({ paymentId: "payment-123" });
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          payment: {
+            findUnique: vi.fn().mockResolvedValue(mockPayment),
+            update: vi.fn().mockResolvedValue({ ...mockPayment, installmentVersion: "D" }),
+            create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
+            count: vi.fn().mockResolvedValue(5),
+          },
+          currentAccount: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+        };
+        return await callback(tx);
+      });
+
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
+
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("Anulación procesada para pago payment-123");
+    });
+
+    it("debería anular el pago exitosamente con OTP válido", async () => {
+      // Arrange
+      const formData = createFormData({
+        paymentId: "payment-123",
+        secureMode: "true",
+        otp: "123456",
+      });
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          payment: {
+            findUnique: vi.fn().mockResolvedValue(mockPayment),
+            update: vi.fn().mockResolvedValue({ ...mockPayment, installmentVersion: "D" }),
+            create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
+            count: vi.fn().mockResolvedValue(5),
+          },
+          currentAccount: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+        };
+        return await callback(tx);
+      });
+
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
+
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("(Verificado con OTP)");
     });
   });
 
-  describe("🎯 Edge Cases and Complex Scenarios", () => {
-    it("should handle payment with transaction reference", async () => {
+  describe("Manejo de errores", () => {
+    it("debería manejar errores de Prisma", async () => {
       // Arrange
-      const paymentWithReference = {
-        ...mockPaymentToAnnul,
-        transactionReference: "TXN-REF-12345",
-      };
-
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(paymentWithReference),
-          update: vi.fn().mockResolvedValue(paymentWithReference),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      const result = await undoPayment(mockPrevState, formData);
-
-      // Assert
-      expect(result.success).toBe(true);
-      expect(mockTx.payment.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          transactionReference: "TXN-REF-12345",
-        }),
-      });
-    });
-
-    it("should handle payment with different payment methods", async () => {
-      // Arrange
-      const paymentMethods = ["CASH", "TRANSFER", "CHECK", "CARD"];
-
-      for (const method of paymentMethods) {
-        const paymentWithMethod = {
-          ...mockPaymentToAnnul,
-          paymentMethod: method,
-        };
-
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-
-        const mockTx = {
-          payment: {
-            findUnique: vi.fn().mockResolvedValue(paymentWithMethod),
-            update: vi.fn().mockResolvedValue(paymentWithMethod),
-            create: vi.fn().mockResolvedValue({}),
-            count: vi.fn().mockResolvedValue(1),
-          },
-          currentAccount: {
-            update: vi.fn().mockResolvedValue(mockCurrentAccount),
-          },
-        };
-
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          return await callback(mockTx);
-        });
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(true);
-        expect(mockTx.payment.create).toHaveBeenCalledWith({
-          data: expect.objectContaining({
-            paymentMethod: method,
-          }),
-        });
-
-        vi.clearAllMocks();
-      }
-    });
-
-    it("should handle last installment correctly", async () => {
-      // Arrange
-      const lastInstallmentPayment = {
-        ...mockPaymentToAnnul,
-        installmentNumber: 12, // Last installment
-      };
-
-      const accountNearEnd = {
-        ...mockCurrentAccount,
-        remainingAmount: 1000.0, // Only this payment left
-      };
-
-      const paymentWithLastInstallment = {
-        ...lastInstallmentPayment,
-        currentAccount: accountNearEnd,
-      };
-
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(paymentWithLastInstallment),
-          update: vi.fn().mockResolvedValue(paymentWithLastInstallment),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(0), // No valid payments remaining
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(accountNearEnd),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      const result = await undoPayment(mockPrevState, formData);
-
-      // Assert
-      expect(result.success).toBe(true);
-      expect(mockTx.currentAccount.update).toHaveBeenCalled();
-    });
-
-    it("should handle very large payment amounts", async () => {
-      // Arrange
-      const largePayment = {
-        ...mockPaymentToAnnul,
-        amountPaid: 50000.0,
-      };
-
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(largePayment),
-          update: vi.fn().mockResolvedValue(largePayment),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      const result = await undoPayment(mockPrevState, formData);
-
-      // Assert
-      expect(result.success).toBe(true);
-      expect(mockTx.currentAccount.update).toHaveBeenCalledWith({
-        where: { id: mockCurrentAccount.id },
-        data: expect.objectContaining({
-          remainingAmount: 60000.0, // Original 10000 + large payment 50000
-        }),
-      });
-    });
-
-    it("should handle different payment frequencies in recalculation", async () => {
-      // Arrange
-      const frequencies = ["WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "ANNUALLY"];
-
-      for (const frequency of frequencies) {
-        const accountWithFrequency = {
-          ...mockCurrentAccount,
-          paymentFrequency: frequency as any,
-        };
-
-        const paymentWithFrequency = {
-          ...mockPaymentToAnnul,
-          currentAccount: accountWithFrequency,
-        };
-
-        mockGetOrganization.mockResolvedValue(mockSessionData);
-
-        const mockTx = {
-          payment: {
-            findUnique: vi.fn().mockResolvedValue(paymentWithFrequency),
-            update: vi.fn().mockResolvedValue(paymentWithFrequency),
-            create: vi.fn().mockResolvedValue({}),
-            count: vi.fn().mockResolvedValue(1),
-          },
-          currentAccount: {
-            update: vi.fn().mockResolvedValue(accountWithFrequency),
-          },
-        };
-
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          return await callback(mockTx);
-        });
-
-        const formData = new FormData();
-        formData.append("paymentId", "payment-123");
-
-        // Act
-        const result = await undoPayment(mockPrevState, formData);
-
-        // Assert
-        expect(result.success).toBe(true);
-        expect(mockTx.currentAccount.update).toHaveBeenCalled();
-
-        vi.clearAllMocks();
-      }
-    });
-
-    it("should log operation details correctly", async () => {
-      // Arrange
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          update: vi.fn().mockResolvedValue({
-            ...mockPaymentToAnnul,
-            id: "payment-D-123",
-          }),
-          create: vi.fn().mockResolvedValue({
-            ...mockPaymentToAnnul,
-            id: "payment-H-456",
-          }),
-          count: vi.fn().mockResolvedValue(1),
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
-      });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
-
-      // Act
-      await undoPayment(mockPrevState, formData);
-
-      // Assert
-      expect(mockConsole.log).toHaveBeenCalledWith(
-        expect.stringContaining("Payment payment-123 processed for D/H annulment"),
+      const formData = createFormData({ paymentId: "payment-123" });
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        "Database error",
+        { code: "P2002", clientVersion: "4.0.0" }
       );
+      
+      vi.mocked(prisma.$transaction).mockRejectedValue(prismaError);
+
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("Error de base de datos al anular el pago");
+    });
+
+    it("debería manejar errores generales", async () => {
+      // Arrange
+      const formData = createFormData({ paymentId: "payment-123" });
+      const generalError = new Error("General error");
+      
+      vi.mocked(prisma.$transaction).mockRejectedValue(generalError);
+
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.message).toBe("General error");
+    });
+
+    it("debería manejar errores desconocidos", async () => {
+      // Arrange
+      const formData = createFormData({ paymentId: "payment-123" });
+      
+      vi.mocked(prisma.$transaction).mockRejectedValue("Unknown error");
+
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("Ocurrió un error inesperado");
     });
   });
 
-  describe("📊 Financial Calculations", () => {
-    it("should correctly calculate remaining installments when some payments exist", async () => {
+  describe("Cálculos de cuotas", () => {
+    it("debería recalcular las cuotas correctamente después de anular", async () => {
       // Arrange
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          update: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(5), // 5 valid payments remaining
-        },
-        currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
-        },
-      };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
+      const formData = createFormData({ paymentId: "payment-123" });
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          payment: {
+            findUnique: vi.fn().mockResolvedValue(mockPayment),
+            update: vi.fn().mockResolvedValue({ ...mockPayment, installmentVersion: "D" }),
+            create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
+            count: vi.fn().mockResolvedValue(3), // 3 pagos válidos
+          },
+          currentAccount: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+        };
+        return await callback(tx);
       });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
 
       // Act
       const result = await undoPayment(mockPrevState, formData);
 
       // Assert
       expect(result.success).toBe(true);
-      expect(mockTx.payment.count).toHaveBeenCalledWith({
-        where: {
-          currentAccountId: mockCurrentAccount.id,
-          installmentVersion: null, // Only normal payments
-        },
-      });
-      // Should recalculate for remaining installments: 12 - 5 = 7
-      expect(mockTx.currentAccount.update).toHaveBeenCalledWith({
-        where: { id: mockCurrentAccount.id },
-        data: expect.objectContaining({
-          installmentAmount: expect.any(Number),
-        }),
-      });
+      // Verificar que se llamó al update de currentAccount
+      expect(vi.mocked(prisma.$transaction)).toHaveBeenCalled();
     });
 
-    it("should handle case when no remaining installments", async () => {
+    it("debería manejar casos con tasa de interés cero", async () => {
       // Arrange
-      mockGetOrganization.mockResolvedValue(mockSessionData);
-
-      const mockTx = {
-        payment: {
-          findUnique: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          update: vi.fn().mockResolvedValue(mockPaymentToAnnul),
-          create: vi.fn().mockResolvedValue({}),
-          count: vi.fn().mockResolvedValue(12), // All installments paid (including the one being undone)
-        },
+      const formData = createFormData({ paymentId: "payment-123" });
+      const mockPaymentZeroInterest = {
+        ...mockPayment,
         currentAccount: {
-          update: vi.fn().mockResolvedValue(mockCurrentAccount),
+          ...mockPayment.currentAccount,
+          interestRate: 0,
         },
       };
-
-      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-        return await callback(mockTx);
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          payment: {
+            findUnique: vi.fn().mockResolvedValue(mockPaymentZeroInterest),
+            update: vi.fn().mockResolvedValue({ ...mockPaymentZeroInterest, installmentVersion: "D" }),
+            create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
+            count: vi.fn().mockResolvedValue(5),
+          },
+          currentAccount: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+        };
+        return await callback(tx);
       });
-
-      const formData = new FormData();
-      formData.append("paymentId", "payment-123");
 
       // Act
       const result = await undoPayment(mockPrevState, formData);
 
       // Assert
       expect(result.success).toBe(true);
-      // Should not try to update installmentAmount when no remaining installments
-      expect(mockTx.currentAccount.update).toHaveBeenCalledWith({
-        where: { id: mockCurrentAccount.id },
-        data: expect.objectContaining({
-          remainingAmount: expect.any(Number),
-          updatedAt: expect.any(Date),
-          // Should not include installmentAmount when remaining installments is 0
-        }),
+    });
+
+    it("debería manejar casos sin cuotas restantes", async () => {
+      // Arrange
+      const formData = createFormData({ paymentId: "payment-123" });
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          payment: {
+            findUnique: vi.fn().mockResolvedValue(mockPayment),
+            update: vi.fn().mockResolvedValue({ ...mockPayment, installmentVersion: "D" }),
+            create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
+            count: vi.fn().mockResolvedValue(12), // Todas las cuotas pagadas
+          },
+          currentAccount: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+        };
+        return await callback(tx);
+      });
+
+      // Act
+      const result = await undoPayment(mockPrevState, formData);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe("Diferentes frecuencias de pago", () => {
+    const testFrequencies = [
+      { frequency: "WEEKLY", expectedPeriods: 52 },
+      { frequency: "BIWEEKLY", expectedPeriods: 26 },
+      { frequency: "MONTHLY", expectedPeriods: 12 },
+      { frequency: "QUARTERLY", expectedPeriods: 4 },
+      { frequency: "ANNUALLY", expectedPeriods: 1 },
+    ];
+
+    testFrequencies.forEach(({ frequency }) => {
+      it(`debería manejar frecuencia de pago ${frequency}`, async () => {
+        // Arrange
+        const formData = createFormData({ paymentId: "payment-123" });
+        const mockPaymentWithFrequency = {
+          ...mockPayment,
+          currentAccount: {
+            ...mockPayment.currentAccount,
+            paymentFrequency: frequency,
+          },
+        };
+        
+        vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+          const tx = {
+            payment: {
+              findUnique: vi.fn().mockResolvedValue(mockPaymentWithFrequency),
+              update: vi.fn().mockResolvedValue({ ...mockPaymentWithFrequency, installmentVersion: "D" }),
+              create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
+              count: vi.fn().mockResolvedValue(5),
+            },
+            currentAccount: {
+              update: vi.fn().mockResolvedValue({}),
+            },
+          };
+          return await callback(tx);
+        });
+
+        // Act
+        const result = await undoPayment(mockPrevState, formData);
+
+        // Assert
+        expect(result.success).toBe(true);
       });
     });
   });

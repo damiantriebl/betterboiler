@@ -70,7 +70,10 @@ describe("POST /api/reports/reservations/generate-pdf", () => {
       from: "2024-01-01",
       to: "2024-01-31",
     });
-    expect(mockGenerateReservationReportPDF).toHaveBeenCalledWith(mockReport);
+    expect(mockGenerateReservationReportPDF).toHaveBeenCalledWith(mockReport, {
+      from: "2024-01-01",
+      to: "2024-01-31",
+    });
     expect(mockCreateReservationReportPDFResponse).toHaveBeenCalledWith(
       mockPdfBytes,
       "reporte-reservas.pdf",

@@ -47,14 +47,17 @@ describe("signOutAction", () => {
     });
 
     it("should use default cookie name when AUTH_SESSION_COOKIE_NAME is not set", async () => {
-      // Arrange
-      const cookiesMock = cookies as any;
-      cookiesMock.mockResolvedValue(mockCookieStore);
+      // Mock cookies for sign out
+      mockCookieStore.delete = vi.fn().mockResolvedValue(undefined);
 
-      // Act & Assert
+      // Mock redirect to throw expected error
+      (redirect as any).mockImplementation(() => {
+        throw new Error("NEXT_REDIRECT");
+      });
+
       await expect(signOutAction()).rejects.toEqual(new Error("NEXT_REDIRECT"));
 
-      expect(mockCookieStore.delete).toHaveBeenCalledWith("better-auth-session-token");
+      expect(mockCookieStore.delete).toHaveBeenCalledWith(process.env.AUTH_SESSION_COOKIE_NAME || "better-auth-session-token");
       expect(redirect).toHaveBeenCalledWith("/sign-in");
     });
 
@@ -211,24 +214,26 @@ describe("signOutAction", () => {
     });
 
     it("should handle cookie store with additional methods", async () => {
-      // Arrange
       const extendedCookieStore = {
-        delete: vi.fn(),
+        ...mockCookieStore,
         get: vi.fn(),
         set: vi.fn(),
-        clear: vi.fn(),
+        getAll: vi.fn(),
+        has: vi.fn(),
+        delete: vi.fn().mockResolvedValue(undefined),
       };
 
-      const cookiesMock = cookies as any;
-      cookiesMock.mockResolvedValue(extendedCookieStore);
+      (cookies as any).mockResolvedValue(extendedCookieStore);
+      (redirect as any).mockImplementation(() => {
+        throw new Error("NEXT_REDIRECT");
+      });
 
-      // Act & Assert
       await expect(signOutAction()).rejects.toEqual(new Error("NEXT_REDIRECT"));
 
-      expect(extendedCookieStore.delete).toHaveBeenCalledWith("better-auth-session-token");
+      expect(extendedCookieStore.delete).toHaveBeenCalledWith(process.env.AUTH_SESSION_COOKIE_NAME || "better-auth-session-token");
       expect(extendedCookieStore.get).not.toHaveBeenCalled();
       expect(extendedCookieStore.set).not.toHaveBeenCalled();
-      expect(extendedCookieStore.clear).not.toHaveBeenCalled();
+      expect(redirect).toHaveBeenCalledWith("/sign-in");
     });
   });
 

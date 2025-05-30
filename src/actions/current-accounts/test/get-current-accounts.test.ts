@@ -2,8 +2,10 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCurrentAccounts } from "../get-current-accounts";
+import { auth } from "@/auth";
+import { headers } from "next/headers";
 
-// Mock de Prisma
+// Mock dependencies
 vi.mock("@/lib/prisma", () => ({
   default: {
     currentAccount: {
@@ -13,21 +15,62 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-// Mock de console para tests silenciosos
-const mockConsole = {
-  error: vi.fn(),
-  log: vi.fn(),
-};
+vi.mock("@/auth", () => ({
+  auth: () => ({
+    api: {
+      getSession: vi.fn(),
+    },
+  }),
+}));
+
+vi.mock("@/actions/util", () => ({
+  getOrganizationIdFromSession: vi.fn(),
+}));
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn(),
+}));
 
 const mockPrisma = prisma as any;
+const mockAuth = (auth as any)();
+const mockHeaders = headers as any;
+
+// Import mocked functions
+import { getOrganizationIdFromSession } from "@/actions/util";
+const mockGetOrganizationIdFromSession = getOrganizationIdFromSession as any;
 
 describe("getCurrentAccounts", () => {
+  const mockConsole = {
+    error: vi.fn(),
+    log: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    global.console = mockConsole as any;
+    // No configurar console spy aquí, se hace en beforeAll
+    
+    // Setup default mocks
+    mockHeaders.mockResolvedValue({});
+    mockGetOrganizationIdFromSession.mockResolvedValue({
+      organizationId: "test-org-123",
+      error: null,
+    });
+  });
+
+  beforeAll(() => {
+    // Configurar console spy una sola vez
+    vi.spyOn(console, "error").mockImplementation(mockConsole.error);
+    vi.spyOn(console, "log").mockImplementation(mockConsole.log);
   });
 
   afterEach(() => {
+    // Solo limpiar los mocks, no restaurar
+    mockConsole.error.mockClear();
+    mockConsole.log.mockClear();
+  });
+
+  afterAll(() => {
+    // Restaurar console después de todos los tests
     vi.restoreAllMocks();
   });
 
@@ -106,12 +149,25 @@ describe("getCurrentAccounts", () => {
         where: {},
         include: {
           client: {
-            select: { id: true, firstName: true, lastName: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
           motorcycle: {
             include: {
+              brand: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
               model: {
-                select: { id: true, name: true },
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
@@ -120,8 +176,8 @@ describe("getCurrentAccounts", () => {
         orderBy: {
           createdAt: "desc",
         },
-        skip: 0,
         take: 10,
+        skip: 0,
       });
       expect(result.success).toBe(true);
       expect(result.data).toEqual([mockCurrentAccount]);
@@ -635,6 +691,7 @@ describe("getCurrentAccounts", () => {
       const validationError = new Prisma.PrismaClientValidationError("Invalid where clause", {
         clientVersion: "4.0.0",
       });
+      mockPrisma.currentAccount.count.mockResolvedValue(5);
       mockPrisma.currentAccount.findMany.mockRejectedValue(validationError);
 
       // Act

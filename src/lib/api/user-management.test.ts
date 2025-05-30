@@ -21,6 +21,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/actions/util", () => ({
+  getSession: vi.fn(),
   getOrganizationIdFromSession: vi.fn(),
 }));
 
@@ -30,18 +31,19 @@ vi.mock("next/server", () => ({
   },
 }));
 
-import { getOrganizationIdFromSession } from "@/actions/util";
+import { getSession } from "@/actions/util";
 import prisma from "@/lib/prisma";
 
 describe("User Management API Library", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock de NextResponse.json por defecto
+    // Mock de NextResponse.json para capturar las llamadas
     vi.mocked(NextResponse.json).mockImplementation(
       (data: any, init?: any) =>
         ({
-          data,
+          ok: true,
+          json: async () => data,
           status: init?.status || 200,
         }) as any,
     );
@@ -133,11 +135,11 @@ describe("User Management API Library", () => {
       } satisfies ApiResponse);
     });
 
-    it("debería manejar validación fallida", async () => {
+    it("debería validar input y retornar error 400 para datos inválidos", async () => {
       // Arrange
       const mockOperation = vi.fn();
       const handler = new UserManagementApiHandler({
-        schema: updateUserBanStatusSchema,
+        schema: deleteUserSchema,
         operation: mockOperation,
       });
 
@@ -169,7 +171,8 @@ describe("User Management API Library", () => {
         requiresAuth: true,
       });
 
-      vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
+      vi.mocked(getSession).mockResolvedValue({
+        session: null,
         error: "No autorizado",
       } as any);
 
@@ -214,7 +217,7 @@ describe("User Management API Library", () => {
           success: false,
           error: "Error interno del servidor",
           timestamp: expect.any(String),
-        } satisfies ApiResponse,
+        },
         { status: 500 },
       );
 
@@ -227,8 +230,15 @@ describe("User Management API Library", () => {
       it("debería actualizar estado de baneo correctamente", async () => {
         // Arrange
         const mockUser = { id: "user-123", banned: true, email: "test@example.com" };
-        vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
-          organizationId: "org-1",
+        vi.mocked(getSession).mockResolvedValue({
+          session: {
+            user: {
+              id: "current-user",
+              organizationId: "org-1",
+              role: "admin",
+            },
+          },
+          error: null,
         } as any);
         vi.mocked(prisma.user.update).mockResolvedValue(mockUser as any);
 
@@ -257,8 +267,15 @@ describe("User Management API Library", () => {
       it("debería actualizar organización correctamente", async () => {
         // Arrange
         const mockUser = { id: "user-123", organizationId: "org-2", email: "test@example.com" };
-        vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
-          organizationId: "org-1",
+        vi.mocked(getSession).mockResolvedValue({
+          session: {
+            user: {
+              id: "current-user",
+              organizationId: "org-1",
+              role: "root",
+            },
+          },
+          error: null,
         } as any);
         vi.mocked(prisma.user.update).mockResolvedValue(mockUser as any);
 
@@ -286,8 +303,15 @@ describe("User Management API Library", () => {
     describe("deleteUser", () => {
       it("debería eliminar usuario correctamente", async () => {
         // Arrange
-        vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
-          organizationId: "org-1",
+        vi.mocked(getSession).mockResolvedValue({
+          session: {
+            user: {
+              id: "current-user",
+              organizationId: "org-1",
+              role: "admin",
+            },
+          },
+          error: null,
         } as any);
         vi.mocked(prisma.user.delete).mockResolvedValue({} as any);
 

@@ -81,7 +81,10 @@ describe("/api/reports/reservations", () => {
       expect(getOrganizationIdFromSession).toHaveBeenCalled();
       expect(mockRequest.json).toHaveBeenCalled();
       expect(getReservationsReport).toHaveBeenCalledWith(mockFilters.dateRange);
-      expect(generateReservationReportPDF).toHaveBeenCalledWith(mockReport);
+      expect(generateReservationReportPDF).toHaveBeenCalledWith(mockReport, {
+        startDate: "2024-01-01",
+        endDate: "2024-01-31",
+      });
       expect(createReservationReportPDFResponse).toHaveBeenCalledWith(
         mockPdfBytes,
         "reporte-reservas.pdf",

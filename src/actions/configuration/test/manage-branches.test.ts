@@ -13,11 +13,11 @@ vi.mock("next/cache", () => ({
 
 // Mock de auth
 vi.mock("@/auth", () => ({
-  auth: {
+  auth: () => ({
     api: {
       getSession: vi.fn(),
     },
-  },
+  }),
 }));
 
 // Mock de headers
@@ -46,9 +46,18 @@ const mockConsole = {
 };
 
 const mockRevalidatePath = revalidatePath as any;
-const mockAuth = auth as any;
+const mockAuth = (auth as any)();
 const mockHeaders = headers as any;
 const mockPrisma = prisma as any;
+
+// Mock dependencies
+vi.mock("@/actions/util", () => ({
+  getOrganizationIdFromSession: vi.fn(),
+}));
+
+// Import and get the mocked function after vi.mock
+import { getOrganizationIdFromSession } from "@/actions/util";
+const mockGetOrganizationIdFromSession = getOrganizationIdFromSession as any;
 
 describe("Manage Branches", () => {
   beforeEach(() => {
@@ -57,8 +66,9 @@ describe("Manage Branches", () => {
 
     // Setup default mocks
     mockHeaders.mockResolvedValue({});
-    mockAuth.api.getSession.mockResolvedValue({
-      user: { organizationId: "org-123" },
+    mockGetOrganizationIdFromSession.mockResolvedValue({
+      organizationId: "org-123",
+      error: null,
     });
   });
 
@@ -232,7 +242,10 @@ describe("Manage Branches", () => {
     describe("🔐 Authentication Errors", () => {
       it("should return error when user is not authenticated", async () => {
         // Arrange
-        mockAuth.api.getSession.mockResolvedValue(null);
+        mockGetOrganizationIdFromSession.mockResolvedValue({
+          organizationId: null,
+          error: "Usuario no autenticado o sin organización.",
+        });
 
         // Act
         const result = await createBranch(null, mockFormData);
@@ -245,8 +258,9 @@ describe("Manage Branches", () => {
 
       it("should return error when organization is missing", async () => {
         // Arrange
-        mockAuth.api.getSession.mockResolvedValue({
-          user: { organizationId: null },
+        mockGetOrganizationIdFromSession.mockResolvedValue({
+          organizationId: null,
+          error: "Usuario no autenticado o sin organización.",
         });
 
         // Act
@@ -771,7 +785,10 @@ describe("Manage Branches", () => {
     describe("🔐 Authentication Errors", () => {
       it("should return error when user is not authenticated", async () => {
         // Arrange
-        mockAuth.api.getSession.mockResolvedValue(null);
+        mockGetOrganizationIdFromSession.mockResolvedValue({
+          organizationId: null,
+          error: "Usuario no autenticado o sin organización.",
+        });
         const orderedItems = [{ id: 1, order: 0 }];
 
         // Act

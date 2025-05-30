@@ -11,7 +11,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/actions/util", () => ({
-  getOrganizationIdFromSession: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({
@@ -21,7 +21,7 @@ vi.mock("next/server", () => ({
   },
 }));
 
-import { getOrganizationIdFromSession } from "@/actions/util";
+import { getSession } from "@/actions/util";
 import prisma from "@/lib/prisma";
 import { POST } from "./route";
 
@@ -39,23 +39,26 @@ describe("/api/change-role", () => {
     );
   });
 
-  it("debería actualizar la organización del usuario", async () => {
+  it("debería actualizar el rol del usuario", async () => {
     // Arrange
     const mockUserId = "user-1";
-    const mockOrganizationId = "org-2";
-    const mockUser = {
-      id: mockUserId,
-      organizationId: mockOrganizationId,
-      email: "test@example.com",
-    };
+    const mockRole = "admin";
+    const mockUser = { id: mockUserId, organizationId: "org-1", email: "test@example.com" };
 
-    vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
-      organizationId: "org-1",
+    vi.mocked(getSession).mockResolvedValue({
+      session: {
+        user: {
+          id: "admin-user",
+          role: "admin",
+          organizationId: "org-1",
+        },
+      },
+      error: null,
     } as any);
     vi.mocked(prisma.user.update).mockResolvedValue(mockUser as any);
 
     const mockRequest = {
-      json: vi.fn().mockResolvedValue({ userId: mockUserId, organizationId: mockOrganizationId }),
+      json: vi.fn().mockResolvedValue({ userId: mockUserId, organizationId: "org-1" }),
     } as unknown as Request;
 
     // Act
@@ -65,7 +68,7 @@ describe("/api/change-role", () => {
     expect(mockRequest.json).toHaveBeenCalled();
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: mockUserId },
-      data: { organizationId: mockOrganizationId },
+      data: { organizationId: "org-1" },
       select: { id: true, organizationId: true, email: true },
     });
     expect(NextResponse.json).toHaveBeenCalledWith({
@@ -77,12 +80,13 @@ describe("/api/change-role", () => {
 
   it("debería manejar errores de autenticación", async () => {
     // Arrange
-    vi.mocked(getOrganizationIdFromSession).mockResolvedValue({
+    vi.mocked(getSession).mockResolvedValue({
+      session: null,
       error: "No autorizado",
     } as any);
 
     const mockRequest = {
-      json: vi.fn().mockResolvedValue({ userId: "user-1", organizationId: "org-2" }),
+      json: vi.fn().mockResolvedValue({ userId: "user-1", role: "admin", organizationId: "org-1" }),
     } as unknown as Request;
 
     // Act
@@ -97,5 +101,38 @@ describe("/api/change-role", () => {
       { status: 401 },
     );
     expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it("debería manejar errores internos del servidor", async () => {
+    // Arrange
+    vi.mocked(getSession).mockResolvedValue({
+      session: {
+        user: {
+          id: "admin-user",
+          role: "admin",
+          organizationId: "org-1",
+        },
+      },
+      error: null,
+    } as any);
+    vi.mocked(prisma.user.update).mockRejectedValue(new Error("Error interno del servidor"));
+
+    const mockRequest = {
+      json: vi.fn().mockResolvedValue({ userId: "user-1", role: "admin", organizationId: "org-1" }),
+    } as unknown as Request;
+
+    // Act
+    const response = await POST(mockRequest);
+
+    // Assert
+    expect(NextResponse.json).toHaveBeenCalledWith(
+      {
+        success: false,
+        error: "Error interno del servidor",
+        timestamp: expect.any(String),
+      },
+      { status: 500 },
+    );
+    expect(prisma.user.update).toHaveBeenCalled();
   });
 });
