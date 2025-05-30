@@ -1,19 +1,19 @@
 "use client";
 
-import { createMotorcycleBatch } from "@/actions/stock/create-motorcycle-batch";
-import type { BranchData } from "@/actions/stock/get-branch";
+import { createMotorcycleBatch } from "@/actions/stock";
+import type { BranchData } from "@/actions/stock/form-data-unified";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { ColorConfig } from "@/types/ColorType";
-import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
-import { motorcycleBatchSchema } from "@/zod/MotorcycleBatchSchema";
+import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
+import { motorcycleBatchSchema } from "@/zod/NewBikeZod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Supplier } from "@prisma/client";
 import React, { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { BatchPreview } from "./BatchPreview";
-import { NewMotoForm } from "./NewMotoForm";
-import type { BrandForCombobox } from "./page";
+import { NewMotoFormRefactored } from "./NewMotoForm";
+import type { BrandForCombobox } from "./types";
 
 interface NewStockClientContainerProps {
   availableColors: ColorConfig[];
@@ -49,7 +49,6 @@ export function NewStockClientContainer({
       otrosImpuestosMayorista: null,
       gananciaPorcentajeMayorista: null,
       imageUrl: null,
-      licensePlate: null,
       displacement: null,
     },
   });
@@ -103,7 +102,7 @@ export function NewStockClientContainer({
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          <NewMotoForm
+          <NewMotoFormRefactored
             form={form}
             availableColors={availableColors}
             availableBrands={availableBrands}

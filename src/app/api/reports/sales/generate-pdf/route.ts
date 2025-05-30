@@ -1,21 +1,26 @@
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { Readable } from "node:stream";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import type { ReportFilters } from "@/types/SalesReportType";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateSalesReportPDF } from "./actions";
 
 export async function POST(request: NextRequest) {
   try {
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) {
-      return NextResponse.json({ error: "No organization found" }, { status: 401 });
+    const org = await getOrganizationIdFromSession();
+
+    if (org.error || !org.organizationId) {
+      return NextResponse.json(
+        { error: org.error || "Organization ID not found in session" },
+        { status: 401 },
+      );
     }
 
     const filters = (await request.json()) as ReportFilters;
-    filters.organizationId = organizationId;
+    filters.organizationId = org.organizationId;
 
     const pdfBuffer = await generateSalesReportPDF(filters);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(Buffer.from(pdfBuffer).buffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": 'attachment; filename="reporte-ventas.pdf"',

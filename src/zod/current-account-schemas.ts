@@ -1,4 +1,3 @@
-import type { Client, CurrentAccount, Model, Motorcycle } from "@prisma/client";
 import { z } from "zod";
 
 // Corresponds to the PaymentFrequency enum in Prisma

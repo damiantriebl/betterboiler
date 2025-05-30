@@ -11,10 +11,16 @@ export async function sendEmail({
   text: string;
 }) {
   if (!process.env.SENDGRID_API_KEY) {
-    throw new Error("SENDGRID_API_KEY environment variable is not set");
+    return {
+      success: false,
+      message: "Failed to send email. Please try again later.",
+    };
   }
   if (!process.env.EMAIL_FROM) {
-    throw new Error("EMAIL_FROM environment variable is not set");
+    return {
+      success: false,
+      message: "Failed to send email. Please try again later.",
+    };
   }
 
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -29,13 +35,12 @@ export async function sendEmail({
   try {
     const [response] = await sgMail.send(message);
 
-    if (response.statusCode !== 202) {
-      throw new Error(`SendGrid API returned status code ${response.statusCode}`);
-    }
+    console.log(`Email sent successfully to ${to}`);
 
     return {
       success: true,
-      messageId: response.headers["x-message-id"],
+      message: "Email sent successfully",
+      messageId: response.headers?.["x-message-id"],
     };
   } catch (error) {
     console.error("Error sending email:", error);

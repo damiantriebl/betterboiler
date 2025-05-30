@@ -1,5 +1,6 @@
 import CreateOrEditOrganization from "@/app/(app)/root/CreateOrEditOrganization";
 import DeleteOrganizationButton from "@/app/(app)/root/DeleteOrganizationButton";
+import { auth } from "@/auth";
 import OrganizationLogo from "@/components/custom/OrganizationLogo";
 import {
   Table,
@@ -10,8 +11,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import prisma from "@/lib/prisma";
+import { headers } from "next/headers";
 
 export default async function OrganizationTable() {
+  // Obtener la sesión del usuario actual para saber su organizationId
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  const currentUserOrganizationId = session?.user?.organizationId || null;
+
   const organizations = await prisma.organization.findMany({
     select: {
       id: true,
@@ -52,7 +61,10 @@ export default async function OrganizationTable() {
               )}
             </TableCell>
             <TableCell className="flex gap-2">
-              <CreateOrEditOrganization organization={org} />
+              <CreateOrEditOrganization
+                organization={org}
+                currentUserOrganizationId={currentUserOrganizationId}
+              />
               <DeleteOrganizationButton id={org.id} name={org.name} />
             </TableCell>
           </TableRow>

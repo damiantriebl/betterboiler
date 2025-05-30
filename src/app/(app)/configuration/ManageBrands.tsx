@@ -42,8 +42,9 @@ export default function ManageBrands({
   initialOrganizationBrands,
   organizationId,
 }: ManageBrandsProps) {
-  const [associations, setAssociations] =
-    useState<OrganizationBrandDisplayData[]>(initialOrganizationBrands);
+  const [associations, setAssociations] = useState<OrganizationBrandDisplayData[]>(
+    initialOrganizationBrands || [],
+  );
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOrderPending, startOrderTransition] = useTransition();
@@ -52,7 +53,7 @@ export default function ManageBrands({
   const [isModelActionPending, startModelActionTransition] = useTransition();
 
   useEffect(() => {
-    setAssociations(initialOrganizationBrands);
+    setAssociations(initialOrganizationBrands || []);
   }, [initialOrganizationBrands]);
 
   const sensors = useSensors(
@@ -294,7 +295,7 @@ export default function ManageBrands({
           onSuccess={() => {
             console.log("Modal de asociación de marca cerrado con éxito.");
           }}
-          existingBrandIds={associations.map((assoc) => assoc.brand.id)}
+          existingBrandIds={(associations || []).map((assoc) => assoc.brand.id)}
         />
       )}
     </Card>

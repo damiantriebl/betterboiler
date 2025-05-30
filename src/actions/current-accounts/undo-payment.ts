@@ -1,13 +1,29 @@
 "use server";
 
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import prisma from "@/lib/prisma";
 import { type PaymentFrequency, Prisma, type PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { getOrganizationIdFromSession } from "../util";
 
 const undoPaymentSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required."),
+  otp: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val === null ? undefined : val)),
+  secureMode: z.boolean().optional(),
 });
+
+// Helper para validar OTP (usando la misma función que en motorcycle-operations)
+async function validateOtp(otp: string): Promise<boolean> {
+  // Por ahora, simulamos la validación
+  // En una implementación real, aquí validarías el OTP contra tu sistema de autenticación
+  console.log("[OTP] Validando OTP para anulación de pago:", otp);
+
+  // OTP de prueba: "123456"
+  return otp === "123456";
+}
 
 // Función para calcular el número de períodos por año según la frecuencia de pago
 function getPeriodsPerYear(frequency: PaymentFrequency): number {
@@ -54,25 +70,27 @@ export interface UndoPaymentFormState {
     _form?: string[];
   };
   success: boolean;
+  requiresOtp?: boolean;
 }
 
 export async function undoPayment(
   prevState: UndoPaymentFormState,
   formData: FormData,
 ): Promise<UndoPaymentFormState> {
-  const session = await getOrganizationIdFromSession();
+  const org = await getOrganizationIdFromSession();
 
-  if (!session?.organizationId) {
+  if (!org?.organizationId) {
     return {
       message: "Error: Organization not found or user not authenticated.",
       success: false,
     };
   }
-  const organizationId = session.organizationId;
-  // const userId = session.userId; // TODO: Extract actual userId for auditing if needed
+  const organizationId = org.organizationId;
 
   const validatedFields = undoPaymentSchema.safeParse({
     paymentId: formData.get("paymentId"),
+    otp: formData.get("otp"),
+    secureMode: formData.get("secureMode") === "true",
   });
 
   if (!validatedFields.success) {
@@ -83,7 +101,28 @@ export async function undoPayment(
     };
   }
 
-  const { paymentId } = validatedFields.data;
+  const { paymentId, otp, secureMode } = validatedFields.data;
+
+  // Verificar si se requiere OTP (anulación de pagos es siempre crítica en modo seguro)
+  if (secureMode) {
+    if (!otp) {
+      return {
+        message: "Esta operación requiere verificación OTP en modo seguro.",
+        success: false,
+        requiresOtp: true,
+      };
+    }
+
+    // Validar el OTP
+    const isValidOtp = await validateOtp(otp);
+    if (!isValidOtp) {
+      return {
+        message: "Código OTP inválido. Por favor, verifica el código e intenta nuevamente.",
+        success: false,
+        requiresOtp: true,
+      };
+    }
+  }
 
   try {
     return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -214,7 +253,7 @@ export async function undoPayment(
       );
 
       return {
-        message: `Anulación procesada para pago ${paymentId} (Asientos D/H generados). Saldo y cuota recalculados.`,
+        message: `Anulación procesada para pago ${paymentId} (Asientos D/H generados). Saldo y cuota recalculados.${secureMode ? " (Verificado con OTP)" : ""}`,
         success: true,
       };
     });

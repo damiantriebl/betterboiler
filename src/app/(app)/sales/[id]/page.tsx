@@ -1,10 +1,9 @@
 "use client";
 
 import { getEnabledBankingPromotions } from "@/actions/banking-promotions/get-banking-promotions";
-import { getClients } from "@/actions/clients/get-clients";
+import { getClients } from "@/actions/clients/manage-clients";
 import { createCurrentAccount } from "@/actions/current-accounts/create-current-account";
 import { recordCurrentAccountPayment } from "@/actions/current-accounts/record-current-account-payment";
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
 import { completeSale } from "@/actions/sales/complete-sale";
 import { getMotorcycleById } from "@/actions/sales/get-motorcycle-by-id";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import { getCurrentDayOfWeek } from "@/utils/promotion-utils";
 import type { CreateCurrentAccountInput, RecordPaymentInput } from "@/zod/current-account-schemas";
 import type { Client } from "@prisma/client";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { use } from "react";
@@ -38,6 +37,7 @@ import {
 } from "./utils";
 
 import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
+import { getOrganizationIdFromSession } from "@/actions/util";
 // Import types
 import type { SaleProcessState } from "./types";
 
@@ -389,7 +389,6 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           efectivo: "cash",
           transferencia: "transfer",
           tarjeta: "credit", // Map to both 'credit' and 'debit'
-          mercadopago: "mercadopago",
           todopago: "todopago",
           qr: "qr",
           cheque: "check",
@@ -412,14 +411,14 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
             return promotion.bankId.toString() === saleState.paymentData.banco;
           }
 
-          if (promotion.cardId && saleState.paymentData.tarjetaTipo) {
+          if (promotion.bankCardId && saleState.paymentData.tarjetaTipo) {
             const cardMap: Record<string, number> = {
               visa: 1,
               mastercard: 2,
               amex: 3,
             };
             const cardId = cardMap[saleState.paymentData.tarjetaTipo];
-            return promotion.cardId === cardId;
+            return promotion.bankCardId === cardId;
           }
         } else {
           // For other payment methods, check direct match with type
@@ -775,10 +774,10 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
             try {
               console.log("🔍 [sales/page] Iniciando proceso de creación de cuenta corriente");
               // El organizationId es necesario para la cuenta corriente
-              const sessionResult = await getOrganizationIdFromSession(); // Get the SessionResult object
-              console.log("🔍 [sales/page] OrganizationID session result obtenido:", sessionResult);
+              const org = await getOrganizationIdFromSession(); // Get the SessionResult object
+              console.log("🔍 [sales/page] OrganizationID session result obtenido:", org);
 
-              if (!sessionResult.organizationId) {
+              if (!org.organizationId) {
                 // Check the property
                 console.error(
                   "❌ [sales/page] Error: No se pudo obtener el ID de la organización para la cuenta corriente",
@@ -787,7 +786,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
                   "No se pudo obtener el ID de la organización para la cuenta corriente.",
                 );
               }
-              const currentOrganizationId = sessionResult.organizationId; // Extract the string ID
+              const currentOrganizationId = org.organizationId; // Extract the string ID
 
               const principalAmount = finalPrice - (Number(saleState.paymentData.downPayment) || 0);
               const calculatedInstallmentAmt = calculateInstallmentWithInterestCA(
@@ -953,11 +952,19 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
 
   // Render step content
   const renderStepContent = () => {
+    if (!moto) {
+      return (
+        <div className="flex justify-center items-center h-full min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+
     switch (saleState.currentStep) {
       case 0: // Confirm Motorcycle
         return (
           <ConfirmMotorcycleStep
-            moto={moto || null}
+            moto={moto}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             reservationCurrency={reservationCurrency}
@@ -968,7 +975,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
       case 1: // Payment Method
         return (
           <PaymentMethodStep
-            moto={moto || null}
+            moto={moto}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             reservationCurrency={reservationCurrency}
@@ -1001,7 +1008,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         return (
           <ConfirmationStep
             loading={loading}
-            moto={moto || null}
+            moto={moto}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             buyerData={saleState.buyerData}
@@ -1025,28 +1032,91 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
 
   // Main component return
   return (
-    <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Proceso de Venta</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Stepper currentStep={saleState.currentStep} steps={steps} />
-          <div className="min-h-[400px]">{renderStepContent()}</div>
-          <div className="flex justify-between mt-8">
-            <Button variant="outline" onClick={handleBack} disabled={saleState.currentStep === 0}>
-              Anterior
-            </Button>
+    <div className="container max-w-none  px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Button
-              onClick={handleNext}
-              disabled={saleState.currentStep === steps.length - 1 && loading}
-              className={saleState.currentStep === 2 ? "bg-red-600 hover:bg-red-700" : ""}
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/sales")}
+              className="gap-2"
             >
-              {saleState.currentStep === 2 ? "Confirmar Venta" : "Siguiente"}
+              <ArrowLeft className="w-4 h-4" />
+              Volver al Catálogo
             </Button>
+            <div className="h-6 w-px bg-border" />
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Proceso de Venta</h1>
+              <p className="text-muted-foreground mt-1">
+                {moto
+                  ? `${moto.brand?.name || "Marca"} ${moto.model?.name || "Modelo"} ${moto.year || ""}`
+                  : "Cargando..."}
+              </p>
+            </div>
           </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              Paso {saleState.currentStep + 1} de {steps.length}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stepper */}
+      <Stepper currentStep={saleState.currentStep} steps={steps} />
+
+      {/* Content Card */}
+      <Card className="shadow-sm">
+        <CardContent className="p-8">
+          <div className="min-h-[500px]">{renderStepContent()}</div>
         </CardContent>
       </Card>
+
+      {/* Navigation */}
+      <div className="flex justify-between items-center mt-8 pt-6 border-t">
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          disabled={saleState.currentStep === 0}
+          className="px-6"
+        >
+          Anterior
+        </Button>
+
+        <div className="flex items-center gap-4">
+          {saleState.currentStep < steps.length - 1 && (
+            <Button onClick={handleNext} disabled={loading || isTransitionPending} className="px-6">
+              {loading || isTransitionPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                "Siguiente"
+              )}
+            </Button>
+          )}
+
+          {saleState.currentStep === steps.length - 1 && (
+            <Button
+              onClick={handleNext}
+              disabled={loading || isTransitionPending}
+              className="px-6 bg-green-600 hover:bg-green-700"
+            >
+              {loading || isTransitionPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Completando Venta...
+                </>
+              ) : (
+                "Confirmar Venta"
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

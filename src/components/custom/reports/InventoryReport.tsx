@@ -13,6 +13,7 @@ const stateLabels: Record<MotorcycleState, string> = {
   RESERVADO: "Reservado",
   PROCESANDO: "Procesando",
   ELIMINADO: "Eliminado",
+  EN_TRANSITO: "En Tránsito",
 };
 
 export function InventoryReport({ data }: InventoryReportProps) {

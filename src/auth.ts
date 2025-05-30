@@ -10,12 +10,13 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  trustedOrigins: ["http://localhost:3000", "http://localhost:3001"],
   session: {
-    expiresIn: 60 * 60 * 24 * 7,
-    updateAge: 60 * 60 * 24,
+    expiresIn: 60 * 60 * 24 * 7, // 7 días
+    updateAge: 60 * 60 * 24, // 1 día
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60,
+      maxAge: 10 * 60, // Aumentar a 10 minutos
     },
   },
 
@@ -29,12 +30,12 @@ export const auth = betterAuth({
   plugins: [
     openAPI(),
     admin({
-      adminRole: ["admin", "root"],
+      adminRoles: ["admin", "root"],
     }),
     nextCookies(),
     jwt({
       jwt: {
-        definePayload: async (user) => {
+        definePayload: async ({ user }) => {
           const org = user?.organizationId
             ? await prisma.organization.findUnique({
                 where: { id: user?.organizationId },
@@ -46,7 +47,7 @@ export const auth = betterAuth({
             email: user.email,
             role: user.role,
             organizationId: user.organizationId,
-            organizationName: user.organizationName,
+            organizationName: org?.name,
             organization: org,
           };
         },

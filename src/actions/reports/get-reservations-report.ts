@@ -1,12 +1,33 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type { ReportFilters } from "@/types/reports";
 import { MotorcycleState } from "@prisma/client";
+import { getOrganizationIdFromSession } from "../util";
 
-export async function getReservationsReport(filters: ReportFilters) {
-  const organizationId = filters.organizationId;
-  const dateRange = filters.dateRange;
+export async function getReservationsReport(dateRange?: { from?: Date; to?: Date }) {
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId) {
+    console.error(
+      "Error en getReservationsReport: No se pudo obtener el ID de la organización. Mensaje de sesión:",
+      org.error,
+    );
+    // Devolver una estructura ReservationsReport vacía/por defecto
+    return {
+      summary: {
+        totalReservations: 0,
+        activeReservations: 0,
+        completedReservations: 0,
+        cancelledReservations: 0,
+        expiredReservations: 0,
+        totalAmount: {},
+        conversionRate: 0,
+      },
+      reservationsByStatus: {},
+      reservationsByBranch: {},
+      reservationsByMonth: {},
+    };
+  }
+  const organizationId = org.organizationId;
 
   // Obtener todas las motos reservadas con sus detalles
   const motorcycles = await prisma.motorcycle.findMany({

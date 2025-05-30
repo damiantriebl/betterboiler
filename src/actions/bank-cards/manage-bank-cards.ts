@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "../util";
 
 /**
  * Asocia un tipo de tarjeta a un banco para una organización
@@ -26,14 +26,14 @@ export async function associateBankWithCardType(
   try {
     // Si no se proporciona organizationId, obtenerlo de la sesión
     if (!organizationId) {
-      const orgId = await getOrganizationIdFromSession();
-      if (!orgId) {
+      const org = await getOrganizationIdFromSession();
+      if (!org.organizationId) {
         return {
           success: false,
           error: "No se pudo obtener la organización del usuario",
         };
       }
-      organizationId = orgId;
+      organizationId = org.organizationId;
     }
 
     // Verificar si ya existe esta asociación
@@ -57,7 +57,7 @@ export async function associateBankWithCardType(
       data: {
         bankId,
         cardTypeId,
-        organizationId,
+        organizationId: organizationId as string,
         isEnabled,
         order,
       },
@@ -210,11 +210,11 @@ export async function associateMultipleCardTypesToBank(
 ) {
   try {
     if (!organizationId) {
-      const orgId = await getOrganizationIdFromSession();
-      if (!orgId) {
+      const orgResult = await getOrganizationIdFromSession();
+      if (!orgResult.organizationId) {
         return { success: false, error: "No se pudo obtener la organización del usuario" };
       }
-      organizationId = orgId;
+      organizationId = orgResult.organizationId;
     }
 
     if (!cardTypeIds || cardTypeIds.length === 0) {
@@ -256,9 +256,9 @@ export async function associateMultipleCardTypesToBank(
       data: idsToCreate.map((cardTypeId, index) => ({
         bankId,
         cardTypeId,
-        organizationId, // Ya validamos que existe
-        isEnabled: true, // Default
-        order: index, // Podrías querer una lógica de orden más sofisticada
+        organizationId: organizationId as string,
+        isEnabled: true,
+        order: index,
       })),
       skipDuplicates: true, // Evita errores si algo cambió entre la verificación y la creación
     });

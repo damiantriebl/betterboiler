@@ -1,8 +1,12 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
-import { promotionCalculationSchema } from "@/zod/banking-promotion-schemas";
+import type { Bank } from "@/types/banking-promotions";
+import { unstable_cache } from "next/cache";
+
+// Tipo para las promociones bancarias con relaciones
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PrismaBankingPromotionWithRelations = any;
 
 // Get all banks for selecting in forms
 export async function getAllBanks(): Promise<Bank[]> {
@@ -21,13 +25,13 @@ export async function getAllBanks(): Promise<Bank[]> {
 // Get banking promotions for an organization
 export async function getOrganizationBankingPromotions(
   organizationId: string,
-): Promise<BankingPromotionDisplay[]> {
+): Promise<PrismaBankingPromotionWithRelations[]> {
   try {
     const bankingPromotions = await prisma.bankingPromotion.findMany({
       where: { organizationId },
       include: {
         paymentMethod: true,
-        card: true,
+        bankCard: true,
         bank: true,
         installmentPlans: {
           orderBy: { installments: "asc" },
@@ -36,7 +40,7 @@ export async function getOrganizationBankingPromotions(
       orderBy: { createdAt: "desc" },
     });
 
-    return bankingPromotions as BankingPromotionDisplay[];
+    return bankingPromotions;
   } catch (error) {
     console.error("Error fetching banking promotions:", error);
     return [];
@@ -44,13 +48,15 @@ export async function getOrganizationBankingPromotions(
 }
 
 // Get a single banking promotion with all details
-export async function getBankingPromotionById(id: number): Promise<BankingPromotionDisplay | null> {
+export async function getBankingPromotionById(
+  id: number,
+): Promise<PrismaBankingPromotionWithRelations | null> {
   try {
     const promotion = await prisma.bankingPromotion.findUnique({
       where: { id },
       include: {
         paymentMethod: true,
-        card: true,
+        bankCard: true,
         bank: true,
         installmentPlans: {
           orderBy: { installments: "asc" },
@@ -58,7 +64,7 @@ export async function getBankingPromotionById(id: number): Promise<BankingPromot
       },
     });
 
-    return promotion as BankingPromotionDisplay | null;
+    return promotion;
   } catch (error) {
     console.error(`Error fetching banking promotion with id ${id}:`, error);
     return null;
@@ -91,6 +97,7 @@ export async function calculatePromotionAmount(params: {
     let surchargeAmount = 0;
     let installmentAmount = 0;
     let totalInterest = 0;
+    let hasValidInstallmentPlan = false;
 
     // Apply discount or surcharge
     if (promotion.discountRate && promotion.discountRate > 0) {
@@ -108,6 +115,8 @@ export async function calculatePromotionAmount(params: {
       );
 
       if (installmentPlan) {
+        hasValidInstallmentPlan = true;
+
         if (installmentPlan.interestRate > 0) {
           // Apply interest to final amount
           totalInterest = finalAmount * (installmentPlan.interestRate / 100);
@@ -124,9 +133,10 @@ export async function calculatePromotionAmount(params: {
       finalAmount,
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
       surchargeAmount: surchargeAmount > 0 ? surchargeAmount : undefined,
-      installmentAmount: installmentAmount > 0 ? installmentAmount : undefined,
-      totalInterest: totalInterest > 0 ? totalInterest : undefined,
-      installments: installments && installments > 1 ? installments : undefined,
+      installmentAmount:
+        hasValidInstallmentPlan && installmentAmount > 0 ? installmentAmount : undefined,
+      totalInterest: hasValidInstallmentPlan && totalInterest > 0 ? totalInterest : undefined,
+      installments: hasValidInstallmentPlan ? installments : undefined,
     };
   } catch (error) {
     console.error("Error calculating promotion amount:", error);
@@ -152,7 +162,7 @@ export async function getEnabledBankingPromotions(organizationId: string) {
       include: {
         paymentMethod: true,
         bank: true,
-        card: true,
+        bankCard: true,
         installmentPlans: true,
       },
       orderBy: {

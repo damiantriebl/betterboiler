@@ -1,19 +1,53 @@
-import { type Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
   const prisma = new PrismaClient({
-    // log: ['query', 'info', 'warn', 'error']
-    log: ["warn", "error"],
+    // 🚀 OPTIMIZACIONES DE THROUGHPUT - DATABASE
+    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : [],
+
+    // Connection pooling optimizado para throughput
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+
+    // Configuración optimizada
+    errorFormat: "minimal",
+
+    // Optimizar para performance
+    transactionOptions: {
+      maxWait: 5000, // Tiempo máximo de espera: 5s
+      timeout: 10000, // Timeout de transacción: 10s
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+    },
   });
 
+  // 🚀 Middleware optimizado para throughput
   prisma.$use(async (params: Prisma.MiddlewareParams, next) => {
-    const user = params.args?.context?.user || "anon";
-    /*  console.log(`[DB] User: ${user} | Model: ${params.model} | Action: ${params.action}`);
-    console.log(`[DB] Args: ${JSON.stringify(params.args)}`); */
-    const start = Date.now();
-    const result = await next(params);
-    /*     console.log(`[DB] Duration: ${Date.now() - start}ms`);
-     */ return result;
+    const start = performance.now();
+
+    try {
+      const result = await next(params);
+
+      // Solo logging en desarrollo para queries lentas
+      if (process.env.NODE_ENV === "development") {
+        const duration = performance.now() - start;
+        if (duration > 100) {
+          // Solo queries > 100ms
+          console.log(`🐌 Slow Query: ${params.model}.${params.action} - ${duration.toFixed(2)}ms`);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      const duration = performance.now() - start;
+      console.error(
+        `❌ DB Error: ${params.model}.${params.action} - ${duration.toFixed(2)}ms`,
+        error,
+      );
+      throw error;
+    }
   });
 
   return prisma;

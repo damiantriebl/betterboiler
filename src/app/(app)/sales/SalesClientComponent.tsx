@@ -1,34 +1,37 @@
 "use client"; // <-- ¡Importante! Este es el Client Component
 
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
-import type { MotorcycleTableRowData } from "@/actions/sales/get-motorcycles";
+import type { MotorcycleTableData } from "@/actions/sales/get-motorcycles-unified";
+import { getMotorcycles } from "@/actions/sales/get-motorcycles-unified";
+import { getOrganizationIdFromSession } from "@/actions/util";
+import { SecurityModeToggle } from "@/components/custom/SecurityModeToggle";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMotorcycleFiltersStore } from "@/stores/motorcycle-filters-store";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 import type { Day } from "@/zod/banking-promotion-schemas";
-import type { Brand, Client, Model, Motorcycle, MotorcycleState, Sucursal } from "@prisma/client";
+import type { Client } from "@prisma/client";
+import { MotorcycleState } from "@prisma/client";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MotorcycleTable from "./(table)/MotorcycleTable";
 import { PromotionDayFilter } from "./PromotionDayFilter";
-import { ReserveModal } from "./ReserveModal";
-import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
-import type { Client as ClientType } from "@/types/client";
+import { ReservationModal } from "./components/ReservationModal";
+
+// Estados disponibles por defecto
+const estadosDisponibles: MotorcycleState[] = [
+  MotorcycleState.STOCK,
+  MotorcycleState.RESERVADO,
+  MotorcycleState.PAUSADO,
+];
 
 // Definir las props que espera este componente
 interface SalesClientComponentProps {
-  initialData: MotorcycleTableRowData[]; // Datos obtenidos de getMotorcycles
+  initialData: MotorcycleTableData[]; // Datos obtenidos de getMotorcycles
   clients?: Client[]; // Clientes para mostrar en dropdowns
   promotions?: BankingPromotionDisplay[]; // Promociones bancarias para el día actual (ahora opcional)
   allPromotions?: BankingPromotionDisplay[]; // Todas las promociones bancarias habilitadas (ahora opcional)
   currentDay?: Day; // Día actual
-}
-
-// Estado para la moto seleccionada para la venta
-interface SelectedMotorcycleForSale extends Omit<MotorcycleTableRowData, "id" | "retailPrice"> {
-  // Omitir para redefinir con tipos correctos
-  id: number; // Asegurar que id es number si MotorcycleTableRowData lo tiene como string o diferente
-  name: string; // Nombre compuesto para mostrar
-  retailPrice: number; // Asegurar que retailPrice es number
 }
 
 export default function SalesClientComponent({
@@ -40,15 +43,29 @@ export default function SalesClientComponent({
 }: SalesClientComponentProps) {
   console.log("SalesClientComponent initialData:", initialData);
 
+  const router = useRouter();
+
   // Estado para las promociones filtradas - inicializar directamente con promotions
   const [filteredPromotions, setFilteredPromotions] =
     useState<BankingPromotionDisplay[]>(promotions);
-  const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
-  const [selectedMotorcycle, setSelectedMotorcycle] = useState<SelectedMotorcycleForSale | null>(
-    null,
-  );
   const [organizationId, setOrganizationId] = useState<string | null>(null); // State for organizationId
   const [orgIdError, setOrgIdError] = useState<string | null>(null); // State for error
+
+  // Usar el store para obtener los estados actuales del filtro
+  const { filters, initializeFromData, updateAuxiliaryData } = useMotorcycleFiltersStore();
+
+  // Estado local para las motocicletas - convertir de MotorcycleTableData a MotorcycleWithFullDetails
+  const [motorcycles, setMotorcycles] = useState<MotorcycleWithFullDetails[]>(
+    initialData as MotorcycleWithFullDetails[],
+  );
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [currentFilterStates, setCurrentFilterStates] =
+    useState<MotorcycleState[]>(estadosDisponibles);
+
+  // Estado para el modal de reserva
+  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
+  const [selectedMotorcycleForReservation, setSelectedMotorcycleForReservation] =
+    useState<MotorcycleWithFullDetails | null>(null);
 
   // Verificar si hay promociones disponibles (usando referencia estable)
   const hasPromotions = Array.isArray(allPromotions) && allPromotions.length > 0;
@@ -61,15 +78,47 @@ export default function SalesClientComponent({
     }
   }, [promotions]);
 
+  // Sincronizar el estado local de motorcycles con initialData
+  useEffect(() => {
+    setMotorcycles(initialData as MotorcycleWithFullDetails[]);
+  }, [initialData]);
+
   useEffect(() => {
     const fetchOrganizationId = async () => {
       try {
-        const sessionResult = await getOrganizationIdFromSession();
-        if (sessionResult.organizationId) {
-          setOrganizationId(sessionResult.organizationId);
+        console.log("🔄 Iniciando obtención de organizationId...");
+        console.log(
+          "🔍 Función getOrganizationIdFromSession existe:",
+          typeof getOrganizationIdFromSession,
+        );
+
+        const orgSessionResult = await getOrganizationIdFromSession(); // Renombrado para claridad
+
+        console.log("📝 Resultado de getOrganizationIdFromSession:", orgSessionResult);
+
+        // Verificar que orgSessionResult no sea undefined o null
+        if (!orgSessionResult) {
+          console.error("getOrganizationIdFromSession returned undefined or null");
+          setOrgIdError("Error inesperado: resultado de sesión indefinido.");
+          return;
+        }
+
+        // Verificar que el objeto tenga la estructura esperada
+        if (typeof orgSessionResult !== "object" || !("organizationId" in orgSessionResult)) {
+          console.error(
+            "getOrganizationIdFromSession returned unexpected format:",
+            orgSessionResult,
+          );
+          setOrgIdError("Error inesperado: formato de resultado de sesión inválido.");
+          return;
+        }
+
+        if (orgSessionResult.organizationId) {
+          console.log("✅ OrganizationId obtenido correctamente:", orgSessionResult.organizationId);
+          setOrganizationId(orgSessionResult.organizationId);
         } else {
-          console.error("Failed to get organizationId:", sessionResult.error);
-          setOrgIdError(sessionResult.error || "Failed to retrieve organization ID.");
+          console.error("Failed to get organizationId:", orgSessionResult.error);
+          setOrgIdError(orgSessionResult.error || "Failed to retrieve organization ID.");
           // Handle error appropriately, e.g., show a message to the user or disable certain features
         }
       } catch (error) {
@@ -80,16 +129,13 @@ export default function SalesClientComponent({
     fetchOrganizationId();
   }, []); // Empty dependency array ensures this runs once on mount
 
-  const handleOpenSaleModal = (motorcycle: MotorcycleTableRowData) => {
-    const motorcycleName =
-      `${motorcycle.brand?.name || "Marca"} ${motorcycle.model?.name || "Modelo"} ${motorcycle.year || ""}`.trim();
-
+  const handleOpenSaleModal = (motorcycle: MotorcycleWithFullDetails) => {
     if (typeof motorcycle.retailPrice !== "number") {
       console.error("Precio de venta no disponible o inválido:", motorcycle);
       alert("No se puede procesar la venta: precio no disponible.");
       return;
     }
-    // Asegurarse de que el id de la motocicleta es un número, como espera ReserveModal
+
     const motorcycleIdAsNumber =
       typeof motorcycle.id === "string" ? Number.parseInt(motorcycle.id, 10) : motorcycle.id;
     if (Number.isNaN(motorcycleIdAsNumber)) {
@@ -98,50 +144,169 @@ export default function SalesClientComponent({
       return;
     }
 
-    setSelectedMotorcycle({
-      ...motorcycle, // Extiende el resto de las propiedades
-      id: motorcycleIdAsNumber,
-      name: motorcycleName,
-      retailPrice: motorcycle.retailPrice,
-    });
-    setIsSaleModalOpen(true);
+    // Limpiar localStorage de la venta específica para asegurar que inicie en step 0
+    const localStorageKey = `saleProcess-${motorcycleIdAsNumber}`;
+    localStorage.removeItem(localStorageKey);
+
+    // Redirigir a la página de venta con stepper
+    router.push(`/sales/${motorcycleIdAsNumber}`);
   };
 
-  const handleCloseSaleModal = () => {
-    setIsSaleModalOpen(false);
-    setSelectedMotorcycle(null);
+  // Función para abrir el modal de reserva
+  const handleOpenReservationModal = (motorcycle: MotorcycleWithFullDetails) => {
+    setSelectedMotorcycleForReservation(motorcycle);
+    setIsReservationModalOpen(true);
   };
 
-  const handleSaleCompletion = (result: { type: string; payload: Record<string, unknown> }) => {
-    console.log(`Proceso de venta completado: ${result.type}`, result.payload);
-    alert(
-      `¡${result.type === "current_account" ? "Cuenta corriente creada" : "Pago/Reserva registrado"} con éxito!`,
+  // Función para cerrar el modal de reserva
+  const handleCloseReservationModal = () => {
+    setIsReservationModalOpen(false);
+    setSelectedMotorcycleForReservation(null);
+  };
+
+  // Función para manejar el éxito de la reserva
+  const handleReservationSuccess = () => {
+    if (selectedMotorcycleForReservation) {
+      // Actualizar el estado local de la moto específica
+      setMotorcycles((prev) =>
+        prev.map((moto) =>
+          moto.id === selectedMotorcycleForReservation.id
+            ? { ...moto, state: MotorcycleState.RESERVADO }
+            : moto,
+        ),
+      );
+    }
+
+    // Cerrar el modal
+    setIsReservationModalOpen(false);
+    setSelectedMotorcycleForReservation(null);
+
+    // También revalidar usando router.refresh() como backup
+    router.refresh();
+  };
+
+  // Función para verificar si los estados seleccionados requieren recarga de datos
+  const needsDataReload = (selectedStates: MotorcycleState[]) => {
+    const currentStates = new Set(motorcycles.map((m) => m.state));
+    const hasNewStates = selectedStates.some((state) => !currentStates.has(state));
+    const hasRemovedStates = Array.from(currentStates).some(
+      (state) => !selectedStates.includes(state),
     );
-    handleCloseSaleModal();
-    // TODO: Implementar la actualización de la tabla de motocicletas.
+    return hasNewStates || hasRemovedStates;
+  };
+
+  // Función para recargar datos con estados específicos
+  const reloadMotorcycleData = async (selectedStates: MotorcycleState[]) => {
+    console.log("[DEBUG] Sales reloadMotorcycleData con estados:", selectedStates);
+    setIsLoadingData(true);
+
+    try {
+      // Si selectedStates incluye todos los estados, mostrar todas las motos
+      const allStates = Object.values(MotorcycleState);
+      const shouldShowAll = selectedStates.length === allStates.length;
+
+      let newData: MotorcycleTableData[];
+      if (shouldShowAll) {
+        const allMotorcycles = await getMotorcycles({});
+        newData = allMotorcycles;
+      } else {
+        const filteredMotorcycles = await getMotorcycles({
+          filter: { state: selectedStates },
+        });
+        newData = filteredMotorcycles;
+      }
+
+      setMotorcycles(newData as MotorcycleWithFullDetails[]);
+      // Usar updateAuxiliaryData para no sobrescribir filtros
+      updateAuxiliaryData(newData);
+      console.log("[DEBUG] Sales datos recargados, total motos:", newData.length);
+    } catch (error) {
+      console.error("Error recargando datos de ventas:", error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  // Función para manejar cambios en filtros que requieren recarga
+  const handleFilterChange = async (selectedStates: MotorcycleState[]) => {
+    console.log("[DEBUG] Sales handleFilterChange:", selectedStates);
+
+    // Actualizar el estado del filtro actual
+    setCurrentFilterStates(selectedStates);
+
+    // Siempre verificar si necesitamos recargar datos
+    if (needsDataReload(selectedStates)) {
+      await reloadMotorcycleData(selectedStates);
+    }
+  };
+
+  // Función para recibir los estados actuales del filtro desde MotorcycleTable
+  const handleCurrentStatesChange = (currentStates: MotorcycleState[]) => {
+    setCurrentFilterStates(currentStates);
+  };
+
+  // Función para actualizar el estado de una moto específica
+  const handleMotorcycleUpdate = (motorcycleId: number, newState: MotorcycleState) => {
+    console.log("[DEBUG] handleMotorcycleUpdate:", { motorcycleId, newState, currentFilterStates });
+
+    // Verificar si la moto existe en la lista actual
+    const existingMoto = motorcycles.find((m) => m.id === motorcycleId);
+
+    if (existingMoto) {
+      // Si la moto existe, actualizar su estado localmente
+      setMotorcycles((prev) =>
+        prev.map((moto) => (moto.id === motorcycleId ? { ...moto, state: newState } : moto)),
+      );
+
+      // Si el nuevo estado no está en el filtro actual, la moto debería desaparecer
+      if (!currentFilterStates.includes(newState)) {
+        console.log("[DEBUG] Moto cambió a estado no visible, será filtrada de la vista");
+      }
+    } else {
+      // Si la moto no existe en la lista actual (ej: era ELIMINADO y ahora es STOCK)
+      // Y el nuevo estado debería estar visible según el filtro actual, recargar los datos
+      const shouldBeVisible = currentFilterStates.includes(newState);
+
+      if (shouldBeVisible) {
+        console.log(
+          "[DEBUG] Moto no existe en lista actual pero debería ser visible, recargando con filtro actual:",
+          currentFilterStates,
+        );
+        // Recargar con los estados del filtro actual para traer la moto nueva
+        reloadMotorcycleData(currentFilterStates);
+      } else {
+        console.log("[DEBUG] Moto cambió a estado pero no es visible en el filtro actual");
+      }
+    }
   };
 
   return (
-    <main className="flex flex-col gap-6 pr-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">Catálogo de Motos</h1>
-        <p className="text-muted-foreground">
-          Explora nuestra amplia selección de motocicletas disponibles
-        </p>
+    <main className="flex flex-col gap-6 px-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold">Catálogo de Motos</h1>
+          <p className="text-muted-foreground">
+            Explora nuestra amplia selección de motocicletas disponibles
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <SecurityModeToggle variant="badge" />
+        </div>
       </div>
 
       <Tabs defaultValue="catalog" className="w-full">
-        <TabsList>
-          <TabsTrigger value="catalog">Catálogo</TabsTrigger>
-          {hasPromotions && <TabsTrigger value="promotions">Promociones</TabsTrigger>}
-        </TabsList>
-
         <TabsContent value="catalog">
           <Card className="p-6">
             <MotorcycleTable
-              initialData={initialData as MotorcycleWithFullDetails} // DEUDA TÉCNICA: Coincidir tipos MotorcycleWithFullDetails
-              clients={clients as Client[]} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
+              initialData={motorcycles}
+              clients={clients as Client[]}
               activePromotions={hasPromotions ? filteredPromotions : []}
+              onInitiateSale={handleOpenSaleModal}
+              onInitiateReservation={handleOpenReservationModal}
+              onMotorcycleUpdate={handleMotorcycleUpdate}
+              onFilterChange={handleFilterChange}
+              onCurrentStatesChange={handleCurrentStatesChange}
+              isLoading={isLoadingData}
             />
           </Card>
         </TabsContent>
@@ -186,7 +351,7 @@ export default function SalesClientComponent({
                               ?.filter((p) => p.isEnabled)
                               .map((plan) => (
                                 <div key={plan.id} className="text-blue-600 text-sm">
-                                  {plan.installments} cuotas{" "}
+                                  {plan.installments} cuotas
                                   {plan.interestRate === 0
                                     ? "sin interés"
                                     : `(${plan.interestRate}%)`}
@@ -204,17 +369,14 @@ export default function SalesClientComponent({
         )}
       </Tabs>
 
-      {selectedMotorcycle && (
-        <ReserveModal
-          open={isSaleModalOpen}
-          onClose={handleCloseSaleModal}
-          motorcycleId={selectedMotorcycle.id}
-          motorcycleName={selectedMotorcycle.name}
-          motorcyclePrice={selectedMotorcycle.retailPrice}
-          clients={clients as Client[]} // DEUDA TÉCNICA: Coincidir/unificar tipos Client
-          onSaleProcessCompleted={handleSaleCompletion}
-        />
-      )}
+      {/* Modal de Reserva */}
+      <ReservationModal
+        isOpen={isReservationModalOpen}
+        onClose={handleCloseReservationModal}
+        onSuccess={handleReservationSuccess}
+        motorcycle={selectedMotorcycleForReservation}
+        clients={clients}
+      />
     </main>
   );
 }

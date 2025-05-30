@@ -1,7 +1,9 @@
 import { getSalesReport } from "@/actions/reports/get-sales-report";
-import SalesReportPDF from "@/components/reports/SalesReportPDF";
+import {
+  createSalesReportPDFResponse,
+  generateSalesReportPDF as generateSalesPDF,
+} from "@/lib/pdf-generators/sales-report-pdf";
 import type { ReportFilters } from "@/types/SalesReportType";
-import { renderToStream } from "@react-pdf/renderer";
 
 export async function generateSalesReportPDF(filters: ReportFilters): Promise<Buffer> {
   const report = await getSalesReport(
@@ -13,16 +15,7 @@ export async function generateSalesReportPDF(filters: ReportFilters): Promise<Bu
       : undefined,
   );
 
-  const stream = await renderToStream(<SalesReportPDF report={report} />);
+  const pdfBytes = await generateSalesPDF(report);
 
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    if (typeof chunk === "string") {
-      chunks.push(Buffer.from(chunk, "utf-8"));
-    } else {
-      chunks.push(Buffer.from(chunk));
-    }
-  }
-
-  return Buffer.concat(chunks);
+  return Buffer.from(pdfBytes);
 }

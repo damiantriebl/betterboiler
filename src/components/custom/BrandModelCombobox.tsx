@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, ChevronsUpDown } from "lucide-react";
-import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface ModelInfo {
   id: number;
@@ -45,9 +45,9 @@ export function BrandModelCombobox({
   notFoundMessage = "No se encontró marca/modelo.",
   className,
 }: BrandModelComboboxProps) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
-  const selectedBrandAndModel = React.useMemo(() => {
+  const selectedBrandAndModel = () => {
     if (!selectedModelId) return null;
     for (const brand of brands) {
       const model = brand.models.find((m) => m.id === selectedModelId);
@@ -61,7 +61,7 @@ export function BrandModelCombobox({
       }
     }
     return null;
-  }, [selectedModelId, brands]);
+  };
 
   // Color por defecto si no se proporciona
   const defaultBorderColor = "hsl(var(--border))"; // Usar color de borde de shadcn
@@ -75,8 +75,8 @@ export function BrandModelCombobox({
           aria-expanded={open}
           className={cn("w-full justify-between h-10", className)}
         >
-          {selectedBrandAndModel
-            ? `${selectedBrandAndModel.brandName} - ${selectedBrandAndModel.modelName}`
+          {selectedBrandAndModel()
+            ? `${selectedBrandAndModel()?.brandName} - ${selectedBrandAndModel()?.modelName}`
             : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

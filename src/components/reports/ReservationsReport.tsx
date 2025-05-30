@@ -6,6 +6,17 @@ interface ReservationsReportProps {
   data: ReservationsReportType;
 }
 
+// Función para traducir estados al español
+const translateStatus = (status: string): string => {
+  const translations: Record<string, string> = {
+    active: "Activa",
+    completed: "Completada",
+    cancelled: "Cancelada",
+    expired: "Expirada",
+  };
+  return translations[status] || status;
+};
+
 export function ReservationsReport({ data }: ReservationsReportProps) {
   return (
     <div className="space-y-6">
@@ -56,7 +67,7 @@ export function ReservationsReport({ data }: ReservationsReportProps) {
             {Object.entries(data.reservationsByStatus).map(([status, info]) => (
               <div key={status} className="p-4 rounded-lg border">
                 <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-semibold">{status}</h4>
+                  <h4 className="font-semibold">{translateStatus(status)}</h4>
                   <span className="text-lg font-bold">{info.count}</span>
                 </div>
                 <div className="space-y-1">

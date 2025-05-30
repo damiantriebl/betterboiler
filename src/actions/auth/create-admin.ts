@@ -54,15 +54,16 @@ export async function createAdminUser(
         where: { userId: existingUser.id },
       });
 
-      // Registrar el usuario con Better Auth
-      const result = await auth.emailAndPassword.createUser({
-        userId: existingUser.id,
-        email,
-        password,
-        emailVerified: true,
+      // Registrar el usuario con Better Auth usando la API del servidor
+      const result = await auth.api.signUpEmail({
+        body: {
+          email,
+          password,
+          name,
+        },
       });
 
-      console.log(`Usuario actualizado: ${result?.id || "error"}`);
+      console.log(`Usuario actualizado: ${result?.user?.id || "error"}`);
       return {
         success: true,
         message: "Usuario administrador actualizado correctamente",
@@ -70,33 +71,37 @@ export async function createAdminUser(
       };
     }
 
-    // Si el usuario no existe, crearlo
+    // Si el usuario no existe, crearlo usando Better Auth
     console.log(`Creando nuevo usuario ${email}...`);
 
-    // Crear usuario con datos básicos (sin cuenta aún)
-    const newUser = await prisma.user.create({
-      data: {
-        name,
+    // Registrar el usuario con Better Auth usando la API del servidor
+    const result = await auth.api.signUpEmail({
+      body: {
         email,
+        password,
+        name,
+      },
+    });
+
+    if (!result.user) {
+      throw new Error("No se pudo crear el usuario");
+    }
+
+    // Actualizar el usuario con los datos adicionales
+    await prisma.user.update({
+      where: { id: result.user.id },
+      data: {
         emailVerified: true,
         role,
         organizationId: organization.id,
       },
     });
 
-    // Registrar el usuario con Better Auth
-    const result = await auth.emailAndPassword.createUser({
-      userId: newUser.id,
-      email,
-      password,
-      emailVerified: true,
-    });
-
-    console.log(`Usuario creado: ${result?.id || "error"}`);
+    console.log(`Usuario creado: ${result.user.id}`);
     return {
       success: true,
       message: "Usuario administrador creado correctamente",
-      userId: newUser.id,
+      userId: result.user.id,
     };
   } catch (error: unknown) {
     console.error("Error al crear usuario administrador:", error);

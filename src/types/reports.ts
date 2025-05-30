@@ -37,6 +37,22 @@ export interface InventoryStatusReport {
     reserved: number;
     sold: number;
   };
+  availableMotorcycles?: {
+    id: number;
+    chassisNumber: string;
+    engineNumber: string | null;
+    year: number;
+    mileage: number;
+    retailPrice: number;
+    costPrice: number | null;
+    currency: string;
+    displacement: number | null;
+    createdAt: Date;
+    brand: { name: string } | null;
+    model: { name: string } | null;
+    color: { name: string; colorOne: string; colorTwo: string | null } | null;
+    branch: { name: string } | null;
+  }[];
 }
 
 // Sales Report Types
@@ -187,5 +203,4 @@ export interface MotorcycleWithRelations extends Motorcycle {
   branch?: {
     name: string;
   } | null;
-  soldAt?: Date | null;
 }

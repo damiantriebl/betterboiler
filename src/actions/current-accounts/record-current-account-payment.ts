@@ -38,7 +38,7 @@ function calculateNextDueDateAfterPayment(lastDueDate: Date, frequency: PaymentF
 
 export async function recordCurrentAccountPayment(
   input: RecordPaymentInput,
-): Promise<ActionState & { data?: Payment }> {
+): Promise<ActionState<Payment>> {
   try {
     const validatedInput = recordPaymentSchema.safeParse(input);
     if (!validatedInput.success) {
@@ -72,11 +72,8 @@ export async function recordCurrentAccountPayment(
         throw new Error("Esta cuenta corriente ya ha sido saldada.");
       }
 
-      // Convertir el remainingAmount a número si es necesario
-      const currentRemainingAmount =
-        typeof account.remainingAmount === "number"
-          ? account.remainingAmount
-          : Number.parseFloat(account.remainingAmount.toString());
+      // El remainingAmount en Prisma es sempre Float (number)
+      const currentRemainingAmount = account.remainingAmount;
 
       const newRemainingAmount = currentRemainingAmount - amountPaid;
 

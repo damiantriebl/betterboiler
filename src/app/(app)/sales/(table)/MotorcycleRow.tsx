@@ -1,24 +1,14 @@
 import { TableRow } from "@/components/ui/table";
-import type { Brand, Model, MotoColor, MotorcycleState, Sucursal } from "@prisma/client";
+import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
+import type { MotorcycleState } from "@prisma/client";
 import type React from "react";
-import type { MotorcycleWithActions } from "./MotorcycleActions";
 
 interface MotorcycleRowProps {
-  moto: MotorcycleWithActions & {
-    brand?: Brand | null;
-    model?: Model | null;
-    branch?: Sucursal | null;
-    color?: MotoColor | null;
-    chassisNumber: string;
-    engineNumber: string;
-    year: number;
-    displacement?: number | null;
-    retailPrice: number;
-    costPrice?: number | null;
-    wholesalePrice?: number | null;
-    currency: string;
-  };
-  onAction: (action: "vender" | "reservar" | "eliminarLogico", moto: MotorcycleWithActions) => void;
+  moto: MotorcycleWithFullDetails;
+  onAction: (
+    action: "vender" | "reservar" | "eliminarLogico",
+    moto: MotorcycleWithFullDetails,
+  ) => void;
   onToggleStatus: (motoId: number, currentStatus: MotorcycleState) => void;
   onCancelProcess: (motoId: number) => void;
   onNavigateToDetail: (motoId: string) => void;

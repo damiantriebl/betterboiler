@@ -14,7 +14,7 @@ export default function BankingPromotionDiagnostics() {
     message?: string;
     error?: string;
     count?: number;
-    sample?: Record<string, unknown>;
+    sample?: Record<string, unknown> | null;
   }>({});
 
   const handleRunDiagnostic = async () => {

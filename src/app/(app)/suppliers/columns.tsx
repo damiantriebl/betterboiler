@@ -9,48 +9,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { SupplierFormData } from "@/zod/SuppliersZod";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
-import type { ProveedorFormData } from "./SupplierForm"; // Importamos el tipo desde el formulario
 
-// Tipo de dato para la fila (igual que ProveedorFormData por ahora)
-// En una implementación real, podría ser un tipo diferente devuelto por la API
-export type Proveedor = ProveedorFormData & { id: string }; // Asumimos que cada proveedor tendrá un ID único
+// Tipo de dato para la fila
+export type Proveedor = SupplierFormData & { id: string }; // Asumimos que cada proveedor tendrá un ID único
 
-export const columns: ColumnDef<Proveedor>[] = [
+// Interfaz para la definición simplificada de columnas
+export interface SimpleColumn {
+  accessorKey: keyof Proveedor | "actions"; // 'actions' es un caso especial para la columna de acciones
+  header: string | React.ReactNode; // Puede ser un string o un componente para el header
+  cell?: (props: { row: { original: Proveedor } }) => React.ReactNode; // La función cell es opcional ahora
+  className?: string; // Para estilos opcionales en la celda o header
+}
+
+export const columns: SimpleColumn[] = [
   {
-    accessorKey: "nombreComercial",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Nombre Comercial
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    accessorKey: "commercialName",
+    header: (
+      <div className="flex items-center">
+        Nombre Comercial
+        <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+      </div>
+    ),
     cell: ({ row }) => {
-      const nombreComercial = row.original.nombreComercial;
-      const razonSocial = row.original.razonSocial;
-      // Mostrar nombre comercial si existe, si no, razón social
-      return <div className="font-medium">{nombreComercial || razonSocial}</div>;
+      const commercialName = row.original.commercialName;
+      const legalName = row.original.legalName;
+      return <div className="font-medium">{commercialName || legalName}</div>;
     },
   },
   {
-    accessorKey: "contactoNombre",
+    accessorKey: "contactName",
     header: "Persona de Contacto",
     cell: ({ row }) =>
-      row.original.contactoNombre || <span className="text-muted-foreground italic">N/A</span>,
+      row.original.contactName || <span className="text-muted-foreground italic">N/A</span>,
   },
   {
-    accessorKey: "domicilioComercial",
+    accessorKey: "commercialAddress",
     header: "Domicilio Comercial",
     cell: ({ row }) => {
-      const domicilio = row.original.domicilioComercial;
-      // TODO: Idealmente, extraer la localidad si el campo estuviera estructurado.
-      // Por ahora, mostramos el texto o un snippet.
+      const domicilio = row.original.commercialAddress;
       return (
         <div className="truncate max-w-xs">
           {domicilio || <span className="text-muted-foreground italic">N/A</span>}
@@ -59,10 +57,10 @@ export const columns: ColumnDef<Proveedor>[] = [
     },
   },
   {
-    accessorKey: "estado",
+    accessorKey: "status",
     header: "Estado",
     cell: ({ row }) => {
-      const estado = row.original.estado;
+      const estado = row.original.status;
       return (
         <span
           className={`px-2 py-1 rounded-full text-xs font-semibold ${estado === "activo" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
@@ -73,32 +71,34 @@ export const columns: ColumnDef<Proveedor>[] = [
     },
   },
   {
-    id: "actions",
+    accessorKey: "actions", // Clave especial para la columna de acciones
+    header: "Acciones",
     cell: ({ row }) => {
       const proveedor = row.original;
-
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menú</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(proveedor.id)} // Acción de ejemplo: copiar ID
-            >
-              Copiar ID Proveedor
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Editar</DropdownMenuItem> {/* TODO: Implementar Editar */}
-            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-              Eliminar {/* TODO: Implementar Eliminar */}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="text-right">
+          {" "}
+          {/* Alineación a la derecha para acciones */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Abrir menú</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(proveedor.id)}>
+                Copiar ID Proveedor
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Editar</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       );
     },
   },

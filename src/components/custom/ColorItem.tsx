@@ -258,8 +258,6 @@ export default function ColorItem({
     // Renderizado simple (como ColorDisplay)
     return (
       <span className={cn("inline-flex items-center gap-2", nameClassName)}>
-        {" "}
-        {/* Usar nameClassName en el span wrapper? O ajustar */}
         {renderColorCircle(size)}
         {showName && <span className={cn("truncate", nameClassName)}>{name}</span>}
       </span>

@@ -9,8 +9,8 @@ async function main() {
   console.log("Iniciando proceso de seed...");
 
   // Ejecutar seed del usuario admin
-  console.log("Sembrando usuario admin...");
-  await seedAdminUser();
+  // console.log("Sembrando usuario admin...");
+  // await seedAdminUser();
 
   // Ejecutar seed de marcas y modelos
   console.log("Sembrando marcas y modelos...");
@@ -49,6 +49,7 @@ async function main() {
 }
 
 // Función para crear usuario admin y organización
+/*
 async function seedAdminUser() {
   try {
     console.log("Creando organización apex y usuario admin...");
@@ -125,6 +126,7 @@ async function seedAdminUser() {
     console.error("❌ Error al crear usuario admin:", error);
   }
 }
+*/
 
 async function seedBrandsAndModels() {
   // Define the brand colors
@@ -149,6 +151,40 @@ async function seedBrandsAndModels() {
 
   // Assign the data array to the 'motos' variable
   const motos = [
+    {
+      marca: "Benelli",
+      modelos: [
+        "Tnt 15",
+        "180 S",
+        "251S",
+        "302S",
+        "TRK 502X",
+        "TRK 502",
+        "TRK 702",
+        "TRK 702 x",
+        "TRK 251 full",
+        "Leoncino 250",
+        "Leoncino trail",
+        "Leoncino 800 trail",
+        "Imperiale",
+        "502C",
+        "Tnt 600i",
+        "752s",
+        "RK 150",
+        "202 K light",
+        "v302 c"
+      ]
+    },
+    {
+      marca: "SYM",
+      modelos: [
+        "Jet 14 200",
+        "Citycom 300I",
+        "Orbit II 125",
+        "Joyride 16 300",
+        "Maxsym TL 508",
+      ]
+    },
     {
       marca: "Honda",
       modelos: [

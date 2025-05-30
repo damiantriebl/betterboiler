@@ -1,6 +1,5 @@
 "use client";
 
-import { getOrganization } from "@/actions/get-organization";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,9 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { type PriceDisplayMode, usePriceDisplayStore } from "@/stores/price-display-store";
+import { useSessionStore } from "@/stores/SessionStore";
+import { usePriceDisplayStore } from "@/stores/price-display-store";
 import type { ModelFileWithUrl, MotorcycleWithDetails } from "@/types/motorcycle";
 import type {
   AmortizationScheduleEntry,
@@ -39,26 +40,15 @@ import {
   DollarSign,
   FileText,
   Info,
+  Loader2,
   Pause,
-  Pencil,
   Play,
   RotateCcw,
   Trash2,
-  X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ClientDetail } from "./ClientDetail";
 import QuoteBridgePdf from "./components/QuoteBrigePdf";
-import { QuotePDFDocument } from "./components/QuotePDF";
-import { Switch } from "@/components/ui/switch";
-
-interface PriceDisplayState {
-  mode: PriceDisplayMode;
-  setMode: (mode: PriceDisplayMode) => void;
-  showCost: () => boolean;
-  showWholesale: () => boolean;
-  showRetail: () => boolean;
-}
 
 interface Props {
   isOpen: boolean;
@@ -75,7 +65,7 @@ interface Props {
 
 const DetailItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div>
-    <span className="text-sm font-medium text-muted-foreground">{label}:</span>{" "}
+    <span className="text-sm font-medium text-muted-foreground">{label}:</span>
     <span className="text-sm">{value ?? "N/A"}</span>
   </div>
 );
@@ -85,6 +75,7 @@ function PaymentQuoteSimulator({
   onClose,
   onExportPDF,
   organizationLogoUrl,
+  organizationName,
 }: {
   motorcycle: MotorcycleWithDetails | null;
   onClose: () => void;
@@ -100,8 +91,10 @@ function PaymentQuoteSimulator({
     totalWithFinancing: number;
     formatAmount: (amount: number) => string;
     organizationLogoUrl?: string | null;
+    organizationName?: string | null;
   }) => void;
   organizationLogoUrl?: string | null;
+  organizationName?: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<"efectivo" | "tarjeta" | "cuenta_corriente">(
     "efectivo",
@@ -118,7 +111,7 @@ function PaymentQuoteSimulator({
     annualInterestRate: 30,
   });
 
-  const getPeriodsPerYear = useCallback((frequency: string) => {
+  const getPeriodsPerYear = (frequency: string) => {
     const map: Record<string, number> = {
       WEEKLY: 52,
       BIWEEKLY: 26,
@@ -127,7 +120,7 @@ function PaymentQuoteSimulator({
       ANNUALLY: 1,
     };
     return map[frequency] || 12;
-  }, []);
+  };
 
   const basePrice =
     paymentData.isMayorista && motorcycle?.wholesalePrice
@@ -144,7 +137,7 @@ function PaymentQuoteSimulator({
 
   const financedAmount = finalPrice - paymentData.downPayment;
 
-  const calculateInstallmentDetails = useCallback((): InstallmentDetails => {
+  const calculateInstallmentDetails = (): InstallmentDetails => {
     if (!motorcycle) {
       return {
         installmentAmount: 0,
@@ -325,16 +318,13 @@ function PaymentQuoteSimulator({
       schedule,
       warning: undefined,
     };
-  }, [motorcycle, paymentData, getPeriodsPerYear, financedAmount]);
+  };
 
-  const formatAmount = useCallback(
-    (amount: number) => {
-      return formatPrice(amount, motorcycle?.currency || "ARS");
-    },
-    [motorcycle?.currency],
-  );
+  const formatAmount = (amount: number) => {
+    return formatPrice(amount, motorcycle?.currency || "ARS");
+  };
 
-  const installmentDetailsCalculation = useMemo((): InstallmentDetails => {
+  const installmentDetailsCalculation = (): InstallmentDetails => {
     if (paymentData.metodoPago === "cuenta_corriente") {
       return calculateInstallmentDetails();
     }
@@ -348,14 +338,11 @@ function PaymentQuoteSimulator({
       currency: motorcycle?.currency || "ARS",
       warning: undefined,
     };
-  }, [
-    paymentData.metodoPago,
-    paymentData.cuotas,
-    finalPrice,
-    calculateInstallmentDetails,
-    motorcycle?.currency,
-  ]);
+  };
 
+  const installmentDetails = installmentDetailsCalculation();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Incluir todas las dependencias causaría loop infinito
   useEffect(() => {
     if (onExportPDF && motorcycle) {
       onExportPDF({
@@ -366,24 +353,26 @@ function PaymentQuoteSimulator({
         modifierAmount,
         finalPrice,
         financedAmount,
-        installmentDetails: installmentDetailsCalculation,
-        totalWithFinancing: installmentDetailsCalculation.totalPayment || 0,
+        installmentDetails,
+        totalWithFinancing: installmentDetails.totalPayment || 0,
         formatAmount,
         organizationLogoUrl,
+        organizationName: organizationName || undefined,
       });
     }
   }, [
-    paymentData,
+    paymentData.metodoPago,
+    paymentData.cuotas,
+    paymentData.downPayment,
+    paymentData.currentAccountInstallments,
+    paymentData.annualInterestRate,
     activeTab,
     basePrice,
     modifierAmount,
     finalPrice,
-    financedAmount,
-    installmentDetailsCalculation,
-    formatAmount,
-    onExportPDF,
-    motorcycle,
+    motorcycle?.id,
     organizationLogoUrl,
+    organizationName,
   ]);
 
   const handleTabChange = (tab: "efectivo" | "tarjeta" | "cuenta_corriente") => {
@@ -415,8 +404,7 @@ function PaymentQuoteSimulator({
   };
 
   const renderAmortizationTable = () => {
-    const details = installmentDetailsCalculation;
-    if (!details.schedule || details.schedule.length === 0) {
+    if (!installmentDetails.schedule || installmentDetails.schedule.length === 0) {
       return null;
     }
     return (
@@ -443,7 +431,7 @@ function PaymentQuoteSimulator({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {details.schedule.map((item) => (
+            {installmentDetails.schedule.map((item) => (
               <tr key={item.installmentNumber}>
                 <td className="px-3 py-2 whitespace-nowrap">{item.installmentNumber}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-right">
@@ -462,7 +450,9 @@ function PaymentQuoteSimulator({
             ))}
           </tbody>
         </table>
-        {details.warning && <p className="text-xs text-amber-600 mt-1">{details.warning}</p>}
+        {installmentDetails.warning && (
+          <p className="text-xs text-amber-600 mt-1">{installmentDetails.warning}</p>
+        )}
       </div>
     );
   };
@@ -523,7 +513,7 @@ function PaymentQuoteSimulator({
                           name: "discountType",
                           value: checked ? "discount" : "surcharge",
                         },
-                      })
+                      } as React.ChangeEvent<HTMLInputElement>)
                     }
                   />
                   <Label
@@ -550,7 +540,7 @@ function PaymentQuoteSimulator({
                 }
               />
               <p className="text-xs text-muted-foreground">
-                {paymentData.discountType === "discount" ? "Descuento" : "Recargo"} del{" "}
+                {paymentData.discountType === "discount" ? "Descuento" : "Recargo"} del
                 {paymentData.discountValue}%
               </p>
             </div>
@@ -728,23 +718,19 @@ function PaymentQuoteSimulator({
                   </div>
                   <div className="flex justify-between font-semibold text-blue-600">
                     <span>Valor de cuota:</span>
-                    <span>
-                      {formatAmount(installmentDetailsCalculation.installmentAmount || 0)}
-                    </span>
+                    <span>{formatAmount(installmentDetails.installmentAmount || 0)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>Total a pagar:</span>
-                    <span>{formatAmount(installmentDetailsCalculation.totalPayment || 0)}</span>
+                    <span>{formatAmount(installmentDetails.totalPayment || 0)}</span>
                   </div>
                   {activeTab === "cuenta_corriente" &&
-                    "totalInterest" in installmentDetailsCalculation &&
-                    installmentDetailsCalculation.totalInterest !== undefined &&
-                    installmentDetailsCalculation.totalInterest > 0 && (
+                    "totalInterest" in installmentDetails &&
+                    installmentDetails.totalInterest !== undefined &&
+                    installmentDetails.totalInterest > 0 && (
                       <div className="flex justify-between text-amber-600">
                         <span className="font-medium">Intereses totales:</span>
-                        <span>
-                          {formatAmount(installmentDetailsCalculation.totalInterest || 0)}
-                        </span>
+                        <span>{formatAmount(installmentDetails.totalInterest || 0)}</span>
                       </div>
                     )}
                 </div>
@@ -783,12 +769,10 @@ export function MotorcycleDetailModal({
 
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [quotePdfProps, setQuotePdfProps] = useState<QuotePDFProps | null>(null);
-  const [organization, setOrganization] = useState<{ logo: string | null; name: string } | null>(
-    null,
-  );
+  const { organizationLogo, organizationName, userName, userImage } = useSessionStore();
   const [shouldExportPdf, setShouldExportPdf] = useState(false);
 
-  const { clientId, rawReservationData } = useMemo(() => {
+  const getClientData = () => {
     if (!motorcycle) return { clientId: null, rawReservationData: null };
     if (motorcycle.state === MotorcycleState.PROCESANDO) {
       return { clientId: motorcycle.clientId ?? null, rawReservationData: null };
@@ -799,7 +783,9 @@ export function MotorcycleDetailModal({
       return { clientId: active?.clientId ?? null, rawReservationData: active ?? null };
     }
     return { clientId: null, rawReservationData: null };
-  }, [motorcycle]);
+  };
+
+  const { clientId, rawReservationData } = getClientData();
 
   useEffect(() => {
     if (isOpen && motorcycle?.model?.files) {
@@ -821,10 +807,6 @@ export function MotorcycleDetailModal({
       setCurrentImageIndex(0);
     }
   }, [isOpen, motorcycle?.model?.files]);
-
-  useEffect(() => {
-    getOrganization().then(setOrganization).catch(console.error);
-  }, []);
 
   if (!isOpen || !motorcycle) return null;
 
@@ -975,19 +957,39 @@ export function MotorcycleDetailModal({
         <ClientDetail
           clientId={clientId}
           currency={rawReservationData?.currency || "USD"}
-          reservationData={useMemo(
-            () =>
-              rawReservationData
-                ? {
-                    ...rawReservationData,
-                    currency: rawReservationData.currency || "USD",
-                  }
-                : undefined,
-            [],
-          )}
+          reservationData={
+            rawReservationData
+              ? {
+                  amount: rawReservationData.amount,
+                  createdAt: rawReservationData.createdAt,
+                  paymentMethod: rawReservationData.paymentMethod,
+                  notes: rawReservationData.notes,
+                }
+              : undefined
+          }
         />
       </div>
     );
+  };
+
+  const handleExportPDF = (pdfProps: {
+    motorcycle: MotorcycleWithDetails | null;
+    paymentData: PaymentData;
+    activeTab: string;
+    basePrice: number;
+    modifierAmount: number;
+    finalPrice: number;
+    financedAmount: number;
+    installmentDetails: InstallmentDetails;
+    totalWithFinancing: number;
+    formatAmount: (amount: number) => string;
+    organizationLogoUrl?: string | null;
+    organizationName?: string | null;
+  }) => {
+    setQuotePdfProps({
+      ...pdfProps,
+      organizationName: pdfProps.organizationName || undefined,
+    });
   };
 
   return (
@@ -995,7 +997,19 @@ export function MotorcycleDetailModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader className="pr-10">
-            <DialogTitle className="text-xl font-bold">Detalles de la Moto</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-xl font-bold">Detalles de la Moto</DialogTitle>
+              {userImage?.startsWith("data:image") && (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={userImage}
+                    alt={userName || "Usuario"}
+                    className="w-10 h-10 rounded-full object-cover border"
+                  />
+                  <span className="text-sm font-medium">{userName}</span>
+                </div>
+              )}
+            </div>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
             <div className="md:col-span-2 space-y-6">
@@ -1125,8 +1139,9 @@ export function MotorcycleDetailModal({
           <PaymentQuoteSimulator
             motorcycle={motorcycle}
             onClose={() => setIsQuoteModalOpen(false)}
-            onExportPDF={setQuotePdfProps}
-            organizationLogoUrl={organization?.logo ?? null}
+            onExportPDF={handleExportPDF}
+            organizationLogoUrl={organizationLogo || undefined}
+            organizationName={organizationName || undefined}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsQuoteModalOpen(false)}>
@@ -1134,18 +1149,27 @@ export function MotorcycleDetailModal({
             </Button>
             {motorcycle && quotePdfProps && (
               <Button
-                variant="outline"
+                variant="default"
                 onClick={() => setShouldExportPdf(true)}
-                className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground"
+                disabled={shouldExportPdf}
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Exportar a PDF
+                {shouldExportPdf ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generando PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar a PDF
+                  </>
+                )}
               </Button>
             )}
             {shouldExportPdf && motorcycle && quotePdfProps && (
               <QuoteBridgePdf
                 {...quotePdfProps}
-                organizationLogoKey={organization?.logo ?? undefined}
+                organizationLogoKey={organizationLogo || undefined}
                 fileName={`Presupuesto_${motorcycle?.brand?.name || ""}_${motorcycle?.model?.name || ""}_${new Date().toISOString().split("T")[0]}.pdf`}
                 onReady={() => setShouldExportPdf(false)}
               />

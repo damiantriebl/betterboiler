@@ -1,30 +1,112 @@
-import { getClients } from "@/actions/clients/get-clients";
-import { type MotorcycleTableRowData, getMotorcycles } from "@/actions/sales/get-motorcycles";
+import { getOrganizationBankingPromotions } from "@/actions/banking-promotions/get-banking-promotions";
+import { getClients } from "@/actions/clients/manage-clients";
+import {
+  type MotorcycleTableData,
+  getMotorcyclesOptimized,
+} from "@/actions/sales/get-motorcycles-unified";
+import { auth } from "@/auth";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { Client } from "@prisma/client";
+import { MotorcycleState } from "@prisma/client";
+import { AlertCircle } from "lucide-react";
+import { headers } from "next/headers";
+import { Suspense } from "react";
 import SalesClientComponent from "./SalesClientComponent";
 
-export default async function VentasPage() {
-  // Usar el tipo específico en lugar de any
-  let initialData: MotorcycleTableRowData[] = [];
-  let clients: Client[] = [];
+// Estados disponibles por defecto (motos que se pueden vender/gestionar)
+const estadosDisponibles: MotorcycleState[] = [
+  MotorcycleState.STOCK,
+  MotorcycleState.RESERVADO,
+  MotorcycleState.PAUSADO,
+];
 
+// 🚀 ADAPTADOR: Convertir MotorcycleTableData a formato compatible
+function adaptOptimizedToRowData(optimized: MotorcycleTableData[]): MotorcycleTableData[] {
+  return optimized;
+}
+
+// 🚀 OPTIMIZACIÓN 1: Componente de Loading específico para sales
+function SalesTableSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+        <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+      </div>
+      <div className="h-96 bg-muted animate-pulse rounded" />
+      <div className="flex justify-between">
+        <div className="h-6 w-24 bg-muted animate-pulse rounded" />
+        <div className="h-6 w-16 bg-muted animate-pulse rounded" />
+      </div>
+    </div>
+  );
+}
+
+// 🚀 OPTIMIZACIÓN 2: Error boundary específico
+function SalesError({ error }: { error: string }) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Error al cargar catálogo de ventas</AlertTitle>
+      <AlertDescription className="mt-2">
+        {error}
+        <br />
+        <span className="text-sm text-muted-foreground mt-1 block">
+          Intenta recargar la página o contacta al administrador.
+        </span>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+// 🚀 OPTIMIZACIÓN 3: Componente separado para datos async con cache
+async function SalesContent() {
   try {
-    // Obtener datos en paralelo para mejorar rendimiento
-    const [motorcyclesData, clientsData] = await Promise.all([
-      getMotorcycles({}), // Pasamos un objeto vacío como opciones
-      getClients(), // No necesita parámetros
+    // Obtener session una sola vez
+    const session = await auth.api.getSession({ headers: await headers() });
+    const organizationId = session?.user?.organizationId;
+
+    if (!organizationId) {
+      throw new Error("No se pudo obtener la organización del usuario");
+    }
+
+    // 🚀 OPTIMIZACIÓN 4: Carga paralela optimizada con filtros
+    const [motorcyclesRawData, clientsData, promotionsData] = await Promise.all([
+      // Cargar por defecto con estados disponibles (STOCK, RESERVADO, PAUSADO)
+      getMotorcyclesOptimized({
+        state: estadosDisponibles,
+      }),
+      getClients(),
+      // Promociones solo si son necesarias
+      getOrganizationBankingPromotions(organizationId).catch(() => []),
     ]);
 
-    // Asignar resultados
-    initialData = motorcyclesData;
-    clients = clientsData;
+    // Adaptar datos optimizados al formato esperado
+    const motorcyclesData = adaptOptimizedToRowData(motorcyclesRawData);
 
-    // Renderizar componente cliente con datos iniciales
-    return <SalesClientComponent initialData={initialData} clients={clients} />;
+    return (
+      <SalesClientComponent
+        initialData={motorcyclesData}
+        clients={clientsData as Client[]}
+        promotions={promotionsData as BankingPromotionDisplay[]}
+      />
+    );
   } catch (error) {
     console.error("Error cargando datos para la página de ventas:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Error desconocido al cargar datos";
+    return <SalesError error={errorMessage} />;
   }
+}
 
-  // Fallback en caso de error o sin datos
-  return <SalesClientComponent initialData={initialData} clients={clients} />;
+// 🚀 OPTIMIZACIÓN 5: Página principal con Suspense y metadata
+export default async function VentasPage() {
+  return (
+    <div className="container max-w-none w-full p-4">
+      <Suspense fallback={<SalesTableSkeleton />}>
+        <SalesContent />
+      </Suspense>
+    </div>
+  );
 }

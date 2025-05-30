@@ -6,6 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 import { MotorcycleState, type Reservation } from "@prisma/client";
 import {
   BookmarkPlus,
@@ -44,8 +45,11 @@ export interface MotorcycleWithActions {
 }
 
 interface MotorcycleActionButtonsProps {
-  moto: MotorcycleWithActions;
-  onAction: (action: "vender" | "reservar" | "eliminarLogico", moto: MotorcycleWithActions) => void;
+  moto: MotorcycleWithFullDetails;
+  onAction: (
+    action: "vender" | "reservar" | "eliminarLogico",
+    moto: MotorcycleWithFullDetails,
+  ) => void;
   onToggleStatus: (motoId: number, currentStatus: MotorcycleState) => void;
   onCancelProcess: (motoId: number) => void;
   onNavigateToDetail: (motoId: string) => void;

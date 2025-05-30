@@ -276,7 +276,7 @@ const AddOrSelectModelModal: React.FC<AddOrSelectModelModalProps> = ({
               {selectedModelIds.length > 0 && (
                 <div className="flex items-center justify-between bg-muted px-3 py-2 rounded-md">
                   <span className="text-sm">
-                    {selectedModelIds.length} {selectedModelIds.length === 1 ? "modelo" : "modelos"}{" "}
+                    {selectedModelIds.length} {selectedModelIds.length === 1 ? "modelo" : "modelos"}
                     seleccionados
                   </span>
                   <Button

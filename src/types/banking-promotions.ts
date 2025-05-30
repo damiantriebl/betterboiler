@@ -1,7 +1,7 @@
 // Types for banking promotions and installment plans
 
 import type { Day } from "@/zod/banking-promotion-schemas";
-import type { PaymentCard } from "./payment-cards";
+import type { BankCard } from "./bank-cards";
 import type { PaymentMethod } from "./payment-methods";
 
 export interface Bank {
@@ -24,7 +24,7 @@ export interface BankingPromotion {
   description?: string | null;
   organizationId: string;
   paymentMethodId: number;
-  cardId?: number | null;
+  bankCardId?: number | null;
   bankId?: number | null;
   discountRate?: number | null;
   surchargeRate?: number | null;
@@ -35,7 +35,7 @@ export interface BankingPromotion {
   endDate?: Date | null;
   activeDays?: Day[];
   paymentMethod?: PaymentMethod;
-  card?: PaymentCard | null;
+  bankCard?: BankCard | null;
   bank?: Bank | null;
   installmentPlans?: InstallmentPlan[];
 }
@@ -43,7 +43,7 @@ export interface BankingPromotion {
 // Type for complete banking promotion with related entities
 export interface BankingPromotionDisplay extends BankingPromotion {
   paymentMethod: PaymentMethod;
-  card: PaymentCard | null;
+  bankCard: BankCard | null;
   bank: Bank | null;
   installmentPlans: InstallmentPlan[];
 }

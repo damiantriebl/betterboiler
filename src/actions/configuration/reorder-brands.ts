@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getOrganizationIdFromSession } from "../util";
 
 // Tipo simple para el estado de esta acción específica
 interface ReorderState {
@@ -15,12 +16,23 @@ export async function reorderBrands(brandIdsInOrder: number[]): Promise<ReorderS
   }
 
   try {
+    // Obtener organizationId de la sesión
+    const org = await getOrganizationIdFromSession();
+    if (!org.organizationId) {
+      return { success: false, error: "Usuario no autenticado o sin organización." };
+    }
+
+    const organizationId = org.organizationId;
+
     // Usar una transacción para asegurar que todas las actualizaciones se hagan o ninguna
     await prisma.$transaction(
-      // Crear un array de promesas, una por cada marca a actualizar
+      // Crear un array de promesas, una por cada asociación OrganizationBrand a actualizar
       brandIdsInOrder.map((brandId, index) =>
-        prisma.brand.update({
-          where: { id: brandId },
+        prisma.organizationBrand.updateMany({
+          where: {
+            organizationId: organizationId,
+            brandId: brandId,
+          },
           data: { order: index }, // Asignar el índice del array como el nuevo orden
         }),
       ),

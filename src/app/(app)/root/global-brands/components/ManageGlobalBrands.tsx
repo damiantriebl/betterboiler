@@ -11,10 +11,10 @@ import {
   updateRootModel,
   updateRootModelsOrder,
 } from "@/actions/root/global-brand-actions";
+import { Spinner } from "@/components/custom/Spinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useActionState } from "@/hooks/use-action-state";
-import { useToast } from "@/hooks/use-toast"; // Trying custom hook path again
+import { useToast } from "@/hooks/use-toast";
 import type {
   ActionState,
   BatchActionState,
@@ -60,17 +60,14 @@ export default function ManageGlobalBrands({ initialGlobalBrands }: ManageGlobal
   const [isDeletePending, startDeleteTransition] = useTransition();
   const [isModelActionPending, startModelActionTransition] = useTransition();
   const [isBrandUpdatePending, startBrandUpdateTransition] = useTransition();
-  const actionState = useActionState();
 
+  // Solo sincronizar si el estado actual está vacío y tenemos datos iniciales
+  // Esto evita loops infinitos causados por cambios de referencia en initialGlobalBrands
   useEffect(() => {
-    setBrands(initialGlobalBrands);
-  }, [initialGlobalBrands]);
-
-  useEffect(() => {
-    if (actionState.success) {
-      setIsModalOpen(false);
+    if (brands.length === 0 && initialGlobalBrands.length > 0) {
+      setBrands(initialGlobalBrands);
     }
-  }, [actionState.success]);
+  }, [initialGlobalBrands, brands.length]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -158,9 +155,10 @@ export default function ManageGlobalBrands({ initialGlobalBrands }: ManageGlobal
         toast({ title: "Marca actualizada", description: result.message });
         // Update with data from server to be safe, though revalidate should handle it
         if (result.data) {
+          const updatedBrand = result.data;
           startBrandUpdateTransition(() => {
             setBrands((prev) =>
-              prev.map((b) => (b.id === result.data.id ? { ...b, name: result.data.name } : b)),
+              prev.map((b) => (b.id === updatedBrand.id ? { ...b, name: updatedBrand.name } : b)),
             );
           });
         }

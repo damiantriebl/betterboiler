@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { type PriceDisplayMode, usePriceDisplayStore } from "@/stores/price-display-store";
-import { Diamond, DiamondMinus, DiamondPlus, Percent } from "lucide-react";
+import { Diamond, DiamondMinus, DiamondPlus } from "lucide-react";
 import { useEffect } from "react";
 
 export function PriceModeSelector() {
@@ -26,13 +26,13 @@ export function PriceModeSelector() {
 
   return (
     <TooltipProvider>
-      <div className="relative top-0 left-150 flex gap-1 border-b border-x  rounded-b-md bg-background p-0.5">
+      <div className="flex gap-1 bg-background/80 backdrop-blur-sm border border-border/60 rounded-lg p-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant={mode === "all" ? "default" : "ghost"}
               size="sm"
-              className="h-8 min-w-8 px-2 sm:px-3 flex items-center gap-1"
+              className="h-8 min-w-8 px-2 sm:px-3 flex items-center gap-1 transition-all duration-200"
               onClick={() => handleSetMode("all")}
             >
               <div className="relative">
@@ -50,7 +50,7 @@ export function PriceModeSelector() {
             <Button
               variant={mode === "retail-wholesale" ? "default" : "ghost"}
               size="sm"
-              className="h-8 min-w-8 px-2 sm:px-3 flex items-center gap-1"
+              className="h-8 min-w-8 px-2 sm:px-3 flex items-center gap-1 transition-all duration-200"
               onClick={() => handleSetMode("retail-wholesale")}
             >
               <div className="relative">
@@ -68,7 +68,7 @@ export function PriceModeSelector() {
             <Button
               variant={mode === "retail-only" ? "default" : "ghost"}
               size="sm"
-              className="h-8 min-w-8 px-2 sm:px-3 flex items-center gap-1"
+              className="h-8 min-w-8 px-2 sm:px-3 flex items-center gap-1 transition-all duration-200"
               onClick={() => handleSetMode("retail-only")}
             >
               <div className="relative">

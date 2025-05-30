@@ -37,7 +37,6 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { BankCard } from "@/types/bank-cards";
 import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
-import type { PaymentCard } from "@/types/payment-cards";
 import type { PaymentMethod } from "@/types/payment-methods";
 import {
   extractBankAndCardFromBankCardId,
@@ -51,7 +50,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Building, CalendarIcon, CreditCard, Percent, Plus, Trash } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 
 interface PromotionFormProps {
   paymentMethods: PaymentMethod[];
@@ -78,7 +77,7 @@ type FormValues = {
   endDate?: Date;
   activeDays: Day[];
   installmentPlans: {
-    id: string;
+    id?: number;
     installments: number;
     interestRate: number;
     isEnabled: boolean;
@@ -104,39 +103,16 @@ export default function PromotionForm({
     promotion?.paymentMethodId ? String(promotion.paymentMethodId) : "",
   );
 
-  // Determine initial isDiscount value and rate value
-  const initialIsDiscount = promotion
-    ? promotion.discountRate !== undefined &&
-      promotion.discountRate !== null &&
-      promotion.discountRate > 0
-    : true;
-  const initialRateValue = promotion
-    ? initialIsDiscount
-      ? promotion.discountRate !== null && promotion.discountRate !== undefined
-        ? promotion.discountRate
-        : undefined
-      : promotion.surchargeRate !== null && promotion.surchargeRate !== undefined
-        ? promotion.surchargeRate
-        : undefined
-    : undefined;
+  // Calculate initial values for editing mode
+  const hasDiscount = promotion?.discountRate != null && promotion.discountRate > 0;
+  const initialRateValue = hasDiscount
+    ? (promotion?.discountRate ?? undefined)
+    : (promotion?.surchargeRate ?? undefined);
+  const initialIsDiscount = hasDiscount;
 
-  // Debug para verificar valores iniciales
-  useEffect(() => {
-    if (promotion) {
-      console.log("Promoción cargada:", {
-        id: promotion.id,
-        name: promotion.name,
-        isDiscount: initialIsDiscount,
-        discountRate: promotion.discountRate,
-        surchargeRate: promotion.surchargeRate,
-        initialRateValue,
-      });
-    }
-  }, [promotion, initialIsDiscount, initialRateValue]);
-
-  // Extract bank and card IDs from promotion
-  const { bankId: initialBankId, cardId: initialCardId } = promotion
-    ? extractBankAndCardFromBankCardId(bankCards, promotion.cardId)
+  // Extract bankId and cardId from the existing promotion if editing
+  const { bankId: initialBankId, cardId: initialCardId } = promotion?.bankCardId
+    ? extractBankAndCardFromBankCardId(bankCards, promotion.bankCardId)
     : { bankId: null, cardId: null };
 
   // Convert bankCards to BankWithCards for our selector
@@ -154,20 +130,26 @@ export default function PromotionForm({
       cardId: initialCardId ? String(initialCardId) : null,
       rateValue: initialRateValue,
       isDiscount: initialIsDiscount,
-      minAmount: promotion?.minAmount || undefined,
-      maxAmount: promotion?.maxAmount || undefined,
+      minAmount: promotion?.minAmount ?? undefined,
+      maxAmount: promotion?.maxAmount ?? undefined,
       isEnabled: promotion?.isEnabled ?? true,
-      startDate: promotion?.startDate || undefined,
-      endDate: promotion?.endDate || undefined,
+      startDate: promotion?.startDate ?? undefined,
+      endDate: promotion?.endDate ?? undefined,
       activeDays: promotion?.activeDays || [],
       installmentPlans:
         promotion?.installmentPlans?.map((plan) => ({
-          id: String(plan.id),
+          id: plan.id,
           installments: plan.installments,
           interestRate: plan.interestRate,
           isEnabled: plan.isEnabled,
         })) || [],
     },
+  });
+
+  // Configurar useFieldArray para installmentPlans
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "installmentPlans",
   });
 
   // Watch values for conditional rendering
@@ -217,7 +199,7 @@ export default function PromotionForm({
         : (promotion.surchargeRate as number);
       const { bankId: initBankId, cardId: initCardId } = extractBankAndCardFromBankCardId(
         bankCards,
-        promotion.cardId,
+        promotion.bankCardId,
       );
       form.reset({
         name: promotion.name,
@@ -236,7 +218,7 @@ export default function PromotionForm({
         activeDays: promotion.activeDays || [],
         installmentPlans:
           promotion.installmentPlans?.map((plan) => ({
-            id: String(plan.id),
+            id: plan.id,
             installments: plan.installments,
             interestRate: plan.interestRate,
             isEnabled: plan.isEnabled,
@@ -264,20 +246,17 @@ export default function PromotionForm({
   }, [promotion, bankCards, form]);
 
   // Handle form submission
-  const onSubmit = (_data: FormValues) => {
+  const onSubmit = (data: FormValues) => {
     // Map raw installment plans
-    const installmentPlans = form.getValues("installmentPlans").map((plan) => ({
-      id:
-        typeof plan.id === "string" && plan.id.startsWith("temp-")
-          ? undefined
-          : Number.parseInt(plan.id),
+    const installmentPlans = data.installmentPlans.map((plan) => ({
+      id: plan.id,
       installments: plan.installments,
       interestRate: plan.interestRate,
       isEnabled: plan.isEnabled,
     }));
     // Derive discount/surcharge from raw rateValue and isDiscount
-    const rawRate = form.getValues("rateValue");
-    const isDisc = form.getValues("isDiscount");
+    const rawRate = data.rateValue;
+    const isDisc = data.isDiscount;
     let discountRate: number | null = null;
     let surchargeRate: number | null = null;
     if (rawRate !== undefined && rawRate !== null) {
@@ -298,7 +277,7 @@ export default function PromotionForm({
 
         // For new promotion
         if (!isEditing) {
-          const values = form.getValues();
+          const values = data;
           const result = await createBankingPromotion({
             name: values.name,
             description: values.description,
@@ -338,23 +317,13 @@ export default function PromotionForm({
                   name: banksWithCards.find((b) => b.bank.id === createdBankId)?.bank.name || "",
                 }
               : null;
-            const card: PaymentCard | null = createdCardId
-              ? {
-                  id: createdCardId,
-                  name: "",
-                  type: "",
-                  issuer: "",
-                }
-              : null;
 
-            if (card && bank && createdBankId !== null && createdCardId !== null) {
-              const createBwc = banksWithCards.find((b) => b.bank.id === createdBankId);
-              const createCt = createBwc?.cards.find((c) => c.cardType.id === createdCardId);
-              if (createCt) {
-                card.name = createCt.cardType.name;
-                card.type = createCt.cardType.type;
-              }
-            }
+            const card: BankCard | null =
+              createdCardId && createdBankId
+                ? bankCards.find(
+                    (bc) => bc.id === findBankCardId(bankCards, createdBankId, createdCardId),
+                  ) || null
+                : null;
 
             // Crear el objeto de promoción con installmentPlans vacío (se cargarán al recargar)
             const newPromotion: BankingPromotionDisplay = {
@@ -366,7 +335,7 @@ export default function PromotionForm({
                 description: "",
               },
               bank,
-              card,
+              bankCard: card,
               activeDays: (result.data.activeDays || []) as Day[],
               installmentPlans: installmentPlans.map((plan) => {
                 const planIdStr = String(plan.id || "");
@@ -402,7 +371,7 @@ export default function PromotionForm({
         // For updating existing promotion
         else if (promotion) {
           // Get current promotion details for manual comparison via server action
-          const currentPromoDetails = await getBankingPromotionDetails(promotion.id);
+          const currentPromoDetails = await getBankingPromotionDetails(String(promotion.id));
 
           if (currentPromoDetails.success && currentPromoDetails.data) {
             console.log("Current promotion (server action):", currentPromoDetails.data);
@@ -416,20 +385,20 @@ export default function PromotionForm({
 
           const result = await updateBankingPromotion({
             id: promotion.id,
-            name: _data.name,
-            description: _data.description,
-            paymentMethodId: Number.parseInt(_data.paymentMethodId),
-            bankId: _data.bankId ? Number.parseInt(_data.bankId) : null,
-            cardId: _data.cardId ? Number.parseInt(_data.cardId) : null,
+            name: data.name,
+            description: data.description,
+            paymentMethodId: Number.parseInt(data.paymentMethodId),
+            bankId: data.bankId ? Number.parseInt(data.bankId) : null,
+            cardId: data.cardId ? Number.parseInt(data.cardId) : null,
             discountRate,
             surchargeRate,
-            minAmount: _data.minAmount,
-            maxAmount: _data.maxAmount,
-            isEnabled: _data.isEnabled,
-            startDate: _data.startDate,
-            endDate: _data.endDate,
-            activeDays: _data.activeDays,
-            installmentPlans: _data.installmentPlans,
+            minAmount: data.minAmount,
+            maxAmount: data.maxAmount,
+            isEnabled: data.isEnabled,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            activeDays: data.activeDays,
+            installmentPlans: data.installmentPlans,
             organizationId,
           });
 
@@ -443,12 +412,12 @@ export default function PromotionForm({
 
             // Obtener el método de pago seleccionado
             const selectedMethod = paymentMethods.find(
-              (m) => m.id.toString() === _data.paymentMethodId,
+              (m) => m.id.toString() === data.paymentMethodId,
             );
 
             // Obtener banco y tarjeta si están seleccionados
-            const updatedBankId = _data.bankId ? Number.parseInt(_data.bankId) : null;
-            const updatedCardId = _data.cardId ? Number.parseInt(_data.cardId) : null;
+            const updatedBankId = data.bankId ? Number.parseInt(data.bankId) : null;
+            const updatedCardId = data.cardId ? Number.parseInt(data.cardId) : null;
 
             const bank: Bank | null = updatedBankId
               ? {
@@ -456,29 +425,18 @@ export default function PromotionForm({
                   name: banksWithCards.find((b) => b.bank.id === updatedBankId)?.bank.name || "",
                 }
               : null;
-            const card: PaymentCard | null = updatedCardId
-              ? {
-                  id: updatedCardId,
-                  name: "",
-                  type: "",
-                  issuer: "",
-                }
-              : null;
 
-            if (card && bank && updatedBankId !== null && updatedCardId !== null) {
-              const updateBwc = banksWithCards.find((b) => b.bank.id === updatedBankId);
-              const updateCt = updateBwc?.cards.find((c) => c.cardType.id === updatedCardId);
-              if (updateCt) {
-                card.name = updateCt.cardType.name;
-                card.type = updateCt.cardType.type;
-              }
-            }
+            const card: BankCard | null =
+              updatedCardId && updatedBankId
+                ? bankCards.find(
+                    (bc) => bc.id === findBankCardId(bankCards, updatedBankId, updatedCardId),
+                  ) || null
+                : null;
 
             // Mapping de los planes de instalación actualizados (usar datos originales del formulario)
-            const updatedInstallmentPlans = _data.installmentPlans.map((plan) => {
-              const pid = String(plan.id);
+            const updatedInstallmentPlans = data.installmentPlans.map((plan) => {
               return {
-                id: pid.startsWith("temp-") ? -Date.now() : Number.parseInt(pid),
+                id: plan.id || -Date.now(), // Para nuevos planes sin id
                 bankingPromotionId: promotion.id,
                 installments: plan.installments,
                 interestRate: plan.interestRate,
@@ -489,22 +447,21 @@ export default function PromotionForm({
             // Crear el objeto de promoción actualizado con los valores correctos
             const updatedPromotion: BankingPromotionDisplay = {
               ...promotion,
-              name: _data.name,
-              description: _data.description || null,
-              paymentMethodId: Number.parseInt(_data.paymentMethodId),
+              name: data.name,
+              description: data.description || null,
+              paymentMethodId: Number.parseInt(data.paymentMethodId),
               bankId: updatedBankId,
-              cardId: updatedCardId,
+              bankCard: card || promotion.bankCard,
               discountRate: discountRate, // Usar el valor calculado
               surchargeRate: surchargeRate, // Usar el valor calculado
-              minAmount: _data.minAmount || null,
-              maxAmount: _data.maxAmount || null,
-              isEnabled: _data.isEnabled,
-              startDate: _data.startDate || null,
-              endDate: _data.endDate || null,
-              activeDays: _data.activeDays as Day[],
+              minAmount: data.minAmount || null,
+              maxAmount: data.maxAmount || null,
+              isEnabled: data.isEnabled,
+              startDate: data.startDate || null,
+              endDate: data.endDate || null,
+              activeDays: data.activeDays as Day[],
               paymentMethod: selectedMethod || promotion.paymentMethod,
               bank: bank || promotion.bank,
-              card: card || promotion.card,
               installmentPlans: updatedInstallmentPlans,
             };
 
@@ -535,25 +492,16 @@ export default function PromotionForm({
 
   // Add a new installment plan
   const addInstallmentPlan = () => {
-    const currentPlans = form.getValues("installmentPlans");
-    form.setValue("installmentPlans", [
-      ...currentPlans,
-      {
-        id: `temp-${Date.now()}`, // Temporary ID for new plans
-        installments: 3, // Default: 3 installments
-        interestRate: 0, // Default: 0% interest
-        isEnabled: true,
-      },
-    ]);
+    append({
+      installments: 3, // Default: 3 installments
+      interestRate: 0, // Default: 0% interest
+      isEnabled: true,
+    });
   };
 
   // Remove an installment plan
   const removeInstallmentPlan = (index: number) => {
-    const currentPlans = form.getValues("installmentPlans");
-    form.setValue(
-      "installmentPlans",
-      currentPlans.filter((_, i) => i !== index),
-    );
+    remove(index);
   };
 
   return (
@@ -944,16 +892,16 @@ export default function PromotionForm({
                       </Button>
                     </div>
 
-                    {form.watch("installmentPlans")?.map((plan) => (
-                      <Card key={plan.id}>
+                    {fields.map((field, index) => (
+                      <Card key={field.id}>
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-sm font-medium">Plan {plan.id}</h4>
+                            <h4 className="text-sm font-medium">Plan {index + 1}</h4>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeInstallmentPlan(Number.parseInt(plan.id))}
+                              onClick={() => removeInstallmentPlan(index)}
                             >
                               <Trash className="h-4 w-4 text-destructive" />
                             </Button>
@@ -962,7 +910,7 @@ export default function PromotionForm({
                           <div className="grid grid-cols-2 gap-4">
                             <FormField
                               control={form.control}
-                              name={`installmentPlans.${plan.id}.installments`}
+                              name={`installmentPlans.${index}.installments`}
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Cuotas</FormLabel>
@@ -972,7 +920,7 @@ export default function PromotionForm({
                                       min="1"
                                       placeholder="Ej: 3"
                                       {...field}
-                                      value={field.value === undefined ? "" : field.value}
+                                      value={field.value ?? ""}
                                       onChange={(e) => {
                                         const value = e.target.value
                                           ? Number.parseInt(e.target.value, 10)
@@ -988,7 +936,7 @@ export default function PromotionForm({
 
                             <FormField
                               control={form.control}
-                              name={`installmentPlans.${plan.id}.interestRate`}
+                              name={`installmentPlans.${index}.interestRate`}
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Interés (%)</FormLabel>
@@ -998,12 +946,12 @@ export default function PromotionForm({
                                       min="0"
                                       placeholder="Ej: 10"
                                       {...field}
-                                      value={field.value === undefined ? "" : field.value}
+                                      value={field.value ?? ""}
                                       onChange={(e) => {
                                         const value = e.target.value
                                           ? Number.parseFloat(e.target.value)
-                                          : undefined;
-                                        field.onChange(value);
+                                          : 0;
+                                        field.onChange(Number.isNaN(value) ? 0 : value);
                                       }}
                                     />
                                   </FormControl>
@@ -1015,11 +963,14 @@ export default function PromotionForm({
 
                           <FormField
                             control={form.control}
-                            name={`installmentPlans.${plan.id}.isEnabled`}
+                            name={`installmentPlans.${index}.isEnabled`}
                             render={({ field }) => (
                               <FormItem className="flex items-center space-x-2 mt-2">
                                 <FormControl>
-                                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                  <Switch
+                                    checked={field.value ?? false}
+                                    onCheckedChange={field.onChange}
+                                  />
                                 </FormControl>
                                 <FormLabel className="!mt-0">Plan habilitado</FormLabel>
                               </FormItem>
@@ -1029,8 +980,7 @@ export default function PromotionForm({
                       </Card>
                     ))}
 
-                    {(!form.watch("installmentPlans") ||
-                      form.watch("installmentPlans").length === 0) && (
+                    {fields.length === 0 && (
                       <p className="text-center text-muted-foreground text-sm border rounded-md p-4">
                         No hay planes de cuotas configurados. Haga clic en "Agregar plan" para crear
                         uno.

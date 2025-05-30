@@ -1,4 +1,5 @@
 import {
+  type Branch,
   type Brand,
   type Model,
   type ModelFile,
@@ -6,7 +7,6 @@ import {
   type Motorcycle,
   MotorcycleState,
   type Reservation,
-  type Sucursal,
 } from "@prisma/client";
 
 export interface ModelFileWithUrl {
@@ -43,7 +43,7 @@ export interface MotorcycleWithDetails extends Motorcycle {
         files?: ModelFileWithUrl[];
       })
     | null;
-  branch?: Sucursal | null;
+  branch?: Branch | null;
   color?: MotoColor | null;
   reservations?: ReservationWithDetails[];
   reservation?: ReservationWithDetails | null;
@@ -71,4 +71,5 @@ export const estadoVentaConfig: Record<MotorcycleState, { label: string; classNa
   [MotorcycleState.PROCESANDO]: { label: "En Proceso", className: "text-purple-600" },
   [MotorcycleState.VENDIDO]: { label: "Vendido", className: "text-gray-600" },
   [MotorcycleState.ELIMINADO]: { label: "Eliminado", className: "text-red-600" },
+  [MotorcycleState.EN_TRANSITO]: { label: "En Tránsito", className: "text-orange-600" },
 };

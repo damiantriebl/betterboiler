@@ -14,6 +14,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { getOrganizationIdFromSession } from "../util";
 
 // Definición básica de FormState
 type BaseFormState = {
@@ -43,7 +44,7 @@ interface CreateColorErrorState extends BaseFormState {
 export type CreateColorState = CreateColorSuccessState | CreateColorErrorState;
 
 // Interfaz base para otros estados que no devuelven datos específicos
-export interface GeneralFormState extends BaseFormState {}
+export type GeneralFormState = BaseFormState;
 
 // ==============================================
 // Acciones para Colores (MotoColor) por Organización
@@ -139,7 +140,7 @@ export async function createMotoColor(
 
 // --- Acción: updateMotoColor ---
 // Usar GeneralFormState ya que no devuelve datos específicos en éxito
-export interface UpdateColorActionState extends GeneralFormState {}
+export type UpdateColorActionState = GeneralFormState;
 
 export async function updateMotoColor(
   prevState: UpdateColorActionState | undefined,
@@ -225,7 +226,7 @@ export async function updateMotoColor(
 
 // --- Acción: deleteMotoColor ---
 // Usar GeneralFormState
-export interface DeleteColorState extends GeneralFormState {}
+export type DeleteColorState = GeneralFormState;
 
 export async function deleteMotoColor(
   prevState: DeleteColorState | undefined,
@@ -272,7 +273,7 @@ export async function deleteMotoColor(
 
 // --- Acción: updateMotoColorsOrder ---
 // Usar GeneralFormState
-export interface UpdateColorsOrderState extends GeneralFormState {}
+export type UpdateColorsOrderState = GeneralFormState;
 
 export async function updateMotoColorsOrder(
   prevState: UpdateColorsOrderState | undefined,

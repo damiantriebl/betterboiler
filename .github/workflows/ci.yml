@@ -16,6 +16,19 @@ jobs:
       matrix:
         task: [test, lint, format, coverage]
     name: ${{ matrix.task }}
+    env:
+      # Variables de entorno necesarias para testing
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test_db"
+      NEXTAUTH_SECRET: "test-secret-for-ci"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NODE_ENV: "test"
+      # Variables para AWS S3 (valores dummy para testing)
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AWS_S3_BUCKET_NAME: "test-bucket"
+      # Variables para autenticación
+      AUTH_SESSION_COOKIE_NAME: "better-auth-session-token"
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +45,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile     
+
+      - name: Generate Prisma Client
+        run: |
+          echo "Generating Prisma client..."
+          pnpm prisma generate
+          echo "Prisma client generated successfully"
 
       - if: matrix.task == 'format'
         name: Install Biome

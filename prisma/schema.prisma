@@ -81,10 +81,19 @@ model Organization {
   organizationPaymentMethods OrganizationPaymentMethod[]
   payments                   Payment[]
   reservations               Reservation[]
-  sucursales                 Sucursal[]
+  branches                   Branch[]
   suppliers                  Supplier[]
   motorcycles                Motorcycle[]
   users                      User[]
+  pettyCashDeposits          PettyCashDeposit[]
+  pettyCashWithdrawals       PettyCashWithdrawal[]
+  pettyCashSpends            PettyCashSpend[]
+  logisticProviders          LogisticProvider[]
+  motorcycleTransfers        MotorcycleTransfer[]
+  secureModeEnabled          Boolean  @default(false)
+  otpSecret                  String?
+  otpAuthUrl                 String?
+  otpVerified                Boolean  @default(false)
 
   @@map("organization")
 }
@@ -94,6 +103,8 @@ model User {
   name                    String
   email                   String        @unique
   emailVerified           Boolean       @default(false)
+  phone                   String?
+  address                 String?
   profileOriginal         String?
   profileCrop             String?
   profileOriginalVariants String[]
@@ -110,6 +121,8 @@ model User {
   sales                   Motorcycle[]  @relation("MotorcycleSales")
   sessions                Session[]
   organization            Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transfersRequested      MotorcycleTransfer[] @relation("TransferRequester")
+  transfersConfirmed      MotorcycleTransfer[] @relation("TransferConfirmer")
 
   @@map("user")
 }
@@ -208,15 +221,18 @@ model OrganizationModelConfig {
   @@index([modelId])
 }
 
-model Sucursal {
-  id             Int          @id @default(autoincrement())
-  name           String
-  order          Int
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  motorcycles    Motorcycle[]
+model Branch {
+  id                   Int                  @id @default(autoincrement())
+  name                 String
+  order                Int
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  organizationId       String
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  motorcycles          Motorcycle[]
+  pettyCashDeposits    PettyCashDeposit[]
+  transfersFrom        MotorcycleTransfer[] @relation("TransferFromBranch")
+  transfersTo          MotorcycleTransfer[] @relation("TransferToBranch")
 
   @@unique([organizationId, name])
   @@index([organizationId, order])
@@ -320,7 +336,8 @@ model Motorcycle {
   soldAt          DateTime?
   currentAccounts CurrentAccount[]
   reservations    Reservation[]
-  branch          Sucursal         @relation(fields: [branchId], references: [id])
+  transfers       MotorcycleTransfer[]
+  branch          Branch         @relation(fields: [branchId], references: [id])
   brand           Brand            @relation(fields: [brandId], references: [id])
   client          Client?          @relation(fields: [clientId], references: [id])
   color           MotoColor        @relation(fields: [colorId], references: [id])
@@ -564,6 +581,7 @@ enum MotorcycleState {
   RESERVADO
   PROCESANDO
   ELIMINADO
+  EN_TRANSITO
 }
 
 enum PaymentFrequency {
@@ -589,4 +607,153 @@ enum PaymentStatus {
   PROCESSING
   FAILED
   PARTIAL
+}
+
+enum PettyCashDepositStatus {
+  OPEN
+  CLOSED
+  PENDING_FUNDING
+}
+
+enum PettyCashWithdrawalStatus {
+  PENDING_JUSTIFICATION
+  PARTIALLY_JUSTIFIED
+  JUSTIFIED
+  NOT_CLOSED // Cuando el depósito se cierra pero este retiro no está justificado
+}
+
+model PettyCashDeposit {
+  id              String                    @id @default(cuid())
+  organizationId  String
+  amount          Float
+  date            DateTime
+  description     String
+  reference       String?
+  status          PettyCashDepositStatus   @default(OPEN)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  branchId        Int?
+
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch          Branch?                @relation(fields: [branchId], references: [id], onDelete:SetNull)
+  withdrawals     PettyCashWithdrawal[]
+
+  @@index([organizationId, date])
+  @@index([organizationId, status])
+  @@index([branchId])
+}
+
+model PettyCashWithdrawal {
+  id                String                    @id @default(cuid())
+  organizationId    String
+  depositId         String
+  userId            String // ID del usuario que recibe/gestiona el retiro
+  userName          String // Nombre del usuario para mostrar en la UI
+  amountGiven       Float // Monto total entregado en este retiro
+  amountJustified   Float                     @default(0) // Monto justificado por gastos
+  date              DateTime
+  status            PettyCashWithdrawalStatus @default(PENDING_JUSTIFICATION)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  organization      Organization              @relation(fields: [organizationId], references: [id], onDelete:NoAction, map: "withdrawal_organization") // Evitar ciclos de cascada si org se borra
+  deposit           PettyCashDeposit          @relation(fields: [depositId], references: [id], onDelete:Cascade)
+  spends            PettyCashSpend[]
+
+  @@index([organizationId, userId])
+  @@index([depositId])
+}
+
+model PettyCashSpend {
+  id             String   @id @default(cuid())
+  organizationId String
+  withdrawalId   String
+  motive         String?
+  description    String/*  */
+  amount         Float
+  date           DateTime
+  ticketUrl      String?  // URL del comprobante, opcional
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: NoAction, map: "spend_organization") // Evitar ciclos de cascada
+  withdrawal   PettyCashWithdrawal  @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+
+  @@index([withdrawalId])
+}
+
+model LogisticProvider {
+  id                 Int             @id @default(autoincrement())
+  name               String
+  contactName        String?
+  contactPhone       String?
+  contactEmail       String?
+  address            String?
+  transportTypes     String[]        // ["terrestre", "aéreo", "marítimo", "especializado"]
+  vehicleTypes       String[]        // ["camión", "furgoneta", "remolque_especializado", "grúa"]
+  coverageZones      String[]        // ["local", "nacional", "internacional"]
+  pricePerKm         Float?
+  baseFee            Float?
+  currency           String          @default("ARS")
+  insurance          Boolean         @default(false)
+  maxWeight          Float?          // en kg
+  maxVolume          Float?          // en m³
+  specialRequirements String?        // requisitos especiales para motos
+  rating             Float?          // rating del 1-5
+  status             String          @default("activo")
+  notes              String?
+  organizationId     String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  organization       Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transfers          MotorcycleTransfer[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model MotorcycleTransfer {
+  id                    Int                  @id @default(autoincrement())
+  motorcycleId          Int
+  fromBranchId          Int
+  toBranchId            Int
+  logisticProviderId    Int?
+  status                MotorcycleTransferStatus @default(REQUESTED)
+  requestedDate         DateTime
+  scheduledPickupDate   DateTime?
+  actualPickupDate      DateTime?
+  estimatedDeliveryDate DateTime?
+  actualDeliveryDate    DateTime?
+  cost                  Float?
+  currency              String               @default("ARS")
+  notes                 String?
+  requestedBy           String               // user ID
+  confirmedBy           String?              // user ID
+  trackingNumber        String?
+  organizationId        String
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  motorcycle            Motorcycle           @relation(fields: [motorcycleId], references: [id])
+  fromBranch            Branch              @relation("TransferFromBranch", fields: [fromBranchId], references: [id])
+  toBranch              Branch              @relation("TransferToBranch", fields: [toBranchId], references: [id])
+  logisticProvider      LogisticProvider?    @relation(fields: [logisticProviderId], references: [id])
+  requester             User                 @relation("TransferRequester", fields: [requestedBy], references: [id])
+  confirmer             User?                @relation("TransferConfirmer", fields: [confirmedBy], references: [id])
+  organization          Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([motorcycleId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([fromBranchId])
+  @@index([toBranchId])
+  @@index([logisticProviderId])
+}
+
+enum MotorcycleTransferStatus {
+  REQUESTED
+  CONFIRMED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
 }

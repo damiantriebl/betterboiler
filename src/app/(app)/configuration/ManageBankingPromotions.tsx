@@ -25,10 +25,10 @@ import { Toggle } from "@/components/ui/toggle";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { BankCardDisplay } from "@/types/bank-cards";
-import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { PaymentMethod } from "@/types/payment-methods";
 import { PercentIcon, Plus, ToggleLeft, ToggleRight, Trash2, Wallet } from "lucide-react";
-import { useCallback, useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import PromotionForm from "./PromotionForm";
 import PromotionsCalculator from "./PromotionsCalculator";
 
@@ -151,7 +151,7 @@ export default function ManageBankingPromotions({
         setPromotions(updatedPromotions);
         updateOptimisticPromotions(updatedPromotions);
 
-        const result = await toggleBankingPromotion(id, !currentStatus);
+        const result = await toggleBankingPromotion({ id: id, isEnabled: !currentStatus });
 
         if (!result.success) {
           // Revertir ambos estados si falla
@@ -196,18 +196,16 @@ export default function ManageBankingPromotions({
 
     startTransition(async () => {
       try {
-        // Primero actualizamos el estado local (optimista)
         const updatedPromotions = promotions.filter((promo) => promo.id !== deletingPromotion.id);
         setPromotions(updatedPromotions);
         updateOptimisticPromotions(updatedPromotions);
 
-        const result = await deleteBankingPromotion(deletingPromotion.id);
+        const result = await deleteBankingPromotion(deletingPromotion.id.toString());
 
         if (!result.success) {
           // Si falla, restauramos el estado original
-          setPromotions(promotions);
-          updateOptimisticPromotions(promotions);
-
+          setPromotions(promotions); // Restaurar desde el estado original no optimista
+          updateOptimisticPromotions(promotions); // Actualizar el estado optimista también
           toast({
             title: "Error",
             description: result.message,
@@ -220,10 +218,8 @@ export default function ManageBankingPromotions({
           });
         }
       } catch (error: unknown) {
-        // Si falla, restauramos el estado original
-        setPromotions(promotions);
+        setPromotions(promotions); // Restaurar estado original en caso de error
         updateOptimisticPromotions(promotions);
-
         toast({
           title: "Error",
           description:
@@ -376,9 +372,9 @@ export default function ManageBankingPromotions({
                         <div className="flex flex-wrap gap-2 mt-1">
                           <Badge variant="outline">{promotion.paymentMethod.name}</Badge>
 
-                          {promotion.card && (
+                          {promotion.bankCard && (
                             <Badge variant="outline" className="border-blue-200">
-                              {promotion.card.name}
+                              {promotion.bankCard.cardType.name}
                             </Badge>
                           )}
 
@@ -404,28 +400,28 @@ export default function ManageBankingPromotions({
                         <div className="text-xs text-muted-foreground grid grid-cols-2 gap-2">
                           {promotion.minAmount && (
                             <div>
-                              <span className="font-medium">Mín:</span>{" "}
+                              <span className="font-medium">Mín:</span>
                               {formatCurrency(promotion.minAmount)}
                             </div>
                           )}
 
                           {promotion.maxAmount && (
                             <div>
-                              <span className="font-medium">Máx:</span>{" "}
+                              <span className="font-medium">Máx:</span>
                               {formatCurrency(promotion.maxAmount)}
                             </div>
                           )}
 
                           {promotion.startDate && (
                             <div>
-                              <span className="font-medium">Desde:</span>{" "}
+                              <span className="font-medium">Desde:</span>
                               {formatDate(new Date(promotion.startDate))}
                             </div>
                           )}
 
                           {promotion.endDate && (
                             <div>
-                              <span className="font-medium">Hasta:</span>{" "}
+                              <span className="font-medium">Hasta:</span>
                               {formatDate(new Date(promotion.endDate))}
                             </div>
                           )}

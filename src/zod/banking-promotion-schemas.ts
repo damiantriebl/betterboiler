@@ -1,5 +1,3 @@
-import type { BankingPromotionDisplay } from "@/types/banking-promotions";
-import type { InstallmentPlan } from "@prisma/client";
 import { z } from "zod";
 
 // Define the day type

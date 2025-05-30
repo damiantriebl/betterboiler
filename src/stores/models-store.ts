@@ -6,9 +6,16 @@ export interface ModelData {
   id: number;
   name: string;
   brandId: number;
-  imageUrl?: string;
-  specSheetUrl?: string;
+  imageUrl?: string | null;
+  specSheetUrl?: string | null;
   additionalFiles?: { url: string; name: string; type: string }[];
+}
+
+// Definición para la respuesta de la API /api/models
+interface ApiResult {
+  success: boolean;
+  models?: ModelData[]; // models es un array de ModelData en caso de éxito
+  error?: string; // error es un string en caso de fallo
 }
 
 interface ModelsStore {
@@ -46,8 +53,8 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
     try {
       const result = await getModelsByBrandId(brandId);
 
-      if (result.success && result.data) {
-        const brandModels = result.data;
+      if (result.success && result.models) {
+        const brandModels = result.models as ModelData[];
         set((state) => ({
           models: {
             ...state.models,
@@ -60,7 +67,6 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
       }
       set((state) => ({
         error: result.error || "Error al obtener modelos",
-        models: [],
         loadingBrandIds: state.loadingBrandIds.filter((id) => id !== brandId),
       }));
       return [];
@@ -92,8 +98,8 @@ export const useModelsStore = create<ModelsStore>((set, get) => ({
         }).then((res) => res.json());
       }
 
-      if (result?.success?.models?.[0]) {
-        const newModel = result.success.models[0];
+      if (result?.success && result.models && result.models.length > 0) {
+        const newModel = result.models[0];
         set((state) => ({
           models: {
             ...state.models,

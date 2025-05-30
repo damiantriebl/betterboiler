@@ -1,14 +1,27 @@
 "use server";
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { uploadToS3 } from "@/lib/s3-unified";
 import type { serverMessage } from "@/types/ServerMessageType";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
-import { uploadBufferToS3 } from "../S3/upload-buffer-to-s3";
 
 export async function createOrUpdateOrganization(formData: FormData): Promise<serverMessage> {
+  // Verificar autenticación
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    return {
+      success: false,
+      error: "Usuario no autenticado",
+    };
+  }
+
   const id = formData.get("id") as string | null;
   const name = formData.get("name") as string | null;
+  const logo = formData.get("logo") as string | null; // Para compatibilidad con URLs
   const logoFile = formData.get("logoFile") as File | null;
   const thumbnailFile = formData.get("thumbnailFile") as File | null;
 
@@ -26,6 +39,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
       if (exists) slug += `-${uuidv4().slice(0, 8)}`;
       const org = await prisma.organization.create({ data: { name, slug } });
       organizationId = org.id;
+      console.log("new organization", org);
     }
 
     // Validar que organizationId existe
@@ -45,17 +59,20 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
             .webp({ quality: 80 })
             .toBuffer();
           const path = `organization/${organizationId}/logo_${size}`;
-          return uploadBufferToS3({ buffer: resizedBuffer, path });
+          return uploadToS3(resizedBuffer, path, "image/webp");
         }),
       );
       // Use the result of the 400px upload (first in sizes array)
       const result400 = uploadResults[0];
-      if (result400.success && result400.path) {
+      if (result400.success && result400.key) {
         // Store the S3 key in the database
-        logoUrl = result400.path;
+        logoUrl = result400.key;
       } else {
         console.error("Error uploading 400px logo:", result400);
       }
+    } else if (logo) {
+      // Si no hay archivo pero sí URL, usar la URL
+      logoUrl = logo;
     }
 
     // --- Subida de la Miniatura (si existe) ---
@@ -66,12 +83,13 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
         .webp({ quality: 75 })
         .toBuffer();
       const thumbnailPath = `organization/${organizationId}/thumbnail_200`;
-      const thumbnailUploadResult = await uploadBufferToS3({
-        buffer: resizedThumbnailBuffer,
-        path: thumbnailPath,
-      });
-      if (thumbnailUploadResult.success && thumbnailUploadResult.path) {
-        thumbnailUrl = thumbnailUploadResult.path; // Guardar KEY del thumbnail
+      const thumbnailUploadResult = await uploadToS3(
+        resizedThumbnailBuffer,
+        thumbnailPath,
+        "image/webp",
+      );
+      if (thumbnailUploadResult.success && thumbnailUploadResult.key) {
+        thumbnailUrl = thumbnailUploadResult.key; // Guardar KEY del thumbnail
       } else {
         console.error("Error uploading 200px thumbnail:", thumbnailUploadResult);
       }
@@ -98,4 +116,34 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
     console.error("🔥 ERROR SERVER ACTION:", error);
     return { error: (error as Error).message || "Ocurrió un error inesperado.", success: false };
   }
+}
+
+// Función wrapper para crear organizaciones (compatibilidad con create-organizations.ts)
+export async function createOrganization(
+  prevState: { success: string | false; error: string | false },
+  formData: FormData,
+): Promise<serverMessage> {
+  // Remover el ID para forzar creación
+  const newFormData = new FormData();
+  for (const [key, value] of formData.entries()) {
+    if (key !== "id") {
+      newFormData.append(key, value);
+    }
+  }
+
+  return await createOrUpdateOrganization(newFormData);
+}
+
+// Función wrapper para actualizar organizaciones (compatibilidad con update-organizations.ts)
+export async function updateOrganization(
+  prevState: { success: string | false; error: string | false },
+  formData: FormData,
+): Promise<serverMessage> {
+  // Verificar que tenga ID para forzar actualización
+  const id = formData.get("id");
+  if (!id) {
+    return { error: "ID de organización requerido para actualización", success: false };
+  }
+
+  return await createOrUpdateOrganization(formData);
 }

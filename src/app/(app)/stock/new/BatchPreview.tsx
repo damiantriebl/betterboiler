@@ -1,6 +1,6 @@
 "use client";
 
-import type { BranchData } from "@/actions/stock/get-branch";
+import type { BranchData } from "@/actions/stock/form-data-unified";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -16,7 +16,7 @@ import type { ColorConfig } from "@/types/ColorType";
 import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
 import type { Supplier } from "@prisma/client";
 import React from "react";
-import type { BrandForCombobox } from "./page"; // Asume que este tipo está en page.tsx
+import type { BrandForCombobox } from "./types"; // Asume que este tipo está en types.tsx
 
 // Interfaz para las props del Preview
 interface BatchPreviewProps {
@@ -82,7 +82,7 @@ export function BatchPreview({
               <span className="font-medium">Año:</span> {renderValue(formData.year)}
             </p>
             <p>
-              <span className="font-medium">Cilindrada:</span>{" "}
+              <span className="font-medium">Cilindrada:</span>
               {formData.displacement ? (
                 `${formData.displacement} cc`
               ) : (
@@ -90,7 +90,7 @@ export function BatchPreview({
               )}
             </p>
             <p>
-              <span className="font-medium">Proveedor:</span>{" "}
+              <span className="font-medium">Proveedor:</span>
               {renderValue(selectedSupplier?.commercialName || selectedSupplier?.legalName, "N/A")}
             </p>
           </div>
@@ -98,15 +98,15 @@ export function BatchPreview({
           <div className="space-y-2">
             <h4 className="font-semibold mb-1 text-base">Precios ({formData.currency})</h4>
             <p>
-              <span className="font-medium">Costo:</span>{" "}
+              <span className="font-medium">Costo:</span>
               {formatCurrency(formData.costPrice, formData.currency)}
             </p>
             <p>
-              <span className="font-medium">Minorista:</span>{" "}
+              <span className="font-medium">Minorista:</span>
               {formatCurrency(formData.retailPrice, formData.currency)}
             </p>
             <p>
-              <span className="font-medium">Mayorista:</span>{" "}
+              <span className="font-medium">Mayorista:</span>
               {formatCurrency(formData.wholesalePrice, formData.currency)}
             </p>
           </div>
@@ -121,20 +121,15 @@ export function BatchPreview({
         </CardHeader>
         <CardContent>
           <div className="max-h-[450px] overflow-y-auto border rounded-md">
-            {" "}
-            {/* Contenedor scrollable con borde */}
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
-                {" "}
-                {/* Header fijo */}
                 <TableRow>
                   <TableHead className="w-[40px]">#</TableHead>
-                  {/* Ajustar ancho si es necesario */}
                   <TableHead>Chasis</TableHead>
                   <TableHead>Motor</TableHead>
                   <TableHead>Color</TableHead>
                   <TableHead>Sucursal</TableHead>
-                  <TableHead>Estado</TableHead> {/* Nueva Columna */}
+                  <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Km</TableHead>
                 </TableRow>
               </TableHeader>
@@ -175,8 +170,7 @@ export function BatchPreview({
                           )}
                         </TableCell>
                         <TableCell>{renderValue(selectedBranch?.nombre)}</TableCell>
-                        <TableCell>{renderValue(unit.state, "STOCK")}</TableCell>{" "}
-                        {/* Mostrar Estado */}
+                        <TableCell>{renderValue(unit.state, "STOCK")}</TableCell>
                         <TableCell className="text-right">{unit.mileage ?? 0}</TableCell>
                       </TableRow>
                     );

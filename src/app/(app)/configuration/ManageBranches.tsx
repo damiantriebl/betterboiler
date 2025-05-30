@@ -1,15 +1,15 @@
 "use client";
 
 import {
-  type CreateSucursalState,
-  type DeleteSucursalState,
-  type UpdateOrderState,
-  type UpdateSucursalState,
-  createSucursal,
-  deleteSucursal,
-  updateSucursal,
-  updateSucursalesOrder,
-} from "@/actions/configuration/manage-sucursales";
+  type CreateBranchState,
+  type DeleteBranchState,
+  type UpdateBranchState,
+  type UpdateBranchesOrderState,
+  createBranch,
+  deleteBranch,
+  updateBranch,
+  updateBranchesOrder,
+} from "@/actions/configuration/manage-branches";
 import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
@@ -27,49 +27,48 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { Sucursal } from "@prisma/client";
-import { Loader2 } from "lucide-react";
+import type { Branch } from "@prisma/client";
 import React, { useState, useEffect, useTransition } from "react";
 import AddBranchItem from "./AddBranchItem";
-import SucursalItem from "./BranchItem";
+import BranchItem from "./BranchItem";
 
 interface ManageBranchesProps {
-  initialSucursalesData: Sucursal[];
+  initialBranchesData: Branch[];
 }
 
-type LocalSucursal = Sucursal;
+type LocalBranch = Branch;
 
-export default function ManageBranches({ initialSucursalesData }: ManageBranchesProps) {
-  const [sucursales, setSucursales] = useState<LocalSucursal[]>(initialSucursalesData);
+export default function ManageBranches({ initialBranchesData }: ManageBranchesProps) {
+  const [branches, setBranches] = useState<LocalBranch[]>(initialBranchesData);
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [isAdding, startAddTransition] = useTransition();
   const [isUpdating, startUpdateTransition] = useTransition();
 
   useEffect(() => {
-    setSucursales(initialSucursalesData);
-  }, [initialSucursalesData]);
+    setBranches(initialBranchesData);
+  }, [initialBranchesData]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleAddSucursal = (newSucursalName: string) => {
-    const trimmedName = newSucursalName.trim();
+  const handleAddBranch = (newBranchName: string) => {
+    const trimmedName = newBranchName.trim();
     if (!trimmedName) return;
 
     const formData = new FormData();
     formData.append("name", trimmedName);
 
     startAddTransition(async () => {
-      const result: CreateSucursalState = await createSucursal(null, formData);
-      if (result.success && result.sucursal) {
-        const newSucursal = result.sucursal;
-        setSucursales((prev) => [...prev, newSucursal].sort((a, b) => a.order - b.order));
+      const result: CreateBranchState = await createBranch(null, formData);
+      if (result.success && result.branch) {
+        const newBranch = result.branch;
+        setBranches((prev) => [...prev, newBranch].sort((a, b) => a.order - b.order));
         toast({
           title: "Sucursal añadida",
-          description: `"${newSucursal.name}" se añadió con éxito.`,
+          description: `"${newBranch.name}" se añadió con éxito.`,
         });
       } else {
         toast({ variant: "destructive", title: "Error al añadir", description: result.error });
@@ -77,11 +76,11 @@ export default function ManageBranches({ initialSucursalesData }: ManageBranches
     });
   };
 
-  const handleDeleteSucursal = (idToDelete: number) => {
-    const sucursalToDelete = sucursales.find((s) => s.id === idToDelete);
-    if (!sucursalToDelete) return;
+  const handleDeleteBranch = (idToDelete: number) => {
+    const branchToDelete = branches.find((b) => b.id === idToDelete);
+    if (!branchToDelete) return;
 
-    if (!confirm(`¿Estás seguro de que quieres eliminar la sucursal "${sucursalToDelete.name}"?`)) {
+    if (!confirm(`¿Estás seguro de que quieres eliminar la sucursal "${branchToDelete.name}"?`)) {
       return;
     }
 
@@ -89,49 +88,49 @@ export default function ManageBranches({ initialSucursalesData }: ManageBranches
     formData.append("id", idToDelete.toString());
 
     startTransition(async () => {
-      const previousSucursales = sucursales;
-      setSucursales((prev) => prev.filter((s) => s.id !== idToDelete));
+      const previousBranches = branches;
+      setBranches((prev) => prev.filter((b) => b.id !== idToDelete));
 
-      const result: DeleteSucursalState = await deleteSucursal(null, formData);
+      const result: DeleteBranchState = await deleteBranch(null, formData);
       if (result.success) {
         toast({
           title: "Sucursal eliminada",
-          description: `"${sucursalToDelete.name}" ha sido eliminada.`,
+          description: `"${branchToDelete.name}" ha sido eliminada.`,
         });
       } else {
-        setSucursales(previousSucursales);
+        setBranches(previousBranches);
         toast({ variant: "destructive", title: "Error al eliminar", description: result.error });
       }
     });
   };
 
-  const handleEditSucursal = (idToEdit: number, newName: string) => {
+  const handleEditBranch = (idToEdit: number, newName: string) => {
     const trimmedNewName = newName.trim();
     if (!trimmedNewName) return;
 
-    const originalSucursal = sucursales.find((s) => s.id === idToEdit);
-    if (!originalSucursal || originalSucursal.name === trimmedNewName) return;
+    const originalBranch = branches.find((b) => b.id === idToEdit);
+    if (!originalBranch || originalBranch.name === trimmedNewName) return;
 
     const formData = new FormData();
     formData.append("id", idToEdit.toString());
     formData.append("name", trimmedNewName);
 
     startUpdateTransition(async () => {
-      const previousSucursales = sucursales;
-      setSucursales((prev) =>
-        prev.map((s) => (s.id === idToEdit ? { ...s, name: trimmedNewName } : s)),
+      const previousBranches = branches;
+      setBranches((prev) =>
+        prev.map((b) => (b.id === idToEdit ? { ...b, name: trimmedNewName } : b)),
       );
 
-      const result: UpdateSucursalState = await updateSucursal(null, formData);
-      if (result.success && result.sucursal) {
-        const updatedSucursal = result.sucursal;
-        setSucursales((prev) => prev.map((s) => (s.id === idToEdit ? updatedSucursal : s)));
+      const result: UpdateBranchState = await updateBranch(null, formData);
+      if (result.success && result.branch) {
+        const updatedBranch = result.branch;
+        setBranches((prev) => prev.map((b) => (b.id === idToEdit ? updatedBranch : b)));
         toast({
           title: "Sucursal renombrada",
-          description: `"${originalSucursal.name}" ahora es "${updatedSucursal.name}".`,
+          description: `"${originalBranch.name}" ahora es "${updatedBranch.name}".`,
         });
       } else {
-        setSucursales(previousSucursales);
+        setBranches(previousBranches);
         toast({ variant: "destructive", title: "Error al renombrar", description: result.error });
       }
     });
@@ -145,9 +144,9 @@ export default function ManageBranches({ initialSucursalesData }: ManageBranches
       const overId = Number(over.id);
 
       let orderedItemsForAction: { id: number; order: number }[] = [];
-      const previousSucursales = sucursales;
+      const previousBranches = branches;
 
-      setSucursales((currentItems) => {
+      setBranches((currentItems) => {
         const oldIndex = currentItems.findIndex((item) => item.id === activeId);
         const newIndex = currentItems.findIndex((item) => item.id === overId);
         if (oldIndex === -1 || newIndex === -1) return currentItems;
@@ -161,9 +160,12 @@ export default function ManageBranches({ initialSucursalesData }: ManageBranches
 
       if (orderedItemsForAction.length > 0) {
         startTransition(async () => {
-          const result: UpdateOrderState = await updateSucursalesOrder(null, orderedItemsForAction);
+          const result: UpdateBranchesOrderState = await updateBranchesOrder(
+            null,
+            orderedItemsForAction,
+          );
           if (!result.success) {
-            setSucursales(previousSucursales);
+            setBranches(previousBranches);
             toast({
               variant: "destructive",
               title: "Error al reordenar",
@@ -191,24 +193,21 @@ export default function ManageBranches({ initialSucursalesData }: ManageBranches
         modifiers={[restrictToVerticalAxis]}
       >
         <div className="flex flex-col gap-3">
-          <SortableContext
-            items={sucursales.map((s) => s.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {sucursales.map((sucursal) => (
-              <SucursalItem
-                key={sucursal.id}
-                id={sucursal.id}
-                name={sucursal.name}
-                onEdit={handleEditSucursal}
-                onDelete={handleDeleteSucursal}
-                isUpdating={isUpdating && !!sucursales.find((s) => s.id === sucursal.id)}
+          <SortableContext items={branches.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+            {branches.map((branch) => (
+              <BranchItem
+                key={branch.id}
+                id={branch.id}
+                name={branch.name}
+                onEdit={handleEditBranch}
+                onDelete={handleDeleteBranch}
+                isUpdating={isUpdating && !!branches.find((b) => b.id === branch.id)}
               />
             ))}
           </SortableContext>
-          <AddBranchItem onAdd={handleAddSucursal} isAdding={isAdding} className="mt-2" />
+          <AddBranchItem onAdd={handleAddBranch} isAdding={isAdding} className="mt-2" />
 
-          {sucursales.length === 0 && (
+          {branches.length === 0 && (
             <p className="text-center text-muted-foreground mt-4">No hay sucursales añadidas.</p>
           )}
         </div>

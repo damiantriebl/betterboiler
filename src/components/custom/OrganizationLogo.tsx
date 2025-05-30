@@ -2,6 +2,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/SessionStore";
 import { Building } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -13,6 +14,7 @@ interface OrganizationLogoProps {
   variant?: "default" | "bare";
   nameDisplayOpacity?: number;
   className?: string;
+  useSessionData?: boolean;
 }
 
 // cache de URLs
@@ -26,13 +28,20 @@ export async function getLogoUrl(input: string): Promise<string> {
     urlCache.set(input, input);
     return input;
   }
-  const res = await fetch(`/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`);
-  const data = await res.json();
-  if (res.ok && data.success?.url) {
-    urlCache.set(input, data.success.url);
-    return data.success.url;
+  try {
+    const res = await fetch(
+      `/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`,
+    );
+    const data = await res.json();
+    if (res.ok && data.success?.url) {
+      urlCache.set(input, data.success.url);
+      return data.success.url;
+    }
+    throw new Error(data.failure || "Failed to get signed URL");
+  } catch (error) {
+    console.error("Error fetching logo URL:", error);
+    throw error;
   }
-  throw new Error(data.failure || "Failed to get signed URL");
 }
 
 export default function OrganizationLogo({
@@ -43,7 +52,16 @@ export default function OrganizationLogo({
   variant = "default",
   nameDisplayOpacity = 1,
   className,
+  useSessionData = true,
 }: OrganizationLogoProps) {
+  // Obtener datos del store si es necesario
+  const storeOrgName = useSessionStore((state) => state.organizationName);
+  const storeOrgLogo = useSessionStore((state) => state.organizationLogo);
+
+  // Usar props o datos del store según sea necesario
+  const displayName = name || (useSessionData ? storeOrgName : null);
+  const displayLogo = logo || (useSessionData ? storeOrgLogo : null);
+
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -150,31 +168,27 @@ export default function OrganizationLogo({
     if (thumbnail) getLogoUrl(thumbnail).catch(() => {});
   }, [thumbnail]);
 
-  const fetchLogoUrl = useCallback(
-    async (key: string) => {
-      if (isLoading) return;
-      setIsLoading(true);
-      setHasError(false);
-      try {
-        const url = await getLogoUrl(key);
-        setImageUrl(url);
-      } catch {
-        setHasError(true);
-        setImageUrl(null);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [isLoading],
-  );
+  const fetchLogoUrl = useCallback(async (key: string) => {
+    setIsLoading(true);
+    setHasError(false);
+    try {
+      const url = await getLogoUrl(key);
+      setImageUrl(url);
+    } catch {
+      setHasError(true);
+      setImageUrl(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (typeof logo === "string" && logo.length > 0) {
-      fetchLogoUrl(logo);
+    if (typeof displayLogo === "string" && displayLogo.length > 0) {
+      fetchLogoUrl(displayLogo);
     } else {
       setHasError(true);
     }
-  }, [logo, fetchLogoUrl]);
+  }, [displayLogo, fetchLogoUrl]);
 
   const renderFallback = () => (
     <Building className={fallbackIconClasses} style={isCustomSize ? customIconStyles : {}} />
@@ -184,7 +198,7 @@ export default function OrganizationLogo({
     <img
       key={imageUrl}
       src={imageUrl || ""}
-      alt={name || "Organization Logo"}
+      alt={displayName || "Organization Logo"}
       className={imgClasses}
       onError={() => setHasError(true)}
     />
@@ -195,23 +209,9 @@ export default function OrganizationLogo({
       className={containerClasses}
       style={isCustomSize ? customContainerStyles : {}}
       role="img"
-      aria-label={`${name || "Organization"} logo container`}
+      aria-label={`${displayName || "Organization"} logo container`}
     >
       {imageUrl && !hasError ? renderImage() : renderFallback()}
-      {name && (
-        <span
-          className="text-xl font-bold pl-2 transition-opacity duration-200 ease-out"
-          style={{ opacity: nameDisplayOpacity }}
-        >
-          <div
-            className="text-xl font-bold pr-2 transition-opacity duration-200 ease-out"
-            style={{ opacity: nameDisplayOpacity }}
-          >
-            {" "}
-            {name}
-          </div>
-        </span>
-      )}
     </div>
   );
 }

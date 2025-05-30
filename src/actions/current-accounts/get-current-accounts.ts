@@ -4,6 +4,7 @@ import db from "@/lib/prisma";
 import type { ActionState } from "@/types/action-states";
 // Import Prisma namespace along with types
 import {
+  type Brand,
   type Client,
   type CurrentAccount,
   type Model,
@@ -20,6 +21,7 @@ export type CurrentAccountWithDetails = CurrentAccount & {
   motorcycle?: Motorcycle & {
     // Motorcycle is now optional if relation can be null
     model: Pick<Model, "id" | "name">; // Model is nested within Motorcycle
+    brand: Pick<Brand, "id" | "name">; // Brand is nested within Motorcycle
   };
   // Include payments to show paid installments
   payments: Payment[];
@@ -75,6 +77,9 @@ export async function getCurrentAccounts(
           include: {
             model: {
               // Include the model related to the motorcycle
+              select: { id: true, name: true },
+            },
+            brand: {
               select: { id: true, name: true },
             },
           },

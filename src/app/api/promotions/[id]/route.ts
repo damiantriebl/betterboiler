@@ -1,20 +1,23 @@
-import { getOrganizationIdFromSession } from "@/actions/getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Obtener el ID de la organización desde la sesión
-    const organizationId = await getOrganizationIdFromSession();
-    if (!organizationId) {
+    const org = await getOrganizationIdFromSession();
+    if (!org.organizationId) {
       return NextResponse.json(
         { error: "No se pudo obtener la organización del usuario" },
         { status: 401 },
       );
     }
 
+    // Obtener los parámetros
+    const { id } = await params;
+
     // Convertir el ID de la promoción a número
-    const promotionId = Number.parseInt(params.id);
+    const promotionId = Number.parseInt(id);
     if (Number.isNaN(promotionId)) {
       return NextResponse.json({ error: "ID de promoción inválido" }, { status: 400 });
     }
@@ -23,7 +26,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const promotion = await prisma.bankingPromotion.findUnique({
       where: {
         id: promotionId,
-        organizationId,
+        organizationId: org.organizationId,
       },
       include: {
         installmentPlans: true,

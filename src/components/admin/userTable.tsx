@@ -23,6 +23,9 @@ export default async function UsersTable() {
   const path = referer ? new URL(referer).pathname : "";
   const isAdminRoute = path.startsWith("/admin");
 
+  // Verificar si el usuario actual es ROOT para mostrar el selector de organizaciones
+  const isRootUser = session?.user.role === "root";
+
   const [users, organizations] = await Promise.all([
     prisma.user.findMany({
       where:
@@ -44,7 +47,7 @@ export default async function UsersTable() {
           <TableHead>Verificado</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Fecha Ingreso</TableHead>
-          {!isAdminRoute && <TableHead>Organización</TableHead>}
+          {!isAdminRoute && isRootUser && <TableHead>Organización</TableHead>}
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
@@ -63,7 +66,7 @@ export default async function UsersTable() {
               )}
             </TableCell>
             <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-            {!isAdminRoute && (
+            {!isAdminRoute && isRootUser && (
               <TableCell>
                 <OrganizationSelect
                   userId={user.id}

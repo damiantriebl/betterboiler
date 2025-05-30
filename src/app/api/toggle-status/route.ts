@@ -1,9 +1,6 @@
-import prisma from "@/lib/prisma";
+import { userOperations } from "@/lib/api/user-management";
 // app/api/toggle-status/route.ts
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  const { userId, banned } = await req.json();
-  await prisma.user.update({ where: { id: userId }, data: { banned } });
-  return NextResponse.json({ success: true });
-}
+// 🚀 API unificada para cambiar estado de baneo usando patrón Strategy
+export const POST = userOperations.toggleBanStatus.handle.bind(userOperations.toggleBanStatus);

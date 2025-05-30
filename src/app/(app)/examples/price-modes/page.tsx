@@ -39,7 +39,7 @@ export default function PriceModesExamplePage() {
   ];
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container max-w-none py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Ejemplo de Modos de Precio</h1>
         <p className="text-muted-foreground">
@@ -48,7 +48,7 @@ export default function PriceModesExamplePage() {
         </p>
         <div className="mt-4 p-4 bg-muted rounded-md">
           <p>
-            <strong>Modo actual:</strong>{" "}
+            <strong>Modo actual:</strong>
             {mode === "all"
               ? "Todos los precios (Costo, Mayorista, Minorista)"
               : mode === "retail-wholesale"

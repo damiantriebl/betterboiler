@@ -1,13 +1,14 @@
 import prisma from "@/lib/prisma";
-import { deleteFromS3 } from "@/lib/s3";
+import { deleteFromS3 } from "@/lib/s3-unified";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { modelId: string; fileId: string } },
+  context: { params: Promise<{ modelId: string; fileId: string }> },
 ) {
   try {
-    const modelId = Number.parseInt(context.params.modelId);
+    const params = await context.params;
+    const modelId = Number.parseInt(params.modelId);
 
     if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
@@ -15,7 +16,7 @@ export async function DELETE(
 
     // Get file info before deleting
     const file = await prisma.modelFile.findUnique({
-      where: { id: context.params.fileId },
+      where: { id: params.fileId },
     });
 
     if (!file) {

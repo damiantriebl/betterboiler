@@ -1,5 +1,5 @@
-import { uploadBufferToS3 } from "@/actions/S3/upload-buffer-to-s3";
 import prisma from "@/lib/prisma";
+import { uploadToS3 } from "@/lib/s3-unified";
 import type { ModelFileWithUrl } from "@/types/motorcycle";
 import { type NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
@@ -44,9 +44,10 @@ async function processImage(file: File): Promise<{ original: Buffer; thumbnail: 
   };
 }
 
-export async function GET(request: NextRequest, context: { params: { modelId: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ modelId: string }> }) {
   try {
-    const modelId = Number.parseInt(context.params.modelId);
+    const params = await context.params;
+    const modelId = Number.parseInt(params.modelId);
     if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID de modelo inválido" }, { status: 400 });
     }
@@ -99,9 +100,13 @@ export async function GET(request: NextRequest, context: { params: { modelId: st
   }
 }
 
-export async function POST(request: NextRequest, context: { params: { modelId: string } }) {
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ modelId: string }> },
+) {
   try {
-    const modelId = Number.parseInt(context.params.modelId);
+    const params = await context.params;
+    const modelId = Number.parseInt(params.modelId);
     if (Number.isNaN(modelId)) {
       return NextResponse.json({ error: "ID de modelo inválido" }, { status: 400 });
     }
@@ -140,8 +145,8 @@ export async function POST(request: NextRequest, context: { params: { modelId: s
 
       // Upload both versions
       const [originalUpload, thumbnailUpload] = await Promise.all([
-        uploadBufferToS3({ buffer: original, path: originalPath }),
-        uploadBufferToS3({ buffer: thumbnail, path: thumbnailPath }),
+        uploadToS3(original, originalPath, "image/webp"),
+        uploadToS3(thumbnail, thumbnailPath, "image/webp"),
       ]);
 
       console.log("Upload results:", { originalUpload, thumbnailUpload });
@@ -161,7 +166,7 @@ export async function POST(request: NextRequest, context: { params: { modelId: s
       console.log("Uploading non-image file:", { path });
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      uploadResult = await uploadBufferToS3({ buffer, path });
+      uploadResult = await uploadToS3(buffer, path);
 
       console.log("Upload result:", uploadResult);
 

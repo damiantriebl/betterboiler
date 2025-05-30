@@ -29,7 +29,7 @@ alwaysApply: true
 - en seguridad y autentificacion se usa better-auth
 - en estilo tailwind 3.4
 - en estado zustand
-- en pdf se usa @react-pdf/renderer siempre trantando de que sea siempre del lado de el servidor
+- en pdf se usa @pdf-lib siempre trantando de que sea siempre del lado de el servidor
 
 # Test
 

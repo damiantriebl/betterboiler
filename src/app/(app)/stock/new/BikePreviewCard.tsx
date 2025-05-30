@@ -1,10 +1,14 @@
 "use client";
 
+import { BranchData } from "@/actions/stock/form-data-unified";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ColorConfig } from "@/types/ColorType";
-import * as React from "react";
-import type { BrandForCombobox } from "./page"; // Importar tipo desde page
+import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
+import type { Supplier } from "@prisma/client";
+import { Calendar, Car, FileImage, Package } from "lucide-react";
+import type { BrandForCombobox } from "./types"; // Importar tipo desde types
 
 interface MotoPreviewCardProps {
   formData: {
@@ -31,24 +35,13 @@ export function MotoPreviewCard({
   availableBrands,
   availableColors,
 }: MotoPreviewCardProps) {
-  const selectedBrand = React.useMemo(
-    () => availableBrands.find((b) => b.id === formData.marcaId),
-    [availableBrands, formData.marcaId],
-  );
+  const selectedBrand = availableBrands.find((b) => b.id === formData.marcaId);
 
-  const selectedModel = React.useMemo(
-    () => selectedBrand?.models.find((m) => m.id === formData.modeloId),
-    [selectedBrand, formData.modeloId],
-  );
+  const selectedModel = selectedBrand?.models.find((m) => m.id === formData.modeloId);
 
   const firstUnit = formData.units?.[0];
 
-  const selectedColor = React.useMemo(
-    () =>
-      // Buscar por dbId ya que colorId en el form viene de ahí
-      availableColors.find((c) => c.dbId === firstUnit?.colorId),
-    [availableColors, firstUnit?.colorId],
-  );
+  const selectedColor = availableColors.find((c) => c.dbId === firstUnit?.colorId);
 
   // Usar el color definido en OrganizationBrand o un gris por defecto
   const brandColor = selectedBrand?.color || "#cccccc";
@@ -73,13 +66,10 @@ export function MotoPreviewCard({
       style={{ borderColor: brandColor }}
     >
       <CardHeader className="pb-2 pt-4">
-        {" "}
         {/* Menos padding vertical */}
         <CardTitle className="text-lg">Vista Previa</CardTitle> {/* Título más pequeño */}
       </CardHeader>
       <CardContent className="space-y-2 text-sm pb-4">
-        {" "}
-        {/* Menos espacio y padding */}
         <div className="flex justify-between items-center">
           <span className="font-semibold text-muted-foreground">Marca:</span>
           <span className="font-medium">{getDisplayValue(selectedBrand?.name, "---")}</span>

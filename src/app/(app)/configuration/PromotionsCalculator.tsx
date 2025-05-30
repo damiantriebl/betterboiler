@@ -152,7 +152,7 @@ export default function PromotionsCalculator({ promotions }: PromotionsCalculato
               <SelectContent>
                 {availableInstallments.map((plan) => (
                   <SelectItem key={plan.id} value={plan.installments.toString()}>
-                    {plan.installments} cuotas{" "}
+                    {plan.installments} cuotas
                     {plan.interestRate === 0 ? "sin interés" : `(${plan.interestRate}% interés)`}
                   </SelectItem>
                 ))}
@@ -243,12 +243,12 @@ export default function PromotionsCalculator({ promotions }: PromotionsCalculato
               <Percent className="w-4 h-4 mr-1" />
               {calculation.finalAmount < calculation.originalAmount ? (
                 <span className="text-green-600">
-                  Ahorra{" "}
+                  Ahorra
                   {(100 - (calculation.finalAmount / calculation.originalAmount) * 100).toFixed(2)}%
                 </span>
               ) : calculation.finalAmount > calculation.originalAmount ? (
                 <span className="text-amber-600">
-                  Incremento del{" "}
+                  Incremento del
                   {((calculation.finalAmount / calculation.originalAmount) * 100 - 100).toFixed(2)}%
                 </span>
               ) : (

@@ -37,8 +37,8 @@ import type { ActionState } from "@/types/action-states";
 import { type RecordPaymentInput, recordPaymentSchema } from "@/zod/current-account-schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { AlertCircle, CalendarIcon, CheckCircle2 } from "lucide-react";
-import React, { useEffect, useActionState, useState } from "react";
+import { AlertCircle, CalendarIcon, CheckCircle2, Loader2 } from "lucide-react";
+import React, { useEffect, useActionState, useTransition, useState } from "react";
 import { useForm } from "react-hook-form";
 
 interface PaymentModalProps {
@@ -66,6 +66,7 @@ export default function PaymentModal({
     recordPayment,
     initialActionState,
   );
+  const [isTransitioning, startTransition] = useTransition();
 
   const [showSurplusOptions, setShowSurplusOptions] = useState(false);
 
@@ -109,7 +110,9 @@ export default function PaymentModal({
   }, [actionState.success, onClose, form]);
 
   const processForm = async (data: RecordPaymentInput) => {
-    formAction(data);
+    startTransition(() => {
+      formAction(data);
+    });
   };
 
   return (

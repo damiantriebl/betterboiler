@@ -50,13 +50,6 @@ const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
   },
   {
     id: 7,
-    name: "MercadoPago",
-    type: "mercadopago",
-    description: "Pago a través de MercadoPago",
-    iconUrl: "/icons/payment-methods/mercadopago.svg",
-  },
-  {
-    id: 8,
     name: "Código QR",
     type: "qr",
     description: "Pago mediante escaneo de código QR",
@@ -92,7 +85,7 @@ export async function getOrganizationPaymentMethods(
     });
 
     const formattedMethods: OrganizationPaymentMethodDisplay[] = organizationMethods.map(
-      (orgMethod: OrganizationPaymentMethod) => ({
+      (orgMethod) => ({
         id: orgMethod.id,
         order: orgMethod.order,
         isEnabled: orgMethod.isEnabled,

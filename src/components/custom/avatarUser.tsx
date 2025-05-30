@@ -1,4 +1,7 @@
+"use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCallback, useEffect, useState } from "react";
+import { getLogoUrl } from "./OrganizationLogo";
 
 interface AvatarUserProps {
   src?: string | null;
@@ -32,14 +35,56 @@ const getColorScheme = (name: string) => {
 };
 
 const AvatarUser = ({ src, name }: AvatarUserProps) => {
-  const { bg, text, border } = getColorScheme(name || "");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const displayName = name || "";
+  const displaySrc = src || "";
+
+  const fetchImageUrl = useCallback(
+    async (key: string) => {
+      if (isLoading) return;
+      setIsLoading(true);
+      setHasError(false);
+      try {
+        if (key.startsWith("http://") || key.startsWith("https://")) {
+          setImageUrl(key);
+        } else {
+          const url = await getLogoUrl(key);
+          setImageUrl(url);
+        }
+      } catch (error) {
+        console.error("Error obteniendo URL de imagen:", error);
+        setHasError(true);
+        setImageUrl(null);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isLoading],
+  );
+
+  useEffect(() => {
+    if (displaySrc && displaySrc.length > 0) {
+      fetchImageUrl(displaySrc);
+    } else {
+      setHasError(true);
+      setImageUrl(null);
+    }
+  }, [displaySrc, fetchImageUrl]);
+
+  const { bg, text, border } = getColorScheme(displayName);
 
   return (
     <Avatar className={`border-2 ${border} size-14`}>
-      <AvatarImage src={src ?? undefined} />
-      <AvatarFallback className={`${bg} ${text} font-bold text-lg`}>
-        {getInitials(name || "")}
-      </AvatarFallback>
+      {!hasError && imageUrl ? (
+        <AvatarImage src={imageUrl} />
+      ) : (
+        <AvatarFallback className={`${bg} ${text} font-bold text-lg`}>
+          {getInitials(displayName)}
+        </AvatarFallback>
+      )}
     </Avatar>
   );
 };

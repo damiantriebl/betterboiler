@@ -13,15 +13,8 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { getOrganizationIdFromSession } from "../getOrganizationIdFromSession";
+import { getOrganizationIdFromSession } from "../util";
 
-// Helper para obtener organizationId de la sesión
-
-// ==============================================
-// Acciones para Marcas (Brands) - Modelo N:M
-// ==============================================
-
-// --- Acción: associateOrganizationBrand (Reemplaza createOrganizationBrand) ---
 export interface AssociateBrandState {
   success: boolean;
   error?: string | null;
@@ -33,9 +26,11 @@ export async function associateOrganizationBrand(
   prevState: AssociateBrandState | null,
   formData: FormData,
 ): Promise<AssociateBrandState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const organizationId = org.organizationId;
 
   const validatedFields = associateBrandSchema.safeParse({
     name: formData.get("name"),
@@ -137,9 +132,11 @@ export async function updateOrganizationBrandAssociation(
   prevState: UpdateAssociationState | null,
   formData: FormData,
 ): Promise<UpdateAssociationState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const organizationId = org.organizationId;
 
   const validatedFields = updateBrandAssociationSchema.safeParse({
     organizationBrandId: formData.get("organizationBrandId"),
@@ -198,9 +195,11 @@ export async function dissociateOrganizationBrand(
   prevState: DissociateBrandState | null,
   formData: FormData,
 ): Promise<DissociateBrandState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const organizationId = org.organizationId;
 
   const validatedFields = dissociateBrandSchema.safeParse({
     organizationBrandId: formData.get("organizationBrandId"),
@@ -210,26 +209,48 @@ export async function dissociateOrganizationBrand(
   const { organizationBrandId } = validatedFields.data;
 
   try {
-    // Verificar que la asociación pertenece a la organización actual
-    const associationToDelete = await prisma.organizationBrand.findUnique({
-      where: { id: organizationBrandId },
+    await prisma.$transaction(async (tx) => {
+      // 1. Verificar que la asociación pertenece a la organización actual y obtener brandId
+      const associationToDelete = await tx.organizationBrand.findUnique({
+        where: { id: organizationBrandId },
+        select: { organizationId: true, brandId: true }, // Seleccionar brandId también
+      });
+
+      if (!associationToDelete || associationToDelete.organizationId !== organizationId) {
+        // Lanzar un error para abortar la transacción si no se encuentra o no pertenece
+        throw new Error("Asociación no encontrada o no pertenece a tu organización.");
+      }
+
+      const brandIdToDeleteConfigs = associationToDelete.brandId;
+
+      // 2. Eliminar las OrganizationModelConfig asociadas a esta organización y marca
+      await tx.organizationModelConfig.deleteMany({
+        where: {
+          organizationId: organizationId,
+          model: {
+            brandId: brandIdToDeleteConfigs,
+          },
+        },
+      });
+
+      // 3. Borrar la entrada en OrganizationBrand
+      await tx.organizationBrand.delete({ where: { id: organizationBrandId } });
     });
-    if (!associationToDelete || associationToDelete.organizationId !== organizationId) {
-      return {
-        success: false,
-        error: "Asociación no encontrada o no pertenece a tu organización.",
-      };
-    }
 
-    // Borrar solo la entrada en OrganizationBrand
-    await prisma.organizationBrand.delete({ where: { id: organizationBrandId } });
-
-    revalidatePath("/configuracion");
-    return { success: true };
+    revalidatePath("/configuration"); // Estandarizar ruta
+    return { success: true }; // Eliminado message para cumplir con DissociateBrandState
   } catch (error) {
     console.error("🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):", error);
+    // Si el error es el que lanzamos arriba, usar su mensaje
+    if (
+      error instanceof Error &&
+      error.message === "Asociación no encontrada o no pertenece a tu organización."
+    ) {
+      return { success: false, error: error.message };
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return { success: false, error: "La asociación a eliminar no se encontró." };
+      // Este error podría ocurrir si organizationBrand.delete falla porque ya no existe
+      return { success: false, error: "La asociación a eliminar no se encontró (P2025)." };
     }
     return { success: false, error: "Error al desasociar la marca." };
   }
@@ -245,9 +266,11 @@ export async function updateOrganizationBrandsOrder(
   prevState: UpdateBrandOrderState | null,
   orderedAssociations: { id: number; order: number }[],
 ): Promise<UpdateBrandOrderState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const organizationId = org.organizationId;
 
   const validationResult = updateOrgBrandOrderSchema.safeParse(orderedAssociations);
   if (!validationResult.success) {
@@ -305,9 +328,11 @@ export async function renameBrandByDuplication(
   prevState: RenameBrandState | null,
   formData: FormData,
 ): Promise<RenameBrandState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const organizationId = org.organizationId;
 
   const validatedFields = renameBrandNMschema.safeParse({
     oldOrganizationBrandId: formData.get("oldOrganizationBrandId"),
@@ -453,14 +478,14 @@ export async function addModelToOrganizationBrand(
   prevState: CreateModelState | null,
   formData: FormData,
 ): Promise<CreateModelState> {
-  const sessionResult = await getOrganizationIdFromSession();
-  if (!sessionResult.organizationId) {
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId) {
     return {
       success: false,
-      error: sessionResult.error || "Usuario no autenticado o sin organización.",
+      error: org.error || "Usuario no autenticado o sin organización.",
     };
   }
-  const organizationId = sessionResult.organizationId;
+  const organizationId = org.organizationId;
 
   const validatedFields = createModelSchema.safeParse({
     name: formData.get("name"),
@@ -634,9 +659,11 @@ export async function updateOrganizationModel(
   prevState: UpdateModelState | null,
   formData: FormData,
 ): Promise<UpdateModelState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const organizationId = org.organizationId;
 
   const validatedFields = updateModelSchema.safeParse({
     id: formData.get("id"), // ID del modelo ANTIGUO a reemplazar
@@ -731,9 +758,11 @@ export async function updateOrganizationModelsOrder(
   prevState: UpdateModelsOrderState | null,
   payload: { brandId: number; modelOrders: { modelId: number; order: number }[] },
 ): Promise<UpdateModelsOrderState> {
-  const organizationId = await getOrganizationIdFromSession();
-  if (!organizationId)
+  const org = await getOrganizationIdFromSession();
+  if (!org.organizationId)
     return { success: false, error: "Usuario no autenticado o sin organización." };
+
+  const organizationId = org.organizationId;
 
   const { brandId, modelOrders } = payload;
 

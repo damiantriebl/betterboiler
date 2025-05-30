@@ -1,35 +1,52 @@
 // NavbarSticky.tsx
 "use client";
+import { PriceModeSelector } from "@/components/ui/price-mode-selector";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useSessionStore } from "@/stores/SessionStore";
 import { useMemo } from "react";
 import OrganizationLogo from "./OrganizationLogo";
 
 interface NavbarStickyProps {
-  organization: { logo: string | null; thumbnail: string | null; name: string };
+  organization?: { logo: string | null; thumbnail: string | null; name: string };
   scrollAmount: number;
 }
 
 export default function NavbarSticky({ organization, scrollAmount }: NavbarStickyProps) {
-  const logoKey = useMemo(() => {
-    return scrollAmount > 0.5 && organization.thumbnail
-      ? organization.thumbnail
-      : organization.logo;
-  }, [organization.logo, organization.thumbnail, scrollAmount]);
+  // Usar el store para obtener datos si no se proporcionan como props
+  const storeOrgName = useSessionStore((state) => state.organizationName);
+  const storeOrgLogo = useSessionStore((state) => state.organizationLogo);
 
+  // Usar los datos del store o los proporcionados como props
+  const orgData = useMemo(() => {
+    if (organization) return organization;
+    return {
+      logo: storeOrgLogo,
+      thumbnail: null, // No tenemos thumbnail en el store todavía
+      name: storeOrgName || "Organización",
+    };
+  }, [organization, storeOrgLogo, storeOrgName]);
+
+  const logoKey = useMemo(() => {
+    if (!orgData.logo && !orgData.thumbnail) return null;
+    return scrollAmount > 0.5 && orgData.thumbnail ? orgData.thumbnail : orgData.logo;
+  }, [orgData.logo, orgData.thumbnail, scrollAmount]);
+
+  // Todos los hooks useMemo deben llamarse ANTES del retorno condicional.
   const height = useMemo(() => {
-    const startHeight = 5;
+    const startHeight = 9; // Reducido para evitar que se extienda demasiado
     const endHeight = 3.5;
     return startHeight - scrollAmount * (startHeight - endHeight);
   }, [scrollAmount]);
 
   const paddingY = useMemo(() => {
-    const startPadding = 0.75;
-    const endPadding = 0.25;
+    const startPadding = 1; // Reducido para menos altura total
+    const endPadding = 0.5;
     return startPadding - scrollAmount * (startPadding - endPadding);
   }, [scrollAmount]);
 
   const logoSize = useMemo(() => {
-    const startSize = 8;
-    const endSize = 2.5;
+    const startSize = 7; // Logo aún más grande
+    const endSize = 3.5;
     return Math.max(endSize, startSize - scrollAmount * (startSize - endSize));
   }, [scrollAmount]);
 
@@ -37,11 +54,9 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
     return scrollAmount > 0.3 ? "default" : "bare";
   }, [scrollAmount]);
 
-  const showName = scrollAmount > 0.7;
   const nameOpacity = useMemo(() => {
     const startFade = 0.8;
     const endFade = 0.95;
-
     let calculatedOpacity = 0;
     if (scrollAmount <= startFade) {
       calculatedOpacity = 0;
@@ -53,25 +68,52 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
     return calculatedOpacity;
   }, [scrollAmount]);
 
+  // Padding top dinámico para evitar que se corte
+  const paddingTop = useMemo(() => {
+    const startPadding = 0.75; // Reducido para menos altura total
+    const endPadding = 0.25;
+    return startPadding - scrollAmount * (startPadding - endPadding);
+  }, [scrollAmount]);
+
   return (
     <div
       className={`
-        sticky top-0 z-50 flex items-center justify-center space-x-4
-        bg-background transition-all duration-200 ease-out
+        sticky top-0 z-10 w-full
+        bg-transparent backdrop-blur-sm 
+        transition-all duration-200 ease-out
+        flex items-center justify-between pr-10
       `}
       style={{
         height: `${height}rem`,
-        padding: `${paddingY}rem 0`,
+        paddingTop: `${paddingTop}rem`,
+        paddingBottom: `${paddingY}rem`,
+        paddingLeft: "1rem",
+        paddingRight: "1rem",
       }}
     >
-      <OrganizationLogo
-        logo={logoKey}
-        thumbnail={organization.thumbnail}
-        name={organization.name}
-        size={logoSize}
-        variant={logoVariant}
-        nameDisplayOpacity={nameOpacity}
-      />
+      {/* SidebarTrigger en la izquierda */}
+      <div className="flex items-center">
+        <SidebarTrigger />
+      </div>
+
+      {/* Logo en el centro */}
+      <div className="flex items-center space-x-4">
+        {logoKey && (
+          <OrganizationLogo
+            logo={logoKey}
+            thumbnail={orgData.thumbnail}
+            name={orgData.name}
+            size={logoSize}
+            variant={logoVariant}
+            nameDisplayOpacity={nameOpacity}
+          />
+        )}
+      </div>
+
+      {/* Selector de precios en la derecha */}
+      <div className="flex items-center">
+        <PriceModeSelector />
+      </div>
     </div>
   );
 }

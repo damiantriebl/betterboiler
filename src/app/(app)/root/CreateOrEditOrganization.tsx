@@ -13,10 +13,12 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/SessionStore";
 import type { serverMessage } from "@/types/ServerMessageType";
 import { type OrganizationFormData, organizationSchema } from "@/zod/OrganizationZod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Label } from "@radix-ui/react-label";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 
@@ -26,12 +28,15 @@ interface Props {
     name: string;
     logo?: string | null;
   } | null;
+  currentUserOrganizationId?: string | null;
 }
 
-const CreateOrEditOrganization = ({ organization }: Props) => {
+const CreateOrEditOrganization = ({ organization, currentUserOrganizationId }: Props) => {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<serverMessage>({ success: false, error: false });
+  const setSession = useSessionStore((state) => state.setSession);
+  const router = useRouter();
 
   const form = useForm<OrganizationFormData>({
     resolver: zodResolver(organizationSchema),
@@ -43,12 +48,33 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
 
   useEffect(() => {
     if (state.success) {
-      window.location.reload();
+      const newName = form.getValues("name");
+      const hasNewLogo = form.getValues("logoFile");
+
+      // Solo actualizar SessionStore si es la organización del usuario actual
+      const isCurrentUserOrganization = organization?.id === currentUserOrganizationId;
+
+      if (isCurrentUserOrganization) {
+        const sessionUpdate: any = {
+          organizationName: newName,
+        };
+
+        if (hasNewLogo && organization?.id) {
+          sessionUpdate.organizationLogo = `organization/${organization.id}/logo_400`;
+        }
+
+        setSession(sessionUpdate);
+      }
+
       setOpen(false);
       toast({
-        title: "Exito",
-        description: "Se actualizo la imagen correctamente",
+        title: "Éxito",
+        description: isCurrentUserOrganization
+          ? "Se actualizó la organización correctamente"
+          : "Se actualizó la organización correctamente. Los cambios se reflejarán después de volver a iniciar sesión.",
       });
+
+      router.refresh();
     }
 
     if (state.error) {
@@ -58,7 +84,7 @@ const CreateOrEditOrganization = ({ organization }: Props) => {
         variant: "destructive",
       });
     }
-  }, [state]);
+  }, [state, setSession, router, form, organization?.id, currentUserOrganizationId]);
 
   const handleUploadChange = ({ originalFile }: UploadResult) => {
     form.setValue("logoFile", originalFile);

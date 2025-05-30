@@ -44,7 +44,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { BankWithCards, CardType, BankCard } from "@/types/bank-cards";
+import type { BankCard, BankWithCards, CardType } from "@/types/bank-cards";
 import type { Bank } from "@/types/banking-promotions";
 import { Building, CreditCard, GripVertical, Plus, Trash2 } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
@@ -256,7 +256,11 @@ export default function ManageBankCards({
         // También actualizar el estado de banksCardState para mantener todo sincronizado
         setBankCardsState(newState);
       } else {
-        toast({ title: "Error en Asociación", description: result.error, variant: "destructive" });
+        toast({
+          title: "Error en Asociación",
+          description: result.message,
+          variant: "destructive",
+        });
         // Rollback is automatic
       }
 
@@ -289,7 +293,7 @@ export default function ManageBankCards({
       } else {
         toast({
           title: "Error",
-          description: result.error || "Error al eliminar asociación.",
+          description: result.message || "Error al eliminar asociación.",
           variant: "destructive",
         });
       }
@@ -323,7 +327,7 @@ export default function ManageBankCards({
       } else {
         toast({
           title: "Error",
-          description: result.error || "Error al cambiar el estado.",
+          description: result.message || "Error al cambiar el estado.",
           variant: "destructive",
         });
       }
@@ -375,7 +379,7 @@ export default function ManageBankCards({
         } else {
           toast({
             title: "Error",
-            description: result.error || "Error al actualizar el orden.",
+            description: result.message || "Error al actualizar el orden.",
             variant: "destructive",
           });
         }

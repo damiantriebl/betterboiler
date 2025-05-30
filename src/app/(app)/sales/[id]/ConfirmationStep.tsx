@@ -48,7 +48,7 @@ export default function ConfirmationStep({
           {isReserved && (
             <div className="p-4 bg-blue-50 rounded-lg mb-4">
               <p>
-                Se aplicó un monto de reserva de{" "}
+                Se aplicó un monto de reserva de
                 <span className="font-bold">{formatPrice(reservationAmount)}</span>.
               </p>
             </div>
@@ -63,7 +63,7 @@ export default function ConfirmationStep({
               {moto?.year})
             </p>
             <p>
-              <span className="font-medium">Precio:</span>{" "}
+              <span className="font-medium">Precio:</span>
               {formatPrice(moto?.retailPrice ?? 0, moto?.currency)}
             </p>
             <p>
