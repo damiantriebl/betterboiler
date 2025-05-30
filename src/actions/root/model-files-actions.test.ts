@@ -48,7 +48,7 @@ describe("model-files-actions", () => {
   describe("uploadModelFiles", () => {
     it("devuelve error cuando no hay sesión válida", async () => {
       const { uploadModelFiles } = await import("./model-files-actions");
-      
+
       vi.mocked(getSession).mockResolvedValue({ session: null });
 
       const formData = new FormData();
@@ -62,7 +62,7 @@ describe("model-files-actions", () => {
 
     it("devuelve error cuando modelId no es válido", async () => {
       const { uploadModelFiles } = await import("./model-files-actions");
-      
+
       vi.mocked(getSession).mockResolvedValue({
         session: { user: { id: "user-1" } },
       });
@@ -80,7 +80,7 @@ describe("model-files-actions", () => {
   describe("getModelFiles", () => {
     it("devuelve error cuando no hay sesión válida", async () => {
       const { getModelFiles } = await import("./model-files-actions");
-      
+
       vi.mocked(getSession).mockResolvedValue({ session: null });
 
       const result = await getModelFiles(1);
@@ -91,7 +91,7 @@ describe("model-files-actions", () => {
 
     it("devuelve error cuando modelId no es válido", async () => {
       const { getModelFiles } = await import("./model-files-actions");
-      
+
       vi.mocked(getSession).mockResolvedValue({
         session: { user: { id: "user-1" } },
       });
@@ -106,7 +106,7 @@ describe("model-files-actions", () => {
   describe("deleteModelFile", () => {
     it("devuelve error cuando no hay sesión válida", async () => {
       const { deleteModelFile } = await import("./model-files-actions");
-      
+
       vi.mocked(getSession).mockResolvedValue({ session: null });
 
       const result = await deleteModelFile("file-1");
@@ -117,7 +117,7 @@ describe("model-files-actions", () => {
 
     it("devuelve error cuando fileId no es válido", async () => {
       const { deleteModelFile } = await import("./model-files-actions");
-      
+
       vi.mocked(getSession).mockResolvedValue({
         session: { user: { id: "user-1" } },
       });
