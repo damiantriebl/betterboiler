@@ -103,7 +103,9 @@ export async function setupCurrentAccountMethod(): Promise<PaymentMethodResult> 
   }
 }
 
-export async function setupPaymentMethod(params: PaymentMethodSetupParams): Promise<PaymentMethodResult> {
+export async function setupPaymentMethod(
+  params: PaymentMethodSetupParams,
+): Promise<PaymentMethodResult> {
   try {
     const authResult = await validateOrganizationAccess();
 
@@ -195,7 +197,7 @@ export async function getOrganizationPaymentMethods(): Promise<PaymentMethodResu
     }
 
     const paymentMethods = await prisma.organizationPaymentMethod.findMany({
-      where: { 
+      where: {
         organizationId: authResult.organizationId,
         isEnabled: true,
       },
@@ -215,8 +217,8 @@ export async function getOrganizationPaymentMethods(): Promise<PaymentMethodResu
 }
 
 export async function togglePaymentMethodStatus(
-  methodId: string, 
-  isEnabled: boolean
+  methodId: string,
+  isEnabled: boolean,
 ): Promise<PaymentMethodResult> {
   try {
     const authResult = await validateOrganizationAccess();
@@ -259,4 +261,4 @@ export async function togglePaymentMethodStatus(
       error: handlePaymentMethodError(error, "togglePaymentMethodStatus"),
     };
   }
-} 
+}

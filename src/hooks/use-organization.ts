@@ -1,6 +1,6 @@
 "use client";
 
-import { getOrganizationIdFromSession, getOrganizationDetailsById } from "@/actions/util";
+import { getOrganizationDetailsById, getOrganizationIdFromSession } from "@/actions/util";
 import type { Organization } from "@prisma/client";
 import { useEffect, useState } from "react";
 
@@ -27,8 +27,16 @@ export function useOrganization(): UseOrganizationReturn {
 
         if (!mounted) return;
 
-        if (sessionData.error || !sessionData.organizationId) {
-          throw new Error(sessionData.error || "No organizationId found in session");
+        if (!sessionData) {
+          throw new Error("No se pudo obtener los datos de la sesión");
+        }
+
+        if (sessionData.error) {
+          throw new Error(sessionData.error);
+        }
+
+        if (!sessionData.organizationId) {
+          throw new Error("No se encontró ID de organización en la sesión");
         }
 
         const orgDetails = await getOrganizationDetailsById(sessionData.organizationId);
@@ -36,7 +44,9 @@ export function useOrganization(): UseOrganizationReturn {
         if (!mounted) return;
 
         if (!orgDetails) {
-          throw new Error(`Organization details not found for ID: ${sessionData.organizationId}`);
+          throw new Error(
+            `No se encontraron detalles de la organización para ID: ${sessionData.organizationId}`,
+          );
         }
 
         setOrganization(orgDetails);
@@ -44,7 +54,9 @@ export function useOrganization(): UseOrganizationReturn {
         if (!mounted) return;
         console.error("Error fetching organization data:", err);
         setError(
-          err instanceof Error ? err : new Error("Unknown error fetching organization data"),
+          err instanceof Error
+            ? err
+            : new Error("Error desconocido al obtener datos de la organización"),
         );
       } finally {
         if (mounted) {

@@ -58,14 +58,14 @@ export default function CurrentAccountReportPage() {
       const response = await fetch(`/api/reports/current-account/${accountId}`);
 
       if (!response.ok) {
-        throw new Error('Error al generar el PDF');
+        throw new Error("Error al generar el PDF");
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
 
       // Crear elemento de descarga
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `Reporte_CC_${accountData?.client.lastName || "Cliente"}_${accountData?.motorcycle?.chassisNumber || accountId}.pdf`;
       document.body.appendChild(a);
@@ -74,10 +74,9 @@ export default function CurrentAccountReportPage() {
       // Limpiar
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
     } catch (error) {
-      console.error('Error descargando PDF:', error);
-      setError('Error al descargar el PDF');
+      console.error("Error descargando PDF:", error);
+      setError("Error al descargar el PDF");
     } finally {
       setPdfLoading(false);
     }
@@ -98,17 +97,16 @@ export default function CurrentAccountReportPage() {
       const response = await fetch(`/api/reports/current-account/${accountId}`);
 
       if (!response.ok) {
-        throw new Error('Error al generar el PDF');
+        throw new Error("Error al generar el PDF");
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       setPdfUrl(url);
       setShowViewer(true);
-
     } catch (error) {
-      console.error('Error generando preview PDF:', error);
-      setError('Error al generar la previsualización del PDF');
+      console.error("Error generando preview PDF:", error);
+      setError("Error al generar la previsualización del PDF");
     } finally {
       setPdfLoading(false);
     }

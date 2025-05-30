@@ -1,5 +1,8 @@
 "use client";
 
+import type { MotorcycleTableData } from "@/actions/sales/get-motorcycles-unified";
+import { updateMotorcycleStatus } from "@/actions/stock";
+import { OtpDialog } from "@/components/custom/OtpDialog";
 import { Button } from "@/components/ui/button";
 import { PriceDisplay } from "@/components/ui/price-display";
 import {
@@ -18,40 +21,41 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useMotorcycleFiltersStore } from "@/stores/motorcycle-filters-store";
+import { useSecurityStore } from "@/stores/security-store";
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import { estadoVentaConfig } from "@/types/motorcycle";
 import type { MotorcycleWithFullDetails, ReservationWithDetails } from "@/types/motorcycle";
-import { type Client, type Motorcycle, MotorcycleState, type CurrentAccount } from "@prisma/client";
+import { type Client, type CurrentAccount, type Motorcycle, MotorcycleState } from "@prisma/client";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useOptimistic, useState, useTransition, useMemo } from "react";
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import DeleteConfirmationDialog from "../DeleteDialog";
 import { MotorcycleDetailModal } from "../MotorcycleDetailModal";
-import { ReserveModal } from "../ReserveModal";
 import { ColumnSelector } from "./ColumnSelector";
 import FilterSection from "./FilterSection";
 import { ActionButtons, ActionMenu } from "./MotorcycleActions";
 import MotorcycleRow from "./MotorcycleRow";
 import MotorcycleStatusBadge from "./MotorcycleStatusBadge";
 import PaginationControl from "./PaginationControl";
-import { updateMotorcycleStatus } from "@/actions/stock";
 
 // Definición de Props para MotorcycleTable
 interface MotorcycleTableProps {
   initialData: MotorcycleWithFullDetails[];
   clients: Client[];
   activePromotions: BankingPromotionDisplay[];
-  onInitiateSale?: (motorcycle: MotorcycleWithFullDetails) => void; // Añadida prop opcional para iniciar venta
+  onInitiateSale?: (motorcycle: MotorcycleWithFullDetails) => void;
+  onInitiateReservation?: (motorcycle: MotorcycleWithFullDetails) => void;
+  onMotorcycleUpdate?: (motorcycleId: number, newState: MotorcycleState) => void;
+  onFilterChange?: (selectedStates: MotorcycleState[]) => Promise<void>;
+  onCurrentStatesChange?: (currentStates: MotorcycleState[]) => void;
+  isLoading?: boolean;
 }
 
 type SortableKey = keyof Pick<
   Motorcycle,
   "id" | "year" | "mileage" | "retailPrice" | "state" | "chassisNumber" | "createdAt" | "updatedAt"
 >;
-type SortConfig = {
-  key: SortableKey | null;
-  direction: "asc" | "desc" | null;
-};
 
 type ManualColumnId =
   | "brandModel"
@@ -81,7 +85,6 @@ const AVAILABLE_COLUMNS: ManualColumnDefinition[] = [
 ];
 
 const DEFAULT_VISIBLE_COLUMNS: ManualColumnId[] = AVAILABLE_COLUMNS.map((col) => col.id);
-
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 export default function MotorcycleTable({
@@ -89,34 +92,47 @@ export default function MotorcycleTable({
   clients,
   activePromotions,
   onInitiateSale,
+  onInitiateReservation,
+  onMotorcycleUpdate,
+  onFilterChange,
+  onCurrentStatesChange,
+  isLoading,
 }: MotorcycleTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [filters, setFilters] = useState({
-    search: "",
-    marca: "todas",
-    tipo: "todos",
-    ubicacion: "todas",
-    estadosVenta: Object.values(MotorcycleState),
-    years: [] as number[],
-  });
+  // Usar el store de filtros
+  const {
+    filters,
+    currentPage,
+    pageSize,
+    sortConfig,
+    setCurrentPage,
+    setPageSize,
+    setSortConfig,
+    initializeFromData,
+  } = useMotorcycleFiltersStore();
+
   const [motorcycles, setMotorcycles] = useState<MotorcycleWithFullDetails[]>(initialData);
   const [selectedMotoToDelete, setSelectedMotoToDelete] =
     useState<MotorcycleWithFullDetails | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showReserveModal, setShowReserveModal] = useState(false);
-  const [selectedReserveMoto, setSelectedReserveMoto] = useState<MotorcycleWithFullDetails | null>(
-    null,
-  );
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedMotoForModal, setSelectedMotoForModal] =
     useState<MotorcycleWithFullDetails | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<ManualColumnId[]>(DEFAULT_VISIBLE_COLUMNS);
+
+  // Estados para OTP y seguridad
+  const { secureMode } = useSecurityStore();
+  const [showOtpDialog, setShowOtpDialog] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    motorcycleId: number;
+    newStatus: MotorcycleState;
+    currentStatus: MotorcycleState;
+  } | null>(null);
 
   const [optimisticMotorcycles, addOptimisticUpdate] = useOptimistic(
     motorcycles,
@@ -132,17 +148,22 @@ export default function MotorcycleTable({
     },
   );
 
-  // 🚀 OPTIMIZACIÓN 1: Memoizar datos computacionales pesados
-  const { availableBrands, availableModels, availableBranches, availableYears } = useMemo(() => {
-    const brands = [...new Set(optimisticMotorcycles.map((m) => m.brand?.name).filter(Boolean))].sort() as string[];
-    const models = [...new Set(optimisticMotorcycles.map((m) => m.model?.name).filter(Boolean))].sort() as string[];
-    const branches = [...new Set(optimisticMotorcycles.map((m) => m.branch?.name).filter(Boolean))].sort() as string[];
-    const years = [...new Set(optimisticMotorcycles.map((m) => m.year).filter((y) => typeof y === "number"))].sort((a, b) => b - a) as number[];
+  // Inicializar el store con los datos cuando cambien
+  useEffect(() => {
+    console.log("[DEBUG] initialData changed, initializing store");
+    initializeFromData(initialData);
+    setMotorcycles(initialData);
+  }, [initialData, initializeFromData]);
 
-    return { availableBrands: brands, availableModels: models, availableBranches: branches, availableYears: years };
-  }, [optimisticMotorcycles]);
+  // Notificar al padre sobre los estados del filtro cuando cambien
+  useEffect(() => {
+    if (onCurrentStatesChange) {
+      console.log("[DEBUG] Notificando estados del filtro al padre:", filters.estadosVenta);
+      onCurrentStatesChange(filters.estadosVenta);
+    }
+  }, [filters.estadosVenta, onCurrentStatesChange]);
 
-  // 🚀 OPTIMIZACIÓN 2: Memoizar filtrado de datos
+  // 🚀 OPTIMIZACIÓN: Memoizar filtrado de datos
   const filteredData = useMemo(() => {
     let filtered = [...optimisticMotorcycles];
 
@@ -177,15 +198,15 @@ export default function MotorcycleTable({
     return filtered;
   }, [optimisticMotorcycles, filters]);
 
-  // 🚀 OPTIMIZACIÓN 3: Memoizar ordenamiento
+  // 🚀 OPTIMIZACIÓN: Memoizar ordenamiento
   const sortedData = useMemo(() => {
     const { key, direction } = sortConfig;
 
     if (!key || !direction) return filteredData;
 
     return [...filteredData].sort((a, b) => {
-      const aValue = a[key];
-      const bValue = b[key];
+      const aValue = a[key as keyof MotorcycleWithFullDetails];
+      const bValue = b[key as keyof MotorcycleWithFullDetails];
 
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return direction === "asc" ? -1 : 1;
@@ -202,7 +223,7 @@ export default function MotorcycleTable({
     });
   }, [filteredData, sortConfig]);
 
-  // 🚀 OPTIMIZACIÓN 4: Paginación eficiente
+  // 🚀 OPTIMIZACIÓN: Paginación eficiente
   const { paginatedData, totalPages, totalItems } = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
@@ -212,19 +233,9 @@ export default function MotorcycleTable({
     return {
       paginatedData: paginated,
       totalPages: pages,
-      totalItems: sortedData.length
+      totalItems: sortedData.length,
     };
   }, [sortedData, currentPage, pageSize]);
-
-  // 🚀 OPTIMIZACIÓN 5: Sincronizar con initialData cuando cambie
-  useEffect(() => {
-    setMotorcycles(initialData);
-  }, [initialData]);
-
-  // Remover las funciones antigas getFilteredData y getSortedData
-  // que ahora son reemplazadas por los useMemo optimizados
-
-  const getTableData = () => paginatedData;
 
   const handleSort = (column: ManualColumnDefinition) => {
     if (!column.isSortable || !column.sortKey) return;
@@ -237,22 +248,33 @@ export default function MotorcycleTable({
     }
 
     setSortConfig({ key: direction ? key : null, direction });
-    setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
-    const totalPages = Math.ceil((getTableData() ?? []).length / pageSize);
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   const handlePageSizeChange = (size: string) => {
     setPageSize(Number(size));
-    setCurrentPage(1);
   };
 
-  const handleFilterChange = (filterType: string, value: string | MotorcycleState[] | number[]) => {
-    setFilters((prev) => ({ ...prev, [filterType]: value }));
-    setCurrentPage(1);
+  const handleFilterChange = async (
+    filterType: string,
+    value: string | MotorcycleState[] | number[],
+  ) => {
+    // Si es un cambio en estadosVenta, notificar al componente padre
+    if (filterType === "estadosVenta" && Array.isArray(value)) {
+      const statesValue = value as MotorcycleState[];
+
+      // Si tenemos un callback de recarga, usarlo
+      if (onFilterChange) {
+        try {
+          await onFilterChange(statesValue);
+        } catch (error) {
+          console.error("Error en recarga de datos:", error);
+        }
+      }
+    }
   };
 
   const handleColumnToggle = (columnId: ManualColumnId) => {
@@ -276,22 +298,92 @@ export default function MotorcycleTable({
       actionLabel = "activando";
     }
 
+    // Verificar si es una transición crítica que requiere OTP
+    const requiresOtp =
+      secureMode &&
+      ((currentStatus === MotorcycleState.VENDIDO && newStatus === MotorcycleState.STOCK) ||
+        (currentStatus === MotorcycleState.ELIMINADO && newStatus === MotorcycleState.STOCK));
+
+    console.log("[DEBUG] OTP verification:", {
+      secureMode,
+      currentStatus,
+      newStatus,
+      requiresOtp,
+    });
+
+    if (requiresOtp) {
+      console.log(
+        "[DEBUG] Showing OTP dialog for critical transition:",
+        currentStatus,
+        "→",
+        newStatus,
+      );
+      setPendingStatusChange({
+        motorcycleId: motoId,
+        newStatus,
+        currentStatus: currentStatus,
+      });
+      setShowOtpDialog(true);
+      setOtpError("");
+      return;
+    }
+
+    // Ejecutar la transición directamente si no requiere OTP
+    executeStatusChange(motoId, newStatus, currentStatus, actionLabel);
+  };
+
+  // Nueva función para ejecutar el cambio de estado
+  const executeStatusChange = (
+    motoId: number,
+    newStatus: MotorcycleState,
+    currentStatus: MotorcycleState,
+    actionLabel: string,
+    otp?: string,
+  ) => {
     startTransition(async () => {
       addOptimisticUpdate({ motorcycleId: motoId, newStatus });
       try {
-        const result = await updateMotorcycleStatus(motoId, newStatus);
+        const result = await updateMotorcycleStatus(motoId, newStatus, {
+          secureMode,
+          otp,
+        });
 
         if (result.success) {
-          setMotorcycles((current) =>
-            current.map((moto) => (moto.id === motoId ? { ...moto, state: newStatus } : moto)),
-          );
+          // Usar el callback del componente padre si está disponible
+          if (onMotorcycleUpdate) {
+            onMotorcycleUpdate(motoId, newStatus);
+          } else {
+            // Fallback al estado local si no hay callback
+            setMotorcycles((current) =>
+              current.map((moto) => (moto.id === motoId ? { ...moto, state: newStatus } : moto)),
+            );
+          }
 
           toast({
             title: "Estado Actualizado",
             description: `Moto ${actionLabel === "restaurando" ? "restaurada a stock" : actionLabel === "pausando" ? "pausada" : "activada"} correctamente.`,
           });
         } else {
-          setMotorcycles((current) => [...current]);
+          // Si requiere OTP y no se proporcionó, mostrar el modal
+          if (result.requiresOtp && !otp) {
+            setPendingStatusChange({
+              motorcycleId: motoId,
+              newStatus,
+              currentStatus,
+            });
+            setShowOtpDialog(true);
+            setOtpError("");
+            return;
+          }
+
+          // En caso de error, revertir el cambio optimistic al estado original
+          if (!onMotorcycleUpdate) {
+            setMotorcycles((current) =>
+              current.map((moto) =>
+                moto.id === motoId ? { ...moto, state: currentStatus } : moto,
+              ),
+            );
+          }
 
           toast({
             variant: "destructive",
@@ -300,7 +392,12 @@ export default function MotorcycleTable({
           });
         }
       } catch (error) {
-        setMotorcycles((current) => [...current]);
+        // En caso de error, revertir el cambio optimistic al estado original
+        if (!onMotorcycleUpdate) {
+          setMotorcycles((current) =>
+            current.map((moto) => (moto.id === motoId ? { ...moto, state: currentStatus } : moto)),
+          );
+        }
 
         toast({
           variant: "destructive",
@@ -311,22 +408,69 @@ export default function MotorcycleTable({
     });
   };
 
+  // Handler para confirmar OTP
+  const handleOtpConfirm = async (otp: string) => {
+    if (!pendingStatusChange) return;
+
+    setOtpLoading(true);
+    setOtpError("");
+
+    try {
+      const { motorcycleId, newStatus, currentStatus } = pendingStatusChange;
+
+      let actionLabel: string;
+      if (currentStatus === MotorcycleState.ELIMINADO) {
+        actionLabel = "restaurando";
+      } else if (currentStatus === MotorcycleState.STOCK) {
+        actionLabel = "pausando";
+      } else {
+        actionLabel = "activando";
+      }
+
+      // Ejecutar la transición con OTP
+      await executeStatusChange(motorcycleId, newStatus, currentStatus, actionLabel, otp);
+
+      // Cerrar el modal OTP
+      setShowOtpDialog(false);
+      setPendingStatusChange(null);
+    } catch (error) {
+      setOtpError("Error al validar el código OTP.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const handleSetEliminado = (motoId: number) => {
     const newStatus = MotorcycleState.ELIMINADO;
+    const originalState = motorcycles.find((m) => m.id === motoId)?.state;
+
     startTransition(async () => {
       addOptimisticUpdate({ motorcycleId: motoId, newStatus });
       try {
         const result = await updateMotorcycleStatus(motoId, newStatus);
         if (result.success) {
-          setMotorcycles((current) =>
-            current.map((moto) => (moto.id === motoId ? { ...moto, state: newStatus } : moto)),
-          );
+          // Usar el callback del componente padre si está disponible
+          if (onMotorcycleUpdate) {
+            onMotorcycleUpdate(motoId, newStatus);
+          } else {
+            // Fallback al estado local si no hay callback
+            setMotorcycles((current) =>
+              current.map((moto) => (moto.id === motoId ? { ...moto, state: newStatus } : moto)),
+            );
+          }
           toast({
             title: "Moto Eliminada",
             description: "La moto ha sido marcada como eliminada (lógicamente).",
           });
         } else {
-          setMotorcycles((current) => [...current]);
+          // En caso de error, revertir el cambio optimistic al estado original
+          if (!onMotorcycleUpdate && originalState) {
+            setMotorcycles((current) =>
+              current.map((moto) =>
+                moto.id === motoId ? { ...moto, state: originalState } : moto,
+              ),
+            );
+          }
 
           toast({
             variant: "destructive",
@@ -335,7 +479,12 @@ export default function MotorcycleTable({
           });
         }
       } catch (error) {
-        setMotorcycles((current) => [...current]);
+        // En caso de error, revertir el cambio optimistic al estado original
+        if (!onMotorcycleUpdate && originalState) {
+          setMotorcycles((current) =>
+            current.map((moto) => (moto.id === motoId ? { ...moto, state: originalState } : moto)),
+          );
+        }
 
         toast({
           variant: "destructive",
@@ -357,37 +506,15 @@ export default function MotorcycleTable({
       if (onInitiateSale) {
         onInitiateSale(moto as MotorcycleWithFullDetails);
       } else {
-        const newStatus = MotorcycleState.PROCESANDO;
-        startTransition(async () => {
-          addOptimisticUpdate({ motorcycleId: moto.id, newStatus });
-          try {
-            const result = await updateMotorcycleStatus(moto.id, newStatus);
-            if (result.success) {
-              setMotorcycles((current) =>
-                current.map((m) => (m.id === moto.id ? { ...m, state: newStatus } : m)),
-              );
-              router.push(`/sales/${moto.id}`);
-            } else {
-              setMotorcycles((current) => [...current]);
-              toast({
-                variant: "destructive",
-                title: "Error al actualizar estado",
-                description: result.error || "No se pudo cambiar el estado a PROCESANDO.",
-              });
-            }
-          } catch (error) {
-            setMotorcycles((current) => [...current]);
-            toast({
-              variant: "destructive",
-              title: "Error inesperado",
-              description: "Ocurrió un error al preparar la moto para venta.",
-            });
-          }
-        });
+        router.push(`/sales/${moto.id}`);
       }
     } else if (action === "reservar") {
-      setSelectedReserveMoto(moto as MotorcycleWithFullDetails);
-      setShowReserveModal(true);
+      if (onInitiateReservation) {
+        onInitiateReservation(moto as MotorcycleWithFullDetails);
+      } else {
+        console.warn("No se ha proporcionado onInitiateReservation callback");
+        router.push(`/reservations/new?motorcycleId=${moto.id}`);
+      }
     }
   };
 
@@ -399,57 +526,9 @@ export default function MotorcycleTable({
     }
   };
 
-  const handleReserved = (updatedMoto: {
-    motorcycleId: number;
-    reservationId: number;
-    amount: number;
-    clientId: string;
-    currency: string;
-  }) => {
-    startTransition(() => {
-      setMotorcycles((prev) =>
-        prev.map((m) => {
-          if (m.id !== updatedMoto.motorcycleId) {
-            return m;
-          }
-
-          const newReservationData: ReservationWithDetails = {
-            id: updatedMoto.reservationId,
-            amount: updatedMoto.amount,
-            currency: updatedMoto.currency,
-            motorcycleId: updatedMoto.motorcycleId,
-            clientId: updatedMoto.clientId,
-            expirationDate: null,
-            status: "active",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            organizationId: m.organizationId,
-            notes: null,
-            paymentMethod: null,
-          };
-
-          return {
-            ...m,
-            state: MotorcycleState.RESERVADO,
-            reservation: newReservationData,
-          };
-        }),
-      );
-
-      addOptimisticUpdate({
-        motorcycleId: updatedMoto.motorcycleId,
-        newStatus: MotorcycleState.RESERVADO,
-      });
-
-      toast({
-        title: "Moto reservada",
-        description: "La moto ha sido reservada correctamente.",
-      });
-    });
-  };
-
   const handleCancelProcess = (motoId: number) => {
     const newStatus = MotorcycleState.STOCK;
+
     startTransition(async () => {
       addOptimisticUpdate({ motorcycleId: motoId, newStatus });
       try {
@@ -459,9 +538,9 @@ export default function MotorcycleTable({
             current.map((moto) =>
               moto.id === motoId
                 ? {
-                  ...moto,
-                  state: newStatus,
-                }
+                    ...moto,
+                    state: newStatus,
+                  }
                 : moto,
             ),
           );
@@ -488,14 +567,13 @@ export default function MotorcycleTable({
   };
 
   const handleOpenDetailModal = (moto: MotorcycleWithFullDetails) => {
-    // Asegurarnos de que el modelo incluya la propiedad imageUrl
     const motoWithModelData = {
       ...moto,
       model: moto.model
         ? {
-          ...moto.model,
-          imageUrl: moto.model.imageUrl || null,
-        }
+            ...moto.model,
+            imageUrl: moto.model.imageUrl || null,
+          }
         : null,
     };
     console.log("handleOpenDetailModal - Moto data:", JSON.stringify(motoWithModelData, null, 2));
@@ -527,43 +605,6 @@ export default function MotorcycleTable({
         selectedMoto={selectedMotoToDelete}
         handleDelete={handleDeleteConfirm}
       />
-      <ReserveModal
-        open={showReserveModal}
-        onClose={() => setShowReserveModal(false)}
-        motorcycleId={selectedReserveMoto?.id ? Number(selectedReserveMoto.id) : 0}
-        motorcycleName={
-          selectedReserveMoto
-            ? `${selectedReserveMoto.brand?.name || ""} ${selectedReserveMoto.model?.name || ""}`
-            : ""
-        }
-        motorcyclePrice={selectedReserveMoto?.retailPrice || 0}
-        clients={clients}
-        onSaleProcessCompleted={(data) => {
-          if (data.type === "reservation") {
-            handleReserved(
-              data.payload as {
-                motorcycleId: number;
-                reservationId: number;
-                amount: number;
-                clientId: string;
-                currency: string;
-              },
-            );
-          } else if (data.type === "current_account") {
-            // Handle current account creation
-            // We can update the motorcycle state similar to reservation
-            const currentAccountPayload = data.payload as CurrentAccount; // <<< TYPE ASSERTION MÁS ESPECÍFICO
-            const updatedMotoPayload = {
-              motorcycleId: Number(selectedReserveMoto?.id || 0),
-              reservationId: 0, // Not applicable for current account
-              amount: selectedReserveMoto?.retailPrice || 0,
-              clientId: currentAccountPayload.clientId, // <<< USAR CLIENTID DEL PAYLOAD TIPADO
-              currency: selectedReserveMoto?.currency || "USD",
-            };
-            handleReserved(updatedMotoPayload);
-          }
-        }}
-      />
       <MotorcycleDetailModal
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
@@ -576,16 +617,40 @@ export default function MotorcycleTable({
         onEdit={(id) => router.push(`/stock/edit/${id}`)}
         estadoVentaConfig={estadoVentaConfig}
       />
+      <OtpDialog
+        open={showOtpDialog}
+        onOpenChange={(open) => {
+          setShowOtpDialog(open);
+          if (!open) {
+            setPendingStatusChange(null);
+            setOtpError("");
+          }
+        }}
+        onConfirm={handleOtpConfirm}
+        title="Verificación de Seguridad Requerida"
+        description={
+          pendingStatusChange?.currentStatus === MotorcycleState.VENDIDO
+            ? "Estás intentando devolver una motocicleta VENDIDA a STOCK. Esta es una operación crítica que requiere verificación adicional."
+            : pendingStatusChange?.currentStatus === MotorcycleState.ELIMINADO
+              ? "Estás intentando restaurar una motocicleta ELIMINADA a STOCK. Esta es una operación crítica que requiere verificación adicional."
+              : "Esta es una operación crítica que requiere verificación adicional."
+        }
+        isLoading={otpLoading}
+        error={otpError}
+      />
+
+      {/* Overlay de loading */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <p className="text-sm text-muted-foreground">Cargando motocicletas...</p>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6">
-        <FilterSection
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          availableYears={availableYears}
-          availableBrands={availableBrands}
-          availableModels={availableModels}
-          availableBranches={availableBranches}
-        />
+        <FilterSection onFilterChange={handleFilterChange} />
       </div>
 
       <div className="flex items-center justify-between p-4 bg-muted/50 gap-4">
@@ -612,7 +677,8 @@ export default function MotorcycleTable({
         />
 
         <div className="text-sm text-muted-foreground">
-          Mostrando {(currentPage - 1) * pageSize + 1} a {Math.min(currentPage * pageSize, totalItems)} de
+          Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
+          {Math.min(currentPage * pageSize, totalItems)} de
           {totalItems} motos
         </div>
       </div>

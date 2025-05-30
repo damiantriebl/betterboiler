@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { type CreateReservationInput, createReservationSchema } from "@/zod/ReservationZod";
 import { MotorcycleState } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { getOrganizationIdFromSession } from "../util";
 
 export async function createReservation(data: CreateReservationInput) {
@@ -98,6 +99,9 @@ export async function createReservation(data: CreateReservationInput) {
 
       return reservation;
     });
+
+    // Revalidar la página de sales para mostrar el cambio de estado
+    revalidatePath("/sales");
 
     return {
       success: true,

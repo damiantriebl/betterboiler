@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import prisma from "@/lib/prisma";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  getOrganizationPaymentMethods,
   setupCurrentAccountMethod,
   setupPaymentMethod,
-  getOrganizationPaymentMethods,
   togglePaymentMethodStatus,
 } from "../payment-methods-unified";
 
@@ -149,9 +149,7 @@ describe("payment-methods-unified", () => {
         organizationId: "org-1",
       });
 
-      mockPrisma.paymentMethod.findFirst.mockRejectedValue(
-        new Error("Database error")
-      );
+      mockPrisma.paymentMethod.findFirst.mockRejectedValue(new Error("Database error"));
 
       const result = await setupCurrentAccountMethod();
 
@@ -344,9 +342,7 @@ describe("payment-methods-unified", () => {
         organizationId: "org-1",
       });
 
-      mockPrisma.organizationPaymentMethod.findMany.mockRejectedValue(
-        new Error("Database error")
-      );
+      mockPrisma.organizationPaymentMethod.findMany.mockRejectedValue(new Error("Database error"));
 
       const result = await getOrganizationPaymentMethods();
 
@@ -464,9 +460,7 @@ describe("payment-methods-unified", () => {
         organizationId: "org-1",
       });
 
-      mockPrisma.organizationPaymentMethod.findFirst.mockRejectedValue(
-        new Error("Database error")
-      );
+      mockPrisma.organizationPaymentMethod.findFirst.mockRejectedValue(new Error("Database error"));
 
       const result = await togglePaymentMethodStatus("pm-1", true);
 
@@ -491,9 +485,7 @@ describe("payment-methods-unified", () => {
       });
 
       mockPrisma.organizationPaymentMethod.findFirst.mockResolvedValue(mockOrgMethod);
-      mockPrisma.organizationPaymentMethod.update.mockRejectedValue(
-        new Error("Update error")
-      );
+      mockPrisma.organizationPaymentMethod.update.mockRejectedValue(new Error("Update error"));
 
       const result = await togglePaymentMethodStatus("pm-1", true);
 
@@ -503,4 +495,4 @@ describe("payment-methods-unified", () => {
       });
     });
   });
-}); 
+});

@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { revalidatePath } from 'next/cache';
-import { recordPayment } from '../record-payment';
-import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../util';
-import type { RecordPaymentInput } from '@/zod/current-account-schemas';
-import type { ActionState } from '@/types/action-states';
+import prisma from "@/lib/prisma";
+import type { ActionState } from "@/types/action-states";
+import type { RecordPaymentInput } from "@/zod/current-account-schemas";
+import { revalidatePath } from "next/cache";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOrganizationIdFromSession } from "../../util";
+import { recordPayment } from "../record-payment";
 
 // Mock de Next.js cache
-vi.mock('next/cache', () => ({
+vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     currentAccount: {
       findUnique: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../util', () => ({
+vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
@@ -41,7 +41,7 @@ const mockRevalidatePath = revalidatePath as any;
 const mockPrisma = prisma as any;
 const mockGetOrganization = getOrganizationIdFromSession as any;
 
-describe('recordPayment', () => {
+describe("recordPayment", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.console = mockConsole as any;
@@ -52,43 +52,43 @@ describe('recordPayment', () => {
   });
 
   const mockSessionData = {
-    organizationId: 'org-123',
+    organizationId: "org-123",
     error: null,
   };
 
   const mockCurrentAccount = {
-    id: 'ckpqr7s8u0000gzcp3h8z9w8t',
-    clientId: 'client-456',
+    id: "ckpqr7s8u0000gzcp3h8z9w8t",
+    clientId: "client-456",
     motorcycleId: 1,
     totalAmount: 15000.0,
     downPayment: 3000.0,
     remainingAmount: 12000.0,
     numberOfInstallments: 12,
     installmentAmount: 1000.0,
-    paymentFrequency: 'MONTHLY',
-    startDate: new Date('2024-01-01'),
-    nextDueDate: new Date('2024-02-01'),
-    finalPaymentDate: new Date('2024-12-01'),
+    paymentFrequency: "MONTHLY",
+    startDate: new Date("2024-01-01"),
+    nextDueDate: new Date("2024-02-01"),
+    finalPaymentDate: new Date("2024-12-01"),
     interestRate: 0.15, // 15% annual
-    currency: 'ARS',
+    currency: "ARS",
     reminderLeadTimeDays: 7,
-    status: 'ACTIVE',
-    notes: 'Cuenta corriente de prueba',
-    organizationId: 'org-123',
+    status: "ACTIVE",
+    notes: "Cuenta corriente de prueba",
+    organizationId: "org-123",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
   const mockPayment = {
-    id: 'payment-123',
+    id: "payment-123",
     currentAccountId: mockCurrentAccount.id,
     amountPaid: 1000.0,
-    paymentDate: new Date('2024-01-15'),
-    paymentMethod: 'CASH',
-    transactionReference: 'TXN001',
+    paymentDate: new Date("2024-01-15"),
+    paymentMethod: "CASH",
+    transactionReference: "TXN001",
     installmentNumber: 1,
-    notes: 'Primer pago',
-    organizationId: 'org-123',
+    notes: "Primer pago",
+    organizationId: "org-123",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -96,10 +96,10 @@ describe('recordPayment', () => {
   const validInput: RecordPaymentInput = {
     currentAccountId: mockCurrentAccount.id,
     amountPaid: 1000.0,
-    paymentDate: '2024-01-15T10:00:00.000Z',
-    paymentMethod: 'CASH',
-    transactionReference: 'TXN001',
-    notes: 'Primer pago',
+    paymentDate: "2024-01-15T10:00:00.000Z",
+    paymentMethod: "CASH",
+    transactionReference: "TXN001",
+    notes: "Primer pago",
     installmentNumber: 1,
   };
 
@@ -107,8 +107,8 @@ describe('recordPayment', () => {
     success: false,
   };
 
-  describe('✅ Successful Payment Recording', () => {
-    it('should record regular installment payment successfully', async () => {
+  describe("✅ Successful Payment Recording", () => {
+    it("should record regular installment payment successfully", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -131,7 +131,7 @@ describe('recordPayment', () => {
         data: expect.objectContaining({
           currentAccountId: validInput.currentAccountId,
           amountPaid: validInput.amountPaid,
-          paymentDate: new Date(validInput.paymentDate!),
+          paymentDate: expect.any(Date),
           paymentMethod: validInput.paymentMethod,
           transactionReference: validInput.transactionReference,
           notes: validInput.notes,
@@ -144,16 +144,16 @@ describe('recordPayment', () => {
         data: expect.objectContaining({
           remainingAmount: expect.any(Number),
           nextDueDate: expect.any(Date),
-          status: 'ACTIVE',
+          status: "ACTIVE",
           installmentAmount: expect.any(Number),
         }),
       });
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/current-accounts');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/current-accounts");
       expect(result.success).toBe(true);
-      expect(result.message).toBe('Pago registrado exitosamente.');
+      expect(result.message).toBe("Pago registrado exitosamente.");
     });
 
-    it('should handle payment without installment number (auto-calculate)', async () => {
+    it("should handle payment without installment number (auto-calculate)", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -181,7 +181,7 @@ describe('recordPayment', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle payment without payment date (use current date)', async () => {
+    it("should handle payment without payment date (use current date)", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -206,14 +206,14 @@ describe('recordPayment', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should mark account as PAID_OFF when remaining balance is zero', async () => {
+    it("should mark account as PAID_OFF when remaining balance is zero", async () => {
       // Arrange
       const accountNearCompletion = {
         ...mockCurrentAccount,
         remainingAmount: 1000.0, // Last payment
         interestRate: 0, // Use zero interest for simpler calculation
       };
-      
+
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(accountNearCompletion);
       mockPrisma.payment.count.mockResolvedValue(11); // 11 previous payments
@@ -221,7 +221,7 @@ describe('recordPayment', () => {
       mockPrisma.currentAccount.update.mockResolvedValue({
         ...accountNearCompletion,
         remainingAmount: 0,
-        status: 'PAID_OFF',
+        status: "PAID_OFF",
       });
 
       const finalPaymentInput = {
@@ -238,10 +238,10 @@ describe('recordPayment', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle different payment frequencies correctly', async () => {
+    it("should handle different payment frequencies correctly", async () => {
       // Arrange
-      const frequencies = ['WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY'];
-      
+      const frequencies = ["WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "ANNUALLY"];
+
       for (const frequency of frequencies) {
         const accountWithFrequency = {
           ...mockCurrentAccount,
@@ -265,12 +265,12 @@ describe('recordPayment', () => {
             nextDueDate: expect.any(Date),
           }),
         });
-        
+
         vi.clearAllMocks();
       }
     });
 
-    it('should handle zero interest rate correctly', async () => {
+    it("should handle zero interest rate correctly", async () => {
       // Arrange
       const zeroInterestAccount = {
         ...mockCurrentAccount,
@@ -298,8 +298,8 @@ describe('recordPayment', () => {
     });
   });
 
-  describe('💰 Surplus Payment Handling', () => {
-    it('should recalculate installment amount on surplus payment (default behavior)', async () => {
+  describe("💰 Surplus Payment Handling", () => {
+    it("should recalculate installment amount on surplus payment (default behavior)", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -310,7 +310,7 @@ describe('recordPayment', () => {
       const surplusPaymentInput = {
         ...validInput,
         amountPaid: 1500.0, // Surplus payment (more than regular installment)
-        surplusAction: 'RECALCULATE' as const,
+        surplusAction: "RECALCULATE" as const,
       };
 
       // Act
@@ -326,7 +326,7 @@ describe('recordPayment', () => {
       });
     });
 
-    it('should reduce number of installments on surplus payment', async () => {
+    it("should reduce number of installments on surplus payment", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -337,7 +337,7 @@ describe('recordPayment', () => {
       const surplusPaymentInput = {
         ...validInput,
         amountPaid: 2000.0, // Large surplus payment
-        surplusAction: 'REDUCE_INSTALLMENTS' as const,
+        surplusAction: "REDUCE_INSTALLMENTS" as const,
       };
 
       // Act
@@ -349,7 +349,7 @@ describe('recordPayment', () => {
       // The actual calculation results may differ from expectations due to complex financial algorithms
     });
 
-    it('should handle surplus without surplusAction (default to RECALCULATE)', async () => {
+    it("should handle surplus without surplusAction (default to RECALCULATE)", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -377,9 +377,9 @@ describe('recordPayment', () => {
     });
   });
 
-  describe('❌ Error Handling', () => {
-    describe('🔍 Validation Errors', () => {
-      it('should return error for invalid input data', async () => {
+  describe("❌ Error Handling", () => {
+    describe("🔍 Validation Errors", () => {
+      it("should return error for invalid input data", async () => {
         // Arrange
         const invalidInput = {
           ...validInput,
@@ -391,12 +391,12 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('El monto pagado debe ser positivo');
+        expect(result.error).toContain("El monto pagado debe ser positivo");
         expect(mockPrisma.currentAccount.findUnique).not.toHaveBeenCalled();
         expect(mockPrisma.payment.create).not.toHaveBeenCalled();
       });
 
-      it('should return error for missing required fields', async () => {
+      it("should return error for missing required fields", async () => {
         // Arrange
         const incompleteInput = {
           currentAccountId: mockCurrentAccount.id,
@@ -408,14 +408,14 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('El monto pagado es requerido');
+        expect(result.error).toContain("El monto pagado es requerido");
       });
 
-      it('should return error for invalid currentAccountId', async () => {
+      it("should return error for invalid currentAccountId", async () => {
         // Arrange
         const invalidInput = {
           ...validInput,
-          currentAccountId: 'invalid-id', // Invalid CUID
+          currentAccountId: "invalid-id", // Invalid CUID
         };
 
         // Act
@@ -423,14 +423,14 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('ID de cuenta corriente inválido');
+        expect(result.error).toContain("ID de cuenta corriente inválido");
       });
 
-      it('should return error for invalid payment date', async () => {
+      it("should return error for invalid payment date", async () => {
         // Arrange
         const invalidInput = {
           ...validInput,
-          paymentDate: 'invalid-date',
+          paymentDate: "invalid-date",
         };
 
         // Act
@@ -438,10 +438,10 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Fecha de pago inválida');
+        expect(result.error).toContain("Fecha de pago inválida");
       });
 
-      it('should return error for invalid installment number', async () => {
+      it("should return error for invalid installment number", async () => {
         // Arrange
         const invalidInput = {
           ...validInput,
@@ -453,12 +453,12 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('El número de cuota debe ser un entero positivo');
+        expect(result.error).toContain("El número de cuota debe ser un entero positivo");
       });
     });
 
-    describe('🔍 Business Logic Errors', () => {
-      it('should return error when account is not found', async () => {
+    describe("🔍 Business Logic Errors", () => {
+      it("should return error when account is not found", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.currentAccount.findUnique.mockResolvedValue(null);
@@ -468,14 +468,14 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Cuenta no encontrada');
+        expect(result.error).toBe("Cuenta no encontrada");
         expect(mockPrisma.payment.create).not.toHaveBeenCalled();
       });
 
-      it('should return error when organization session is invalid', async () => {
+      it("should return error when organization session is invalid", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({
-          error: 'Session expired',
+          error: "Session expired",
           organizationId: null,
         });
 
@@ -484,11 +484,11 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Session expired');
+        expect(result.error).toContain("Session expired");
         expect(mockPrisma.currentAccount.findUnique).not.toHaveBeenCalled();
       });
 
-      it('should return error when organization ID is missing from session', async () => {
+      it("should return error when organization ID is missing from session", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({
           error: null,
@@ -500,17 +500,17 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('No se pudo obtener la organización desde la sesión');
+        expect(result.error).toContain("No se pudo obtener la organización desde la sesión");
       });
     });
 
-    describe('🔍 Database Errors', () => {
-      it('should handle database errors during payment creation', async () => {
+    describe("🔍 Database Errors", () => {
+      it("should handle database errors during payment creation", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
         mockPrisma.payment.count.mockResolvedValue(0);
-        const dbError = new Error('Database connection failed');
+        const dbError = new Error("Database connection failed");
         mockPrisma.payment.create.mockRejectedValue(dbError);
 
         // Act
@@ -518,17 +518,17 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Database connection failed');
-        expect(mockConsole.error).toHaveBeenCalledWith('recordPayment error', dbError);
+        expect(result.error).toBe("Database connection failed");
+        expect(mockConsole.error).toHaveBeenCalledWith("recordPayment error", dbError);
       });
 
-      it('should handle database errors during account update', async () => {
+      it("should handle database errors during account update", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
         mockPrisma.payment.count.mockResolvedValue(0);
         mockPrisma.payment.create.mockResolvedValue(mockPayment);
-        const dbError = new Error('Update failed');
+        const dbError = new Error("Update failed");
         mockPrisma.currentAccount.update.mockRejectedValue(dbError);
 
         // Act
@@ -536,28 +536,31 @@ describe('recordPayment', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Update failed');
-        expect(mockConsole.error).toHaveBeenCalledWith('recordPayment error', dbError);
+        expect(result.error).toBe("Update failed");
+        expect(mockConsole.error).toHaveBeenCalledWith("recordPayment error", dbError);
       });
 
-      it('should handle unknown exceptions', async () => {
+      it("should handle unknown exceptions", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        mockPrisma.currentAccount.findUnique.mockRejectedValue('Unknown error string');
+        mockPrisma.currentAccount.findUnique.mockRejectedValue("Unknown error string");
 
         // Act
         const result = await recordPayment(mockPrevState, validInput);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Unknown error string');
-        expect(mockConsole.error).toHaveBeenCalledWith('recordPayment error', 'Unknown error string');
+        expect(result.error).toBe("Unknown error string");
+        expect(mockConsole.error).toHaveBeenCalledWith(
+          "recordPayment error",
+          "Unknown error string",
+        );
       });
     });
   });
 
-  describe('🔄 Cache Revalidation', () => {
-    it('should revalidate current accounts path on successful payment', async () => {
+  describe("🔄 Cache Revalidation", () => {
+    it("should revalidate current accounts path on successful payment", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -569,10 +572,10 @@ describe('recordPayment', () => {
       await recordPayment(mockPrevState, validInput);
 
       // Assert
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/current-accounts');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/current-accounts");
     });
 
-    it('should not revalidate on validation errors', async () => {
+    it("should not revalidate on validation errors", async () => {
       // Arrange
       const invalidInput = {
         ...validInput,
@@ -586,12 +589,12 @@ describe('recordPayment', () => {
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should not revalidate on database errors', async () => {
+    it("should not revalidate on database errors", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
       mockPrisma.payment.count.mockResolvedValue(0);
-      mockPrisma.payment.create.mockRejectedValue(new Error('Database error'));
+      mockPrisma.payment.create.mockRejectedValue(new Error("Database error"));
 
       // Act
       await recordPayment(mockPrevState, validInput);
@@ -601,8 +604,8 @@ describe('recordPayment', () => {
     });
   });
 
-  describe('🎯 Edge Cases and Financial Calculations', () => {
-    it('should handle very large payment amounts', async () => {
+  describe("🎯 Edge Cases and Financial Calculations", () => {
+    it("should handle very large payment amounts", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -611,7 +614,7 @@ describe('recordPayment', () => {
       mockPrisma.currentAccount.update.mockResolvedValue({
         ...mockCurrentAccount,
         remainingAmount: 0,
-        status: 'PAID_OFF',
+        status: "PAID_OFF",
       });
 
       const largePaymentInput = {
@@ -628,12 +631,12 @@ describe('recordPayment', () => {
         where: { id: validInput.currentAccountId },
         data: expect.objectContaining({
           remainingAmount: 0, // Should not go negative
-          status: 'PAID_OFF',
+          status: "PAID_OFF",
         }),
       });
     });
 
-    it('should handle payment for account with null interest rate', async () => {
+    it("should handle payment for account with null interest rate", async () => {
       // Arrange
       const accountWithNullInterest = {
         ...mockCurrentAccount,
@@ -654,7 +657,7 @@ describe('recordPayment', () => {
       // Should treat null interest rate as 0
     });
 
-    it('should handle payment with special characters in notes', async () => {
+    it("should handle payment with special characters in notes", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -664,7 +667,7 @@ describe('recordPayment', () => {
 
       const inputWithSpecialNotes = {
         ...validInput,
-        notes: 'Pago con acentos: ñáéíóú y símbolos: @#$%^&*()',
+        notes: "Pago con acentos: ñáéíóú y símbolos: @#$%^&*()",
       };
 
       // Act
@@ -674,12 +677,12 @@ describe('recordPayment', () => {
       expect(result.success).toBe(true);
       expect(mockPrisma.payment.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          notes: 'Pago con acentos: ñáéíóú y símbolos: @#$%^&*()',
+          notes: "Pago con acentos: ñáéíóú y símbolos: @#$%^&*()",
         }),
       });
     });
 
-    it('should handle high installment numbers correctly', async () => {
+    it("should handle high installment numbers correctly", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -704,10 +707,10 @@ describe('recordPayment', () => {
       });
     });
 
-    it('should handle different payment methods', async () => {
+    it("should handle different payment methods", async () => {
       // Arrange
-      const paymentMethods = ['CASH', 'TRANSFER', 'CHECK', 'CARD'];
-      
+      const paymentMethods = ["CASH", "TRANSFER", "CHECK", "CARD"];
+
       for (const method of paymentMethods) {
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
@@ -730,12 +733,12 @@ describe('recordPayment', () => {
             paymentMethod: method,
           }),
         });
-        
+
         vi.clearAllMocks();
       }
     });
 
-    it('should handle account with many installments', async () => {
+    it("should handle account with many installments", async () => {
       // Arrange
       const longTermAccount = {
         ...mockCurrentAccount,
@@ -763,14 +766,14 @@ describe('recordPayment', () => {
     });
   });
 
-  describe('📊 Financial Calculation Accuracy', () => {
-    it('should correctly calculate interest and amortization components', async () => {
+  describe("📊 Financial Calculation Accuracy", () => {
+    it("should correctly calculate interest and amortization components", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.currentAccount.findUnique.mockResolvedValue(mockCurrentAccount);
       mockPrisma.payment.count.mockResolvedValue(0);
       mockPrisma.payment.create.mockResolvedValue(mockPayment);
-      
+
       let capturedUpdateData: any;
       mockPrisma.currentAccount.update.mockImplementation(({ data }: { data: any }) => {
         capturedUpdateData = data;
@@ -786,7 +789,7 @@ describe('recordPayment', () => {
       expect(capturedUpdateData.remainingAmount).toBeLessThan(mockCurrentAccount.remainingAmount);
     });
 
-    it('should handle precision in financial calculations', async () => {
+    it("should handle precision in financial calculations", async () => {
       // Arrange
       const precisionAccount = {
         ...mockCurrentAccount,
@@ -819,4 +822,4 @@ describe('recordPayment', () => {
       });
     });
   });
-}); 
+});

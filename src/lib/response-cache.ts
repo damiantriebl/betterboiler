@@ -19,15 +19,15 @@ class ResponseCache {
   // Generar clave de cache basada en URL y headers relevantes
   generateKey(url: string, method: string, userId?: string, organizationId?: string): string {
     const baseKey = `${method}:${url}`;
-    const userContext = userId ? `user:${userId}` : 'anonymous';
-    const orgContext = organizationId ? `org:${organizationId}` : 'no-org';
+    const userContext = userId ? `user:${userId}` : "anonymous";
+    const orgContext = organizationId ? `org:${organizationId}` : "no-org";
     return `${baseKey}:${userContext}:${orgContext}`;
   }
 
   // Obtener del cache
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       this.stats.misses++;
       return null;
@@ -48,7 +48,8 @@ class ResponseCache {
   }
 
   // Guardar en cache
-  set<T>(key: string, data: T, ttlMs: number = 300000): void { // 5 minutos por defecto
+  set<T>(key: string, data: T, ttlMs = 300000): void {
+    // 5 minutos por defecto
     // Si el cache está lleno, eliminar entrada más antigua
     if (this.cache.size >= this.maxSize) {
       this.evictLeastRecentlyUsed();
@@ -78,22 +79,22 @@ class ResponseCache {
   cleanup(): number {
     const now = Date.now();
     let removed = 0;
-    
+
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp > entry.ttl) {
         this.cache.delete(key);
         removed++;
       }
     }
-    
+
     return removed;
   }
 
   // Eliminar entrada menos usada
   private evictLeastRecentlyUsed(): void {
-    let lruKey = '';
-    let lruHits = Infinity;
-    let oldestTime = Infinity;
+    let lruKey = "";
+    let lruHits = Number.POSITIVE_INFINITY;
+    let oldestTime = Number.POSITIVE_INFINITY;
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.hits < lruHits || (entry.hits === lruHits && entry.timestamp < oldestTime)) {
@@ -111,9 +112,10 @@ class ResponseCache {
 
   // Obtener estadísticas
   getStats() {
-    const hitRate = this.stats.hits + this.stats.misses > 0 
-      ? (this.stats.hits / (this.stats.hits + this.stats.misses) * 100).toFixed(2)
-      : '0';
+    const hitRate =
+      this.stats.hits + this.stats.misses > 0
+        ? ((this.stats.hits / (this.stats.hits + this.stats.misses)) * 100).toFixed(2)
+        : "0";
 
     return {
       ...this.stats,
@@ -135,18 +137,21 @@ export const responseCache = new ResponseCache();
 
 // Helper para configurar TTL según el tipo de data
 export const CACHE_TTL = {
-  STATIC_DATA: 30 * 60 * 1000,     // 30 minutos
-  USER_DATA: 5 * 60 * 1000,        // 5 minutos
-  DYNAMIC_DATA: 1 * 60 * 1000,     // 1 minuto
-  REAL_TIME: 10 * 1000,            // 10 segundos
+  STATIC_DATA: 30 * 60 * 1000, // 30 minutos
+  USER_DATA: 5 * 60 * 1000, // 5 minutos
+  DYNAMIC_DATA: 1 * 60 * 1000, // 1 minuto
+  REAL_TIME: 10 * 1000, // 10 segundos
 } as const;
 
 // Auto cleanup cada 5 minutos
-if (typeof globalThis !== 'undefined') {
-  setInterval(() => {
-    const removed = responseCache.cleanup();
-    if (removed > 0 && process.env.NODE_ENV === 'development') {
-      console.log(`🧹 Cache cleanup: removed ${removed} expired entries`);
-    }
-  }, 5 * 60 * 1000);
-} 
+if (typeof globalThis !== "undefined") {
+  setInterval(
+    () => {
+      const removed = responseCache.cleanup();
+      if (removed > 0 && process.env.NODE_ENV === "development") {
+        console.log(`🧹 Cache cleanup: removed ${removed} expired entries`);
+      }
+    },
+    5 * 60 * 1000,
+  );
+}

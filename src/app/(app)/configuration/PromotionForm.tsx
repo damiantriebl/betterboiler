@@ -50,7 +50,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Building, CalendarIcon, CreditCard, Percent, Plus, Trash } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 
 interface PromotionFormProps {
   paymentMethods: PaymentMethod[];

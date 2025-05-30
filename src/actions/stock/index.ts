@@ -1,8 +1,8 @@
 // Export functions from unified stock files
-export { 
+export {
   createMotorcycleBatch,
   updateMotorcycle,
-  updateMotorcycleStatus
+  updateMotorcycleStatus,
 } from "./motorcycle-operations-unified";
 
 export {
@@ -10,5 +10,5 @@ export {
   getMotosEnProgreso,
   getFormData,
   getFormDataBasic,
-  getBrandsWithModels
-} from "./form-data-unified"; 
+  getBrandsWithModels,
+} from "./form-data-unified";

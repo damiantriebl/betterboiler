@@ -3,8 +3,8 @@
 import UploadButton from "@/components/custom/UploadCropperButton";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
-import type { Control, UseFormSetValue } from "react-hook-form";
 import React from "react";
+import type { Control, UseFormSetValue } from "react-hook-form";
 
 interface MultimediaSectionProps {
   control: Control<MotorcycleBatchFormData>;

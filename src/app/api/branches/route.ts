@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import { getOrganizationIdFromSession } from "@/actions/util";
-import { withPerformanceOptimization, optimizedJsonResponse } from "@/lib/api-optimizer";
+import { optimizedJsonResponse, withPerformanceOptimization } from "@/lib/api-optimizer";
+import prisma from "@/lib/prisma";
 import { CACHE_TTL } from "@/lib/response-cache";
+import { type NextRequest, NextResponse } from "next/server";
 
 async function getBranchesHandler(req: NextRequest) {
   try {
@@ -39,7 +39,7 @@ async function getBranchesHandler(req: NextRequest) {
   } catch (error) {
     console.error("[BRANCHES_GET]", error);
     return NextResponse.json(
-      { 
+      {
         error: "Error interno del servidor al obtener sucursales",
         timestamp: new Date().toISOString(),
       },
@@ -51,7 +51,7 @@ async function getBranchesHandler(req: NextRequest) {
 // 🚀 APLICAR OPTIMIZACIONES DE THROUGHPUT
 export const GET = withPerformanceOptimization(getBranchesHandler, {
   cache: true,
-  cacheType: 'STATIC_DATA', // Branches cambian poco
+  cacheType: "STATIC_DATA", // Branches cambian poco
   cacheTTL: CACHE_TTL.STATIC_DATA, // 30 minutos
 });
 
@@ -67,13 +67,10 @@ async function postBranchesHandler(req: NextRequest) {
     }
 
     const body = await req.json();
-    
+
     // Validación rápida
     if (!body.name) {
-      return NextResponse.json(
-        { error: "Nombre es requerido" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Nombre es requerido" }, { status: 400 });
     }
 
     // 🚀 TRANSACCIÓN OPTIMIZADA
@@ -101,7 +98,7 @@ async function postBranchesHandler(req: NextRequest) {
   } catch (error) {
     console.error("[BRANCHES_POST]", error);
     return NextResponse.json(
-      { 
+      {
         error: "Error interno del servidor al crear sucursal",
         timestamp: new Date().toISOString(),
       },

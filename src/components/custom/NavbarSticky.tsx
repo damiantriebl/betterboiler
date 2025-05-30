@@ -1,8 +1,10 @@
 // NavbarSticky.tsx
 "use client";
+import { PriceModeSelector } from "@/components/ui/price-mode-selector";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useSessionStore } from "@/stores/SessionStore";
 import { useMemo } from "react";
 import OrganizationLogo from "./OrganizationLogo";
-import { useSessionStore } from "@/stores/SessionStore";
 
 interface NavbarStickyProps {
   organization?: { logo: string | null; thumbnail: string | null; name: string };
@@ -31,20 +33,20 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
 
   // Todos los hooks useMemo deben llamarse ANTES del retorno condicional.
   const height = useMemo(() => {
-    const startHeight = 3.5;
-    const endHeight = 2.5;
+    const startHeight = 9; // Reducido para evitar que se extienda demasiado
+    const endHeight = 3.5;
     return startHeight - scrollAmount * (startHeight - endHeight);
   }, [scrollAmount]);
 
   const paddingY = useMemo(() => {
-    const startPadding = 0.75;
-    const endPadding = 0.25;
+    const startPadding = 1; // Reducido para menos altura total
+    const endPadding = 0.5;
     return startPadding - scrollAmount * (startPadding - endPadding);
   }, [scrollAmount]);
 
   const logoSize = useMemo(() => {
-    const startSize = 4;
-    const endSize = 2;
+    const startSize = 7; // Logo aún más grande
+    const endSize = 3.5;
     return Math.max(endSize, startSize - scrollAmount * (startSize - endSize));
   }, [scrollAmount]);
 
@@ -66,46 +68,52 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
     return calculatedOpacity;
   }, [scrollAmount]);
 
-  // Ahora, después de que todos los hooks se hayan llamado, podemos retornar null.
-  if (!logoKey) {
-    return null;
-  }
+  // Padding top dinámico para evitar que se corte
+  const paddingTop = useMemo(() => {
+    const startPadding = 0.75; // Reducido para menos altura total
+    const endPadding = 0.25;
+    return startPadding - scrollAmount * (startPadding - endPadding);
+  }, [scrollAmount]);
 
   return (
     <div
       className={`
-        sticky top-0 z-50 flex items-center justify-start space-x-4
-        bg-background transition-all duration-200 ease-out
-        pl-8
+        sticky top-0 z-10 w-full
+        bg-transparent backdrop-blur-sm 
+        transition-all duration-200 ease-out
+        flex items-center justify-between pr-10
       `}
       style={{
         height: `${height}rem`,
-        padding: `${paddingY}rem 0`,
+        paddingTop: `${paddingTop}rem`,
+        paddingBottom: `${paddingY}rem`,
+        paddingLeft: "1rem",
+        paddingRight: "1rem",
       }}
     >
-      <OrganizationLogo
-        logo={logoKey}
-        thumbnail={orgData.thumbnail}
-        name={orgData.name}
-        size={logoSize}
-        variant={logoVariant}
-        nameDisplayOpacity={nameOpacity}
-      />
-      {/* Mostrar el nombre de la organización si es necesario y visible */}
-      {nameOpacity > 0 && (
-        <span
-          style={{
-            opacity: nameOpacity,
-            transition: "opacity 0.2s ease-in-out",
-            fontWeight: 600,
-            fontSize: "1.25rem", // Ajustar tamaño según necesidad
-            lineHeight: "1",
-            color: "hsl(var(--foreground))", // Usar variables de color de Tailwind/Shadcn
-          }}
-        >
-          {orgData.name}
-        </span>
-      )}
+      {/* SidebarTrigger en la izquierda */}
+      <div className="flex items-center">
+        <SidebarTrigger />
+      </div>
+
+      {/* Logo en el centro */}
+      <div className="flex items-center space-x-4">
+        {logoKey && (
+          <OrganizationLogo
+            logo={logoKey}
+            thumbnail={orgData.thumbnail}
+            name={orgData.name}
+            size={logoSize}
+            variant={logoVariant}
+            nameDisplayOpacity={nameOpacity}
+          />
+        )}
+      </div>
+
+      {/* Selector de precios en la derecha */}
+      <div className="flex items-center">
+        <PriceModeSelector />
+      </div>
     </div>
   );
 }

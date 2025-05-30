@@ -3,9 +3,7 @@
 import db from "@/lib/prisma";
 import type { ActionState } from "@/types/action-states";
 
-export async function getCurrentAccountDetails(
-  accountId: string,
-): Promise<ActionState<any>> {
+export async function getCurrentAccountDetails(accountId: string): Promise<ActionState<any>> {
   if (!accountId) {
     return { success: false, error: "ID de cuenta corriente no proporcionado." };
   }

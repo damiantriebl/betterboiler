@@ -28,6 +28,10 @@ export const estadoVentaConfig: Record<MotorcycleState, { label: string; classNa
     label: "Eliminado",
     className: "border-red-500 text-red-500 bg-transparent hover:bg-red-100",
   },
+  [MotorcycleState.EN_TRANSITO]: {
+    label: "En Tránsito",
+    className: "border-purple-500 text-purple-500 bg-transparent hover:bg-purple-100",
+  },
 };
 
 interface MotorcycleStatusBadgeProps {

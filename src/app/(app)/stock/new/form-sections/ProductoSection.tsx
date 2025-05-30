@@ -10,9 +10,11 @@ import type {
   Control,
   ControllerRenderProps,
   UseFormClearErrors,
+  UseFormRegister,
   UseFormSetValue,
+  UseFormWatch,
 } from "react-hook-form";
-import type { BrandForCombobox } from "../page";
+import type { BrandForCombobox } from "../types";
 import { SupplierSection } from "./SupplierSection";
 
 interface ProductoSectionProps {

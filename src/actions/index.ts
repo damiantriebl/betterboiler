@@ -11,5 +11,9 @@ export * from "./petty-cash/delete-petty-cash-deposit";
 // Export functions from unified util files instead of individual files
 export { getLogoUrl, fetchImageAsBase64 } from "./util";
 export { getSession, getOrganizationIdFromSession } from "./util";
-export { getBranchesForOrganizationAction, getOrganizationDetailsById, getUsersForOrganizationAction } from "./util";
+export {
+  getBranchesForOrganizationAction,
+  getOrganizationDetailsById,
+  getUsersForOrganizationAction,
+} from "./util";
 export { setupCurrentAccountMethod } from "./util";

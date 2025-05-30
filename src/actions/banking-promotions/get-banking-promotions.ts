@@ -5,6 +5,7 @@ import type { Bank } from "@/types/banking-promotions";
 import { unstable_cache } from "next/cache";
 
 // Tipo para las promociones bancarias con relaciones
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PrismaBankingPromotionWithRelations = any;
 
 // Get all banks for selecting in forms
@@ -47,7 +48,9 @@ export async function getOrganizationBankingPromotions(
 }
 
 // Get a single banking promotion with all details
-export async function getBankingPromotionById(id: number): Promise<PrismaBankingPromotionWithRelations | null> {
+export async function getBankingPromotionById(
+  id: number,
+): Promise<PrismaBankingPromotionWithRelations | null> {
   try {
     const promotion = await prisma.bankingPromotion.findUnique({
       where: { id },
@@ -113,7 +116,7 @@ export async function calculatePromotionAmount(params: {
 
       if (installmentPlan) {
         hasValidInstallmentPlan = true;
-        
+
         if (installmentPlan.interestRate > 0) {
           // Apply interest to final amount
           totalInterest = finalAmount * (installmentPlan.interestRate / 100);
@@ -130,7 +133,8 @@ export async function calculatePromotionAmount(params: {
       finalAmount,
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
       surchargeAmount: surchargeAmount > 0 ? surchargeAmount : undefined,
-      installmentAmount: hasValidInstallmentPlan && installmentAmount > 0 ? installmentAmount : undefined,
+      installmentAmount:
+        hasValidInstallmentPlan && installmentAmount > 0 ? installmentAmount : undefined,
       totalInterest: hasValidInstallmentPlan && totalInterest > 0 ? totalInterest : undefined,
       installments: hasValidInstallmentPlan ? installments : undefined,
     };

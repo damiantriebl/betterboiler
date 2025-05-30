@@ -19,7 +19,7 @@ export default function DebugPriceDisplay() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container max-w-none py-8">
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Depuración de Estado de Precios</CardTitle>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
+import type { BranchData } from "@/actions/stock/form-data-unified";
 import { BrandModelCombobox } from "@/components/custom/BrandModelCombobox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -30,19 +31,19 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ColorConfig } from "@/types/ColorType";
-import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
+import type { MotorcycleBatchFormData, motorcycleBatchSchema } from "@/zod/NewBikeZod";
 import type { Supplier } from "@prisma/client";
 import { AlertCircle, Info, Loader2 } from "lucide-react";
 import React from "react";
-import { useFieldArray, type UseFormReturn } from "react-hook-form";
-import type { BrandForCombobox, ModelInfo } from "./page";
+import { type UseFormReturn, useFieldArray } from "react-hook-form";
+import type { z } from "zod";
+import type { BrandForCombobox, ModelInfo } from "./types";
 
 // Importar componentes modulares
 import { IdentificacionSection } from "./form-sections/IdentificacionSection";
 import { LegalSection } from "./form-sections/LegalSection";
 import { MultimediaSection } from "./form-sections/MultimediaSection";
 import { PreciosSection } from "./form-sections/PreciosSection";
-import { BranchData } from "@/actions/stock/form-data-unified";
 
 // Constantes para pestañas
 const TABS_ORDER = ["producto", "identificacion", "precios", "multimedia", "legal"] as const;
@@ -55,9 +56,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-      value === undefined ||
-      (Array.isArray(value) && value.length === 0) ||
-      value === "" ? (
+    value === undefined ||
+    (Array.isArray(value) && value.length === 0) ||
+    value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -116,6 +117,7 @@ export function NewMotoFormRefactored({
     getValues,
     clearErrors,
     formState: { errors },
+    watch,
   } = form;
 
   const [activeTab, setActiveTab] = React.useState<TabValue>(TABS_ORDER[0]);
@@ -143,18 +145,18 @@ export function NewMotoFormRefactored({
         displacement: initialData.displacement,
         units: initialData.id
           ? [
-            {
-              idTemporal: initialData.id,
-              chassisNumber: initialData.chassisNumber,
-              engineNumber: initialData.engineNumber ?? "",
-              colorId: initialData.colorId,
-              mileage: initialData.mileage,
-              branchId: initialData.branchId,
-              state: initialData.state,
-              licensePlate: initialData.licensePlate ?? "",
-              observations: initialData.observations ?? "",
-            },
-          ]
+              {
+                idTemporal: initialData.id,
+                chassisNumber: initialData.chassisNumber,
+                engineNumber: initialData.engineNumber ?? "",
+                colorId: initialData.colorId,
+                mileage: initialData.mileage,
+                branchId: initialData.branchId,
+                state: initialData.state,
+                licensePlate: initialData.licensePlate ?? "",
+                observations: initialData.observations ?? "",
+              },
+            ]
           : [],
         currency: initialData.currency,
         costPrice: initialData.costPrice,
@@ -381,7 +383,12 @@ export function NewMotoFormRefactored({
           </TabsContent>
 
           <TabsContent value="precios" className="space-y-6">
-            <PreciosSection control={control} isSubmitting={isSubmitting} />
+            <PreciosSection
+              control={control}
+              setValue={setValue}
+              watch={watch}
+              isSubmitting={isSubmitting}
+            />
           </TabsContent>
 
           <TabsContent value="multimedia" className="space-y-6">

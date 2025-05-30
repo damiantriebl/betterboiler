@@ -29,9 +29,9 @@ export async function reorderBrands(brandIdsInOrder: number[]): Promise<ReorderS
       // Crear un array de promesas, una por cada asociación OrganizationBrand a actualizar
       brandIdsInOrder.map((brandId, index) =>
         prisma.organizationBrand.updateMany({
-          where: { 
+          where: {
             organizationId: organizationId,
-            brandId: brandId 
+            brandId: brandId,
           },
           data: { order: index }, // Asignar el índice del array como el nuevo orden
         }),

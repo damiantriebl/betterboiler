@@ -9,8 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import type { SupplierFormData } from "@/zod/SuppliersZod";
+import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 
 // Tipo de dato para la fila
 export type Proveedor = SupplierFormData & { id: string }; // Asumimos que cada proveedor tendrá un ID único

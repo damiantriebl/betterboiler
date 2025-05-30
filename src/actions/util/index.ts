@@ -13,9 +13,9 @@ export * from "./payment-methods-unified";
 // Legacy exports for backward compatibility
 export { getOrganizationIdFromSession, getSession } from "./auth-session-unified";
 export { getLogoUrl, getLogoUrlFromOrganization, fetchImageAsBase64 } from "./assets-unified";
-export { 
-  getOrganizationDetailsById, 
-  getBranchesForOrganizationAction, 
-  getUsersForOrganizationAction 
+export {
+  getOrganizationDetailsById,
+  getBranchesForOrganizationAction,
+  getUsersForOrganizationAction,
 } from "./organization-data-unified";
-export { setupCurrentAccountMethod } from "./payment-methods-unified"; 
+export { setupCurrentAccountMethod } from "./payment-methods-unified";

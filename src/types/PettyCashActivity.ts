@@ -1,4 +1,4 @@
-import type { PettyCashDeposit, PettyCashWithdrawal, PettyCashSpend, Branch } from "@prisma/client";
+import type { Branch, PettyCashDeposit, PettyCashSpend, PettyCashWithdrawal } from "@prisma/client";
 
 // Tipo para los gastos de caja chica enriquecidos con información adicional si es necesario
 export type EnrichedSpendPrisma = PettyCashSpend & {

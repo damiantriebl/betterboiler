@@ -57,7 +57,7 @@ export async function associateBankWithCardType(
       data: {
         bankId,
         cardTypeId,
-        organizationId,
+        organizationId: organizationId as string,
         isEnabled,
         order,
       },
@@ -256,9 +256,9 @@ export async function associateMultipleCardTypesToBank(
       data: idsToCreate.map((cardTypeId, index) => ({
         bankId,
         cardTypeId,
-        organizationId: organizationId!, // Ya validamos que existe
-        isEnabled: true, // Default
-        order: index, // Podrías querer una lógica de orden más sofisticada
+        organizationId: organizationId as string,
+        isEnabled: true,
+        order: index,
       })),
       skipDuplicates: true, // Evita errores si algo cambió entre la verificación y la creación
     });

@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { revalidatePath } from 'next/cache';
-import { reorderBrands } from '../reorder-brands';
-import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../util';
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOrganizationIdFromSession } from "../../util";
+import { reorderBrands } from "../reorder-brands";
 
 // Mock de Next.js cache
-vi.mock('next/cache', () => ({
+vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     organizationBrand: {
@@ -20,7 +20,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../util', () => ({
+vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
@@ -34,7 +34,7 @@ const mockRevalidatePath = revalidatePath as any;
 const mockPrisma = prisma as any;
 const mockGetOrganization = getOrganizationIdFromSession as any;
 
-describe('reorderBrands', () => {
+describe("reorderBrands", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.console = mockConsole as any;
@@ -44,15 +44,15 @@ describe('reorderBrands', () => {
     vi.restoreAllMocks();
   });
 
-  const mockOrganizationId = 'org-123';
+  const mockOrganizationId = "org-123";
 
-  describe('✅ Successful Reordering', () => {
-    it('should reorder brands successfully', async () => {
+  describe("✅ Successful Reordering", () => {
+    it("should reorder brands successfully", async () => {
       // Arrange
       const brandIds = [3, 1, 2];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-      
-      // Mock $transaction to resolve successfully 
+
+      // Mock $transaction to resolve successfully
       mockPrisma.$transaction.mockResolvedValue([
         { count: 1 }, // brand 3 -> order 0
         { count: 1 }, // brand 1 -> order 1
@@ -66,12 +66,12 @@ describe('reorderBrands', () => {
       expect(mockGetOrganization).toHaveBeenCalled();
       // Verify that $transaction was called
       expect(mockPrisma.$transaction).toHaveBeenCalled();
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
     });
 
-    it('should handle single brand reordering', async () => {
+    it("should handle single brand reordering", async () => {
       // Arrange
       const brandIds = [5];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -85,7 +85,7 @@ describe('reorderBrands', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle large number of brands', async () => {
+    it("should handle large number of brands", async () => {
       // Arrange
       const brandIds = Array.from({ length: 20 }, (_, i) => i + 1);
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -100,42 +100,42 @@ describe('reorderBrands', () => {
     });
   });
 
-  describe('❌ Validation Errors', () => {
-    it('should return error for empty brand array', async () => {
+  describe("❌ Validation Errors", () => {
+    it("should return error for empty brand array", async () => {
       // Act
       const result = await reorderBrands([]);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('No se proporcionó un orden válido.');
+      expect(result.error).toBe("No se proporcionó un orden válido.");
       expect(mockGetOrganization).not.toHaveBeenCalled();
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should return error for null brand array', async () => {
+    it("should return error for null brand array", async () => {
       // Act
       const result = await reorderBrands(null as any);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('No se proporcionó un orden válido.');
+      expect(result.error).toBe("No se proporcionó un orden válido.");
       expect(mockGetOrganization).not.toHaveBeenCalled();
     });
 
-    it('should return error for undefined brand array', async () => {
+    it("should return error for undefined brand array", async () => {
       // Act
       const result = await reorderBrands(undefined as any);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('No se proporcionó un orden válido.');
+      expect(result.error).toBe("No se proporcionó un orden válido.");
       expect(mockGetOrganization).not.toHaveBeenCalled();
     });
   });
 
-  describe('🔐 Authentication Errors', () => {
-    it('should return error when user is not authenticated', async () => {
+  describe("🔐 Authentication Errors", () => {
+    it("should return error when user is not authenticated", async () => {
       // Arrange
       const brandIds = [1, 2, 3];
       mockGetOrganization.mockResolvedValue({ organizationId: null });
@@ -145,12 +145,12 @@ describe('reorderBrands', () => {
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Usuario no autenticado o sin organización.');
+      expect(result.error).toBe("Usuario no autenticado o sin organización.");
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should return error when organization is missing', async () => {
+    it("should return error when organization is missing", async () => {
       // Arrange
       const brandIds = [1, 2, 3];
       mockGetOrganization.mockResolvedValue({ organizationId: undefined });
@@ -160,93 +160,96 @@ describe('reorderBrands', () => {
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Usuario no autenticado o sin organización.');
+      expect(result.error).toBe("Usuario no autenticado o sin organización.");
     });
 
-    it('should return error when organization is empty string', async () => {
+    it("should return error when organization is empty string", async () => {
       // Arrange
       const brandIds = [1, 2, 3];
-      mockGetOrganization.mockResolvedValue({ organizationId: '' });
+      mockGetOrganization.mockResolvedValue({ organizationId: "" });
 
       // Act
       const result = await reorderBrands(brandIds);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Usuario no autenticado o sin organización.');
+      expect(result.error).toBe("Usuario no autenticado o sin organización.");
     });
   });
 
-  describe('❌ Database Errors', () => {
-    it('should handle transaction error', async () => {
+  describe("❌ Database Errors", () => {
+    it("should handle transaction error", async () => {
       // Arrange
       const brandIds = [1, 2, 3];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-      mockPrisma.$transaction.mockRejectedValue(new Error('Transaction failed'));
+      mockPrisma.$transaction.mockRejectedValue(new Error("Transaction failed"));
 
       // Act
       const result = await reorderBrands(brandIds);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Transaction failed');
+      expect(result.error).toBe("Transaction failed");
       expect(mockConsole.error).toHaveBeenCalledWith(
-        '🔥 ERROR SERVER ACTION (reorderBrands):',
-        expect.any(Error)
+        "🔥 ERROR SERVER ACTION (reorderBrands):",
+        expect.any(Error),
       );
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should handle partial transaction failure', async () => {
+    it("should handle partial transaction failure", async () => {
       // Arrange
       const brandIds = [1, 2, 3];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-      mockPrisma.$transaction.mockRejectedValue(new Error('Some updates failed'));
+      mockPrisma.$transaction.mockRejectedValue(new Error("Some updates failed"));
 
       // Act
       const result = await reorderBrands(brandIds);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Some updates failed');
+      expect(result.error).toBe("Some updates failed");
     });
 
-    it('should handle database connection error', async () => {
+    it("should handle database connection error", async () => {
       // Arrange
       const brandIds = [1, 2];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-      mockPrisma.$transaction.mockRejectedValue(new Error('Database connection lost'));
+      mockPrisma.$transaction.mockRejectedValue(new Error("Database connection lost"));
 
       // Act
       const result = await reorderBrands(brandIds);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Database connection lost');
+      expect(result.error).toBe("Database connection lost");
     });
 
-    it('should handle unknown error', async () => {
+    it("should handle unknown error", async () => {
       // Arrange
       const brandIds = [1, 2];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-      mockPrisma.$transaction.mockRejectedValue('Unknown error');
+      mockPrisma.$transaction.mockRejectedValue("Unknown error");
 
       // Act
       const result = await reorderBrands(brandIds);
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Error al reordenar las marcas.');
+      expect(result.error).toBe("Error al reordenar las marcas.");
     });
   });
 
-  describe('🎯 Edge Cases', () => {
-    it('should handle duplicate brand IDs in array', async () => {
+  describe("🎯 Edge Cases", () => {
+    it("should handle duplicate brand IDs in array", async () => {
       // Arrange
       const brandIds = [1, 2, 1, 3]; // Duplicated brand ID 1
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.$transaction.mockResolvedValue([
-        { count: 1 }, { count: 1 }, { count: 1 }, { count: 1 }
+        { count: 1 },
+        { count: 1 },
+        { count: 1 },
+        { count: 1 },
       ]);
 
       // Act
@@ -257,7 +260,7 @@ describe('reorderBrands', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
-    it('should handle negative brand IDs', async () => {
+    it("should handle negative brand IDs", async () => {
       // Arrange
       const brandIds = [-1, -2, -3];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -271,7 +274,7 @@ describe('reorderBrands', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
-    it('should handle zero brand ID', async () => {
+    it("should handle zero brand ID", async () => {
       // Arrange
       const brandIds = [0, 1, 2];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -285,7 +288,7 @@ describe('reorderBrands', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
-    it('should handle very large brand IDs', async () => {
+    it("should handle very large brand IDs", async () => {
       // Arrange
       const brandIds = [999999, 1000000, 1000001];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -300,8 +303,8 @@ describe('reorderBrands', () => {
     });
   });
 
-  describe('🔄 Cache Revalidation', () => {
-    it('should revalidate correct path on success', async () => {
+  describe("🔄 Cache Revalidation", () => {
+    it("should revalidate correct path on success", async () => {
       // Arrange
       const brandIds = [1, 2];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -311,11 +314,11 @@ describe('reorderBrands', () => {
       await reorderBrands(brandIds);
 
       // Assert
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
       expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
     });
 
-    it('should not revalidate on validation error', async () => {
+    it("should not revalidate on validation error", async () => {
       // Act
       await reorderBrands([]);
 
@@ -323,7 +326,7 @@ describe('reorderBrands', () => {
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should not revalidate on authentication error', async () => {
+    it("should not revalidate on authentication error", async () => {
       // Arrange
       mockGetOrganization.mockResolvedValue({ organizationId: null });
 
@@ -334,11 +337,11 @@ describe('reorderBrands', () => {
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should not revalidate on database error', async () => {
+    it("should not revalidate on database error", async () => {
       // Arrange
       const brandIds = [1, 2];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-      mockPrisma.$transaction.mockRejectedValue(new Error('DB Error'));
+      mockPrisma.$transaction.mockRejectedValue(new Error("DB Error"));
 
       // Act
       await reorderBrands(brandIds);
@@ -348,11 +351,11 @@ describe('reorderBrands', () => {
     });
   });
 
-  describe('📊 Console Logging', () => {
-    it('should log errors with correct format', async () => {
+  describe("📊 Console Logging", () => {
+    it("should log errors with correct format", async () => {
       // Arrange
       const brandIds = [1, 2];
-      const error = new Error('Test error');
+      const error = new Error("Test error");
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
       mockPrisma.$transaction.mockRejectedValue(error);
 
@@ -361,12 +364,12 @@ describe('reorderBrands', () => {
 
       // Assert
       expect(mockConsole.error).toHaveBeenCalledWith(
-        '🔥 ERROR SERVER ACTION (reorderBrands):',
-        error
+        "🔥 ERROR SERVER ACTION (reorderBrands):",
+        error,
       );
     });
 
-    it('should not log on successful operations', async () => {
+    it("should not log on successful operations", async () => {
       // Arrange
       const brandIds = [1, 2];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -380,8 +383,8 @@ describe('reorderBrands', () => {
     });
   });
 
-  describe('🔐 Security Considerations', () => {
-    it('should validate organization ownership before reordering', async () => {
+  describe("🔐 Security Considerations", () => {
+    it("should validate organization ownership before reordering", async () => {
       // Arrange
       const brandIds = [1, 2, 3];
       mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -395,10 +398,10 @@ describe('reorderBrands', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
-    it('should handle organization injection attempts', async () => {
+    it("should handle organization injection attempts", async () => {
       // Arrange
       const brandIds = [1, 2];
-      const maliciousOrgId = 'org-malicious';
+      const maliciousOrgId = "org-malicious";
       mockGetOrganization.mockResolvedValue({ organizationId: maliciousOrgId });
       mockPrisma.$transaction.mockResolvedValue([{ count: 1 }, { count: 1 }]);
 
@@ -410,4 +413,4 @@ describe('reorderBrands', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
   });
-}); 
+});

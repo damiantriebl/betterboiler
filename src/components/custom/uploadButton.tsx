@@ -1,9 +1,9 @@
 "use client";
+import { Badge } from "@/components/ui/badge";
 import { getSignedUrl } from "@/lib/s3-unified";
 import Image from "next/image";
 import { useState } from "react";
 import { Input } from "../ui/input";
-import { Badge } from "@/components/ui/badge";
 
 const UploadButton = () => {
   const [file, setFile] = useState<File>();

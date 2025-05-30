@@ -25,6 +25,7 @@ import {
   useSensor as useModelSensor,
   useSensors as useModelSensors,
 } from "@dnd-kit/core";
+import type { DraggableAttributes } from "@dnd-kit/core";
 import { restrictToVerticalAxis, restrictToWindowEdges } from "@dnd-kit/modifiers";
 import {
   SortableContext as ModelSortableContext,
@@ -51,7 +52,6 @@ import { AddOrSelectModelModal } from "./AddOrSelectModelModal";
 import BrandContainer from "./BrandContainer";
 import type { BrandWithDisplayModelsData, DisplayModelData } from "./Interfaces";
 import ModelItem from "./ModelItem";
-import type { DraggableAttributes } from "@dnd-kit/core";
 
 interface SingleBrandColumnProps {
   id: number;
@@ -436,8 +436,8 @@ export default function SingleBrandColumn({
                   <ModelItem
                     model={activeModel}
                     isOverlay
-                    onUpdate={() => { }}
-                    onDissociate={() => { }}
+                    onUpdate={() => {}}
+                    onDissociate={() => {}}
                   />
                 ) : null}
               </DragOverlay>

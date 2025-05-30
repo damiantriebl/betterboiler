@@ -11,6 +11,7 @@ import {
   updateRootModel,
   updateRootModelsOrder,
 } from "@/actions/root/global-brand-actions";
+import { Spinner } from "@/components/custom/Spinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -45,7 +46,6 @@ import React, { useState, useEffect, useTransition } from "react";
 import CreateGlobalBrandModal from "./CreateGlobalBrandModal";
 // TODO: Crear e importar SingleGlobalBrandColumn
 import SingleGlobalBrandColumn from "./SingleGlobalBrandColumn";
-import { Spinner } from "@/components/custom/Spinner";
 
 interface ManageGlobalBrandsProps {
   initialGlobalBrands: (Brand & { models?: Model[] })[]; // Use Prisma types
@@ -61,9 +61,13 @@ export default function ManageGlobalBrands({ initialGlobalBrands }: ManageGlobal
   const [isModelActionPending, startModelActionTransition] = useTransition();
   const [isBrandUpdatePending, startBrandUpdateTransition] = useTransition();
 
+  // Solo sincronizar si el estado actual está vacío y tenemos datos iniciales
+  // Esto evita loops infinitos causados por cambios de referencia en initialGlobalBrands
   useEffect(() => {
-    setBrands(initialGlobalBrands);
-  }, [initialGlobalBrands]);
+    if (brands.length === 0 && initialGlobalBrands.length > 0) {
+      setBrands(initialGlobalBrands);
+    }
+  }, [initialGlobalBrands, brands.length]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -205,9 +209,9 @@ export default function ManageGlobalBrands({ initialGlobalBrands }: ManageGlobal
         prev.map((b) =>
           b.id === brandId
             ? {
-              ...b,
-              models: b.models?.map((m) => (m.id === modelId ? { ...m, name: newName } : m)),
-            }
+                ...b,
+                models: b.models?.map((m) => (m.id === modelId ? { ...m, name: newName } : m)),
+              }
             : b,
         ),
       );
@@ -233,9 +237,9 @@ export default function ManageGlobalBrands({ initialGlobalBrands }: ManageGlobal
               prev.map((b) =>
                 b.id === brandId
                   ? {
-                    ...b,
-                    models: b.models?.map((m) => (m.id === updatedModel.id ? updatedModel : m)),
-                  }
+                      ...b,
+                      models: b.models?.map((m) => (m.id === updatedModel.id ? updatedModel : m)),
+                    }
                   : b,
               ),
             );
@@ -344,7 +348,7 @@ export default function ManageGlobalBrands({ initialGlobalBrands }: ManageGlobal
                   onUpdateModel={handleUpdateModel} // Pass real action handler
                   onDeleteModel={handleDeleteModel} // Pass real action handler
                   onModelsOrderUpdate={handleModelsOrderUpdate} // Pass real action handler
-                // TODO: Pass pending states if needed
+                  // TODO: Pass pending states if needed
                 />
               ))}
             </div>

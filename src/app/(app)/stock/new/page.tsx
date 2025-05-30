@@ -1,25 +1,12 @@
-import { getBranches, type BranchData } from "@/actions/stock/form-data-unified";
+import { type BranchData, getBranches } from "@/actions/stock/form-data-unified";
 import { getSuppliers } from "@/actions/suppliers/suppliers-unified";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
 import type { Supplier } from "@prisma/client";
 import { headers } from "next/headers";
-import * as React from "react";
 import { NewStockClientContainer } from "./NewStockClientContainer";
-
-// Definir tipos localmente (copiado de NuevaMotoForm)
-export interface ModelInfo {
-  id: number;
-  name: string;
-}
-export interface BrandForCombobox {
-  id: number;
-  name: string;
-  color: string | null;
-  models: ModelInfo[];
-}
-// ---
+import type { BrandForCombobox } from "./types";
 
 async function getAvailableBrandsAndModels(organizationId: string): Promise<BrandForCombobox[]> {
   console.warn("Verificando getAvailableBrandsAndModels para Org:", organizationId);
@@ -105,7 +92,7 @@ export default async function NuevaMotoPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container max-w-none px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Ingresar Nueva Moto</h1>
 
       <div className="mb-12">

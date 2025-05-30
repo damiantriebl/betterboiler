@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { type MotorcycleState, Prisma } from "@prisma/client";
+import type { MotorcycleState, Prisma } from "@prisma/client";
 import { unstable_noStore as noStore, unstable_cache } from "next/cache";
 import { headers } from "next/headers";
 
@@ -52,10 +52,7 @@ export interface GetMotorcyclesOptions {
 }
 
 // 🚀 Query base optimizada
-const buildMotorcycleQuery = (
-  organizationId: string,
-  options: GetMotorcyclesOptions = {}
-) => {
+const buildMotorcycleQuery = (organizationId: string, options: GetMotorcyclesOptions = {}) => {
   const baseWhere: Prisma.MotorcycleWhereInput = {
     organizationId,
     ...(options.filter?.state && { state: { in: options.filter.state } }),
@@ -120,10 +117,7 @@ const buildMotorcycleQuery = (
   return {
     where: baseWhere,
     select: baseSelect,
-    orderBy: [
-      { state: "asc" as const },
-      { createdAt: "desc" as const },
-    ],
+    orderBy: [{ state: "asc" as const }, { createdAt: "desc" as const }],
     ...(options.filter?.limit && { take: options.filter.limit }),
   };
 };
@@ -134,16 +128,16 @@ const getCachedMotorcycles = unstable_cache(
     const query = buildMotorcycleQuery(organizationId, options);
     return await prisma.motorcycle.findMany(query);
   },
-  ['motorcycles-unified'],
+  ["motorcycles-unified"],
   {
     revalidate: 60, // Cache por 1 minuto
-    tags: ['motorcycles'],
-  }
+    tags: ["motorcycles"],
+  },
 );
 
 // 🚀 Función principal unificada
 export async function getMotorcycles(
-  options: GetMotorcyclesOptions = {}
+  options: GetMotorcyclesOptions = {},
 ): Promise<MotorcycleTableData[]> {
   try {
     // Configuración por defecto
@@ -178,9 +172,7 @@ export async function getMotorcycles(
     // Obtener datos con o sin cache
     const motorcycles = defaultOptions.optimization?.useCache
       ? await getCachedMotorcycles(organizationId, defaultOptions)
-      : await prisma.motorcycle.findMany(
-          buildMotorcycleQuery(organizationId, defaultOptions)
-        );
+      : await prisma.motorcycle.findMany(buildMotorcycleQuery(organizationId, defaultOptions));
 
     // 🚀 Transformación optimizada
     return motorcycles.map((moto) => ({
@@ -195,7 +187,7 @@ export async function getMotorcycles(
       state: moto.state,
       chassisNumber: moto.chassisNumber,
       engineNumber: moto.engineNumber,
-      // Simplificar datos de marca 
+      // Simplificar datos de marca
       brand: moto.brand
         ? {
             name: moto.brand.name,
@@ -216,9 +208,10 @@ export async function getMotorcycles(
 }
 
 // 🚀 Funciones de conveniencia
-export async function getMotorcyclesOptimized(
-  filter?: { state?: MotorcycleState[]; limit?: number }
-): Promise<MotorcycleTableData[]> {
+export async function getMotorcyclesOptimized(filter?: {
+  state?: MotorcycleState[];
+  limit?: number;
+}): Promise<MotorcycleTableData[]> {
   return getMotorcycles({
     filter,
     optimization: {
@@ -229,9 +222,10 @@ export async function getMotorcyclesOptimized(
   });
 }
 
-export async function getMotorcyclesWithSupplier(
-  filter?: { state?: MotorcycleState[]; limit?: number }
-): Promise<MotorcycleTableData[]> {
+export async function getMotorcyclesWithSupplier(filter?: {
+  state?: MotorcycleState[];
+  limit?: number;
+}): Promise<MotorcycleTableData[]> {
   return getMotorcycles({
     filter,
     optimization: {
@@ -242,9 +236,10 @@ export async function getMotorcyclesWithSupplier(
   });
 }
 
-export async function getMotorcyclesBasic(
-  filter?: { state?: MotorcycleState[]; limit?: number }
-): Promise<MotorcycleTableData[]> {
+export async function getMotorcyclesBasic(filter?: {
+  state?: MotorcycleState[];
+  limit?: number;
+}): Promise<MotorcycleTableData[]> {
   return getMotorcycles({
     filter,
     optimization: {
@@ -259,4 +254,4 @@ export async function getMotorcyclesBasic(
 export async function invalidateMotorcyclesCache() {
   // En una implementación real, esto invalidaría el cache por tags
   console.log("Cache de motocicletas invalidado");
-} 
+}

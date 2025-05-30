@@ -1,6 +1,9 @@
-import { getOrganizationIdFromSession } from "@/actions/util";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
-import { generateReservationReportPDF as generateReservationPDF, createReservationReportPDFResponse } from "@/lib/pdf-generators/reservation-report-pdf";
+import { getOrganizationIdFromSession } from "@/actions/util";
+import {
+  createReservationReportPDFResponse,
+  generateReservationReportPDF as generateReservationPDF,
+} from "@/lib/pdf-generators/reservation-report-pdf";
 import type { DateRange } from "@/types/DateRange";
 import type { ReservationsReport } from "@/types/reports";
 

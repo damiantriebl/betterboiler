@@ -2,9 +2,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/SessionStore";
 import { Building } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSessionStore } from "@/stores/SessionStore";
 
 interface OrganizationLogoProps {
   logo?: string | null;
@@ -168,23 +168,19 @@ export default function OrganizationLogo({
     if (thumbnail) getLogoUrl(thumbnail).catch(() => {});
   }, [thumbnail]);
 
-  const fetchLogoUrl = useCallback(
-    async (key: string) => {
-      if (isLoading) return;
-      setIsLoading(true);
-      setHasError(false);
-      try {
-        const url = await getLogoUrl(key);
-        setImageUrl(url);
-      } catch {
-        setHasError(true);
-        setImageUrl(null);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [isLoading],
-  );
+  const fetchLogoUrl = useCallback(async (key: string) => {
+    setIsLoading(true);
+    setHasError(false);
+    try {
+      const url = await getLogoUrl(key);
+      setImageUrl(url);
+    } catch {
+      setHasError(true);
+      setImageUrl(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof displayLogo === "string" && displayLogo.length > 0) {
@@ -216,19 +212,6 @@ export default function OrganizationLogo({
       aria-label={`${displayName || "Organization"} logo container`}
     >
       {imageUrl && !hasError ? renderImage() : renderFallback()}
-      {displayName && (
-        <span
-          className="text-xl font-bold pl-2 transition-opacity duration-200 ease-out"
-          style={{ opacity: nameDisplayOpacity }}
-        >
-          <div
-            className="text-xl font-bold pr-2 transition-opacity duration-200 ease-out"
-            style={{ opacity: nameDisplayOpacity }}
-          >
-            {displayName}
-          </div>
-        </span>
-      )}
     </div>
   );
 }

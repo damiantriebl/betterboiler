@@ -1,7 +1,7 @@
 import { TableRow } from "@/components/ui/table";
+import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 import type { MotorcycleState } from "@prisma/client";
 import type React from "react";
-import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 
 interface MotorcycleRowProps {
   moto: MotorcycleWithFullDetails;

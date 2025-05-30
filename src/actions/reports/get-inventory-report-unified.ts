@@ -1,10 +1,10 @@
 "use server";
 
-import { getOrganizationIdFromSession } from "../util";
 import prisma from "@/lib/prisma";
 import type { InventoryStatusReport } from "@/types/reports";
 import { MotorcycleState } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { getOrganizationIdFromSession } from "../util";
 
 // ===========================
 // TIPOS INTERNOS
@@ -44,7 +44,7 @@ interface BrandGroup {
 // ===========================
 
 const CACHE_CONFIG = {
-  tags: ['inventory-report'] as string[],
+  tags: ["inventory-report"] as string[],
   revalidate: 300, // 5 minutos
 };
 
@@ -70,9 +70,12 @@ function buildWhereFilter(organizationId: string, dateRange?: { from?: Date; to?
 /**
  * Obtiene conteos por estado de manera optimizada
  */
-async function getStateGroups(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<StateGroup[]> {
+async function getStateGroups(
+  organizationId: string,
+  dateRange?: { from?: Date; to?: Date },
+): Promise<StateGroup[]> {
   const whereFilter = buildWhereFilter(organizationId, dateRange);
-  
+
   const byState = await prisma.motorcycle.groupBy({
     by: ["state"],
     where: whereFilter,
@@ -90,9 +93,12 @@ async function getStateGroups(organizationId: string, dateRange?: { from?: Date;
 /**
  * Obtiene valores por estado y moneda
  */
-async function getValueByState(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<ValueStateGroup[]> {
+async function getValueByState(
+  organizationId: string,
+  dateRange?: { from?: Date; to?: Date },
+): Promise<ValueStateGroup[]> {
   const whereFilter = buildWhereFilter(organizationId, dateRange);
-  
+
   const valueByState = await prisma.motorcycle.groupBy({
     by: ["state", "currency"],
     where: whereFilter,
@@ -115,9 +121,12 @@ async function getValueByState(organizationId: string, dateRange?: { from?: Date
 /**
  * Obtiene conteos por marca de manera optimizada
  */
-async function getBrandGroups(organizationId: string, dateRange?: { from?: Date; to?: Date }): Promise<BrandGroup[]> {
+async function getBrandGroups(
+  organizationId: string,
+  dateRange?: { from?: Date; to?: Date },
+): Promise<BrandGroup[]> {
   const whereFilter = buildWhereFilter(organizationId, dateRange);
-  
+
   // Usar groupBy para mejor rendimiento
   const byBrand = await prisma.motorcycle.groupBy({
     by: ["brandId"],
@@ -155,7 +164,7 @@ async function getBrandGroups(organizationId: string, dateRange?: { from?: Date;
  */
 function calculateSummary(stateGroups: StateGroup[]) {
   const stateCount = new Map(stateGroups.map((s) => [s.state, s._count]));
-  
+
   return {
     total: stateGroups.reduce((acc, curr) => acc + curr._count, 0),
     inStock: stateCount.get(MotorcycleState.STOCK) || 0,
@@ -181,6 +190,65 @@ function getEmptyReport(): InventoryStatusReport {
   };
 }
 
+/**
+ * Obtiene las motos disponibles en stock con detalles completos para el PDF
+ */
+async function getAvailableMotorcycles(
+  organizationId: string,
+  dateRange?: { from?: Date; to?: Date },
+) {
+  const whereFilter = buildWhereFilter(organizationId, dateRange);
+
+  const availableMotorcycles = await prisma.motorcycle.findMany({
+    where: {
+      ...whereFilter,
+      state: MotorcycleState.STOCK, // Solo motos en stock
+    },
+    select: {
+      id: true,
+      chassisNumber: true,
+      engineNumber: true,
+      year: true,
+      mileage: true,
+      retailPrice: true,
+      costPrice: true,
+      currency: true,
+      displacement: true,
+      createdAt: true,
+      brand: {
+        select: {
+          name: true,
+        },
+      },
+      model: {
+        select: {
+          name: true,
+        },
+      },
+      color: {
+        select: {
+          name: true,
+          colorOne: true,
+          colorTwo: true,
+        },
+      },
+      branch: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: [
+      { brand: { name: "asc" } },
+      { model: { name: "asc" } },
+      { year: "desc" },
+      { chassisNumber: "asc" },
+    ],
+  });
+
+  return availableMotorcycles;
+}
+
 // ===========================
 // FUNCIÓN PRINCIPAL
 // ===========================
@@ -189,9 +257,11 @@ function getEmptyReport(): InventoryStatusReport {
  * Función principal para obtener el reporte de inventario
  * Combina lo mejor de ambas implementaciones anteriores
  */
-async function _getInventoryStatusReport(options: InventoryOptions = {}): Promise<InventoryStatusReport> {
+async function _getInventoryStatusReport(
+  options: InventoryOptions = {},
+): Promise<InventoryStatusReport> {
   const { dateRange, includeValueAnalysis = true } = options;
-  
+
   try {
     // Obtener organización
     const org = await getOrganizationIdFromSession();
@@ -221,7 +291,6 @@ async function _getInventoryStatusReport(options: InventoryOptions = {}): Promis
       byBrand: brandGroups,
       valueByState: valueGroups,
     };
-
   } catch (error) {
     console.error("Error obteniendo reporte de inventario:", error);
     return getEmptyReport();
@@ -249,8 +318,8 @@ export const getInventoryStatusReportCached = unstable_cache(
   async (dateRange?: { from?: Date; to?: Date }) => {
     return _getInventoryStatusReport({ dateRange, useCache: true });
   },
-  ['inventory-status-report'],
-  CACHE_CONFIG
+  ["inventory-status-report"],
+  CACHE_CONFIG,
 );
 
 /**
@@ -260,9 +329,9 @@ export async function getInventoryStatusReportBasic(dateRange?: {
   from?: Date;
   to?: Date;
 }): Promise<InventoryStatusReport> {
-  return _getInventoryStatusReport({ 
-    dateRange, 
-    includeValueAnalysis: false 
+  return _getInventoryStatusReport({
+    dateRange,
+    includeValueAnalysis: false,
   });
 }
 
@@ -273,9 +342,9 @@ export async function getInventoryStatusReportDetailed(dateRange?: {
   from?: Date;
   to?: Date;
 }): Promise<InventoryStatusReport> {
-  return _getInventoryStatusReport({ 
-    dateRange, 
-    includeValueAnalysis: true 
+  return _getInventoryStatusReport({
+    dateRange,
+    includeValueAnalysis: true,
   });
 }
 
@@ -286,4 +355,48 @@ export async function invalidateInventoryReportCache(): Promise<void> {
   console.log("Cache de reporte de inventario invalidado");
   // En una implementación real, aquí se invalidaría el cache
   // revalidateTag('inventory-report');
-} 
+}
+
+/**
+ * Versión específica para PDF que incluye las motos disponibles
+ */
+export async function getInventoryStatusReportForPDF(dateRange?: {
+  from?: Date;
+  to?: Date;
+}): Promise<InventoryStatusReport> {
+  try {
+    // Obtener organización
+    const org = await getOrganizationIdFromSession();
+    if (!org.organizationId) {
+      console.error(
+        "Error en getInventoryStatusReportForPDF: No se pudo obtener el ID de la organización. Mensaje de sesión:",
+        org.error,
+      );
+      return getEmptyReport();
+    }
+
+    const organizationId = org.organizationId;
+
+    // Ejecutar consultas en paralelo para mejor rendimiento
+    const [stateGroups, brandGroups, valueGroups, availableMotorcycles] = await Promise.all([
+      getStateGroups(organizationId, dateRange),
+      getBrandGroups(organizationId, dateRange),
+      getValueByState(organizationId, dateRange),
+      getAvailableMotorcycles(organizationId, dateRange),
+    ]);
+
+    // Calcular resumen
+    const summary = calculateSummary(stateGroups);
+
+    return {
+      summary,
+      byState: stateGroups,
+      byBrand: brandGroups,
+      valueByState: valueGroups,
+      availableMotorcycles,
+    };
+  } catch (error) {
+    console.error("Error obteniendo reporte de inventario para PDF:", error);
+    return getEmptyReport();
+  }
+}

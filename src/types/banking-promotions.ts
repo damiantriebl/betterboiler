@@ -1,8 +1,8 @@
 // Types for banking promotions and installment plans
 
 import type { Day } from "@/zod/banking-promotion-schemas";
-import type { PaymentMethod } from "./payment-methods";
 import type { BankCard } from "./bank-cards";
+import type { PaymentMethod } from "./payment-methods";
 
 export interface Bank {
   id: number;

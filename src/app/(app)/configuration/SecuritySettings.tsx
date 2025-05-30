@@ -1,22 +1,14 @@
 "use client";
 
-import React, { useEffect, useState, useActionState, useRef, startTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  getSecuritySettings,
-  toggleSecureMode,
-  verifyOtpSetup,
   type SecuritySettings as SecuritySettingsData,
   type ToggleSecureModeResult,
   type VerifyOtpSetupResult,
+  getSecuritySettings,
+  toggleSecureMode,
+  verifyOtpSetup,
 } from "@/actions/configuration/security-actions";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -25,6 +17,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import React, { useEffect, useState, useActionState, useRef, startTransition } from "react";
 
 const initialToggleState: ToggleSecureModeResult = { success: false };
 const initialVerifyState: VerifyOtpSetupResult = { success: false };
@@ -62,11 +62,25 @@ export default function SecuritySettings() {
   useEffect(() => {
     async function fetchSettings() {
       setIsLoadingSettings(true);
-      const currentSettings = await getSecuritySettings();
-      if (currentSettings.error) {
-        toast({ variant: "destructive", title: "Error", description: currentSettings.error });
+      try {
+        const currentSettings = await getSecuritySettings();
+        console.log("Debug: getSecuritySettings returned:", currentSettings);
+        console.log("Debug: typeof currentSettings:", typeof currentSettings);
+
+        // Verificar que currentSettings existe y es un objeto válido antes de acceder a sus propiedades
+        if (currentSettings && typeof currentSettings === "object" && currentSettings.error) {
+          toast({ variant: "destructive", title: "Error", description: currentSettings.error });
+        }
+        setSettings(currentSettings || null);
+      } catch (error) {
+        console.error("Error fetching security settings:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudieron cargar las configuraciones de seguridad",
+        });
+        setSettings(null);
       }
-      setSettings(currentSettings);
       setIsLoadingSettings(false);
     }
     fetchSettings();
@@ -145,13 +159,28 @@ export default function SecuritySettings() {
     }
   };
 
-  if (isLoadingSettings || !settings) {
+  if (isLoadingSettings) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-1/4" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
       </div>
+    );
+  }
+
+  // Si no hay settings después de cargar, mostrar un mensaje de error
+  if (!settings) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Error de Configuración</CardTitle>
+          <CardDescription>
+            No se pudieron cargar las configuraciones de seguridad. Por favor, intenta recargar la
+            página.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 

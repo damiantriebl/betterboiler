@@ -1,13 +1,7 @@
-import { PDFBuilder, colors, fontSizes, margins } from '@/lib/pdf-lib-utils';
-import type { AmortizationScheduleEntry, QuotePDFProps as BaseQuotePDFProps } from '@/types/quote';
-
-export interface QuotePDFProps extends BaseQuotePDFProps {
-  motorcycleImage?: string;
-  organizationName?: string;
-  userName?: string;
-  userImage?: string;
-  organizationLogo?: string;
-}
+import { colors, fontSizes, margins } from "@/lib/pdf-lib-utils";
+import type { QuotePDFProps } from "@/types/quote";
+import type { AmortizationScheduleEntry } from "@/types/quote";
+import { type PDFSection, PDFSectionHelpers, PDFTemplate, createPDFResponse } from "./pdf-template";
 
 export async function generateQuotePDF(props: QuotePDFProps): Promise<Uint8Array> {
   const {
@@ -25,196 +19,195 @@ export async function generateQuotePDF(props: QuotePDFProps): Promise<Uint8Array
   } = props;
 
   if (!motorcycle) {
-    throw new Error('Datos de motocicleta requeridos');
+    throw new Error("Datos de motocicleta requeridos");
   }
 
-  const pdf = await PDFBuilder.create();
-  const { width, height } = pdf.getPageDimensions();
-  
-  let currentY = height - margins.normal;
-  const contentWidth = width - (margins.normal * 2);
-
-  // Encabezado
-  pdf.addText(`Presupuesto ${organizationName || 'Empresa'}`, {
-    x: margins.normal,
-    y: currentY,
-    size: fontSizes.title,
-    font: await pdf['timesRomanBoldFont'],
+  // Crear template con el logo arriba del todo
+  const template = new PDFTemplate({
+    title: "Presupuesto de Motocicleta",
+    subtitle: `${motorcycle.brand?.name} ${motorcycle.model?.name} (${motorcycle.year})`,
+    filename: "presupuesto.pdf",
+    includeGenerationDate: true,
   });
 
-  const currentDate = new Date().toLocaleDateString('es-AR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  await template.init();
 
-  pdf.addText(`Fecha: ${currentDate}`, {
-    x: margins.normal,
-    y: currentY - 25,
-    size: fontSizes.normal,
-  });
-
-  currentY -= 80;
-
-  // Información del vehículo
-  currentY = pdf.addSection('Información del Vehículo', margins.normal, currentY, contentWidth);
-  
-  const vehicleInfo = [
-    `Marca/Modelo: ${motorcycle.brand?.name} ${motorcycle.model?.name}`,
-    `Año: ${motorcycle.year}`,
-    `Color: ${motorcycle.color?.name || 'N/A'}`,
-    `Chasis: ${motorcycle.chassisNumber || 'N/A'}`,
-    `Motor: ${motorcycle.engineNumber || 'N/A'}`,
-    `Kilometraje: ${motorcycle.mileage} km`,
-    `Cilindrada: ${motorcycle.displacement || 'N/A'} cc`,
-  ];
-
-  vehicleInfo.forEach((text) => {
-    pdf.addText(text, {
-      x: margins.normal + 10,
-      y: currentY,
-      size: fontSizes.normal,
-    });
-    currentY -= 18;
-  });
-
-  currentY -= 30;
-
-  // Información de pago
-  currentY = pdf.addSection('Información de Pago', margins.normal, currentY, contentWidth);
-
-  const getPaymentMethodText = () => {
-    switch (activeTab) {
-      case 'efectivo':
-        return 'Efectivo/Transferencia';
-      case 'tarjeta':
-        return `Tarjeta - ${paymentData.cuotas} cuota(s)`;
-      case 'cuenta_corriente':
-        return `Financiación - ${paymentData.currentAccountInstallments} cuotas (${paymentData.annualInterestRate}% interés)`;
-      default:
-        return 'No especificado';
-    }
-  };
-
+  // Función para formatear montos
   const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: motorcycle?.currency || 'ARS',
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: motorcycle?.currency || "ARS",
     }).format(amount);
   };
 
-  const paymentInfo = [
-    `Método de Pago: ${getPaymentMethodText()}`,
-    `Precio Base: ${formatAmount(basePrice)}`,
+  // Función para obtener texto del método de pago
+  const getPaymentMethodText = () => {
+    switch (activeTab) {
+      case "efectivo":
+        return "Efectivo/Transferencia";
+      case "tarjeta":
+        return `Tarjeta - ${paymentData.cuotas} cuota(s)`;
+      case "cuenta_corriente":
+        return `Financiación - ${paymentData.currentAccountInstallments} cuotas (${paymentData.annualInterestRate}% interés)`;
+      default:
+        return "No especificado";
+    }
+  };
+
+  // Definir secciones del presupuesto
+  const sections: PDFSection[] = [
+    // Sección Información del Vehículo
+    {
+      title: "Información del Vehículo",
+      content: PDFSectionHelpers.createSummarySection({
+        "Marca/Modelo": `${motorcycle.brand?.name} ${motorcycle.model?.name}`,
+        Año: motorcycle.year?.toString() || "N/A",
+        Color: motorcycle.color?.name || "N/A",
+        Chasis: motorcycle.chassisNumber || "N/A",
+        Motor: motorcycle.engineNumber || "N/A",
+        Kilometraje: `${motorcycle.mileage} km`,
+        Cilindrada: `${motorcycle.displacement || "N/A"} cc`,
+      }),
+    },
+
+    // Sección Información de Pago
+    {
+      title: "Información de Pago",
+      content: (pdf, currentY, contentWidth) => {
+        // Crear datos dinámicos para el resumen de pago
+        const paymentSummary: { [key: string]: string } = {
+          "Método de Pago": getPaymentMethodText(),
+          "Precio Base": formatAmount(basePrice),
+        };
+
+        // Agregar descuento/recargo si aplica
+        if (paymentData.discountValue > 0) {
+          const type = paymentData.discountType === "discount" ? "Descuento" : "Recargo";
+          const sign = paymentData.discountType === "discount" ? "-" : "+";
+          paymentSummary[`${type} (${paymentData.discountValue}%)`] =
+            `${sign}${formatAmount(modifierAmount)}`;
+        }
+
+        paymentSummary["Precio Final"] = formatAmount(finalPrice);
+
+        // Información específica según método de pago
+        if (activeTab === "tarjeta" && paymentData.cuotas > 1) {
+          paymentSummary["Número de Cuotas"] = paymentData.cuotas.toString();
+          paymentSummary["Valor de Cuota"] = formatAmount(finalPrice / paymentData.cuotas);
+        }
+
+        if (activeTab === "cuenta_corriente") {
+          paymentSummary["Pago Inicial"] = formatAmount(paymentData.downPayment);
+          paymentSummary["Monto a Financiar"] = formatAmount(financedAmount);
+          paymentSummary["Tasa de Interés"] = `${paymentData.annualInterestRate}% anual`;
+          paymentSummary.Cuotas = `${paymentData.currentAccountInstallments} (${paymentData.currentAccountFrequency})`;
+          paymentSummary["Valor de Cuota"] = formatAmount(
+            installmentDetails.installmentAmount || 0,
+          );
+          paymentSummary["Total a Pagar"] = formatAmount(totalWithFinancing);
+
+          if (
+            "totalInterest" in installmentDetails &&
+            installmentDetails.totalInterest !== undefined &&
+            installmentDetails.totalInterest > 0
+          ) {
+            paymentSummary["Intereses Totales"] = formatAmount(installmentDetails.totalInterest);
+          }
+        }
+
+        // Usar el helper para crear la tabla de resumen
+        return PDFSectionHelpers.createSummarySection(paymentSummary)(pdf, currentY, contentWidth);
+      },
+    },
+
+    // Sección Plan de Pagos (solo para cuenta corriente)
+    ...(activeTab === "cuenta_corriente" &&
+    installmentDetails.schedule &&
+    installmentDetails.schedule.length > 0
+      ? [
+          {
+            title: "Plan de Pagos Detallado",
+            newPageBefore: true,
+            content: PDFSectionHelpers.createTableSection(
+              ["N°", "Capital Inicio", "Amortización", "Interés", "Cuota"],
+              installmentDetails.schedule.map((item: AmortizationScheduleEntry) => [
+                item.installmentNumber.toString(),
+                formatAmount(item.capitalAtPeriodStart),
+                formatAmount(item.amortization),
+                formatAmount(item.interestForPeriod),
+                formatAmount(item.calculatedInstallmentAmount),
+              ]),
+              {
+                cellHeight: 28,
+                fontSize: fontSizes.small,
+                headerColor: colors.primary,
+              },
+            ),
+            minSpaceRequired: 300,
+          },
+        ]
+      : []),
+
+    // Sección Información Adicional
+    {
+      title: "Información Adicional",
+      content: (pdf, currentY, contentWidth) => {
+        let y = currentY;
+
+        // Información del vendedor
+        if (userName) {
+          pdf.addText(`Presupuesto generado por: ${userName}`, {
+            x: margins.normal,
+            y: y,
+            size: fontSizes.normal,
+            color: colors.textPrimary,
+          });
+          y -= 25;
+        }
+
+        // Términos y condiciones
+        pdf.addText("Términos y Condiciones:", {
+          x: margins.normal,
+          y: y,
+          size: fontSizes.medium,
+          color: colors.textPrimary,
+          font: pdf.getHelveticaBoldFont(),
+        });
+        y -= 20;
+
+        const terms = [
+          "• Este presupuesto es válido por 7 días desde la fecha de emisión.",
+          "• Todos los precios incluyen IVA.",
+          "• La disponibilidad del vehículo está sujeta a stock.",
+          "• Los colores pueden variar según la disponibilidad.",
+        ];
+
+        for (const term of terms) {
+          pdf.addText(term, {
+            x: margins.normal,
+            y,
+            size: fontSizes.small,
+            color: colors.textSecondary,
+          });
+          y -= 18;
+        }
+
+        return y - 20;
+      },
+    },
   ];
 
-  if (paymentData.discountValue > 0) {
-    paymentInfo.push(
-      `${paymentData.discountType === 'discount' ? 'Descuento' : 'Recargo'} (${paymentData.discountValue}%): ${paymentData.discountType === 'discount' ? '-' : '+'}${formatAmount(modifierAmount)}`
-    );
-  }
+  // Agregar todas las secciones
+  await template.addSections(sections);
 
-  paymentInfo.push(`Precio Final: ${formatAmount(finalPrice)}`);
-
-  if (activeTab === 'tarjeta' && paymentData.cuotas > 1) {
-    paymentInfo.push(
-      `Cuotas: ${paymentData.cuotas}`,
-      `Valor de Cuota: ${formatAmount(finalPrice / paymentData.cuotas)}`
-    );
-  }
-
-  if (activeTab === 'cuenta_corriente') {
-    paymentInfo.push(
-      `Pago Inicial: ${formatAmount(paymentData.downPayment)}`,
-      `Monto a Financiar: ${formatAmount(financedAmount)}`,
-      `Tasa de Interés: ${paymentData.annualInterestRate}% anual`,
-      `Cuotas: ${paymentData.currentAccountInstallments} (${paymentData.currentAccountFrequency})`,
-      `Valor de Cuota: ${formatAmount(installmentDetails.installmentAmount)}`,
-      `Total a Pagar: ${formatAmount(totalWithFinancing)}`
-    );
-
-    if ('totalInterest' in installmentDetails && installmentDetails.totalInterest !== undefined && installmentDetails.totalInterest > 0) {
-      paymentInfo.push(`Intereses Totales: ${formatAmount(installmentDetails.totalInterest)}`);
-    }
-  }
-
-  paymentInfo.forEach((text) => {
-    pdf.addText(text, {
-      x: margins.normal + 10,
-      y: currentY,
-      size: fontSizes.normal,
-    });
-    currentY -= 18;
-  });
-
-  currentY -= 30;
-
-  // Plan de pagos para cuenta corriente
-  if (activeTab === 'cuenta_corriente' && installmentDetails.schedule && installmentDetails.schedule.length > 0) {
-    if (currentY < 300) {
-      pdf.addPage();
-      currentY = height - margins.normal;
-    }
-
-    currentY = pdf.addSection('Plan de Pagos', margins.normal, currentY, contentWidth);
-
-    const scheduleHeaders = ['N°', 'Capital', 'Amort.', 'Interés', 'Cuota'];
-    const scheduleRows = installmentDetails.schedule.map((item: AmortizationScheduleEntry) => [
-      item.installmentNumber.toString(),
-      formatAmount(item.capitalAtPeriodStart),
-      formatAmount(item.amortization),
-      formatAmount(item.interestForPeriod),
-      formatAmount(item.calculatedInstallmentAmount),
-    ]);
-
-    currentY = pdf.addTable({
-      x: margins.normal,
-      y: currentY,
-      width: contentWidth,
-      cellHeight: 20,
-      headers: scheduleHeaders,
-      rows: scheduleRows,
-      fontSize: fontSizes.small,
-    });
-
-    currentY -= 30;
-  }
-
-  // Información del usuario
-  if (userName) {
-    pdf.addText(`Presupuesto generado por: ${userName}`, {
-      x: margins.normal,
-      y: currentY,
-      size: fontSizes.normal,
-    });
-    currentY -= 30;
-  }
-
-  // Pie de página
-  pdf.addText('Este presupuesto es válido por 7 días desde la fecha de emisión.', {
-    x: margins.normal,
-    y: 50,
-    size: fontSizes.small,
-    color: colors.gray,
-  });
-
-  pdf.addText('Todos los precios incluyen IVA.', {
-    x: margins.normal,
-    y: 35,
-    size: fontSizes.small,
-    color: colors.gray,
-  });
-
-  return pdf.finalize();
+  // Finalizar y retornar
+  return template.finalize();
 }
 
 // Función para crear una respuesta HTTP con el PDF
-export function createQuotePDFResponse(pdfBytes: Uint8Array, filename: string = 'Presupuesto.pdf'): Response {
-  return new Response(Buffer.from(pdfBytes), {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': pdfBytes.length.toString(),
-    },
-  });
-} 
+export function createQuotePDFResponse(
+  pdfBytes: Uint8Array,
+  filename = "Presupuesto.pdf",
+): Response {
+  return createPDFResponse(pdfBytes, filename);
+}

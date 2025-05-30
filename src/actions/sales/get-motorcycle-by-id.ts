@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import type {
+  Branch,
   Brand,
   Client,
   Model,
@@ -10,7 +11,6 @@ import type {
   MotoColor,
   Motorcycle,
   Reservation,
-  Branch,
 } from "@prisma/client";
 import { headers } from "next/headers";
 

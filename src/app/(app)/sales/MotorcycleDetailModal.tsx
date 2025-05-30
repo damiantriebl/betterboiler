@@ -19,8 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/SessionStore";
 import { usePriceDisplayStore } from "@/stores/price-display-store";
 import type { ModelFileWithUrl, MotorcycleWithDetails } from "@/types/motorcycle";
 import type {
@@ -38,16 +40,15 @@ import {
   DollarSign,
   FileText,
   Info,
+  Loader2,
   Pause,
   Play,
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ClientDetail } from "./ClientDetail";
 import QuoteBridgePdf from "./components/QuoteBrigePdf";
-import { Switch } from "@/components/ui/switch";
-import { useSessionStore } from "@/stores/SessionStore";
 
 interface Props {
   isOpen: boolean;
@@ -110,7 +111,7 @@ function PaymentQuoteSimulator({
     annualInterestRate: 30,
   });
 
-  const getPeriodsPerYear = useCallback((frequency: string) => {
+  const getPeriodsPerYear = (frequency: string) => {
     const map: Record<string, number> = {
       WEEKLY: 52,
       BIWEEKLY: 26,
@@ -119,7 +120,7 @@ function PaymentQuoteSimulator({
       ANNUALLY: 1,
     };
     return map[frequency] || 12;
-  }, []);
+  };
 
   const basePrice =
     paymentData.isMayorista && motorcycle?.wholesalePrice
@@ -136,7 +137,7 @@ function PaymentQuoteSimulator({
 
   const financedAmount = finalPrice - paymentData.downPayment;
 
-  const calculateInstallmentDetails = useCallback((): InstallmentDetails => {
+  const calculateInstallmentDetails = (): InstallmentDetails => {
     if (!motorcycle) {
       return {
         installmentAmount: 0,
@@ -317,16 +318,13 @@ function PaymentQuoteSimulator({
       schedule,
       warning: undefined,
     };
-  }, [motorcycle, paymentData, getPeriodsPerYear, financedAmount]);
+  };
 
-  const formatAmount = useCallback(
-    (amount: number) => {
-      return formatPrice(amount, motorcycle?.currency || "ARS");
-    },
-    [motorcycle?.currency],
-  );
+  const formatAmount = (amount: number) => {
+    return formatPrice(amount, motorcycle?.currency || "ARS");
+  };
 
-  const installmentDetailsCalculation = useMemo((): InstallmentDetails => {
+  const installmentDetailsCalculation = (): InstallmentDetails => {
     if (paymentData.metodoPago === "cuenta_corriente") {
       return calculateInstallmentDetails();
     }
@@ -340,14 +338,11 @@ function PaymentQuoteSimulator({
       currency: motorcycle?.currency || "ARS",
       warning: undefined,
     };
-  }, [
-    paymentData.metodoPago,
-    paymentData.cuotas,
-    finalPrice,
-    calculateInstallmentDetails,
-    motorcycle?.currency,
-  ]);
+  };
 
+  const installmentDetails = installmentDetailsCalculation();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Incluir todas las dependencias causaría loop infinito
   useEffect(() => {
     if (onExportPDF && motorcycle) {
       onExportPDF({
@@ -358,24 +353,24 @@ function PaymentQuoteSimulator({
         modifierAmount,
         finalPrice,
         financedAmount,
-        installmentDetails: installmentDetailsCalculation,
-        totalWithFinancing: installmentDetailsCalculation.totalPayment || 0,
+        installmentDetails,
+        totalWithFinancing: installmentDetails.totalPayment || 0,
         formatAmount,
         organizationLogoUrl,
         organizationName: organizationName || undefined,
       });
     }
   }, [
-    paymentData,
+    paymentData.metodoPago,
+    paymentData.cuotas,
+    paymentData.downPayment,
+    paymentData.currentAccountInstallments,
+    paymentData.annualInterestRate,
     activeTab,
     basePrice,
     modifierAmount,
     finalPrice,
-    financedAmount,
-    installmentDetailsCalculation,
-    formatAmount,
-    onExportPDF,
-    motorcycle,
+    motorcycle?.id,
     organizationLogoUrl,
     organizationName,
   ]);
@@ -409,8 +404,7 @@ function PaymentQuoteSimulator({
   };
 
   const renderAmortizationTable = () => {
-    const details = installmentDetailsCalculation;
-    if (!details.schedule || details.schedule.length === 0) {
+    if (!installmentDetails.schedule || installmentDetails.schedule.length === 0) {
       return null;
     }
     return (
@@ -437,7 +431,7 @@ function PaymentQuoteSimulator({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {details.schedule.map((item) => (
+            {installmentDetails.schedule.map((item) => (
               <tr key={item.installmentNumber}>
                 <td className="px-3 py-2 whitespace-nowrap">{item.installmentNumber}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-right">
@@ -456,7 +450,9 @@ function PaymentQuoteSimulator({
             ))}
           </tbody>
         </table>
-        {details.warning && <p className="text-xs text-amber-600 mt-1">{details.warning}</p>}
+        {installmentDetails.warning && (
+          <p className="text-xs text-amber-600 mt-1">{installmentDetails.warning}</p>
+        )}
       </div>
     );
   };
@@ -722,23 +718,19 @@ function PaymentQuoteSimulator({
                   </div>
                   <div className="flex justify-between font-semibold text-blue-600">
                     <span>Valor de cuota:</span>
-                    <span>
-                      {formatAmount(installmentDetailsCalculation.installmentAmount || 0)}
-                    </span>
+                    <span>{formatAmount(installmentDetails.installmentAmount || 0)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>Total a pagar:</span>
-                    <span>{formatAmount(installmentDetailsCalculation.totalPayment || 0)}</span>
+                    <span>{formatAmount(installmentDetails.totalPayment || 0)}</span>
                   </div>
                   {activeTab === "cuenta_corriente" &&
-                    "totalInterest" in installmentDetailsCalculation &&
-                    installmentDetailsCalculation.totalInterest !== undefined &&
-                    installmentDetailsCalculation.totalInterest > 0 && (
+                    "totalInterest" in installmentDetails &&
+                    installmentDetails.totalInterest !== undefined &&
+                    installmentDetails.totalInterest > 0 && (
                       <div className="flex justify-between text-amber-600">
                         <span className="font-medium">Intereses totales:</span>
-                        <span>
-                          {formatAmount(installmentDetailsCalculation.totalInterest || 0)}
-                        </span>
+                        <span>{formatAmount(installmentDetails.totalInterest || 0)}</span>
                       </div>
                     )}
                 </div>
@@ -780,7 +772,7 @@ export function MotorcycleDetailModal({
   const { organizationLogo, organizationName, userName, userImage } = useSessionStore();
   const [shouldExportPdf, setShouldExportPdf] = useState(false);
 
-  const { clientId, rawReservationData } = useMemo(() => {
+  const getClientData = () => {
     if (!motorcycle) return { clientId: null, rawReservationData: null };
     if (motorcycle.state === MotorcycleState.PROCESANDO) {
       return { clientId: motorcycle.clientId ?? null, rawReservationData: null };
@@ -791,7 +783,9 @@ export function MotorcycleDetailModal({
       return { clientId: active?.clientId ?? null, rawReservationData: active ?? null };
     }
     return { clientId: null, rawReservationData: null };
-  }, [motorcycle]);
+  };
+
+  const { clientId, rawReservationData } = getClientData();
 
   useEffect(() => {
     if (isOpen && motorcycle?.model?.files) {
@@ -963,16 +957,16 @@ export function MotorcycleDetailModal({
         <ClientDetail
           clientId={clientId}
           currency={rawReservationData?.currency || "USD"}
-          reservationData={useMemo(
-            () =>
-              rawReservationData
-                ? {
-                  ...rawReservationData,
-                  currency: rawReservationData.currency || "USD",
+          reservationData={
+            rawReservationData
+              ? {
+                  amount: rawReservationData.amount,
+                  createdAt: rawReservationData.createdAt,
+                  paymentMethod: rawReservationData.paymentMethod,
+                  notes: rawReservationData.notes,
                 }
-                : undefined,
-            [],
-          )}
+              : undefined
+          }
         />
       </div>
     );
@@ -1155,12 +1149,21 @@ export function MotorcycleDetailModal({
             </Button>
             {motorcycle && quotePdfProps && (
               <Button
-                variant="outline"
+                variant="default"
                 onClick={() => setShouldExportPdf(true)}
-                className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground"
+                disabled={shouldExportPdf}
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Exportar a PDF
+                {shouldExportPdf ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generando PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar a PDF
+                  </>
+                )}
               </Button>
             )}
             {shouldExportPdf && motorcycle && quotePdfProps && (

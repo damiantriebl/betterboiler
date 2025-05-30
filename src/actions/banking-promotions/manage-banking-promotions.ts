@@ -1,17 +1,17 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import {
-  bankingPromotionSchema,
+  type bankingPromotionSchema,
   updateBankingPromotionSchema,
   updateInstallmentPlanStatusSchema,
 } from "@/zod/banking-promotion-schemas";
-import { revalidatePath } from "next/cache";
 import type { BankingPromotion } from "@prisma/client";
-import { getOrganizationIdFromSession } from "../util";
-import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { Prisma } from "@prisma/client";
-import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import type { z } from "zod";
+import { getOrganizationIdFromSession } from "../util";
 
 // Tipos inferidos de los esquemas de Zod
 type CreateBankingPromotionInput = z.infer<typeof bankingPromotionSchema> & {
@@ -28,9 +28,7 @@ type ToggleInstallmentPlanInput = {
 };
 
 // Create a new banking promotion
-export async function createBankingPromotion(
-  data: CreateBankingPromotionInput,
-) {
+export async function createBankingPromotion(data: CreateBankingPromotionInput) {
   try {
     // Validate the data - include organizationId in validation
     const validatedData = updateBankingPromotionSchema.omit({ id: true }).parse(data);

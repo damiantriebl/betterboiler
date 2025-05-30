@@ -1,26 +1,26 @@
 "use client";
 
 import { updateUserAction } from "@/actions/auth/update-user";
-import { Button } from "@/components/ui/button";
 import UploadCropperButton, { type UploadResult } from "@/components/custom/UploadCropperButton";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  FormControl,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+import { getLogoUrl } from "@/components/custom/OrganizationLogo";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionStore } from "@/stores/SessionStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { startTransition, useActionState, useEffect, useState, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import Image from "next/image";
-import { getLogoUrl } from "@/components/custom/OrganizationLogo";
 
 const profileSchema = z.object({
   userId: z.string().nonempty(),
@@ -48,6 +48,7 @@ export default function ProfileForm({
   };
 }) {
   const { toast } = useToast();
+  const setSession = useSessionStore((state) => state.setSession);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -197,6 +198,16 @@ export default function ProfileForm({
       toast({ title: "Éxito", description: "Perfil actualizado correctamente" });
       initialProfileOriginalKey.current = form.getValues("profileOriginalKey");
       initialProfileCropKey.current = form.getValues("profileCropKey");
+
+      // Actualizar el SessionStore con la nueva imagen
+      const newImageKey = form.getValues("profileCropKey") || form.getValues("profileOriginalKey");
+      const newName = form.getValues("name");
+
+      setSession({
+        userImage: newImageKey || null,
+        userName: newName || null,
+      });
+
       if (profileImagePreview?.startsWith("blob:")) {
         const s3Key = form.getValues("profileCropKey") || form.getValues("profileOriginalKey");
         if (s3Key) {
@@ -212,7 +223,7 @@ export default function ProfileForm({
     } else if (state.error) {
       toast({ title: "Error", description: state.error, variant: "destructive" });
     }
-  }, [state, toast, form, profileImagePreview]);
+  }, [state, toast, form, profileImagePreview, setSession]);
 
   useEffect(() => {
     let isMounted = true;
@@ -331,30 +342,15 @@ export default function ProfileForm({
                     {isLoadingPreview ? (
                       <p className="text-xs text-muted-foreground">Cargando...</p>
                     ) : profileImagePreview ? (
-                      <Image
+                      <img
                         src={
                           profileImagePreview.startsWith("blob:") ||
                           profileImagePreview.startsWith("http")
                             ? profileImagePreview
                             : `https://dummyimage.com/128x128/ccc/999&text=S3:${profileImagePreview.substring(profileImagePreview.length - 10)}`
                         }
-                        alt="Preview imagen de perfil"
-                        width={128}
-                        height={128}
-                        className="object-cover"
-                        onError={() => {
-                          if (
-                            profileImagePreview &&
-                            !profileImagePreview.startsWith("blob:") &&
-                            !profileImagePreview.startsWith("http")
-                          ) {
-                          } else if (profileImagePreview) {
-                            const fallbackKey =
-                              form.getValues("profileCropKey") ||
-                              form.getValues("profileOriginalKey");
-                            if (fallbackKey) setProfileImagePreview(fallbackKey);
-                          }
-                        }}
+                        alt="Vista previa de la imagen de perfil"
+                        className="w-full h-full object-cover"
                       />
                     ) : null}
                   </div>

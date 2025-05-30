@@ -16,7 +16,17 @@ import { cn } from "@/lib/utils";
 
 import { authClient } from "@/auth-client";
 import { UserButton } from "@/components/custom/UserButton";
-import { Building, HelpCircle, Home, Package, Settings, ShoppingCart, Truck } from "lucide-react";
+import { useSessionStore } from "@/stores/SessionStore";
+import {
+  Building,
+  HelpCircle,
+  Home,
+  Package,
+  Route,
+  Settings,
+  ShoppingCart,
+  Truck,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -399,6 +409,10 @@ const SidebarContent = React.forwardRef<
   const { useSession } = authClient;
   const { data: session, isPending, error } = useSession();
 
+  // Obtener datos del SessionStore de Zustand
+  const storeOrganizationName = useSessionStore((state) => state.organizationName);
+  const storeUserName = useSessionStore((state) => state.userName);
+
   // Usar type assertion más específica
   interface OrganizationInfo {
     id: string;
@@ -409,11 +423,13 @@ const SidebarContent = React.forwardRef<
     return typeof user === "object" && user !== null && "organization" in user;
   }
 
+  // Priorizar datos del store, fallback a sesión
   const organizationName =
-    session?.user && hasOrganization(session.user)
+    storeOrganizationName ||
+    (session?.user && hasOrganization(session.user)
       ? session.user.organization?.name
-      : "Organización";
-  const userName = session?.user?.name || "Usuario";
+      : "Organización");
+  const userName = storeUserName || session?.user?.name || "Usuario";
 
   const isActive = (path: string) => {
     return pathname.startsWith(path);
@@ -424,6 +440,7 @@ const SidebarContent = React.forwardRef<
     { href: "/stock/new", icon: Package, label: "Stock" },
     { href: "/sales", icon: ShoppingCart, label: "Ventas" },
     { href: "/suppliers", icon: Truck, label: "Proveedores" },
+    { href: "/logistic", icon: Route, label: "Logística" },
     { href: "/clients", icon: User, label: "Clientes" },
     { href: "/current-accounts", icon: FilePlus2, label: "Cuentas corrientes" },
     { href: "/petty-cash", icon: CircleDollarSign, label: "Caja Chica" },

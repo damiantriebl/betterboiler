@@ -7,9 +7,9 @@ import {
   updateCurrentAccountSchema,
 } from "@/zod/current-account-schemas";
 import { Prisma } from "@prisma/client";
+import type { CurrentAccount } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { CurrentAccount } from "@prisma/client";
 
 export async function updateCurrentAccount(
   input: UpdateCurrentAccountInput,

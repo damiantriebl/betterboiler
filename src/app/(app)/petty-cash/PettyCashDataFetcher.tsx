@@ -1,12 +1,16 @@
-import { getPettyCashData } from "@/actions/petty-cash/get-petty-cash-data";
 import {
   createPettyCashDeposit,
-  createPettyCashWithdrawal,
   createPettyCashSpendWithTicket,
+  createPettyCashWithdrawal,
 } from "@/actions";
-import PettyCashClientPage from "./PettyCashClientPage";
+import { getPettyCashData } from "@/actions/petty-cash/get-petty-cash-data";
+import {
+  getBranchesForOrganizationAction,
+  getOrganizationIdFromSession,
+  getUsersForOrganizationAction,
+} from "@/actions/util";
 import type { Branch } from "@prisma/client";
-import { getBranchesForOrganizationAction, getUsersForOrganizationAction, getOrganizationIdFromSession } from "@/actions/util";
+import PettyCashClientPage from "./PettyCashClientPage";
 
 // Importar el tipo correcto desde util
 import type { OrganizationUser } from "@/actions/util";
@@ -36,10 +40,10 @@ export default async function PettyCashDataFetcher() {
   const organizationUsers: OrganizationUser[] = await getUsersForOrganizationAction(organizationId);
 
   // Convertir OrganizationUser a User para compatibilidad con el componente
-  const users = organizationUsers.map(user => ({
+  const users = organizationUsers.map((user) => ({
     id: user.id,
     name: user.name || "Sin nombre", // Manejar el caso null
-    role: user.role || "user"
+    role: user.role || "user",
   }));
 
   return (

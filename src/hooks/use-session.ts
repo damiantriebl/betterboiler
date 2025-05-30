@@ -1,8 +1,8 @@
 "use client";
 
-import { authClient } from "@/auth-client";
 import type { Session } from "@/auth";
-import { useEffect, useState, useRef } from "react";
+import { authClient } from "@/auth-client";
+import { useEffect, useRef, useState } from "react";
 
 // Cache global de sesión para evitar múltiples llamadas
 let globalSessionCache: {
@@ -21,12 +21,12 @@ export function useSession() {
 
   useEffect(() => {
     isMounted.current = true;
-    
+
     const fetchSession = async () => {
       try {
         // Verificar cache primero
         const now = Date.now();
-        if (globalSessionCache && (now - globalSessionCache.timestamp) < CACHE_DURATION) {
+        if (globalSessionCache && now - globalSessionCache.timestamp < CACHE_DURATION) {
           if (isMounted.current) {
             setSession(globalSessionCache.session);
             setLoading(false);
@@ -45,7 +45,7 @@ export function useSession() {
         }
 
         // Crear nueva promesa
-        const sessionPromise = authClient.getSession().then(result => result.data);
+        const sessionPromise = authClient.getSession().then((result) => result.data);
         globalSessionCache = {
           session: null,
           timestamp: now,
@@ -53,7 +53,7 @@ export function useSession() {
         };
 
         const { data, error } = await authClient.getSession();
-        
+
         // Actualizar cache
         globalSessionCache = {
           session: data,
@@ -91,15 +91,15 @@ export function useSession() {
   const refresh = async () => {
     globalSessionCache = null; // Limpiar cache
     setLoading(true);
-    
+
     try {
       const { data, error } = await authClient.getSession();
-      
+
       globalSessionCache = {
         session: data,
         timestamp: Date.now(),
       };
-      
+
       if (error) {
         setError(new Error(error.message || "Error al refrescar sesión"));
         setSession(null);
@@ -116,4 +116,4 @@ export function useSession() {
   };
 
   return { session, loading, error, refresh };
-} 
+}

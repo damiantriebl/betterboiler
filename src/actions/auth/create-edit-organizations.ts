@@ -1,17 +1,17 @@
 "use server";
-import prisma from "@/lib/prisma";
-import type { serverMessage } from "@/types/ServerMessageType";
 import { auth } from "@/auth";
-import { headers } from "next/headers";
+import prisma from "@/lib/prisma";
+import { uploadToS3 } from "@/lib/s3-unified";
+import type { serverMessage } from "@/types/ServerMessageType";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
-import { uploadToS3 } from "@/lib/s3-unified";
 
 export async function createOrUpdateOrganization(formData: FormData): Promise<serverMessage> {
   // Verificar autenticación
   const session = await auth.api.getSession({ headers: await headers() });
-  
+
   if (!session?.user) {
     return {
       success: false,
@@ -86,7 +86,7 @@ export async function createOrUpdateOrganization(formData: FormData): Promise<se
       const thumbnailUploadResult = await uploadToS3(
         resizedThumbnailBuffer,
         thumbnailPath,
-        "image/webp"
+        "image/webp",
       );
       if (thumbnailUploadResult.success && thumbnailUploadResult.key) {
         thumbnailUrl = thumbnailUploadResult.key; // Guardar KEY del thumbnail
@@ -126,11 +126,11 @@ export async function createOrganization(
   // Remover el ID para forzar creación
   const newFormData = new FormData();
   for (const [key, value] of formData.entries()) {
-    if (key !== 'id') {
+    if (key !== "id") {
       newFormData.append(key, value);
     }
   }
-  
+
   return await createOrUpdateOrganization(newFormData);
 }
 
@@ -144,6 +144,6 @@ export async function updateOrganization(
   if (!id) {
     return { error: "ID de organización requerido para actualización", success: false };
   }
-  
+
   return await createOrUpdateOrganization(formData);
 }

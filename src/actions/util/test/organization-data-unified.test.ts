@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import prisma from "@/lib/prisma";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  getOrganizationDetailsById,
-  getCurrentOrganizationDetails,
-  getBranchesForOrganizationAction,
   getBranchesData,
-  getUsersForOrganizationAction,
-  getOrganizationUsers,
+  getBranchesForOrganizationAction,
+  getCurrentOrganizationDetails,
+  getOrganizationDetailsById,
   getOrganizationSummary,
+  getOrganizationUsers,
+  getUsersForOrganizationAction,
 } from "../organization-data-unified";
 
 // Mock dependencies
@@ -76,9 +76,7 @@ describe("organization-data-unified", () => {
     });
 
     it("should handle database errors", async () => {
-      mockPrisma.organization.findUnique.mockRejectedValue(
-        new Error("Database error")
-      );
+      mockPrisma.organization.findUnique.mockRejectedValue(new Error("Database error"));
 
       const result = await getOrganizationDetailsById("org-1");
 
@@ -145,9 +143,7 @@ describe("organization-data-unified", () => {
         organizationId: "org-1",
       });
 
-      mockPrisma.organization.findUnique.mockRejectedValue(
-        new Error("Database error")
-      );
+      mockPrisma.organization.findUnique.mockRejectedValue(new Error("Database error"));
 
       const result = await getCurrentOrganizationDetails();
 
@@ -177,9 +173,7 @@ describe("organization-data-unified", () => {
     });
 
     it("should use session organizationId when not provided", async () => {
-      const mockBranches = [
-        { id: 1, name: "Branch 1", organizationId: "org-1", order: 1 },
-      ];
+      const mockBranches = [{ id: 1, name: "Branch 1", organizationId: "org-1", order: 1 }];
 
       mockValidateOrganizationAccess.mockResolvedValue({
         success: true,
@@ -283,9 +277,7 @@ describe("organization-data-unified", () => {
     });
 
     it("should use session organizationId when not provided", async () => {
-      const mockUsers = [
-        { id: "user-1", name: "User 1", email: "user1@test.com", role: "admin" },
-      ];
+      const mockUsers = [{ id: "user-1", name: "User 1", email: "user1@test.com", role: "admin" }];
 
       mockValidateOrganizationAccess.mockResolvedValue({
         success: true,
@@ -342,9 +334,7 @@ describe("organization-data-unified", () => {
     });
 
     it("should use provided organizationId", async () => {
-      const mockUsers = [
-        { id: "user-1", name: "User 1", email: "user1@test.com", role: "admin" },
-      ];
+      const mockUsers = [{ id: "user-1", name: "User 1", email: "user1@test.com", role: "admin" }];
 
       mockPrisma.user.findMany.mockResolvedValue(mockUsers);
 
@@ -464,9 +454,7 @@ describe("organization-data-unified", () => {
         organizationId: "org-1",
       });
 
-      mockPrisma.organization.findUnique.mockRejectedValue(
-        new Error("Database error")
-      );
+      mockPrisma.organization.findUnique.mockRejectedValue(new Error("Database error"));
 
       const result = await getOrganizationSummary();
 
@@ -500,4 +488,4 @@ describe("organization-data-unified", () => {
       });
     });
   });
-}); 
+});

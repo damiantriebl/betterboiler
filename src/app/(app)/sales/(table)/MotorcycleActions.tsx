@@ -6,6 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 import { MotorcycleState, type Reservation } from "@prisma/client";
 import {
   BookmarkPlus,
@@ -16,7 +17,6 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 
 // Definición de colores y estilos para los botones
 const actionConfig = {

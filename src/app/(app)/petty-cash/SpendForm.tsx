@@ -1,17 +1,16 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
-import { Input } from "@/components/ui/input";
+import { createPettyCashSpendWithTicket } from "@/actions";
+import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -21,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -29,19 +29,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createPettyCashSpendWithTicket } from "@/actions";
 import { useToast } from "@/hooks/use-toast";
-import React, { useEffect, useActionState, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { createPettyCashSpendSchema as zodGlobalSchema } from "@/zod/PettyCashZod";
-import { z } from "zod";
 import type { CreatePettyCashSpendState } from "@/types/action-states";
-import type { PettyCashSpend } from "@prisma/client";
-import { updatePettyCashMovement } from "@/actions/petty-cash/update-petty-cash-movement";
+import { createPettyCashSpendSchema as zodGlobalSchema } from "@/zod/PettyCashZod";
 import {
-  updatePettyCashMovementSchema,
   type UpdatePettyCashMovementInput,
+  updatePettyCashMovementSchema,
 } from "@/zod/PettyCashZod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { PettyCashSpend } from "@prisma/client";
+import { Loader2 } from "lucide-react";
+import React, { useEffect, useActionState, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 
 const spendFormClientSchema = zodGlobalSchema.omit({ withdrawalId: true, ticketUrl: true }).extend({
   motive: z.string().min(1, "El motivo es requerido."),

@@ -36,49 +36,64 @@ export default function PaginationControl({
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
 
+  // Si solo hay una página, no mostrar controles de paginación
+  if (totalPages <= 1) {
+    return null;
+  }
+
   return (
     <div className="p-4 border-t">
-      <Pagination className="mt-2">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              onClick={() => onPageChange(currentPage - 1)}
-              className={cn(
-                currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer",
-              )}
-            />
-          </PaginationItem>
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Mostrando {startIndex + 1} a {Math.min(startIndex + pageSize, totalItems)} de {totalItems}{" "}
+          resultados
+        </div>
 
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            const pageNumber = i + 1;
-            return (
-              <PaginationItem key={pageNumber}>
-                <PaginationLink
-                  isActive={currentPage === pageNumber}
-                  onClick={() => onPageChange(pageNumber)}
-                >
-                  {pageNumber}
-                </PaginationLink>
-              </PaginationItem>
-            );
-          })}
-
-          {totalPages > 5 && (
+        <Pagination className="ml-auto">
+          <PaginationContent>
             <PaginationItem>
-              <PaginationEllipsis />
+              <PaginationPrevious
+                onClick={() => onPageChange(currentPage - 1)}
+                className={cn(
+                  currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer",
+                )}
+                aria-label="Previous"
+              />
             </PaginationItem>
-          )}
 
-          <PaginationItem>
-            <PaginationNext
-              onClick={() => onPageChange(currentPage + 1)}
-              className={cn(
-                currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer",
-              )}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const pageNumber = i + 1;
+              return (
+                <PaginationItem key={pageNumber}>
+                  <PaginationLink
+                    isActive={currentPage === pageNumber}
+                    onClick={() => onPageChange(pageNumber)}
+                    aria-label={`Page ${pageNumber}`}
+                  >
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
+
+            {totalPages > 5 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => onPageChange(currentPage + 1)}
+                className={cn(
+                  currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer",
+                )}
+                aria-label="Next"
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     </div>
   );
 }

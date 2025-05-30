@@ -113,8 +113,9 @@ export default function CreateBrandModal({
       startFetchingBrands(async () => {
         try {
           const brands = await getRootBrands();
-          setAvailableBrands(brands);
-          if (brands.length === 0) {
+          // Asegurar que brands sea siempre un array válido
+          setAvailableBrands(Array.isArray(brands) ? brands : []);
+          if (!brands || brands.length === 0) {
             toast({
               title: "No hay marcas globales",
               description: "No se encontraron marcas globales. Puede crear una nueva.",
@@ -142,13 +143,13 @@ export default function CreateBrandModal({
 
   // Handle associate success/error
   useEffect(() => {
-    if (associateState.success && !successHandledRef.current.associate) {
+    if (associateState?.success && !successHandledRef.current.associate) {
       successHandledRef.current.associate = true;
       toast({ title: "Marca Asociada", description: associateState.message });
       onSuccess?.();
       // Use timeout to avoid state updates during rendering
       setTimeout(() => onOpenChange(false), 0);
-    } else if (associateState.error) {
+    } else if (associateState?.error) {
       toast({
         title: "Error al asociar",
         description: associateState.error,
@@ -156,9 +157,9 @@ export default function CreateBrandModal({
       });
     }
   }, [
-    associateState.success,
-    associateState.error,
-    associateState.message,
+    associateState?.success,
+    associateState?.error,
+    associateState?.message,
     toast,
     onSuccess,
     onOpenChange,
@@ -166,7 +167,7 @@ export default function CreateBrandModal({
 
   // Handle create success/error
   useEffect(() => {
-    if (createState.success && !successHandledRef.current.create) {
+    if (createState?.success && !successHandledRef.current.create) {
       successHandledRef.current.create = true;
       toast({
         title: "Marca creada",
@@ -175,7 +176,7 @@ export default function CreateBrandModal({
       onSuccess?.();
       onOpenChange(false);
     }
-    if (createState.error && !successHandledRef.current.create) {
+    if (createState?.error && !successHandledRef.current.create) {
       successHandledRef.current.create = true;
       toast({
         variant: "destructive",
@@ -183,12 +184,19 @@ export default function CreateBrandModal({
         description: createState.message || "Hubo un error al crear la marca",
       });
     }
-  }, [createState.success, createState.error, createState.message, toast, onSuccess, onOpenChange]);
+  }, [
+    createState?.success,
+    createState?.error,
+    createState?.message,
+    toast,
+    onSuccess,
+    onOpenChange,
+  ]);
 
   // Actualizar el color seleccionado cuando cambia la marca seleccionada
   useEffect(() => {
-    if (selectedBrandId) {
-      const brand = availableBrands.find((b) => b.id === Number.parseInt(selectedBrandId));
+    if (selectedBrandId && availableBrands) {
+      const brand = (availableBrands || []).find((b) => b.id === Number.parseInt(selectedBrandId));
       setSelectedBrandColor(brand?.color || null);
     } else {
       setSelectedBrandColor(null);
@@ -199,24 +207,47 @@ export default function CreateBrandModal({
     event.preventDefault();
     if (!selectedBrandId) return;
 
-    const result = await associateOrganizationBrand({
-      organizationId,
-      brandId: selectedBrandId,
-      pathToRevalidate: "/configuration",
-    });
+    try {
+      const result = await associateOrganizationBrand({
+        organizationId,
+        brandId: selectedBrandId,
+        pathToRevalidate: "/configuration",
+      });
 
-    if (result.success) {
-      toast({ title: "Marca asociada correctamente." });
-      onSuccess?.();
-      onOpenChange(false);
-    } else {
-      toast({ title: "Error", description: result.error, variant: "destructive" });
+      // Verificar que result existe y tiene la estructura esperada
+      if (!result || typeof result !== "object") {
+        toast({
+          title: "Error",
+          description: "Ha ocurrido un error inesperado al asociar la marca.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (result.success) {
+        toast({ title: "Marca asociada correctamente." });
+        onSuccess?.();
+        onOpenChange(false);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Ha ocurrido un error al asociar la marca.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error in handleAssociateBrand:", error);
+      toast({
+        title: "Error",
+        description: "Ha ocurrido un error inesperado al asociar la marca.",
+        variant: "destructive",
+      });
     }
   };
 
   // Filtrar marcas no asociadas para mostrar en el select
-  const nonAssociatedBrands = availableBrands.filter(
-    (brand) => !existingBrandIds.includes(brand.id),
+  const nonAssociatedBrands = (availableBrands || []).filter(
+    (brand) => !(existingBrandIds || []).includes(brand.id),
   );
 
   // Verificar si hay marcas disponibles para asociar
@@ -269,8 +300,8 @@ export default function CreateBrandModal({
                         <SelectValue placeholder="Selecciona una marca global..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableBrands.map((brand) => {
-                          const isAlreadyAssociated = existingBrandIds.includes(brand.id);
+                        {(availableBrands || []).map((brand) => {
+                          const isAlreadyAssociated = (existingBrandIds || []).includes(brand.id);
 
                           if (isAlreadyAssociated) {
                             return (
@@ -337,7 +368,7 @@ export default function CreateBrandModal({
                   <div className="p-4 text-center border rounded-md bg-muted/30">
                     <Info className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
-                      {availableBrands.length === 0
+                      {(availableBrands || []).length === 0
                         ? "No hay marcas globales disponibles."
                         : "Todas las marcas globales ya están asociadas a tu organización."}
                     </p>
@@ -347,7 +378,7 @@ export default function CreateBrandModal({
             )}
 
             <DialogFooter
-              className={`mt-4 flex flex-col sm:flex-row sm:justify-between${availableBrands.length > 0 ? " sm:items-center" : ""}`}
+              className={`mt-4 flex flex-col sm:flex-row sm:justify-between${(availableBrands || []).length > 0 ? " sm:items-center" : ""}`}
             >
               <Button
                 type="button"
@@ -358,7 +389,7 @@ export default function CreateBrandModal({
                 <Plus className="mr-2 h-4 w-4" /> Crear Marca Global
               </Button>
               <div
-                className={`flex gap-2 mt-2 sm:mt-0${availableBrands.length === 0 ? " w-full justify-end" : ""}`}
+                className={`flex gap-2 mt-2 sm:mt-0${(availableBrands || []).length === 0 ? " w-full justify-end" : ""}`}
               >
                 <DialogClose asChild>
                   <Button type="button" variant="ghost" disabled={isAssociating}>

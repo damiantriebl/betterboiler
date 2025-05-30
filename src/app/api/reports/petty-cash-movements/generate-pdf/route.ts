@@ -1,9 +1,12 @@
-import { z } from "zod";
-import { NextResponse } from "next/server";
-import { generatePettyCashActivityPDF, createPettyCashActivityPDFResponse } from "@/lib/pdf-generators/petty-cash-activity-pdf";
-import type { ReportDataForPdf } from "@/types/PettyCashActivity";
-import prisma from "@/lib/prisma";
 import { getOrganizationIdFromSession } from "@/actions/util";
+import {
+  createPettyCashActivityPDFResponse,
+  generatePettyCashActivityPDF,
+} from "@/lib/pdf-generators/petty-cash-activity-pdf";
+import prisma from "@/lib/prisma";
+import type { ReportDataForPdf } from "@/types/PettyCashActivity";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 
 // branchId puede ser un string (ID numérico o "general_account") o no estar definido.
 const querySchema = z.object({
@@ -96,17 +99,17 @@ export async function GET(request: Request) {
     const pdfBytes = await generatePettyCashActivityPDF(
       pettyCashDeposits || [],
       startDate,
-      new Date(toDate)
+      new Date(toDate),
     );
 
     const safeFromDate = startDate.toISOString().split("T")[0];
     const safeToDate = new Date(toDate).toISOString().split("T")[0];
-    const filename = pettyCashDeposits.length === 0 
-      ? "reporte_actividad_caja_chica_vacio.pdf"
-      : `reporte_actividad_caja_chica_${safeFromDate}_a_${safeToDate}.pdf`;
+    const filename =
+      pettyCashDeposits.length === 0
+        ? "reporte_actividad_caja_chica_vacio.pdf"
+        : `reporte_actividad_caja_chica_${safeFromDate}_a_${safeToDate}.pdf`;
 
     return createPettyCashActivityPDFResponse(pdfBytes, filename);
-
   } catch (error) {
     console.error("Error generando el PDF de actividad de caja chica:", error);
     return NextResponse.json(

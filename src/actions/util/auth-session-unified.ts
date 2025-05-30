@@ -108,7 +108,7 @@ export async function getOrganizationIdFromSession(): Promise<SessionResult> {
 // Validation helper
 export async function validateOrganizationAccess(): Promise<AuthValidationResult> {
   const sessionResult = await getOrganizationIdFromSession();
-  
+
   if (sessionResult.error || !sessionResult.organizationId) {
     return {
       success: false,
@@ -148,4 +148,4 @@ export async function requireUserRole(): Promise<string> {
     throw new Error("Rol de usuario no encontrado");
   }
   return result.userRole;
-} 
+}

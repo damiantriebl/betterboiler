@@ -39,7 +39,7 @@ export async function sendEmail({
 
     return {
       success: true,
-      message: 'Email sent successfully',
+      message: "Email sent successfully",
       messageId: response.headers?.["x-message-id"],
     };
   } catch (error) {

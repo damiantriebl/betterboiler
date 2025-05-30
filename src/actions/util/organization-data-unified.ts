@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type { Organization, Branch, User } from "@prisma/client";
+import type { Branch, Organization, User } from "@prisma/client";
 import { validateOrganizationAccess } from "./auth-session-unified";
 
 // Types
@@ -55,9 +55,11 @@ export async function getOrganizationDetailsById(
   }
 }
 
-export async function getCurrentOrganizationDetails(): Promise<OrganizationDataResult<Organization>> {
+export async function getCurrentOrganizationDetails(): Promise<
+  OrganizationDataResult<Organization>
+> {
   const authResult = await validateOrganizationAccess();
-  
+
   if (!authResult.success || !authResult.organizationId) {
     return {
       success: false,
@@ -67,7 +69,7 @@ export async function getCurrentOrganizationDetails(): Promise<OrganizationDataR
 
   try {
     const organization = await getOrganizationDetailsById(authResult.organizationId);
-    
+
     if (!organization) {
       return {
         success: false,
@@ -88,9 +90,7 @@ export async function getCurrentOrganizationDetails(): Promise<OrganizationDataR
 }
 
 // Branch functions
-export async function getBranchesForOrganizationAction(
-  organizationId?: string
-): Promise<Branch[]> {
+export async function getBranchesForOrganizationAction(organizationId?: string): Promise<Branch[]> {
   let targetOrganizationId = organizationId;
 
   // If no organizationId provided, get from session
@@ -117,7 +117,7 @@ export async function getBranchesForOrganizationAction(
 
 export async function getBranchesData(): Promise<BranchData[]> {
   const authResult = await validateOrganizationAccess();
-  
+
   if (!authResult.success || !authResult.organizationId) {
     console.error("[getBranchesData] No organizationId found.");
     return [];
@@ -144,7 +144,7 @@ export async function getBranchesData(): Promise<BranchData[]> {
 
 // User functions
 export async function getUsersForOrganizationAction(
-  organizationId?: string
+  organizationId?: string,
 ): Promise<OrganizationUser[]> {
   let targetOrganizationId = organizationId;
 
@@ -177,7 +177,7 @@ export async function getUsersForOrganizationAction(
 }
 
 export async function getOrganizationUsers(
-  params: GetOrganizationUsersParams = {}
+  params: GetOrganizationUsersParams = {},
 ): Promise<OrganizationDataResult<OrganizationUser[]>> {
   let targetOrganizationId = params.organizationId;
 
@@ -215,13 +215,15 @@ export async function getOrganizationUsers(
 }
 
 // Utility functions
-export async function getOrganizationSummary(): Promise<OrganizationDataResult<{
-  organization: Organization;
-  branchCount: number;
-  userCount: number;
-}>> {
+export async function getOrganizationSummary(): Promise<
+  OrganizationDataResult<{
+    organization: Organization;
+    branchCount: number;
+    userCount: number;
+  }>
+> {
   const authResult = await validateOrganizationAccess();
-  
+
   if (!authResult.success || !authResult.organizationId) {
     return {
       success: false,
@@ -263,4 +265,4 @@ export async function getOrganizationSummary(): Promise<OrganizationDataResult<{
       error: handleDatabaseError(error, "getOrganizationSummary"),
     };
   }
-} 
+}

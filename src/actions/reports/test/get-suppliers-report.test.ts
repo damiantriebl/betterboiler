@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getSuppliersReport } from '../get-suppliers-report';
-import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../util';
+import prisma from "@/lib/prisma";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOrganizationIdFromSession } from "../../util";
+import { getSuppliersReport } from "../get-suppliers-report";
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     supplier: {
       findMany: vi.fn(),
@@ -13,37 +13,37 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../util', () => ({
+vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
 // Silenciar console durante los tests
-vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
-describe('getSuppliersReport', () => {
-  const mockOrganizationId = 'clfx1234567890abcdefghijk';
-  
+describe("getSuppliersReport", () => {
+  const mockOrganizationId = "clfx1234567890abcdefghijk";
+
   const mockSupplier = {
     id: 1,
-    legalName: 'Proveedor Legal S.A.',
-    commercialName: 'Proveedor Comercial',
-    status: 'activo',
+    legalName: "Proveedor Legal S.A.",
+    commercialName: "Proveedor Comercial",
+    status: "activo",
     motorcycles: [
       {
-        id: 'clfxmoto1234567890abcd',
+        id: "clfxmoto1234567890abcd",
         costPrice: 40000,
         retailPrice: 50000,
-        currency: 'USD',
-        state: 'STOCK',
-        createdAt: new Date('2024-01-15'),
+        currency: "USD",
+        state: "STOCK",
+        createdAt: new Date("2024-01-15"),
       },
       {
-        id: 'clfxmoto2234567890abcd',
+        id: "clfxmoto2234567890abcd",
         costPrice: 35000,
         retailPrice: 45000,
-        currency: 'USD',
-        state: 'VENDIDO',
-        createdAt: new Date('2024-01-20'),
+        currency: "USD",
+        state: "VENDIDO",
+        createdAt: new Date("2024-01-20"),
       },
     ],
   };
@@ -61,8 +61,8 @@ describe('getSuppliersReport', () => {
     vi.resetAllMocks();
   });
 
-  describe('Casos exitosos', () => {
-    it('debería generar reporte de proveedores exitosamente', async () => {
+  describe("Casos exitosos", () => {
+    it("debería generar reporte de proveedores exitosamente", async () => {
       const result = await getSuppliersReport();
 
       expect(result).toBeDefined();
@@ -73,10 +73,10 @@ describe('getSuppliersReport', () => {
       expect(result.summary.totalPurchases).toEqual({ USD: 75000 });
     });
 
-    it('debería generar reporte con rango de fechas', async () => {
+    it("debería generar reporte con rango de fechas", async () => {
       const dateRange = {
-        from: new Date('2024-01-01'),
-        to: new Date('2024-01-31'),
+        from: new Date("2024-01-01"),
+        to: new Date("2024-01-31"),
       };
 
       await getSuppliersReport(dateRange);
@@ -110,8 +110,8 @@ describe('getSuppliersReport', () => {
       });
     });
 
-    it('debería generar reporte con ID de proveedor específico', async () => {
-      const supplierId = '123';
+    it("debería generar reporte con ID de proveedor específico", async () => {
+      const supplierId = "123";
 
       await getSuppliersReport(undefined, supplierId);
 
@@ -124,22 +124,18 @@ describe('getSuppliersReport', () => {
       });
     });
 
-    it('debería agrupar compras por proveedor correctamente', async () => {
+    it("debería agrupar compras por proveedor correctamente", async () => {
       const mockSuppliers = [
         {
           ...mockSupplier,
-          commercialName: 'Proveedor A',
-          motorcycles: [
-            { ...mockSupplier.motorcycles[0], costPrice: 30000 },
-          ],
+          commercialName: "Proveedor A",
+          motorcycles: [{ ...mockSupplier.motorcycles[0], costPrice: 30000 }],
         },
         {
           ...mockSupplier,
           id: 2,
-          commercialName: 'Proveedor B',
-          motorcycles: [
-            { ...mockSupplier.motorcycles[0], costPrice: 25000 },
-          ],
+          commercialName: "Proveedor B",
+          motorcycles: [{ ...mockSupplier.motorcycles[0], costPrice: 25000 }],
         },
       ];
 
@@ -147,33 +143,33 @@ describe('getSuppliersReport', () => {
 
       const result = await getSuppliersReport();
 
-      expect(result.purchasesBySupplier['Proveedor A']).toEqual({
+      expect(result.purchasesBySupplier["Proveedor A"]).toEqual({
         motorcyclesCount: 1,
         purchases: { USD: 30000 },
       });
-      expect(result.purchasesBySupplier['Proveedor B']).toEqual({
+      expect(result.purchasesBySupplier["Proveedor B"]).toEqual({
         motorcyclesCount: 1,
         purchases: { USD: 25000 },
       });
     });
 
-    it('debería agrupar compras por mes correctamente', async () => {
+    it("debería agrupar compras por mes correctamente", async () => {
       const mockSupplierWithVariedDates = {
         ...mockSupplier,
         motorcycles: [
           {
             ...mockSupplier.motorcycles[0],
-            createdAt: new Date('2024-01-15'),
+            createdAt: new Date("2024-01-15"),
             costPrice: 30000,
             retailPrice: 40000,
-            state: 'VENDIDO',
+            state: "VENDIDO",
           },
           {
             ...mockSupplier.motorcycles[1],
-            createdAt: new Date('2024-02-15'),
+            createdAt: new Date("2024-02-15"),
             costPrice: 25000,
             retailPrice: 35000,
-            state: 'STOCK',
+            state: "STOCK",
           },
         ],
       };
@@ -182,13 +178,13 @@ describe('getSuppliersReport', () => {
 
       const result = await getSuppliersReport();
 
-      expect(result.purchasesByMonth['2024-01']).toEqual({
+      expect(result.purchasesByMonth["2024-01"]).toEqual({
         count: 1,
         totalInvestment: 30000,
         totalSales: 40000,
         soldCount: 1,
       });
-      expect(result.purchasesByMonth['2024-02']).toEqual({
+      expect(result.purchasesByMonth["2024-02"]).toEqual({
         count: 1,
         totalInvestment: 25000,
         totalSales: 0,
@@ -196,18 +192,18 @@ describe('getSuppliersReport', () => {
       });
     });
 
-    it('debería manejar múltiples monedas correctamente', async () => {
+    it("debería manejar múltiples monedas correctamente", async () => {
       const mockSupplierMultiCurrency = {
         ...mockSupplier,
         motorcycles: [
           {
             ...mockSupplier.motorcycles[0],
-            currency: 'USD',
+            currency: "USD",
             costPrice: 30000,
           },
           {
             ...mockSupplier.motorcycles[1],
-            currency: 'COP',
+            currency: "COP",
             costPrice: 2500000,
           },
         ],
@@ -221,17 +217,17 @@ describe('getSuppliersReport', () => {
         USD: 30000,
         COP: 2500000,
       });
-      expect(result.purchasesBySupplier['Proveedor Comercial'].purchases).toEqual({
+      expect(result.purchasesBySupplier["Proveedor Comercial"].purchases).toEqual({
         USD: 30000,
         COP: 2500000,
       });
     });
 
-    it('debería contar proveedores activos e inactivos correctamente', async () => {
+    it("debería contar proveedores activos e inactivos correctamente", async () => {
       const mockSuppliers = [
-        { ...mockSupplier, status: 'activo' },
-        { ...mockSupplier, id: 2, status: 'inactivo' },
-        { ...mockSupplier, id: 3, status: 'activo' },
+        { ...mockSupplier, status: "activo" },
+        { ...mockSupplier, id: 2, status: "inactivo" },
+        { ...mockSupplier, id: 3, status: "activo" },
       ];
 
       mockPrisma.supplier.findMany.mockResolvedValue(mockSuppliers);
@@ -243,35 +239,35 @@ describe('getSuppliersReport', () => {
       expect(result.summary.inactiveSuppliers).toBe(1);
     });
 
-    it('debería usar nombre legal cuando no hay nombre comercial', async () => {
+    it("debería usar nombre legal cuando no hay nombre comercial", async () => {
       const mockSupplierWithoutCommercialName = {
         ...mockSupplier,
         commercialName: null,
-        legalName: 'Solo Nombre Legal S.A.',
+        legalName: "Solo Nombre Legal S.A.",
       };
 
       mockPrisma.supplier.findMany.mockResolvedValue([mockSupplierWithoutCommercialName]);
 
       const result = await getSuppliersReport();
 
-      expect(result.purchasesBySupplier['Solo Nombre Legal S.A.']).toBeDefined();
-      expect(result.supplierDetails[0].name).toBe('Solo Nombre Legal S.A.');
+      expect(result.purchasesBySupplier["Solo Nombre Legal S.A."]).toBeDefined();
+      expect(result.supplierDetails[0].name).toBe("Solo Nombre Legal S.A.");
     });
 
-    it('debería generar detalles de proveedores correctamente', async () => {
+    it("debería generar detalles de proveedores correctamente", async () => {
       const result = await getSuppliersReport();
 
       expect(result.supplierDetails).toHaveLength(1);
       expect(result.supplierDetails[0]).toEqual({
         id: 1,
-        name: 'Proveedor Comercial',
-        status: 'activo',
+        name: "Proveedor Comercial",
+        status: "activo",
         motorcyclesCount: 2,
         totalPurchases: { USD: 75000 },
       });
     });
 
-    it('debería manejar motos sin precio de costo', async () => {
+    it("debería manejar motos sin precio de costo", async () => {
       const mockSupplierWithNullCostPrice = {
         ...mockSupplier,
         motorcycles: [
@@ -291,15 +287,15 @@ describe('getSuppliersReport', () => {
       const result = await getSuppliersReport();
 
       expect(result.summary.totalPurchases).toEqual({ USD: 30000 });
-      expect(result.purchasesBySupplier['Proveedor Comercial'].purchases).toEqual({ USD: 30000 });
+      expect(result.purchasesBySupplier["Proveedor Comercial"].purchases).toEqual({ USD: 30000 });
     });
   });
 
-  describe('Casos de error', () => {
-    it('debería devolver reporte vacío cuando no se puede obtener la organización', async () => {
-      mockGetOrganization.mockResolvedValue({ 
-        organizationId: null, 
-        error: 'Sesión no válida' 
+  describe("Casos de error", () => {
+    it("debería devolver reporte vacío cuando no se puede obtener la organización", async () => {
+      mockGetOrganization.mockResolvedValue({
+        organizationId: null,
+        error: "Sesión no válida",
       });
 
       const result = await getSuppliersReport();
@@ -317,15 +313,26 @@ describe('getSuppliersReport', () => {
       });
     });
 
-    it('debería manejar error de base de datos', async () => {
-      mockPrisma.supplier.findMany.mockRejectedValue(new Error('Database connection failed'));
+    it("debería manejar error de base de datos", async () => {
+      mockPrisma.supplier.findMany.mockRejectedValue(new Error("Database connection failed"));
 
-      await expect(getSuppliersReport()).rejects.toThrow('Database connection failed');
+      await expect(getSuppliersReport()).rejects.toThrow("Database connection failed");
     });
 
-        it('debería manejar proveedores sin motos', async () => {      const mockSupplierWithoutMotorcycles = {        ...mockSupplier,        motorcycles: [],      };      mockPrisma.supplier.findMany.mockResolvedValue([mockSupplierWithoutMotorcycles]);      const result = await getSuppliersReport();      expect(result.summary.totalSuppliers).toBe(1);      expect(result.summary.totalPurchases).toEqual({});      expect(result.purchasesBySupplier['Proveedor Comercial']).toEqual({        motorcyclesCount: 0,        purchases: {},      });      expect(result.supplierDetails[0].motorcyclesCount).toBe(0);    });
+    it("debería manejar proveedores sin motos", async () => {
+      const mockSupplierWithoutMotorcycles = { ...mockSupplier, motorcycles: [] };
+      mockPrisma.supplier.findMany.mockResolvedValue([mockSupplierWithoutMotorcycles]);
+      const result = await getSuppliersReport();
+      expect(result.summary.totalSuppliers).toBe(1);
+      expect(result.summary.totalPurchases).toEqual({});
+      expect(result.purchasesBySupplier["Proveedor Comercial"]).toEqual({
+        motorcyclesCount: 0,
+        purchases: {},
+      });
+      expect(result.supplierDetails[0].motorcyclesCount).toBe(0);
+    });
 
-    it('debería manejar motos sin fecha de creación', async () => {
+    it("debería manejar motos sin fecha de creación", async () => {
       const mockSupplierWithNullCreatedAt = {
         ...mockSupplier,
         motorcycles: [
@@ -344,8 +351,8 @@ describe('getSuppliersReport', () => {
     });
   });
 
-  describe('Casos edge', () => {
-    it('debería manejar lista vacía de proveedores', async () => {
+  describe("Casos edge", () => {
+    it("debería manejar lista vacía de proveedores", async () => {
       mockPrisma.supplier.findMany.mockResolvedValue([]);
 
       const result = await getSuppliersReport();
@@ -359,7 +366,7 @@ describe('getSuppliersReport', () => {
       expect(result.supplierDetails).toEqual([]);
     });
 
-    it('debería verificar que se llame a Prisma con parámetros correctos sin filtros', async () => {
+    it("debería verificar que se llame a Prisma con parámetros correctos sin filtros", async () => {
       await getSuppliersReport();
 
       expect(mockPrisma.supplier.findMany).toHaveBeenCalledWith({
@@ -386,12 +393,12 @@ describe('getSuppliersReport', () => {
       });
     });
 
-    it('debería manejar filtro por fechas y proveedor al mismo tiempo', async () => {
+    it("debería manejar filtro por fechas y proveedor al mismo tiempo", async () => {
       const dateRange = {
-        from: new Date('2024-01-01'),
-        to: new Date('2024-01-31'),
+        from: new Date("2024-01-01"),
+        to: new Date("2024-01-31"),
       };
-      const supplierId = '123';
+      const supplierId = "123";
 
       await getSuppliersReport(dateRange, supplierId);
 
@@ -425,7 +432,7 @@ describe('getSuppliersReport', () => {
       });
     });
 
-    it('debería manejar varios proveedores con el mismo nombre comercial', async () => {
+    it("debería manejar varios proveedores con el mismo nombre comercial", async () => {
       const mockSuppliersWithSameName = [
         { ...mockSupplier, id: 1 },
         { ...mockSupplier, id: 2 },
@@ -435,27 +442,27 @@ describe('getSuppliersReport', () => {
 
       const result = await getSuppliersReport();
 
-      expect(result.purchasesBySupplier['Proveedor Comercial'].motorcyclesCount).toBe(4); // 2 + 2
-      expect(result.purchasesBySupplier['Proveedor Comercial'].purchases.USD).toBe(150000); // 75000 + 75000
+      expect(result.purchasesBySupplier["Proveedor Comercial"].motorcyclesCount).toBe(4); // 2 + 2
+      expect(result.purchasesBySupplier["Proveedor Comercial"].purchases.USD).toBe(150000); // 75000 + 75000
     });
 
-    it('debería calcular correctamente ventas y stock por mes', async () => {
+    it("debería calcular correctamente ventas y stock por mes", async () => {
       const mockSupplierMixedStates = {
         ...mockSupplier,
         motorcycles: [
           {
             ...mockSupplier.motorcycles[0],
-            state: 'VENDIDO',
+            state: "VENDIDO",
             retailPrice: 50000,
             costPrice: 40000,
-            createdAt: new Date('2024-01-15'),
+            createdAt: new Date("2024-01-15"),
           },
           {
             ...mockSupplier.motorcycles[1],
-            state: 'STOCK',
+            state: "STOCK",
             retailPrice: 45000,
             costPrice: 35000,
-            createdAt: new Date('2024-01-15'),
+            createdAt: new Date("2024-01-15"),
           },
         ],
       };
@@ -464,7 +471,7 @@ describe('getSuppliersReport', () => {
 
       const result = await getSuppliersReport();
 
-      expect(result.purchasesByMonth['2024-01']).toEqual({
+      expect(result.purchasesByMonth["2024-01"]).toEqual({
         count: 2,
         totalInvestment: 75000,
         totalSales: 50000, // Solo las vendidas
@@ -472,4 +479,4 @@ describe('getSuppliersReport', () => {
       });
     });
   });
-}); 
+});

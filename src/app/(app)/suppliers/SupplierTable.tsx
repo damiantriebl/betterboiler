@@ -139,47 +139,37 @@ export default function SupplierTable({ initialData, onEdit, onDelete }: Supplie
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between p-4 bg-muted/50 border-t border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Supplieres por página:</span>
-          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-[80px] h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a
-          {Math.min(startIndex + pageSize, sortedData.length)} de {sortedData.length} Supplieres
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("legalName")} className="px-1">
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("legalName")}
+                className="px-1 hover:bg-muted/50"
+              >
                 Nombre <span className="sr-only sm:not-sr-only">Legal/Comercial</span>
                 {getSortIcon("legalName")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("contactName")} className="px-1">
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("contactName")}
+                className="px-1 hover:bg-muted/50"
+              >
                 Contacto
                 {getSortIcon("contactName")}
               </Button>
             </TableHead>
             <TableHead className="hidden sm:table-cell">Domicilio Comercial</TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("status")} className="px-1">
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("status")}
+                className="px-1 hover:bg-muted/50"
+              >
                 Estado
                 {getSortIcon("status")}
               </Button>
@@ -191,27 +181,35 @@ export default function SupplierTable({ initialData, onEdit, onDelete }: Supplie
           {paginatedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                No se encontraron Supplieres.
+                No se encontraron proveedores.
               </TableCell>
             </TableRow>
           )}
           {paginatedData.map((supplier: Supplier) => (
             <TableRow
               key={supplier.id}
-              className={cn(isDeleting && deletingId === supplier.id && "opacity-50")}
+              className={cn(
+                "hover:bg-muted/50 transition-colors",
+                isDeleting && deletingId === supplier.id && "opacity-50",
+              )}
             >
               <TableCell className="font-medium">
-                <Link href={`/suppliers/${supplier.id}`} className="hover:underline">
+                <Link
+                  href={`/suppliers/${supplier.id}`}
+                  className="hover:underline text-blue-600 dark:text-blue-400"
+                >
                   {supplier.commercialName || supplier.legalName}
                 </Link>
                 {supplier.commercialName && supplier.legalName !== supplier.commercialName && (
-                  <span className="block text-xs text-muted-foreground">
-                    ({supplier.legalName})
+                  <span className="block text-xs text-muted-foreground mt-1">
+                    Legal: {supplier.legalName}
                   </span>
                 )}
               </TableCell>
               <TableCell>
-                {supplier.contactName || <span className="text-muted-foreground italic">N/A</span>}
+                {supplier.contactName || (
+                  <span className="text-muted-foreground italic">Sin contacto</span>
+                )}
               </TableCell>
               <TableCell className="hidden sm:table-cell">
                 <div
@@ -219,26 +217,36 @@ export default function SupplierTable({ initialData, onEdit, onDelete }: Supplie
                   title={supplier.commercialAddress || ""}
                 >
                   {supplier.commercialAddress || (
-                    <span className="text-muted-foreground italic">N/A</span>
+                    <span className="text-muted-foreground italic">Sin dirección</span>
                   )}
                 </div>
               </TableCell>
               <TableCell>
                 <Badge
-                  variant={supplier.status === "activo" ? "default" : "outline"}
+                  variant={supplier.status === "ACTIVO" ? "default" : "outline"}
                   className={cn(
-                    supplier.status === "activo"
-                      ? "bg-green-100 text-green-800 border-green-300"
-                      : "bg-gray-100 text-gray-600 border-gray-300",
+                    supplier.status === "ACTIVO"
+                      ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-200"
+                      : supplier.status === "SUSPENDIDO"
+                        ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-200"
+                        : "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-400",
                   )}
                 >
-                  {supplier.status === "activo" ? "Activo" : "Inactivo"}
+                  {supplier.status === "ACTIVO"
+                    ? "Activo"
+                    : supplier.status === "SUSPENDIDO"
+                      ? "Suspendido"
+                      : "Inactivo"}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
+                    <Button
+                      variant="ghost"
+                      className="h-8 w-8 p-0 hover:bg-muted"
+                      disabled={isDeleting && deletingId === supplier.id}
+                    >
                       <span className="sr-only">Abrir menú</span>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
@@ -273,8 +281,32 @@ export default function SupplierTable({ initialData, onEdit, onDelete }: Supplie
         </TableBody>
       </Table>
 
+      {/* Información de paginación y controles en la parte inferior */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Proveedores por página:</span>
+          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="w-[80px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a{" "}
+          {Math.min(startIndex + pageSize, sortedData.length)} de {sortedData.length} proveedores
+        </div>
+      </div>
+
       {totalPages > 1 && (
-        <div className="p-4 border-t">
+        <div className="flex justify-center">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -285,17 +317,34 @@ export default function SupplierTable({ initialData, onEdit, onDelete }: Supplie
                   }
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <PaginationItem key={page}>
-                  <PaginationLink
-                    onClick={() => handlePageChange(page)}
-                    isActive={currentPage === page}
-                    className="cursor-pointer"
-                  >
-                    {page}
-                  </PaginationLink>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let page = i + 1;
+                if (totalPages > 5) {
+                  if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                }
+                return (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(page)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
                 </PaginationItem>
-              ))}
+              )}
               <PaginationItem>
                 <PaginationNext
                   onClick={() => handlePageChange(currentPage + 1)}

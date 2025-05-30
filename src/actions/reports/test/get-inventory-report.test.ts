@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getInventoryStatusReport } from '../get-inventory-report-unified';
-import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../util';
-import { MotorcycleState } from '@prisma/client';
+import prisma from "@/lib/prisma";
+import { MotorcycleState } from "@prisma/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOrganizationIdFromSession } from "../../util";
+import { getInventoryStatusReport } from "../get-inventory-report-unified";
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     motorcycle: {
       groupBy: vi.fn(),
@@ -17,16 +17,16 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../util', () => ({
+vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
 // Silenciar console durante los tests
-const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
-describe('getInventoryStatusReport', () => {
-  const mockOrganizationId = 'clfx1234567890abcdefghijk';
-  
+describe("getInventoryStatusReport", () => {
+  const mockOrganizationId = "clfx1234567890abcdefghijk";
+
   const mockByStateData = [
     { state: MotorcycleState.STOCK, _count: 5 },
     { state: MotorcycleState.RESERVADO, _count: 3 },
@@ -36,17 +36,17 @@ describe('getInventoryStatusReport', () => {
   const mockValueByStateData = [
     {
       state: MotorcycleState.STOCK,
-      currency: 'USD',
+      currency: "USD",
       _sum: { retailPrice: 250000, costPrice: 200000 },
     },
     {
       state: MotorcycleState.RESERVADO,
-      currency: 'USD',
+      currency: "USD",
       _sum: { retailPrice: 150000, costPrice: 120000 },
     },
     {
       state: MotorcycleState.VENDIDO,
-      currency: 'USD',
+      currency: "USD",
       _sum: { retailPrice: 100000, costPrice: 80000 },
     },
   ];
@@ -57,8 +57,8 @@ describe('getInventoryStatusReport', () => {
   ];
 
   const mockBrandsData = [
-    { id: 1, name: 'Honda' },
-    { id: 2, name: 'Yamaha' },
+    { id: 1, name: "Honda" },
+    { id: 2, name: "Yamaha" },
   ];
 
   const mockPrisma = prisma as any;
@@ -67,10 +67,10 @@ describe('getInventoryStatusReport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockConsoleError.mockClear();
-    
+
     // Mock organización exitosa por defecto
     mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
-    
+
     // Mock brands por defecto
     mockPrisma.brand.findMany.mockResolvedValue(mockBrandsData);
   });
@@ -79,8 +79,8 @@ describe('getInventoryStatusReport', () => {
     vi.resetAllMocks();
   });
 
-  describe('Casos exitosos', () => {
-    it('debería generar reporte de inventario exitosamente', async () => {
+  describe("Casos exitosos", () => {
+    it("debería generar reporte de inventario exitosamente", async () => {
       // Setup mocks para este test específico - ajustado para el formato correcto
       const mockByStateDataFormatted = [
         { state: MotorcycleState.STOCK, _count: { _all: 5 } },
@@ -91,17 +91,17 @@ describe('getInventoryStatusReport', () => {
       const mockValueByStateDataFormatted = [
         {
           state: MotorcycleState.STOCK,
-          currency: 'USD',
+          currency: "USD",
           _sum: { retailPrice: 250000, costPrice: 200000 },
         },
         {
           state: MotorcycleState.RESERVADO,
-          currency: 'USD',
+          currency: "USD",
           _sum: { retailPrice: 150000, costPrice: 120000 },
         },
         {
           state: MotorcycleState.VENDIDO,
-          currency: 'USD',
+          currency: "USD",
           _sum: { retailPrice: 100000, costPrice: 80000 },
         },
       ];
@@ -126,19 +126,19 @@ describe('getInventoryStatusReport', () => {
       expect(result.summary.sold).toBe(2);
     });
 
-    it('debería generar reporte con rango de fechas', async () => {
+    it("debería generar reporte con rango de fechas", async () => {
       // Setup mocks para este test específico
       mockPrisma.motorcycle.groupBy.mockResolvedValue([]);
 
       const dateRange = {
-        from: new Date('2024-01-01'),
-        to: new Date('2024-01-31'),
+        from: new Date("2024-01-01"),
+        to: new Date("2024-01-31"),
       };
 
       await getInventoryStatusReport(dateRange);
 
       expect(mockPrisma.motorcycle.groupBy).toHaveBeenNthCalledWith(1, {
-        by: ['state'],
+        by: ["state"],
         where: {
           organizationId: mockOrganizationId,
           createdAt: {
@@ -152,7 +152,7 @@ describe('getInventoryStatusReport', () => {
       });
     });
 
-    it('debería formatear correctamente los datos por estado', async () => {
+    it("debería formatear correctamente los datos por estado", async () => {
       // Setup mocks para este test específico
       const mockByStateDataFormatted = [
         { state: MotorcycleState.STOCK, _count: { _all: 5 } },
@@ -174,7 +174,7 @@ describe('getInventoryStatusReport', () => {
       ]);
     });
 
-    it('debería formatear correctamente los datos por marca', async () => {
+    it("debería formatear correctamente los datos por marca", async () => {
       // Setup mocks para este test específico
       const mockByBrandDataFormatted = [
         { brandId: 1, _count: { _all: 8 } },
@@ -189,21 +189,19 @@ describe('getInventoryStatusReport', () => {
       const result = await getInventoryStatusReport();
 
       expect(result.byBrand).toEqual([
-        { brandId: 1, brandName: 'Honda', _count: 8 },
-        { brandId: 2, brandName: 'Yamaha', _count: 3 },
+        { brandId: 1, brandName: "Honda", _count: 8 },
+        { brandId: 2, brandName: "Yamaha", _count: 3 },
       ]);
     });
 
-    it('debería manejar marcas no encontradas', async () => {
+    it("debería manejar marcas no encontradas", async () => {
       const mockByBrandDataWithUnknown = [
         { brandId: 1, _count: { _all: 8 } },
         { brandId: 999, _count: { _all: 2 } },
       ];
 
       // Mock solo Honda encontrada
-      mockPrisma.brand.findMany.mockResolvedValueOnce([
-        { id: 1, name: 'Honda' }
-      ]);
+      mockPrisma.brand.findMany.mockResolvedValueOnce([{ id: 1, name: "Honda" }]);
 
       mockPrisma.motorcycle.groupBy
         .mockResolvedValueOnce([]) // byState
@@ -213,16 +211,16 @@ describe('getInventoryStatusReport', () => {
       const result = await getInventoryStatusReport();
 
       expect(result.byBrand).toEqual([
-        { brandId: 1, brandName: 'Honda', _count: 8 },
-        { brandId: 999, brandName: 'Desconocida', _count: 2 },
+        { brandId: 1, brandName: "Honda", _count: 8 },
+        { brandId: 999, brandName: "Desconocida", _count: 2 },
       ]);
     });
 
-    it('debería manejar valores nulos en _sum', async () => {
+    it("debería manejar valores nulos en _sum", async () => {
       const mockValueWithNulls = [
         {
           state: MotorcycleState.STOCK,
-          currency: 'USD',
+          currency: "USD",
           _sum: { retailPrice: null, costPrice: null },
         },
       ];
@@ -241,11 +239,11 @@ describe('getInventoryStatusReport', () => {
     });
   });
 
-  describe('Casos de error', () => {
-    it('debería devolver reporte vacío cuando no se puede obtener la organización', async () => {
-      mockGetOrganization.mockResolvedValue({ 
-        organizationId: null, 
-        error: 'Sesión no válida' 
+  describe("Casos de error", () => {
+    it("debería devolver reporte vacío cuando no se puede obtener la organización", async () => {
+      mockGetOrganization.mockResolvedValue({
+        organizationId: null,
+        error: "Sesión no válida",
       });
 
       const result = await getInventoryStatusReport();
@@ -261,17 +259,17 @@ describe('getInventoryStatusReport', () => {
         byBrand: [],
         valueByState: [],
       });
-      
+
       expect(mockConsoleError).toHaveBeenCalledWith(
         "Error en getInventoryStatusReport: No se pudo obtener el ID de la organización. Mensaje de sesión:",
-        'Sesión no válida'
+        "Sesión no válida",
       );
     });
 
-    it('debería manejar error de base de datos', async () => {
+    it("debería manejar error de base de datos", async () => {
       // Primer groupBy falla
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockPrisma.motorcycle.groupBy.mockRejectedValueOnce(new Error('Database error'));
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockPrisma.motorcycle.groupBy.mockRejectedValueOnce(new Error("Database error"));
 
       const result = await getInventoryStatusReport();
 
@@ -287,18 +285,21 @@ describe('getInventoryStatusReport', () => {
         byBrand: [],
         valueByState: [],
       });
-      
-      expect(consoleSpy).toHaveBeenCalledWith('Error obteniendo reporte de inventario:', expect.any(Error));
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error obteniendo reporte de inventario:",
+        expect.any(Error),
+      );
       consoleSpy.mockRestore();
     });
   });
 
-  describe('Casos edge', () => {
-    it('debería manejar datos vacíos', async () => {
+  describe("Casos edge", () => {
+    it("debería manejar datos vacíos", async () => {
       // Mock datos vacíos
       mockPrisma.motorcycle.groupBy
         .mockResolvedValueOnce([]) // byState vacío
-        .mockResolvedValueOnce([]) // byBrand vacío  
+        .mockResolvedValueOnce([]) // byBrand vacío
         .mockResolvedValueOnce([]); // valueByState vacío
 
       mockPrisma.brand.findMany.mockResolvedValueOnce([]);
@@ -316,14 +317,14 @@ describe('getInventoryStatusReport', () => {
       expect(result.byBrand).toEqual([]);
     });
 
-    it('debería verificar que se llame a Prisma con parámetros correctos', async () => {
+    it("debería verificar que se llame a Prisma con parámetros correctos", async () => {
       // Setup mocks para este test específico
       mockPrisma.motorcycle.groupBy.mockResolvedValue([]);
 
       await getInventoryStatusReport();
 
       expect(mockPrisma.motorcycle.groupBy).toHaveBeenNthCalledWith(1, {
-        by: ['state'],
+        by: ["state"],
         where: {
           organizationId: mockOrganizationId,
         },
@@ -333,7 +334,7 @@ describe('getInventoryStatusReport', () => {
       });
 
       expect(mockPrisma.motorcycle.groupBy).toHaveBeenNthCalledWith(2, {
-        by: ['brandId'],
+        by: ["brandId"],
         where: {
           organizationId: mockOrganizationId,
         },
@@ -343,7 +344,7 @@ describe('getInventoryStatusReport', () => {
       });
 
       expect(mockPrisma.motorcycle.groupBy).toHaveBeenNthCalledWith(3, {
-        by: ['state', 'currency'],
+        by: ["state", "currency"],
         where: {
           organizationId: mockOrganizationId,
         },
@@ -354,4 +355,4 @@ describe('getInventoryStatusReport', () => {
       });
     });
   });
-}); 
+});

@@ -1,21 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { revalidatePath } from 'next/cache';
+import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { revalidatePath } from "next/cache";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOrganizationIdFromSession } from "../../util";
 import {
   associateOrganizationBrand,
   dissociateOrganizationBrand,
-} from '../associate-organization-brand';
-import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../util';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { Prisma } from '@prisma/client';
+} from "../associate-organization-brand";
 
 // Mock de Next.js cache
-vi.mock('next/cache', () => ({
+vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     brand: {
       findUnique: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../util', () => ({
+vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
@@ -47,7 +47,7 @@ const mockRevalidatePath = revalidatePath as any;
 const mockPrisma = prisma as any;
 const mockGetOrganization = getOrganizationIdFromSession as any;
 
-describe('Associate Organization Brand', () => {
+describe("Associate Organization Brand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.console = mockConsole as any;
@@ -57,23 +57,23 @@ describe('Associate Organization Brand', () => {
     vi.restoreAllMocks();
   });
 
-  const mockOrganizationId = 'org-123';
-  const mockBrandId = '1';
+  const mockOrganizationId = "org-123";
+  const mockBrandId = "1";
 
   const mockBrandWithModels = {
     id: 1,
-    name: 'Toyota',
-    color: '#ff0000',
+    name: "Toyota",
+    color: "#ff0000",
     models: [
-      { id: 1, name: 'Corolla', brandId: 1 },
-      { id: 2, name: 'Camry', brandId: 1 },
-      { id: 3, name: 'Prius', brandId: 1 },
+      { id: 1, name: "Corolla", brandId: 1 },
+      { id: 2, name: "Camry", brandId: 1 },
+      { id: 3, name: "Prius", brandId: 1 },
     ],
   };
 
-  describe('✨ associateOrganizationBrand', () => {
-    describe('✅ Successful Association', () => {
-      it('should associate brand with models successfully', async () => {
+  describe("✨ associateOrganizationBrand", () => {
+    describe("✅ Successful Association", () => {
+      it("should associate brand with models successfully", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
         mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
@@ -104,16 +104,16 @@ describe('Associate Organization Brand', () => {
           where: { id: Number(mockBrandId) },
           include: {
             models: {
-              orderBy: { name: 'asc' },
+              orderBy: { name: "asc" },
             },
           },
         });
-        expect(mockRevalidatePath).toHaveBeenCalledWith('/configuration');
+        expect(mockRevalidatePath).toHaveBeenCalledWith("/configuration");
         expect(result.success).toBe(true);
-        expect(result.message).toBe('Marca asociada y modelos configurados correctamente.');
+        expect(result.message).toBe("Marca asociada y modelos configurados correctamente.");
       });
 
-      it('should associate brand without models', async () => {
+      it("should associate brand without models", async () => {
         // Arrange
         const brandWithoutModels = {
           ...mockBrandWithModels,
@@ -144,10 +144,10 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(true);
-        expect(result.message).toBe('Marca asociada y modelos configurados correctamente.');
+        expect(result.message).toBe("Marca asociada y modelos configurados correctamente.");
       });
 
-      it('should associate brand with null color', async () => {
+      it("should associate brand with null color", async () => {
         // Arrange
         const brandWithNullColor = {
           ...mockBrandWithModels,
@@ -181,9 +181,9 @@ describe('Associate Organization Brand', () => {
         expect(result.success).toBe(true);
       });
 
-      it('should use custom revalidation path', async () => {
+      it("should use custom revalidation path", async () => {
         // Arrange
-        const customPath = '/custom-path';
+        const customPath = "/custom-path";
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
         mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
           const mockTx = {
@@ -205,7 +205,7 @@ describe('Associate Organization Brand', () => {
         expect(result.success).toBe(true);
       });
 
-      it('should skip revalidation when pathToRevalidate is null', async () => {
+      it("should skip revalidation when pathToRevalidate is null", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
         mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
@@ -228,7 +228,7 @@ describe('Associate Organization Brand', () => {
         expect(result.success).toBe(true);
       });
 
-      it('should create correct model configurations', async () => {
+      it("should create correct model configurations", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
         let capturedModelConfigs: any[] = [];
@@ -275,8 +275,8 @@ describe('Associate Organization Brand', () => {
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should handle brand not found', async () => {
+    describe("❌ Error Handling", () => {
+      it("should handle brand not found", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(null);
 
@@ -288,18 +288,18 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('La marca global no fue encontrada.');
+        expect(result.error).toBe("La marca global no fue encontrada.");
         expect(mockPrisma.$transaction).not.toHaveBeenCalled();
         expect(mockRevalidatePath).not.toHaveBeenCalled();
       });
 
-      it('should handle duplicate association error', async () => {
+      it("should handle duplicate association error", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
-        const duplicateError = new PrismaClientKnownRequestError(
-          'Unique constraint failed',
-          { code: 'P2002', clientVersion: '5.0.0' }
-        );
+        const duplicateError = new PrismaClientKnownRequestError("Unique constraint failed", {
+          code: "P2002",
+          clientVersion: "5.0.0",
+        });
         mockPrisma.$transaction.mockRejectedValue(duplicateError);
 
         // Act
@@ -310,14 +310,14 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('La marca ya está asociada a esta organización.');
+        expect(result.error).toBe("La marca ya está asociada a esta organización.");
         expect(mockRevalidatePath).not.toHaveBeenCalled();
       });
 
-      it('should handle generic unique constraint error', async () => {
+      it("should handle generic unique constraint error", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
-        const uniqueError = new Error('Unique constraint failed');
+        const uniqueError = new Error("Unique constraint failed");
         mockPrisma.$transaction.mockRejectedValue(uniqueError);
 
         // Act
@@ -328,13 +328,13 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('La marca ya está asociada a esta organización.');
+        expect(result.error).toBe("La marca ya está asociada a esta organización.");
       });
 
-      it('should handle general database errors', async () => {
+      it("should handle general database errors", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
-        const dbError = new Error('Database connection failed');
+        const dbError = new Error("Database connection failed");
         mockPrisma.$transaction.mockRejectedValue(dbError);
 
         // Act
@@ -345,14 +345,14 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Database connection failed');
-        expect(mockConsole.error).toHaveBeenCalledWith('Error associating brand:', dbError);
+        expect(result.error).toBe("Database connection failed");
+        expect(mockConsole.error).toHaveBeenCalledWith("Error associating brand:", dbError);
       });
 
-      it('should handle unknown errors', async () => {
+      it("should handle unknown errors", async () => {
         // Arrange
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
-        mockPrisma.$transaction.mockRejectedValue('Unknown error');
+        mockPrisma.$transaction.mockRejectedValue("Unknown error");
 
         // Act
         const result = await associateOrganizationBrand({
@@ -362,12 +362,12 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al asociar la marca y configurar sus modelos.');
+        expect(result.error).toBe("Error al asociar la marca y configurar sus modelos.");
       });
     });
 
-    describe('🎯 Edge Cases', () => {
-      it('should handle brand with undefined models', async () => {
+    describe("🎯 Edge Cases", () => {
+      it("should handle brand with undefined models", async () => {
         // Arrange
         const brandWithUndefinedModels = {
           ...mockBrandWithModels,
@@ -392,9 +392,9 @@ describe('Associate Organization Brand', () => {
         expect(result.success).toBe(true);
       });
 
-      it('should handle numeric brand ID as string', async () => {
+      it("should handle numeric brand ID as string", async () => {
         // Arrange
-        const numericBrandId = '999';
+        const numericBrandId = "999";
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
         mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
           const mockTx = {
@@ -413,14 +413,14 @@ describe('Associate Organization Brand', () => {
         // Assert
         expect(mockPrisma.brand.findUnique).toHaveBeenCalledWith({
           where: { id: Number(numericBrandId) },
-          include: { models: { orderBy: { name: 'asc' } } },
+          include: { models: { orderBy: { name: "asc" } } },
         });
         expect(result.success).toBe(true);
       });
 
-      it('should handle very large brand ID', async () => {
+      it("should handle very large brand ID", async () => {
         // Arrange
-        const largeBrandId = '999999999';
+        const largeBrandId = "999999999";
         mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
         mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
           const mockTx = {
@@ -442,15 +442,15 @@ describe('Associate Organization Brand', () => {
     });
   });
 
-  describe('🗑️ dissociateOrganizationBrand', () => {
+  describe("🗑️ dissociateOrganizationBrand", () => {
     const mockFormData = new FormData();
-    
+
     beforeEach(() => {
-      mockFormData.set('organizationBrandId', '1');
+      mockFormData.set("organizationBrandId", "1");
     });
 
-    describe('✅ Successful Dissociation', () => {
-      it('should dissociate brand successfully', async () => {
+    describe("✅ Successful Dissociation", () => {
+      it("should dissociate brand successfully", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
@@ -474,14 +474,14 @@ describe('Associate Organization Brand', () => {
         expect(mockPrisma.organizationBrand.delete).toHaveBeenCalledWith({
           where: { id: 1 },
         });
-        expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+        expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
         expect(result.success).toBe(true);
       });
 
-      it('should handle large organization brand ID', async () => {
+      it("should handle large organization brand ID", async () => {
         // Arrange
         const largeFormData = new FormData();
-        largeFormData.set('organizationBrandId', '999999');
+        largeFormData.set("organizationBrandId", "999999");
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
           id: 999999,
@@ -501,8 +501,8 @@ describe('Associate Organization Brand', () => {
       });
     });
 
-    describe('❌ Validation Errors', () => {
-      it('should return error for missing organizationBrandId', async () => {
+    describe("❌ Validation Errors", () => {
+      it("should return error for missing organizationBrandId", async () => {
         // Arrange
         const emptyFormData = new FormData();
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -512,14 +512,14 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('ID de asociación inválido.');
+        expect(result.error).toBe("ID de asociación inválido.");
         expect(mockPrisma.organizationBrand.findUnique).not.toHaveBeenCalled();
       });
 
-      it('should return error for non-numeric organizationBrandId', async () => {
+      it("should return error for non-numeric organizationBrandId", async () => {
         // Arrange
         const invalidFormData = new FormData();
-        invalidFormData.set('organizationBrandId', 'invalid-id');
+        invalidFormData.set("organizationBrandId", "invalid-id");
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
 
         // Act
@@ -527,14 +527,14 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('ID de asociación inválido.');
+        expect(result.error).toBe("ID de asociación inválido.");
         expect(mockPrisma.organizationBrand.findUnique).not.toHaveBeenCalled();
       });
 
-      it('should return error for empty organizationBrandId', async () => {
+      it("should return error for empty organizationBrandId", async () => {
         // Arrange
         const emptyIdFormData = new FormData();
-        emptyIdFormData.set('organizationBrandId', '');
+        emptyIdFormData.set("organizationBrandId", "");
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
 
         // Act
@@ -542,12 +542,12 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('ID de asociación inválido.');
+        expect(result.error).toBe("ID de asociación inválido.");
       });
     });
 
-    describe('🔐 Authentication Errors', () => {
-      it('should return error when user is not authenticated', async () => {
+    describe("🔐 Authentication Errors", () => {
+      it("should return error when user is not authenticated", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: null });
 
@@ -556,11 +556,11 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Usuario no autenticado o sin organización.');
+        expect(result.error).toBe("Usuario no autenticado o sin organización.");
         expect(mockPrisma.organizationBrand.findUnique).not.toHaveBeenCalled();
       });
 
-      it('should return error when organization is undefined', async () => {
+      it("should return error when organization is undefined", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: undefined });
 
@@ -569,12 +569,12 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Usuario no autenticado o sin organización.');
+        expect(result.error).toBe("Usuario no autenticado o sin organización.");
       });
     });
 
-    describe('🔒 Authorization Errors', () => {
-      it('should return error when association does not exist', async () => {
+    describe("🔒 Authorization Errors", () => {
+      it("should return error when association does not exist", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue(null);
@@ -584,16 +584,16 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
         expect(mockPrisma.organizationBrand.delete).not.toHaveBeenCalled();
       });
 
-      it('should return error when association belongs to different organization', async () => {
+      it("should return error when association belongs to different organization", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
           id: 1,
-          organizationId: 'different-org-id',
+          organizationId: "different-org-id",
           brandId: 1,
         });
 
@@ -602,13 +602,13 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
         expect(mockPrisma.organizationBrand.delete).not.toHaveBeenCalled();
       });
     });
 
-    describe('❌ Database Errors', () => {
-      it('should handle record not found error during deletion', async () => {
+    describe("❌ Database Errors", () => {
+      it("should handle record not found error during deletion", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
@@ -616,10 +616,10 @@ describe('Associate Organization Brand', () => {
           organizationId: mockOrganizationId,
           brandId: 1,
         });
-        const notFoundError = new Prisma.PrismaClientKnownRequestError(
-          'Record not found',
-          { code: 'P2025', clientVersion: '5.0.0' }
-        );
+        const notFoundError = new Prisma.PrismaClientKnownRequestError("Record not found", {
+          code: "P2025",
+          clientVersion: "5.0.0",
+        });
         mockPrisma.organizationBrand.delete.mockRejectedValue(notFoundError);
 
         // Act
@@ -627,14 +627,14 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('La asociación a eliminar no se encontró.');
+        expect(result.error).toBe("La asociación a eliminar no se encontró.");
         expect(mockConsole.error).toHaveBeenCalledWith(
-          '🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):',
-          notFoundError
+          "🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):",
+          notFoundError,
         );
       });
 
-      it('should handle general database errors', async () => {
+      it("should handle general database errors", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
@@ -642,7 +642,7 @@ describe('Associate Organization Brand', () => {
           organizationId: mockOrganizationId,
           brandId: 1,
         });
-        const dbError = new Error('Database connection failed');
+        const dbError = new Error("Database connection failed");
         mockPrisma.organizationBrand.delete.mockRejectedValue(dbError);
 
         // Act
@@ -650,14 +650,14 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al desasociar la marca.');
+        expect(result.error).toBe("Error al desasociar la marca.");
         expect(mockConsole.error).toHaveBeenCalledWith(
-          '🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):',
-          dbError
+          "🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):",
+          dbError,
         );
       });
 
-      it('should handle unknown errors during deletion', async () => {
+      it("should handle unknown errors during deletion", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
@@ -665,22 +665,22 @@ describe('Associate Organization Brand', () => {
           organizationId: mockOrganizationId,
           brandId: 1,
         });
-        mockPrisma.organizationBrand.delete.mockRejectedValue('Unknown error');
+        mockPrisma.organizationBrand.delete.mockRejectedValue("Unknown error");
 
         // Act
         const result = await dissociateOrganizationBrand(null, mockFormData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al desasociar la marca.');
+        expect(result.error).toBe("Error al desasociar la marca.");
       });
     });
 
-    describe('🎯 Edge Cases', () => {
-      it('should handle zero as organizationBrandId', async () => {
+    describe("🎯 Edge Cases", () => {
+      it("should handle zero as organizationBrandId", async () => {
         // Arrange
         const zeroFormData = new FormData();
-        zeroFormData.set('organizationBrandId', '0');
+        zeroFormData.set("organizationBrandId", "0");
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
           id: 0,
@@ -699,10 +699,10 @@ describe('Associate Organization Brand', () => {
         expect(result.success).toBe(true);
       });
 
-      it('should handle negative organizationBrandId', async () => {
+      it("should handle negative organizationBrandId", async () => {
         // Arrange
         const negativeFormData = new FormData();
-        negativeFormData.set('organizationBrandId', '-1');
+        negativeFormData.set("organizationBrandId", "-1");
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue(null);
 
@@ -711,13 +711,13 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
       });
 
-      it('should handle decimal organizationBrandId', async () => {
+      it("should handle decimal organizationBrandId", async () => {
         // Arrange
         const decimalFormData = new FormData();
-        decimalFormData.set('organizationBrandId', '1.5');
+        decimalFormData.set("organizationBrandId", "1.5");
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue(null);
 
@@ -726,12 +726,12 @@ describe('Associate Organization Brand', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
       });
     });
 
-    describe('🔄 Cache Revalidation', () => {
-      it('should revalidate correct path on successful dissociation', async () => {
+    describe("🔄 Cache Revalidation", () => {
+      it("should revalidate correct path on successful dissociation", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
@@ -745,11 +745,11 @@ describe('Associate Organization Brand', () => {
         await dissociateOrganizationBrand(null, mockFormData);
 
         // Assert
-        expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+        expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
         expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
       });
 
-      it('should not revalidate on validation errors', async () => {
+      it("should not revalidate on validation errors", async () => {
         // Arrange
         const emptyFormData = new FormData();
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
@@ -761,7 +761,7 @@ describe('Associate Organization Brand', () => {
         expect(mockRevalidatePath).not.toHaveBeenCalled();
       });
 
-      it('should not revalidate on database errors', async () => {
+      it("should not revalidate on database errors", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({ organizationId: mockOrganizationId });
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
@@ -769,7 +769,7 @@ describe('Associate Organization Brand', () => {
           organizationId: mockOrganizationId,
           brandId: 1,
         });
-        mockPrisma.organizationBrand.delete.mockRejectedValue(new Error('DB Error'));
+        mockPrisma.organizationBrand.delete.mockRejectedValue(new Error("DB Error"));
 
         // Act
         await dissociateOrganizationBrand(null, mockFormData);
@@ -780,8 +780,8 @@ describe('Associate Organization Brand', () => {
     });
   });
 
-  describe('📊 Console Logging', () => {
-    it('should log brand information during association', async () => {
+  describe("📊 Console Logging", () => {
+    it("should log brand information during association", async () => {
       // Arrange
       mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
       mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
@@ -800,12 +800,12 @@ describe('Associate Organization Brand', () => {
 
       // Assert
       expect(mockConsole.log).toHaveBeenCalledWith(
-        'associateOrganizationBrand: globalBrandWithModels encontrado:',
-        JSON.stringify(mockBrandWithModels, null, 2)
+        "associateOrganizationBrand: globalBrandWithModels encontrado:",
+        JSON.stringify(mockBrandWithModels, null, 2),
       );
     });
 
-    it('should log model configs during association', async () => {
+    it("should log model configs during association", async () => {
       // Arrange
       mockPrisma.brand.findUnique.mockResolvedValue(mockBrandWithModels);
       mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
@@ -829,9 +829,9 @@ describe('Associate Organization Brand', () => {
 
       // Assert
       expect(mockConsole.log).toHaveBeenCalledWith(
-        'associateOrganizationBrand: modelConfigs a crear:',
-        expect.any(String)
+        "associateOrganizationBrand: modelConfigs a crear:",
+        expect.any(String),
       );
     });
   });
-}); 
+});

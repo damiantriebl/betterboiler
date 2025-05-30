@@ -8,14 +8,20 @@ import {
   getOrganizationPaymentMethods,
 } from "@/actions/payment-methods/get-payment-methods";
 import { auth } from "@/auth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import prisma from "@/lib/prisma";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
+import type {
+  CardType as BankCardCardType,
+  BankCardDisplay,
+  BankWithCards,
+} from "@/types/bank-cards";
 import type { Bank, BankingPromotionDisplay } from "@/types/banking-promotions";
+import type { Bank as BankType } from "@/types/banking-promotions"; // Asumiendo que BankType es compatible con la estructura de bank en BankWithCards
 import type { OrganizationPaymentMethodDisplay, PaymentMethod } from "@/types/payment-methods";
-import type { Model, OrganizationBrand, OrganizationModelConfig, Branch } from "@prisma/client";
+import type { Branch, Model, OrganizationBrand, OrganizationModelConfig } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -28,12 +34,6 @@ import ManageBranches from "./ManageBranches";
 import ManageColors from "./ManageColors";
 import ManagePaymentMethods from "./ManagePaymentMethods";
 import SecuritySettings from "./SecuritySettings";
-import type {
-  BankCardDisplay,
-  BankWithCards,
-  CardType as BankCardCardType,
-} from "@/types/bank-cards";
-import type { Bank as BankType } from "@/types/banking-promotions"; // Asumiendo que BankType es compatible con la estructura de bank en BankWithCards
 
 // We'll use these default payment methods if the schema doesn't exist yet
 const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -339,7 +339,7 @@ export default async function ConfigurationPage() {
   );
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+    <div className="container max-w-none p-4">
       <h1 className="text-3xl font-bold mb-6">Configuración de la Organización</h1>
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 mb-4">

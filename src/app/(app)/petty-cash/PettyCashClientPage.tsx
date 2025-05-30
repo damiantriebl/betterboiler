@@ -8,32 +8,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSessionStore } from "@/stores/SessionStore";
-import React, { useState, useEffect } from "react";
-import type {
-  Branch as PrismaBranch,
-  PettyCashDeposit,
-  PettyCashWithdrawal,
-  PettyCashSpend,
-} from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionStore } from "@/stores/SessionStore";
+import type {
+  PettyCashDeposit,
+  PettyCashSpend,
+  PettyCashWithdrawal,
+  Branch as PrismaBranch,
+} from "@prisma/client";
+import React, { useState, useEffect } from "react";
 
 import BalanceCard from "./BalanceCard";
 import DepositForm from "./DepositForm";
-import WithdrawForm from "./WithdrawForm";
-import SpendForm from "./SpendForm";
-import PettyCashTable from "./PettyCashTable";
 import OtpConfirmationModal from "./OtpConfirmationModal";
+import PettyCashTable from "./PettyCashTable";
+import SpendForm from "./SpendForm";
+import WithdrawForm from "./WithdrawForm";
 
-import type { PettyCashData } from "@/actions/petty-cash/get-petty-cash-data";
 import {
   type createPettyCashDeposit,
   type createPettyCashWithdrawal,
+  deletePettyCashDeposit,
   deletePettyCashMovement,
   deletePettyCashWithdrawal,
-  deletePettyCashDeposit,
 } from "@/actions";
 import { getSecuritySettings } from "@/actions/configuration/security-actions";
+import type { PettyCashData } from "@/actions/petty-cash/get-petty-cash-data";
 
 const GENERAL_ACCOUNT_VALUE = "__general__";
 
@@ -241,7 +241,7 @@ export default function PettyCashClientPage({
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+    <div className="container max-w-none p-4 ">
       <header className="mb-6 md:mb-8">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">
           Caja Chica (Jerárquica)

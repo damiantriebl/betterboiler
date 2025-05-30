@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     // Obtener los parámetros
     const { id } = await params;
-    
+
     // Convertir el ID de la promoción a número
     const promotionId = Number.parseInt(id);
     if (Number.isNaN(promotionId)) {

@@ -3,15 +3,7 @@
 export interface PaymentMethod {
   id: number;
   name: string;
-  type:
-    | "cash"
-    | "credit"
-    | "debit"
-    | "transfer"
-    | "check"
-    | "deposit"
-    | "qr"
-    | string;
+  type: "cash" | "credit" | "debit" | "transfer" | "check" | "deposit" | "qr" | string;
   description: string;
   iconUrl?: string | null;
 }

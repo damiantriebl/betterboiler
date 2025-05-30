@@ -5,6 +5,7 @@ import { isPromotionActiveOnDay } from "@/utils/promotion-utils";
 import type { Day } from "@/zod/banking-promotion-schemas";
 
 // Tipo inferido de Prisma para las promociones bancarias
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PrismaBankingPromotionWithRelations = any;
 
 // Days of the week in Spanish (matches the schema definition)

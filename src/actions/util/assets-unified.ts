@@ -28,9 +28,11 @@ function isValidUrl(input: string): boolean {
 
 async function fetchSignedUrl(input: string): Promise<string | null> {
   try {
-    const res = await fetch(
-      `/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`,
-    );
+    // Construir URL absoluta para el servidor
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const url = `${baseUrl}/api/s3/get-signed-url?name=${encodeURIComponent(input)}&operation=get`;
+
+    const res = await fetch(url);
 
     let data: S3SignedUrlResponse;
     try {
@@ -83,7 +85,7 @@ export async function getLogoUrl(input: string): Promise<string | null> {
 
 export async function getLogoUrlFromOrganization(): Promise<string | null> {
   const organizationResult = await getOrganizationIdFromSession();
-  
+
   if (!organizationResult.organizationId) {
     console.error("No se pudo obtener el ID de la organización");
     return null;
@@ -108,7 +110,7 @@ export async function getLogoUrlFromOrganization(): Promise<string | null> {
 
 export async function fetchImageAsBase64(pathOrUrl: string): Promise<string> {
   const signedUrl = await getLogoUrl(pathOrUrl);
-  
+
   if (!signedUrl) {
     throw new Error("No se pudo obtener la URL de la imagen");
   }
@@ -122,7 +124,7 @@ export async function fetchImageAsBase64(pathOrUrl: string): Promise<string> {
   const contentType = res.headers.get("content-type") ?? "image/png";
   const buffer = await res.arrayBuffer();
   const base64 = Buffer.from(buffer).toString("base64");
-  
+
   console.log("base64", base64);
   return `data:${contentType};base64,${base64}`;
 }
@@ -133,18 +135,18 @@ export async function clearAssetCache(): Promise<void> {
   console.log("Asset cache cleared");
 }
 
-export function getAssetCacheSize(): number {
+export async function getAssetCacheSize(): Promise<number> {
   return urlCache.size;
 }
 
-export function removeFromAssetCache(key: string): boolean {
+export async function removeFromAssetCache(key: string): Promise<boolean> {
   return urlCache.delete(key);
 }
 
 // Utility functions
 export async function getAssetWithFallback(
-  primaryPath: string, 
-  fallbackPath?: string
+  primaryPath: string,
+  fallbackPath?: string,
 ): Promise<AssetResult> {
   try {
     const url = await getLogoUrl(primaryPath);
@@ -159,20 +161,20 @@ export async function getAssetWithFallback(
       }
     }
 
-    return { 
-      success: false, 
-      error: "No se pudo obtener la imagen principal ni la de respaldo" 
+    return {
+      success: false,
+      error: "No se pudo obtener la imagen principal ni la de respaldo",
     };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Error desconocido" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido",
     };
   }
 }
 
 export async function preloadAssets(paths: string[]): Promise<void> {
-  const promises = paths.map(path => getLogoUrl(path));
+  const promises = paths.map((path) => getLogoUrl(path));
   await Promise.allSettled(promises);
   console.log(`Preloaded ${paths.length} assets`);
-} 
+}

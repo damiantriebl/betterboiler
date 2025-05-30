@@ -1,9 +1,9 @@
 "use server";
 
+import { getOrganizationIdFromSession } from "@/actions/util"; // Asumiendo que esta devuelve { organizationId, userId, userRole, userEmail }
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import * as otpauth from "otpauth";
-import { getOrganizationIdFromSession } from "@/actions/util"; // Asumiendo que esta devuelve { organizationId, userId, userRole, userEmail }
 
 // --- Tipos de Retorno de las Acciones ---
 

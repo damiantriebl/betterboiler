@@ -11,6 +11,18 @@ const nextConfig = {
   // Corregir configuración de Turbopack
   turbopack: {},
 
+  // Configuración de imágenes para permitir hostnames externos
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'uknapex.s3.us-east-1.amazonaws.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
+
   // 🚀 OPTIMIZACIONES DE THROUGHPUT SIMPLIFICADAS
   // Compresión para reducir tamaño de respuestas
   compress: true,

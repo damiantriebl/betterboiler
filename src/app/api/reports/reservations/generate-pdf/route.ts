@@ -1,6 +1,9 @@
-import { getOrganizationIdFromSession } from "@/actions/util";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
-import { generateReservationReportPDF, createReservationReportPDFResponse } from "@/lib/pdf-generators/reservation-report-pdf";
+import { getOrganizationIdFromSession } from "@/actions/util";
+import {
+  createReservationReportPDFResponse,
+  generateReservationReportPDF,
+} from "@/lib/pdf-generators/reservation-report-pdf";
 import type { ReservationsReport } from "@/types/reports";
 
 export async function POST(request: Request) {
@@ -19,11 +22,10 @@ export async function POST(request: Request) {
       throw new Error("No se pudo generar el reporte");
     }
 
-    // Generar el PDF usando pdf-lib
-    const pdfBytes = await generateReservationReportPDF(report);
+    // Generar el PDF usando pdf-lib con el template unificado
+    const pdfBytes = await generateReservationReportPDF(report, dateRange);
 
     return createReservationReportPDFResponse(pdfBytes, "reporte-reservas.pdf");
-    
   } catch (error) {
     console.error("Error generating PDF:", error);
     return new Response("Error al generar el PDF", { status: 500 });

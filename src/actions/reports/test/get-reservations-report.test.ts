@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getReservationsReport } from '../get-reservations-report';
-import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../util';
-import { MotorcycleState } from '@prisma/client';
+import prisma from "@/lib/prisma";
+import { MotorcycleState } from "@prisma/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOrganizationIdFromSession } from "../../util";
+import { getReservationsReport } from "../get-reservations-report";
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     motorcycle: {
       findMany: vi.fn(),
@@ -14,47 +14,47 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../util', () => ({
+vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
 // Silenciar console durante los tests
-vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
-describe('getReservationsReport', () => {
-  const mockOrganizationId = 'clfx1234567890abcdefghijk';
-  
+describe("getReservationsReport", () => {
+  const mockOrganizationId = "clfx1234567890abcdefghijk";
+
   const mockMotorcycleReserved = {
-    id: 'clfxmoto1234567890abcd',
+    id: "clfxmoto1234567890abcd",
     state: MotorcycleState.RESERVADO,
     client: {
-      id: 'clfxclient123456789abc',
-      firstName: 'Juan',
-      lastName: 'Pérez',
-      email: 'juan@example.com',
-      phone: '123456789',
+      id: "clfxclient123456789abc",
+      firstName: "Juan",
+      lastName: "Pérez",
+      email: "juan@example.com",
+      phone: "123456789",
     },
     seller: {
-      id: 'clfxseller12345678901',
-      name: 'Carlos Vendedor',
-      email: 'carlos@company.com',
+      id: "clfxseller12345678901",
+      name: "Carlos Vendedor",
+      email: "carlos@company.com",
     },
     brand: {
-      name: 'Honda',
+      name: "Honda",
     },
     model: {
-      name: 'CBR 600',
+      name: "CBR 600",
     },
     branch: {
-      id: 'clfxbranch123456789ab',
-      name: 'Sucursal Centro',
+      id: "clfxbranch123456789ab",
+      name: "Sucursal Centro",
     },
     reservations: [
       {
         amount: 50000,
-        currency: 'USD',
-        createdAt: new Date('2024-01-15'),
-        status: 'active',
+        currency: "USD",
+        createdAt: new Date("2024-01-15"),
+        status: "active",
       },
     ],
   };
@@ -72,8 +72,8 @@ describe('getReservationsReport', () => {
     vi.resetAllMocks();
   });
 
-  describe('Casos exitosos', () => {
-    it('debería generar reporte de reservaciones exitosamente', async () => {
+  describe("Casos exitosos", () => {
+    it("debería generar reporte de reservaciones exitosamente", async () => {
       const result = await getReservationsReport();
 
       expect(result).toBeDefined();
@@ -87,10 +87,10 @@ describe('getReservationsReport', () => {
       expect(result.summary.conversionRate).toBe(0);
     });
 
-    it('debería generar reporte con rango de fechas', async () => {
+    it("debería generar reporte con rango de fechas", async () => {
       const dateRange = {
-        from: new Date('2024-01-01'),
-        to: new Date('2024-01-31'),
+        from: new Date("2024-01-01"),
+        to: new Date("2024-01-31"),
       };
 
       await getReservationsReport(dateRange);
@@ -108,9 +108,9 @@ describe('getReservationsReport', () => {
       });
     });
 
-    it('debería generar reporte solo con fecha desde', async () => {
+    it("debería generar reporte solo con fecha desde", async () => {
       const dateRange = {
-        from: new Date('2024-01-01'),
+        from: new Date("2024-01-01"),
       };
 
       await getReservationsReport(dateRange);
@@ -127,19 +127,19 @@ describe('getReservationsReport', () => {
       });
     });
 
-    it('debería agrupar reservaciones por estado correctamente', async () => {
+    it("debería agrupar reservaciones por estado correctamente", async () => {
       const mockMotorcycles = [
         {
           ...mockMotorcycleReserved,
           reservations: [
-            { amount: 30000, currency: 'USD', createdAt: new Date(), status: 'active' },
+            { amount: 30000, currency: "USD", createdAt: new Date(), status: "active" },
           ],
         },
         {
           ...mockMotorcycleReserved,
-          id: 'clfxmoto2234567890abcd',
+          id: "clfxmoto2234567890abcd",
           reservations: [
-            { amount: 20000, currency: 'USD', createdAt: new Date(), status: 'completed' },
+            { amount: 20000, currency: "USD", createdAt: new Date(), status: "completed" },
           ],
         },
       ];
@@ -154,23 +154,23 @@ describe('getReservationsReport', () => {
       expect(result.reservationsByStatus.completed.amount.USD).toBe(20000);
     });
 
-    it('debería agrupar reservaciones por sucursal correctamente', async () => {
+    it("debería agrupar reservaciones por sucursal correctamente", async () => {
       const mockMotorcycles = [
         {
           ...mockMotorcycleReserved,
           reservations: [
-            { amount: 30000, currency: 'USD', createdAt: new Date(), status: 'active' },
+            { amount: 30000, currency: "USD", createdAt: new Date(), status: "active" },
           ],
         },
         {
           ...mockMotorcycleReserved,
-          id: 'clfxmoto2234567890abcd',
+          id: "clfxmoto2234567890abcd",
           branch: {
-            id: 'clfxbranch223456789ab',
-            name: 'Sucursal Norte',
+            id: "clfxbranch223456789ab",
+            name: "Sucursal Norte",
           },
           reservations: [
-            { amount: 25000, currency: 'USD', createdAt: new Date(), status: 'completed' },
+            { amount: 25000, currency: "USD", createdAt: new Date(), status: "completed" },
           ],
         },
       ];
@@ -179,25 +179,25 @@ describe('getReservationsReport', () => {
 
       const result = await getReservationsReport();
 
-      expect(result.reservationsByBranch['clfxbranch123456789ab'].total).toBe(1);
-      expect(result.reservationsByBranch['clfxbranch123456789ab'].active).toBe(1);
-      expect(result.reservationsByBranch['clfxbranch223456789ab'].total).toBe(1);
-      expect(result.reservationsByBranch['clfxbranch223456789ab'].completed).toBe(1);
+      expect(result.reservationsByBranch.clfxbranch123456789ab.total).toBe(1);
+      expect(result.reservationsByBranch.clfxbranch123456789ab.active).toBe(1);
+      expect(result.reservationsByBranch.clfxbranch223456789ab.total).toBe(1);
+      expect(result.reservationsByBranch.clfxbranch223456789ab.completed).toBe(1);
     });
 
-    it('debería manejar múltiples monedas correctamente', async () => {
+    it("debería manejar múltiples monedas correctamente", async () => {
       const mockMotorcycles = [
         {
           ...mockMotorcycleReserved,
           reservations: [
-            { amount: 30000, currency: 'USD', createdAt: new Date(), status: 'active' },
+            { amount: 30000, currency: "USD", createdAt: new Date(), status: "active" },
           ],
         },
         {
           ...mockMotorcycleReserved,
-          id: 'clfxmoto2234567890abcd',
+          id: "clfxmoto2234567890abcd",
           reservations: [
-            { amount: 2500000, currency: 'COP', createdAt: new Date(), status: 'active' },
+            { amount: 2500000, currency: "COP", createdAt: new Date(), status: "active" },
           ],
         },
       ];
@@ -212,33 +212,33 @@ describe('getReservationsReport', () => {
       });
     });
 
-    it('debería calcular tasa de conversión correctamente', async () => {
+    it("debería calcular tasa de conversión correctamente", async () => {
       const mockMotorcycles = [
         {
           ...mockMotorcycleReserved,
           reservations: [
-            { amount: 30000, currency: 'USD', createdAt: new Date(), status: 'completed' },
+            { amount: 30000, currency: "USD", createdAt: new Date(), status: "completed" },
           ],
         },
         {
           ...mockMotorcycleReserved,
-          id: 'moto2',
+          id: "moto2",
           reservations: [
-            { amount: 25000, currency: 'USD', createdAt: new Date(), status: 'active' },
+            { amount: 25000, currency: "USD", createdAt: new Date(), status: "active" },
           ],
         },
         {
           ...mockMotorcycleReserved,
-          id: 'moto3',
+          id: "moto3",
           reservations: [
-            { amount: 20000, currency: 'USD', createdAt: new Date(), status: 'completed' },
+            { amount: 20000, currency: "USD", createdAt: new Date(), status: "completed" },
           ],
         },
         {
           ...mockMotorcycleReserved,
-          id: 'moto4',
+          id: "moto4",
           reservations: [
-            { amount: 15000, currency: 'USD', createdAt: new Date(), status: 'cancelled' },
+            { amount: 15000, currency: "USD", createdAt: new Date(), status: "cancelled" },
           ],
         },
       ];
@@ -253,11 +253,11 @@ describe('getReservationsReport', () => {
     });
   });
 
-  describe('Casos de error', () => {
-    it('debería devolver reporte vacío cuando no se puede obtener la organización', async () => {
-      mockGetOrganization.mockResolvedValue({ 
-        organizationId: null, 
-        error: 'Sesión no válida' 
+  describe("Casos de error", () => {
+    it("debería devolver reporte vacío cuando no se puede obtener la organización", async () => {
+      mockGetOrganization.mockResolvedValue({
+        organizationId: null,
+        error: "Sesión no válida",
       });
 
       const result = await getReservationsReport();
@@ -278,13 +278,13 @@ describe('getReservationsReport', () => {
       });
     });
 
-    it('debería manejar error de base de datos', async () => {
-      mockPrisma.motorcycle.findMany.mockRejectedValue(new Error('Database connection failed'));
+    it("debería manejar error de base de datos", async () => {
+      mockPrisma.motorcycle.findMany.mockRejectedValue(new Error("Database connection failed"));
 
-      await expect(getReservationsReport()).rejects.toThrow('Database connection failed');
+      await expect(getReservationsReport()).rejects.toThrow("Database connection failed");
     });
 
-    it('debería manejar motos sin reservaciones', async () => {
+    it("debería manejar motos sin reservaciones", async () => {
       const mockMotorcycleWithoutReservations = {
         ...mockMotorcycleReserved,
         reservations: [],
@@ -299,13 +299,11 @@ describe('getReservationsReport', () => {
       expect(result.summary.activeReservations).toBe(0);
     });
 
-    it('debería manejar motos sin sucursal', async () => {
+    it("debería manejar motos sin sucursal", async () => {
       const mockMotorcycleWithoutBranch = {
         ...mockMotorcycleReserved,
         branch: null,
-        reservations: [
-          { amount: 30000, currency: 'USD', createdAt: new Date(), status: 'active' },
-        ],
+        reservations: [{ amount: 30000, currency: "USD", createdAt: new Date(), status: "active" }],
       };
 
       mockPrisma.motorcycle.findMany.mockResolvedValue([mockMotorcycleWithoutBranch]);
@@ -317,8 +315,8 @@ describe('getReservationsReport', () => {
     });
   });
 
-  describe('Casos edge', () => {
-    it('debería manejar lista vacía de motos', async () => {
+  describe("Casos edge", () => {
+    it("debería manejar lista vacía de motos", async () => {
       mockPrisma.motorcycle.findMany.mockResolvedValue([]);
 
       const result = await getReservationsReport();
@@ -333,11 +331,11 @@ describe('getReservationsReport', () => {
       });
     });
 
-    it('debería manejar estados de reservación no esperados', async () => {
+    it("debería manejar estados de reservación no esperados", async () => {
       const mockMotorcycleWithUnknownStatus = {
         ...mockMotorcycleReserved,
         reservations: [
-          { amount: 30000, currency: 'USD', createdAt: new Date(), status: 'unknown' },
+          { amount: 30000, currency: "USD", createdAt: new Date(), status: "unknown" },
         ],
       };
 
@@ -349,7 +347,7 @@ describe('getReservationsReport', () => {
       expect(result.reservationsByStatus.unknown.count).toBe(1);
     });
 
-    it('debería verificar que se llame a Prisma con parámetros correctos', async () => {
+    it("debería verificar que se llame a Prisma con parámetros correctos", async () => {
       await getReservationsReport();
 
       expect(mockPrisma.motorcycle.findMany).toHaveBeenCalledWith({
@@ -402,4 +400,4 @@ describe('getReservationsReport', () => {
       });
     });
   });
-}); 
+});

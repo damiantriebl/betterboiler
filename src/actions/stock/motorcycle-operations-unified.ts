@@ -3,11 +3,11 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { motorcycleBatchSchema } from "@/zod/MotorcycleBatchSchema";
+import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
+import { MotorcycleState, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getOrganizationIdFromSession } from "../util";
-import { MotorcycleState, Prisma } from "@prisma/client";
-import type { MotorcycleBatchFormData } from "@/zod/MotorcycleBatchSchema";
 
 // Types
 export interface OperationResult {
@@ -15,6 +15,7 @@ export interface OperationResult {
   message?: string;
   error?: string;
   data?: any;
+  requiresOtp?: boolean;
 }
 
 export interface CreateBatchResult extends OperationResult {
@@ -24,6 +25,7 @@ export interface CreateBatchResult extends OperationResult {
 export interface UpdateStatusResult extends OperationResult {
   previousState?: MotorcycleState;
   newState?: MotorcycleState;
+  requiresOtp?: boolean;
 }
 
 export interface ReserveMotorcycleParams {
@@ -32,18 +34,51 @@ export interface ReserveMotorcycleParams {
   clientId: string;
 }
 
+// Lista de transiciones críticas que requieren OTP en modo seguro
+const CRITICAL_TRANSITIONS = [
+  `${MotorcycleState.VENDIDO}_TO_${MotorcycleState.STOCK}`, // VENDIDO → STOCK
+  `${MotorcycleState.ELIMINADO}_TO_${MotorcycleState.STOCK}`, // ELIMINADO → STOCK
+];
+
+// Helper para verificar si una transición es crítica
+function isCriticalTransition(currentState: MotorcycleState, newState: MotorcycleState): boolean {
+  const transitionKey = `${currentState}_TO_${newState}`;
+  return CRITICAL_TRANSITIONS.includes(transitionKey);
+}
+
+// Helper para validar OTP (simulado por ahora)
+async function validateOtp(otp: string): Promise<boolean> {
+  // Por ahora, simulamos la validación
+  // En una implementación real, aquí validarías el OTP contra tu sistema de autenticación
+  // Puedes integrar con bibliotecas como speakeasy, google-authenticator, etc.
+  console.log("[OTP] Validando OTP:", otp);
+
+  // OTP de prueba: "123456"
+  return otp === "123456";
+}
+
 // State transition rules
 const STATE_TRANSITIONS: Record<MotorcycleState, MotorcycleState[]> = {
-  [MotorcycleState.STOCK]: [MotorcycleState.PAUSADO, MotorcycleState.PROCESANDO, MotorcycleState.RESERVADO],
+  [MotorcycleState.STOCK]: [
+    MotorcycleState.PAUSADO,
+    MotorcycleState.PROCESANDO,
+    MotorcycleState.RESERVADO,
+    MotorcycleState.EN_TRANSITO,
+    MotorcycleState.ELIMINADO,
+  ],
   [MotorcycleState.PAUSADO]: [MotorcycleState.STOCK, MotorcycleState.ELIMINADO],
   [MotorcycleState.RESERVADO]: [MotorcycleState.STOCK, MotorcycleState.PROCESANDO],
   [MotorcycleState.PROCESANDO]: [MotorcycleState.STOCK, MotorcycleState.VENDIDO],
-  [MotorcycleState.VENDIDO]: [], // No transitions allowed from VENDIDO
+  [MotorcycleState.VENDIDO]: [MotorcycleState.STOCK], // Permitir VENDIDO → STOCK (transición crítica)
   [MotorcycleState.ELIMINADO]: [MotorcycleState.STOCK],
+  [MotorcycleState.EN_TRANSITO]: [MotorcycleState.STOCK], // Can return to stock when transfer is completed
 };
 
 // Validation helpers
-function validateStateTransition(currentState: MotorcycleState, newState: MotorcycleState): boolean {
+function validateStateTransition(
+  currentState: MotorcycleState,
+  newState: MotorcycleState,
+): boolean {
   return STATE_TRANSITIONS[currentState]?.includes(newState) ?? false;
 }
 
@@ -112,7 +147,7 @@ export async function createMotorcycleBatch(
     // Create motorcycles in transaction
     const result = await prisma.$transaction(async (tx) => {
       const createdMotorcycles = [];
-      
+
       for (const unitData of units) {
         const newMotorcycle = await tx.motorcycle.create({
           data: {
@@ -141,20 +176,19 @@ export async function createMotorcycleBatch(
         });
         createdMotorcycles.push(newMotorcycle);
       }
-      
+
       return createdMotorcycles;
     });
 
     revalidateMotorcyclePaths();
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: `Lote creado exitosamente: ${result.length} motocicletas agregadas.`,
-      createdCount: result.length 
+      createdCount: result.length,
     };
-
   } catch (error) {
     console.error("Error en createMotorcycleBatch:", error);
-    
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
         const target = (error.meta?.target as string[]) || [];
@@ -162,19 +196,23 @@ export async function createMotorcycleBatch(
         return {
           success: false,
           error: `Error de duplicidad: Ya existe una moto con el mismo ${
-            fieldName === "chassisNumber" ? "número de chasis" : 
-            fieldName === "engineNumber" ? "número de motor" : fieldName
+            fieldName === "chassisNumber"
+              ? "número de chasis"
+              : fieldName === "engineNumber"
+                ? "número de motor"
+                : fieldName
           }.`,
         };
       }
       if (error.code === "P2003") {
         return {
           success: false,
-          error: "Error de referencia: La Marca, Modelo, Color, Sucursal o Proveedor seleccionado no existe.",
+          error:
+            "Error de referencia: La Marca, Modelo, Color, Sucursal o Proveedor seleccionado no existe.",
         };
       }
     }
-    
+
     const message = error instanceof Error ? error.message : "Error inesperado al guardar el lote.";
     return { success: false, error: message };
   }
@@ -242,7 +280,6 @@ export async function updateMotorcycle(
     revalidatePath(`/stock/edit/${id}`);
 
     return { success: true, message: "Motocicleta actualizada correctamente." };
-
   } catch (error) {
     console.error("Error al actualizar la motocicleta:", error);
     return {
@@ -255,6 +292,7 @@ export async function updateMotorcycle(
 export async function updateMotorcycleStatus(
   motorcycleId: number,
   newStatus: MotorcycleState,
+  options: { secureMode?: boolean; otp?: string } = {},
 ): Promise<UpdateStatusResult> {
   try {
     const orgAccess = await validateOrganizationAccess();
@@ -280,13 +318,43 @@ export async function updateMotorcycleStatus(
       };
     }
 
+    // Verificar si es una transición crítica y se requiere OTP
+    const isTransitionCritical = isCriticalTransition(motorcycle.state, newStatus);
+    const { secureMode = false, otp } = options;
+
+    if (secureMode && isTransitionCritical) {
+      if (!otp) {
+        return {
+          success: false,
+          error: "Esta operación requiere verificación OTP en modo seguro.",
+          requiresOtp: true,
+          previousState: motorcycle.state,
+          newState: newStatus,
+        };
+      }
+
+      // Validar el OTP
+      const isValidOtp = await validateOtp(otp);
+      if (!isValidOtp) {
+        return {
+          success: false,
+          error: "Código OTP inválido. Por favor, verifica el código e intenta nuevamente.",
+          requiresOtp: true,
+          previousState: motorcycle.state,
+          newState: newStatus,
+        };
+      }
+    }
+
     const updateData: Prisma.MotorcycleUpdateInput = { state: newStatus };
 
     // Handle specific state transitions
-    if (newStatus === MotorcycleState.STOCK && 
-        (motorcycle.state === MotorcycleState.RESERVADO || 
-         motorcycle.state === MotorcycleState.PROCESANDO || 
-         motorcycle.state === MotorcycleState.ELIMINADO)) {
+    if (
+      newStatus === MotorcycleState.STOCK &&
+      (motorcycle.state === MotorcycleState.RESERVADO ||
+        motorcycle.state === MotorcycleState.PROCESANDO ||
+        motorcycle.state === MotorcycleState.ELIMINADO)
+    ) {
       updateData.client = { disconnect: true };
     }
 
@@ -302,11 +370,10 @@ export async function updateMotorcycleStatus(
 
     return {
       success: true,
-      message: `Estado actualizado de ${motorcycle.state} a ${newStatus}`,
+      message: `Estado actualizado de ${motorcycle.state} a ${newStatus}${secureMode && isTransitionCritical ? " (verificado con OTP)" : ""}`,
       previousState: motorcycle.state,
       newState: newStatus,
     };
-
   } catch (error) {
     console.error("Error en updateMotorcycleStatus:", error);
 
@@ -314,12 +381,14 @@ export async function updateMotorcycleStatus(
       if (error.code === "P2025") {
         return {
           success: false,
-          error: "No se pudo actualizar el estado. La motocicleta no existe o no permite esta transición.",
+          error:
+            "No se pudo actualizar el estado. La motocicleta no existe o no permite esta transición.",
         };
       }
     }
 
-    const message = error instanceof Error ? error.message : "Error inesperado al actualizar estado.";
+    const message =
+      error instanceof Error ? error.message : "Error inesperado al actualizar estado.";
     return { success: false, error: message };
   }
 }
@@ -362,12 +431,11 @@ export async function reserveMotorcycle({
 
     revalidateMotorcyclePaths();
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: "Motocicleta reservada exitosamente",
-      data: { motorcycle: updated } 
+      data: { motorcycle: updated },
     };
-
   } catch (error) {
     console.error("Error en reserveMotorcycle:", error);
     return { success: false, error: "No se pudo reservar la motocicleta" };
@@ -375,6 +443,8 @@ export async function reserveMotorcycle({
 }
 
 // Utility function to get available state transitions
-export function getAvailableStateTransitions(currentState: MotorcycleState): MotorcycleState[] {
+export async function getAvailableStateTransitions(
+  currentState: MotorcycleState,
+): Promise<MotorcycleState[]> {
   return STATE_TRANSITIONS[currentState] || [];
-} 
+}

@@ -6,8 +6,8 @@ import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 
 export default function AppSidebar() {
   return (
-    <Sidebar className="">
-      <SidebarContent className="bg-nebulosa bg-cover bg-center min-h-screen" />
+    <Sidebar variant="floating">
+      <SidebarContent className="bg-nebulosa bg-cover bg-center rounded-lg p-4 " />
     </Sidebar>
   );
 }

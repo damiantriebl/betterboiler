@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getSession } from "@/actions/util";
 import { deleteFromS3 } from "@/lib/s3-unified";
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/actions/util";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock de getSession
 vi.mock("@/actions/util", () => ({
@@ -18,7 +18,7 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
-// Create a mock Prisma instance
+// Mock directo del constructor de PrismaClient
 const mockPrisma = {
   $use: vi.fn(),
   modelFile: {
@@ -33,7 +33,7 @@ vi.mock("@prisma/client", () => ({
   PrismaClient: vi.fn(() => mockPrisma),
   Prisma: {
     TransactionIsolationLevel: {
-      ReadCommitted: 'ReadCommitted',
+      ReadCommitted: "ReadCommitted",
     },
   },
 }));
@@ -84,6 +84,7 @@ describe("model-files-actions", () => {
     vi.clearAllMocks();
     mockRevalidatePath.mockImplementation(() => {});
     mockGetSession.mockResolvedValue({ session: mockSessionData });
+    mockPrisma.modelFile.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -97,10 +98,10 @@ describe("model-files-actions", () => {
         { ...mockFile, id: "file-2", name: "spec.pdf", type: "spec" },
       ];
       mockPrisma.modelFile.findMany.mockResolvedValue(mockFiles);
-      
+
       const { getModelFiles } = await import("../model-files-actions");
       const result = await getModelFiles(1);
-      
+
       expect(result.success).toBe(true);
       expect(result.files).toHaveLength(2);
       expect(mockPrisma.modelFile.findMany).toHaveBeenCalledWith({
@@ -111,37 +112,37 @@ describe("model-files-actions", () => {
 
     it("debería fallar si no hay sesión válida", async () => {
       mockGetSession.mockResolvedValue({ session: null });
-      
+
       const { getModelFiles } = await import("../model-files-actions");
       const result = await getModelFiles(1);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe("No autorizado. Debe iniciar sesión para realizar esta acción.");
     });
 
     it("debería devolver lista vacía si no hay archivos", async () => {
       mockPrisma.modelFile.findMany.mockResolvedValue([]);
-      
+
       const { getModelFiles } = await import("../model-files-actions");
       const result = await getModelFiles(1);
-      
+
       expect(result.success).toBe(true);
       expect(result.files).toEqual([]);
     });
 
     it("debería manejar error de base de datos", async () => {
       mockPrisma.modelFile.findMany.mockRejectedValue(new Error("Database error"));
-      
+
       const { getModelFiles } = await import("../model-files-actions");
       const result = await getModelFiles(1);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe("Database error");
     });
 
     it("debería manejar modelId inválido", async () => {
       const { getModelFiles } = await import("../model-files-actions");
-      
+
       let result = await getModelFiles(0);
       expect(result.success).toBe(false);
       expect(result.error).toBe("ID de modelo no válido");
@@ -161,10 +162,10 @@ describe("model-files-actions", () => {
       mockPrisma.modelFile.findUnique.mockResolvedValue(mockFile);
       mockPrisma.modelFile.delete.mockResolvedValue(mockFile);
       mockDeleteFromS3.mockResolvedValue(undefined);
-      
+
       const { deleteModelFile } = await import("../model-files-actions");
       const result = await deleteModelFile("file-1");
-      
+
       expect(result.success).toBe(true);
       expect(result.message).toBe("Archivo eliminado correctamente");
       expect(mockPrisma.modelFile.findUnique).toHaveBeenCalledWith({ where: { id: "file-1" } });
@@ -177,20 +178,20 @@ describe("model-files-actions", () => {
 
     it("debería fallar si no hay sesión válida", async () => {
       mockGetSession.mockResolvedValue({ session: null });
-      
+
       const { deleteModelFile } = await import("../model-files-actions");
       const result = await deleteModelFile("file-1");
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe("No autorizado. Debe iniciar sesión para realizar esta acción.");
     });
 
     it("debería fallar si el archivo no existe", async () => {
       mockPrisma.modelFile.findUnique.mockResolvedValue(null);
-      
+
       const { deleteModelFile } = await import("../model-files-actions");
       const result = await deleteModelFile("file-999");
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe("Archivo no encontrado");
     });
@@ -200,10 +201,10 @@ describe("model-files-actions", () => {
       mockPrisma.modelFile.findUnique.mockResolvedValue(fileWithoutSmallKey);
       mockPrisma.modelFile.delete.mockResolvedValue(fileWithoutSmallKey);
       mockDeleteFromS3.mockResolvedValue(undefined);
-      
+
       const { deleteModelFile } = await import("../model-files-actions");
       const result = await deleteModelFile("file-1");
-      
+
       expect(result.success).toBe(true);
       expect(mockDeleteFromS3).toHaveBeenCalledTimes(1);
       expect(mockDeleteFromS3).toHaveBeenCalledWith(fileWithoutSmallKey.s3Key);
@@ -212,10 +213,10 @@ describe("model-files-actions", () => {
     it("debería manejar error en eliminación de S3", async () => {
       mockPrisma.modelFile.findUnique.mockResolvedValue(mockFile);
       mockDeleteFromS3.mockRejectedValue(new Error("S3 delete failed"));
-      
+
       const { deleteModelFile } = await import("../model-files-actions");
       const result = await deleteModelFile("file-1");
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain("Error al eliminar archivo de S3");
     });
@@ -224,17 +225,17 @@ describe("model-files-actions", () => {
       mockPrisma.modelFile.findUnique.mockResolvedValue(mockFile);
       mockDeleteFromS3.mockResolvedValue(undefined);
       mockPrisma.modelFile.delete.mockRejectedValue(new Error("Database error"));
-      
+
       const { deleteModelFile } = await import("../model-files-actions");
       const result = await deleteModelFile("file-1");
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe("Database error");
     });
 
     it("debería manejar fileId vacío", async () => {
       const { deleteModelFile } = await import("../model-files-actions");
-      
+
       let result = await deleteModelFile("");
       expect(result.success).toBe(false);
       expect(result.error).toBe("ID de archivo no válido");
@@ -253,10 +254,10 @@ describe("model-files-actions", () => {
         { ...mockFile, id: "file-3", type: "other", name: "document.docx" },
       ];
       mockPrisma.modelFile.findMany.mockResolvedValue(mixedFiles);
-      
+
       const { getModelFiles } = await import("../model-files-actions");
       const result = await getModelFiles(1);
-      
+
       expect(result.success).toBe(true);
       expect(result.files).toHaveLength(3);
       expect(result.files?.map((f) => f.type)).toEqual(["image", "spec", "other"]);
@@ -267,10 +268,10 @@ describe("model-files-actions", () => {
       mockPrisma.modelFile.findUnique.mockResolvedValue(specFile);
       mockPrisma.modelFile.delete.mockResolvedValue(specFile);
       mockDeleteFromS3.mockResolvedValue(undefined);
-      
+
       const { deleteModelFile } = await import("../model-files-actions");
       const result = await deleteModelFile("file-1");
-      
+
       expect(result.success).toBe(true);
       expect(mockDeleteFromS3).toHaveBeenCalledTimes(1);
       expect(mockDeleteFromS3).toHaveBeenCalledWith(specFile.s3Key);

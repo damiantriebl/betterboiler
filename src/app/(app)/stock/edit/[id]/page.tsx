@@ -1,7 +1,7 @@
 import { getMotorcycleById } from "@/actions/sales/get-motorcycle-by-id";
+import { getFormData } from "@/actions/stock";
 import { notFound } from "next/navigation";
 import { EditMotorcycleForm } from "./EditMotorcycleForm";
-import { getFormData } from "@/actions/stock";
 
 interface EditMotorcyclePageProps {
   params: Promise<{
@@ -27,10 +27,7 @@ export default async function EditMotorcyclePage({ params }: EditMotorcyclePageP
           Modifica los detalles de la motocicleta ID: {motorcycle.id}.
         </p>
       </div>
-      <EditMotorcycleForm
-        motorcycle={motorcycle}
-        formData={formData}
-      />
+      <EditMotorcycleForm motorcycle={motorcycle} formData={formData} />
     </main>
   );
 }

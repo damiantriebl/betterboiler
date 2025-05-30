@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { revalidatePath } from 'next/cache';
-import { updateUserAction } from '../update-user';
-import prisma from '@/lib/prisma';
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { updateUserAction } from "../update-user";
 
 // Mock de Next.js cache
-vi.mock('next/cache', () => ({
+vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     user: {
       findFirst: vi.fn(),
@@ -26,9 +26,9 @@ const mockConsole = {
 const mockRevalidatePath = revalidatePath as any;
 const mockPrisma = prisma as any;
 
-describe('updateUserAction', () => {
+describe("updateUserAction", () => {
   const initialState = { success: false };
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     global.console = mockConsole as any;
@@ -40,72 +40,75 @@ describe('updateUserAction', () => {
 
   const createFormData = (data: Record<string, string>) => {
     const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(data)) {
       formData.append(key, value);
-    });
+    }
     return formData;
   };
 
   const mockValidUser = {
-    id: 'user-123',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'user',
-    organizationId: 'org-123',
+    id: "user-123",
+    name: "John Doe",
+    email: "john@example.com",
+    role: "user",
+    organizationId: "org-123",
   };
 
-  describe('✅ Successful User Update', () => {
-    it('should update user successfully with all fields', async () => {
+  describe("✅ Successful User Update", () => {
+    it("should update user successfully with all fields", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue(null); // No duplicate email
       mockPrisma.user.update.mockResolvedValue({
         ...mockValidUser,
-        phone: '+1234567890',
-        address: '123 Main St',
-        profileOriginal: 'original-key-123',
-        profileCrop: 'crop-key-123',
+        phone: "+1234567890",
+        address: "123 Main St",
+        profileOriginal: "original-key-123",
+        profileCrop: "crop-key-123",
       });
 
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'john@example.com',
-        phone: '+1234567890',
-        address: '123 Main St',
-        profileOriginalKey: 'original-key-123',
-        profileCropKey: 'crop-key-123',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "John Doe",
+          email: "john@example.com",
+          phone: "+1234567890",
+          address: "123 Main St",
+          profileOriginalKey: "original-key-123",
+          profileCropKey: "crop-key-123",
+        }),
+      );
 
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'john@example.com',
-          NOT: { id: 'user-123' },
+          email: "john@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
+        where: { id: "user-123" },
         data: {
-          name: 'John Doe',
-          email: 'john@example.com',
-          phone: '+1234567890',
-          address: '123 Main St',
-          profileOriginal: 'original-key-123',
-          profileCrop: 'crop-key-123',
+          name: "John Doe",
+          email: "john@example.com",
+          phone: "+1234567890",
+          address: "123 Main St",
+          profileOriginal: "original-key-123",
+          profileCrop: "crop-key-123",
         },
       });
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/profile');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/profile");
       expect(result.success).toBe(true);
     });
 
-    it('should update user with required fields only', async () => {
+    it("should update user with required fields only", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.user.update.mockResolvedValue({
         ...mockValidUser,
-        name: 'Jane Doe',
-        email: 'jane@example.com',
+        name: "Jane Doe",
+        email: "jane@example.com",
         phone: null,
         address: null,
         profileOriginal: null,
@@ -113,41 +116,44 @@ describe('updateUserAction', () => {
       });
 
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "Jane Doe",
+          email: "jane@example.com",
+        }),
+      );
 
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'jane@example.com',
-          NOT: { id: 'user-123' },
+          email: "jane@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
+        where: { id: "user-123" },
         data: {
-          name: 'Jane Doe',
-          email: 'jane@example.com',
+          name: "Jane Doe",
+          email: "jane@example.com",
           phone: null,
           address: null,
           profileOriginal: null,
           profileCrop: null,
         },
       });
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/profile');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/profile");
       expect(result.success).toBe(true);
     });
 
-    it('should handle empty optional fields as null', async () => {
+    it("should handle empty optional fields as null", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.user.update.mockResolvedValue({
         ...mockValidUser,
-        name: 'Test User',
-        email: 'test@example.com',
+        name: "Test User",
+        email: "test@example.com",
         phone: null,
         address: null,
         profileOriginal: null,
@@ -155,45 +161,48 @@ describe('updateUserAction', () => {
       });
 
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'Test User',
-        email: 'test@example.com',
-        phone: '',
-        address: '',
-        profileOriginalKey: '',
-        profileCropKey: '',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "Test User",
+          email: "test@example.com",
+          phone: "",
+          address: "",
+          profileOriginalKey: "",
+          profileCropKey: "",
+        }),
+      );
 
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'test@example.com',
-          NOT: { id: 'user-123' },
+          email: "test@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
+        where: { id: "user-123" },
         data: {
-          name: 'Test User',
-          email: 'test@example.com',
+          name: "Test User",
+          email: "test@example.com",
           phone: null,
           address: null,
           profileOriginal: null,
           profileCrop: null,
         },
       });
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/profile');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/profile");
       expect(result.success).toBe(true);
     });
   });
 
-  describe('❌ Validation Errors', () => {
-    it('should return error when userId is missing', async () => {
+  describe("❌ Validation Errors", () => {
+    it("should return error when userId is missing", async () => {
       // Arrange
       const formData = createFormData({
-        name: 'John Doe',
-        email: 'john@example.com',
+        name: "John Doe",
+        email: "john@example.com",
       });
 
       // Act
@@ -202,43 +211,43 @@ describe('updateUserAction', () => {
       // Assert
       expect(result).toEqual({
         success: false,
-        error: 'Los campos nombre y email son obligatorios',
+        error: "Los campos nombre y email son obligatorios",
       });
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should return error when name is missing', async () => {
+    it("should return error when name is missing", async () => {
       // Arrange
       const formData = createFormData({
-        userId: 'user-123',
-        email: 'john@example.com',
+        userId: "user-123",
+        email: "john@example.com",
       });
 
       // Act
       const result = await updateUserAction(initialState, formData);
 
       // Assert
-      expect(result.error).toBe('Los campos nombre y email son obligatorios');
+      expect(result.error).toBe("Los campos nombre y email son obligatorios");
       expect(result.success).toBe(false);
     });
 
-    it('should return error when email is missing', async () => {
+    it("should return error when email is missing", async () => {
       // Arrange
       const formData = createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
+        userId: "user-123",
+        name: "John Doe",
       });
 
       // Act
       const result = await updateUserAction(initialState, formData);
 
       // Assert
-      expect(result.error).toBe('Los campos nombre y email son obligatorios');
+      expect(result.error).toBe("Los campos nombre y email son obligatorios");
       expect(result.success).toBe(false);
     });
 
-    it('should return error when all required fields are missing', async () => {
+    it("should return error when all required fields are missing", async () => {
       // Arrange
       const formData = new FormData();
 
@@ -246,47 +255,50 @@ describe('updateUserAction', () => {
       const result = await updateUserAction(initialState, formData);
 
       // Assert
-      expect(result.error).toBe('Los campos nombre y email son obligatorios');
+      expect(result.error).toBe("Los campos nombre y email son obligatorios");
       expect(result.success).toBe(false);
     });
   });
 
-  describe('🔍 Email Duplication Check', () => {
-    it('should return error when email is already in use by another user', async () => {
+  describe("🔍 Email Duplication Check", () => {
+    it("should return error when email is already in use by another user", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue({
-        id: 'other-user-456',
-        email: 'existing@example.com',
+        id: "other-user-456",
+        email: "existing@example.com",
       });
 
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'existing@example.com',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "John Doe",
+          email: "existing@example.com",
+        }),
+      );
 
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'existing@example.com',
-          NOT: { id: 'user-123' },
+          email: "existing@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
       expect(result).toEqual({
         success: false,
-        error: 'Este correo electrónico ya está en uso por otro usuario',
+        error: "Este correo electrónico ya está en uso por otro usuario",
       });
     });
 
-    it('should allow user to keep their current email', async () => {
+    it("should allow user to keep their current email", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue(null); // No other user has this email
       mockPrisma.user.update.mockResolvedValue({
         ...mockValidUser,
-        name: 'John Doe',
-        email: 'john@example.com',
+        name: "John Doe",
+        email: "john@example.com",
         phone: null,
         address: null,
         profileOriginal: null,
@@ -294,89 +306,98 @@ describe('updateUserAction', () => {
       });
 
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'john@example.com',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "John Doe",
+          email: "john@example.com",
+        }),
+      );
 
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'john@example.com',
-          NOT: { id: 'user-123' },
+          email: "john@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
+        where: { id: "user-123" },
         data: {
-          name: 'John Doe',
-          email: 'john@example.com',
+          name: "John Doe",
+          email: "john@example.com",
           phone: null,
           address: null,
           profileOriginal: null,
           profileCrop: null,
         },
       });
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/profile');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/profile");
       expect(result.success).toBe(true);
     });
   });
 
-  describe('❌ Database Error Handling', () => {
-    it('should handle database errors during email check', async () => {
+  describe("❌ Database Error Handling", () => {
+    it("should handle database errors during email check", async () => {
       // Arrange
-      mockPrisma.user.findFirst.mockRejectedValue(new Error('Database error'));
+      mockPrisma.user.findFirst.mockRejectedValue(new Error("Database error"));
 
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'john@example.com',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "John Doe",
+          email: "john@example.com",
+        }),
+      );
 
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'john@example.com',
-          NOT: { id: 'user-123' },
+          email: "john@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
       expect(result).toEqual({
         success: false,
-        error: 'Ha ocurrido un error al actualizar el perfil',
+        error: "Ha ocurrido un error al actualizar el perfil",
       });
       expect(mockConsole.error).toHaveBeenCalledWith(
-        'Error al actualizar el perfil:',
-        new Error('Database error')
+        "Error al actualizar el perfil:",
+        new Error("Database error"),
       );
     });
 
-    it('should handle database errors during user update', async () => {
+    it("should handle database errors during user update", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue(null);
-      mockPrisma.user.update.mockRejectedValue(new Error('Update failed'));
+      mockPrisma.user.update.mockRejectedValue(new Error("Update failed"));
 
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'john@example.com',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "John Doe",
+          email: "john@example.com",
+        }),
+      );
 
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'john@example.com',
-          NOT: { id: 'user-123' },
+          email: "john@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
+        where: { id: "user-123" },
         data: {
-          name: 'John Doe',
-          email: 'john@example.com',
+          name: "John Doe",
+          email: "john@example.com",
           phone: null,
           address: null,
           profileOriginal: null,
@@ -384,68 +405,74 @@ describe('updateUserAction', () => {
         },
       });
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Ha ocurrido un error al actualizar el perfil');
+      expect(result.error).toBe("Ha ocurrido un error al actualizar el perfil");
       expect(mockConsole.error).toHaveBeenCalledWith(
-        'Error al actualizar el perfil:',
-        new Error('Update failed')
+        "Error al actualizar el perfil:",
+        new Error("Update failed"),
       );
     });
   });
 
-  describe('🔄 Cache Revalidation', () => {
-    it('should revalidate profile path after successful update', async () => {
+  describe("🔄 Cache Revalidation", () => {
+    it("should revalidate profile path after successful update", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.user.update.mockResolvedValue({
         ...mockValidUser,
-        name: 'John Doe',
-        email: 'john@example.com',
+        name: "John Doe",
+        email: "john@example.com",
       });
 
       // Act
-      await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'john@example.com',
-      }));
+      await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "John Doe",
+          email: "john@example.com",
+        }),
+      );
 
       // Assert
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/profile');
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/profile");
       expect(mockRevalidatePath).toHaveBeenCalledTimes(1);
     });
 
-    it('should not revalidate path when update fails', async () => {
+    it("should not revalidate path when update fails", async () => {
       // Arrange
       mockPrisma.user.findFirst.mockResolvedValue({
-        id: 'other-user',
-        email: 'existing@example.com',
+        id: "other-user",
+        email: "existing@example.com",
       });
 
       // Act
-      await updateUserAction(initialState, createFormData({
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'existing@example.com',
-      }));
+      await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "user-123",
+          name: "John Doe",
+          email: "existing@example.com",
+        }),
+      );
 
       // Assert
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
   });
 
-  describe('📋 FormData Handling', () => {
-    it('should not revalidate on duplicate email errors', async () => {
+  describe("📋 FormData Handling", () => {
+    it("should not revalidate on duplicate email errors", async () => {
       // Arrange
       const updateData = {
-        id: 'user-123',
-        name: 'John Doe',
-        email: 'existing@example.com',
-        role: 'user',
+        id: "user-123",
+        name: "John Doe",
+        email: "existing@example.com",
+        role: "user",
       };
 
       mockPrisma.user.findFirst.mockResolvedValue({
-        id: 'other-user-456',
-        email: 'existing@example.com',
+        id: "other-user-456",
+        email: "existing@example.com",
       });
 
       // Act
@@ -456,14 +483,14 @@ describe('updateUserAction', () => {
     });
   });
 
-  describe('📋 FormData Handling', () => {
-    it('should correctly extract all fields from FormData', async () => {
+  describe("📋 FormData Handling", () => {
+    it("should correctly extract all fields from FormData", async () => {
       // Arrange
       const updateData = {
-        userId: 'user-123',
-        name: 'FormData User',
-        email: 'formdata@example.com',
-        role: 'manager',
+        userId: "user-123",
+        name: "FormData User",
+        email: "formdata@example.com",
+        role: "manager",
       };
 
       mockPrisma.user.findFirst.mockResolvedValue(null);
@@ -478,27 +505,27 @@ describe('updateUserAction', () => {
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'formdata@example.com',
-          NOT: { id: 'user-123' },
+          email: "formdata@example.com",
+          NOT: { id: "user-123" },
         },
       });
     });
 
-    it('should handle FormData with extra fields', async () => {
+    it("should handle FormData with extra fields", async () => {
       // Arrange
       const formData = new FormData();
-      formData.append('userId', 'user-123');
-      formData.append('name', 'Test User');
-      formData.append('email', 'test@example.com');
-      formData.append('role', 'user');
-      formData.append('extraField', 'should-be-ignored');
-      formData.append('anotherField', 'should-be-ignored');
+      formData.append("userId", "user-123");
+      formData.append("name", "Test User");
+      formData.append("email", "test@example.com");
+      formData.append("role", "user");
+      formData.append("extraField", "should-be-ignored");
+      formData.append("anotherField", "should-be-ignored");
 
       const expectedData = {
-        userId: 'user-123',
-        name: 'Test User',
-        email: 'test@example.com',
-        role: 'user',
+        userId: "user-123",
+        name: "Test User",
+        email: "test@example.com",
+        role: "user",
       };
 
       mockPrisma.user.findFirst.mockResolvedValue(null);
@@ -513,23 +540,23 @@ describe('updateUserAction', () => {
       // Assert
       expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
         where: {
-          email: 'test@example.com',
-          NOT: { id: 'user-123' },
+          email: "test@example.com",
+          NOT: { id: "user-123" },
         },
       });
       expect(result.success).toBe(true);
     });
   });
 
-  describe('🚀 Edge Cases', () => {
-    it('should handle very long names', async () => {
+  describe("🚀 Edge Cases", () => {
+    it("should handle very long names", async () => {
       // Arrange
-      const longName = 'A'.repeat(500);
+      const longName = "A".repeat(500);
       const updateData = {
-        userId: 'user-123',
+        userId: "user-123",
         name: longName,
-        email: 'test@example.com',
-        role: 'user',
+        email: "test@example.com",
+        role: "user",
       };
 
       mockPrisma.user.findFirst.mockResolvedValue(null);
@@ -545,14 +572,14 @@ describe('updateUserAction', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle unicode characters in names', async () => {
+    it("should handle unicode characters in names", async () => {
       // Arrange
-      const unicodeName = 'José María Ñoño 中文';
+      const unicodeName = "José María Ñoño 中文";
       const updateData = {
-        userId: 'user-123',
+        userId: "user-123",
         name: unicodeName,
-        email: 'jose@example.com',
-        role: 'user',
+        email: "jose@example.com",
+        role: "user",
       };
 
       mockPrisma.user.findFirst.mockResolvedValue(null);
@@ -568,14 +595,14 @@ describe('updateUserAction', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle email with special characters', async () => {
+    it("should handle email with special characters", async () => {
       // Arrange
-      const specialEmail = 'user+test@sub-domain.example-site.co.uk';
+      const specialEmail = "user+test@sub-domain.example-site.co.uk";
       const updateData = {
-        userId: 'user-123',
-        name: 'Test User',
+        userId: "user-123",
+        name: "Test User",
         email: specialEmail,
-        role: 'user',
+        role: "user",
       };
 
       mockPrisma.user.findFirst.mockResolvedValue(null);
@@ -591,15 +618,15 @@ describe('updateUserAction', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle different role values', async () => {
+    it("should handle different role values", async () => {
       // Arrange
-      const roles = ['user', 'admin', 'manager', 'viewer'];
+      const roles = ["user", "admin", "manager", "viewer"];
 
       for (const role of roles) {
         const updateData = {
-          userId: 'user-123',
-          name: 'Test User',
-          email: 'test@example.com',
+          userId: "user-123",
+          name: "Test User",
+          email: "test@example.com",
           role,
         };
 
@@ -629,37 +656,40 @@ describe('updateUserAction', () => {
     });
   });
 
-  describe('⚡ Performance Considerations', () => {
-    it('should not make unnecessary database calls on validation failure', async () => {
+  describe("⚡ Performance Considerations", () => {
+    it("should not make unnecessary database calls on validation failure", async () => {
       // Arrange - datos inválidos (faltan campos requeridos)
-      
+
       // Act
-      const result = await updateUserAction(initialState, createFormData({
-        userId: '',
-        name: '',
-        email: '',
-      }));
+      const result = await updateUserAction(
+        initialState,
+        createFormData({
+          userId: "",
+          name: "",
+          email: "",
+        }),
+      );
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Los campos nombre y email son obligatorios');
+      expect(result.error).toBe("Los campos nombre y email son obligatorios");
       expect(mockPrisma.user.findFirst).not.toHaveBeenCalled();
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
-    it('should avoid update operation when email check fails', async () => {
+    it("should avoid update operation when email check fails", async () => {
       // Arrange
       const updateData = {
-        userId: 'user-123',
-        name: 'John Doe',
-        email: 'existing@example.com',
-        role: 'user',
+        userId: "user-123",
+        name: "John Doe",
+        email: "existing@example.com",
+        role: "user",
       };
 
       mockPrisma.user.findFirst.mockResolvedValue({
-        id: 'other-user-456',
-        email: 'existing@example.com',
+        id: "other-user-456",
+        email: "existing@example.com",
       });
 
       // Act
@@ -667,10 +697,10 @@ describe('updateUserAction', () => {
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Este correo electrónico ya está en uso por otro usuario');
+      expect(result.error).toBe("Este correo electrónico ya está en uso por otro usuario");
       expect(mockPrisma.user.findFirst).toHaveBeenCalledTimes(1);
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
   });
-}); 
+});

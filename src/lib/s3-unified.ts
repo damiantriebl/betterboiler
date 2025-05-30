@@ -1,11 +1,11 @@
 "use server";
 
-import { 
-  DeleteObjectCommand, 
-  GetObjectCommand, 
-  PutObjectCommand, 
-  S3Client, 
-  type PutObjectCommandInput 
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  type PutObjectCommandInput,
+  S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl as awsGetSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -55,9 +55,7 @@ interface S3UploadError {
 
 export type S3UploadResult = S3UploadSuccess | S3UploadError;
 
-export type SignedUrlResult = 
-  | { success: { url: string } } 
-  | { failure: string };
+export type SignedUrlResult = { success: { url: string } } | { failure: string };
 
 // ===========================
 // UTILIDADES
@@ -77,16 +75,16 @@ const getMimeType = (fileName: string): string => {
     webp: "image/webp",
     gif: "image/gif",
     svg: "image/svg+xml",
-    
+
     // Documentos
     pdf: "application/pdf",
-    
+
     // Office
     xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ppt: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    
+
     // Archivos
     zip: "application/zip",
     txt: "text/plain",
@@ -104,7 +102,10 @@ const getMimeType = (fileName: string): string => {
  * Normaliza nombres para crear slugs de URL
  */
 const createSlug = (name: string): string => {
-  return name.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-");
 };
 
 /**
@@ -112,12 +113,12 @@ const createSlug = (name: string): string => {
  */
 const generateFileName = (originalName: string, addTimestamp = false): string => {
   if (!addTimestamp) return originalName;
-  
+
   const timestamp = Date.now();
   const extension = originalName.split(".").pop();
   const nameWithoutExt = originalName.replace(/\.[^/.]+$/, "");
   const cleanName = nameWithoutExt.replace(/[^a-zA-Z0-9-_.]/g, "-").toLowerCase();
-  
+
   return `${cleanName}-${timestamp}.${extension}`;
 };
 
@@ -125,9 +126,10 @@ const generateFileName = (originalName: string, addTimestamp = false): string =>
  * Construye URL pública del archivo
  */
 const buildPublicUrl = (key: string): string => {
-  const bucketDomain = process.env.AWS_CLOUDFRONT_DOMAIN ||
+  const bucketDomain =
+    process.env.AWS_CLOUDFRONT_DOMAIN ||
     `${requiredEnvVars.AWS_BUCKET_NAME}.s3.${requiredEnvVars.AWS_REGION}.amazonaws.com`;
-  
+
   return `https://${bucketDomain}/${key}`;
 };
 
@@ -143,7 +145,7 @@ export async function uploadToS3(
   input: File | Buffer | Blob | string,
   key: string,
   contentType?: string,
-  options: UploadOptions = {}
+  options: UploadOptions = {},
 ): Promise<S3UploadResult> {
   try {
     let buffer: Buffer;
@@ -186,12 +188,11 @@ export async function uploadToS3(
 
     const url = buildPublicUrl(key);
     return { success: true, url, key };
-
   } catch (error) {
     console.error("Error uploading to S3:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -205,11 +206,11 @@ export async function uploadModelFile(
   brandName: string,
   modelName: string,
   fileType: FileType,
-  options: UploadOptions = {}
+  options: UploadOptions = {},
 ): Promise<S3UploadResult> {
   const brandSlug = createSlug(brandName);
   const modelSlug = createSlug(modelName);
-  
+
   let key = "";
   const finalFileName = generateFileName(fileName, options.addTimestamp);
 
@@ -239,14 +240,14 @@ export async function uploadToFolder(
   file: File | Buffer | Blob | string,
   folderPath: string,
   fileName?: string,
-  options: UploadOptions = {}
+  options: UploadOptions = {},
 ): Promise<S3UploadResult> {
   let finalFileName = fileName;
-  
+
   if (!finalFileName && file instanceof File) {
     finalFileName = file.name;
   }
-  
+
   if (!finalFileName) {
     throw new Error("fileName is required when not using File object");
   }
@@ -269,7 +270,7 @@ export async function uploadModelImage(
   file: File | Buffer | Blob | string,
   brandName: string,
   modelName: string,
-  options: UploadOptions = {}
+  options: UploadOptions = {},
 ): Promise<S3UploadResult> {
   return uploadModelFile(file, "img.webp", brandName, modelName, "image", options);
 }
@@ -281,7 +282,7 @@ export async function uploadModelThumbnail(
   file: File | Buffer | Blob | string,
   brandName: string,
   modelName: string,
-  options: UploadOptions = {}
+  options: UploadOptions = {},
 ): Promise<S3UploadResult> {
   return uploadModelFile(file, "img_small.webp", brandName, modelName, "image_small", options);
 }
@@ -293,7 +294,7 @@ export async function uploadModelSpec(
   file: File | Buffer | Blob | string,
   brandName: string,
   modelName: string,
-  options: UploadOptions = {}
+  options: UploadOptions = {},
 ): Promise<S3UploadResult> {
   const fileName = `${createSlug(modelName)}.pdf`;
   return uploadModelFile(file, fileName, brandName, modelName, "spec_sheet", options);
@@ -326,7 +327,7 @@ export async function deleteFromS3(key: string): Promise<void> {
 export async function getSignedUrl(
   key: string,
   operation: "get" | "put" = "get",
-  expiresIn = 3600
+  expiresIn = 3600,
 ): Promise<SignedUrlResult> {
   try {
     // Extraer key si es una URL completa
@@ -338,20 +339,20 @@ export async function getSignedUrl(
       }
     }
 
-    const command = operation === "get"
-      ? new GetObjectCommand({ 
-          Bucket: requiredEnvVars.AWS_BUCKET_NAME, 
-          Key: cleanKey 
-        })
-      : new PutObjectCommand({
-          Bucket: requiredEnvVars.AWS_BUCKET_NAME,
-          Key: cleanKey,
-          ContentType: "image/webp",
-        });
+    const command =
+      operation === "get"
+        ? new GetObjectCommand({
+            Bucket: requiredEnvVars.AWS_BUCKET_NAME,
+            Key: cleanKey,
+          })
+        : new PutObjectCommand({
+            Bucket: requiredEnvVars.AWS_BUCKET_NAME,
+            Key: cleanKey,
+            ContentType: "image/webp",
+          });
 
     const signedUrl = await awsGetSignedUrl(s3Client, command, { expiresIn });
     return { success: { url: signedUrl } };
-
   } catch (error) {
     console.error("Error generating signed URL:", error);
     return { failure: "Error interno al generar URL firmada" };
@@ -367,13 +368,13 @@ export async function getSignedUrl(
  */
 export async function validateS3Config(): Promise<{ valid: boolean; missing: string[] }> {
   const missing: string[] = [];
-  
+
   if (!requiredEnvVars.AWS_ACCESS_KEY_ID) missing.push("AWS_ACCESS_KEY_ID");
   if (!requiredEnvVars.AWS_SECRET_ACCESS_KEY) missing.push("AWS_SECRET_ACCESS_KEY");
-  
+
   return {
     valid: missing.length === 0,
-    missing
+    missing,
   };
 }
 
@@ -392,4 +393,4 @@ export async function getS3Config(): Promise<{
     hasCloudFront: Boolean(process.env.AWS_CLOUDFRONT_DOMAIN),
     cloudFrontDomain: process.env.AWS_CLOUDFRONT_DOMAIN,
   };
-} 
+}

@@ -1,10 +1,7 @@
-import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/toaster";
 import type { Metadata } from "next";
 import "./globals.css";
-import prisma from "@/lib/prisma";
 import { Lato } from "next/font/google";
-import { headers } from "next/headers";
 
 const WorkSans = Lato({
   subsets: ["latin"],
@@ -22,16 +19,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  const organization = session?.user.organizationId
-    ? await prisma.organization.findUnique({
-        where: { id: session.user.organizationId },
-        select: { name: true },
-      })
-    : null;
-
   return (
     <html lang="en">
       <body lang="es" className={`${WorkSans.className} antialiased`}>

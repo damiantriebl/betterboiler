@@ -9,7 +9,7 @@ export const createReservationSchema = z.object({
   clientId: z.string().min(1, "El ID del cliente es requerido"),
   amount: z.number().positive("El monto debe ser un número positivo"),
   currency: z.enum(["USD", "ARS"]).default("USD"),
-  expirationDate: z.date().nullable().optional(),
+  expirationDate: z.string().nullable().optional().or(z.date().nullable().optional()),
   paymentMethod: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 });

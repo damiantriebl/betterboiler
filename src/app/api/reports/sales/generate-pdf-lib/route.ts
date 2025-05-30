@@ -1,6 +1,9 @@
-import { generateSalesReportPDF, createPDFResponse } from '@/lib/pdf-generators/sales-report-pdf';
-import type { SalesReport } from '@/types/reports';
-import { NextRequest } from 'next/server';
+import {
+  createSalesReportPDFResponse,
+  generateSalesReportPDF,
+} from "@/lib/pdf-generators/sales-report-pdf";
+import type { SalesReport } from "@/types/reports";
+import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,17 +15,16 @@ export async function POST(request: NextRequest) {
     const pdfBytes = await generateSalesReportPDF(reportData);
 
     // Crear y retornar la respuesta HTTP
-    return createPDFResponse(pdfBytes, `reporte-ventas-${new Date().toISOString().split('T')[0]}.pdf`);
-
-  } catch (error) {
-    console.error('Error generando PDF de ventas:', error);
-    return new Response(
-      JSON.stringify({ error: 'Error generando el reporte PDF' }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
+    return createSalesReportPDFResponse(
+      pdfBytes,
+      `reporte-ventas-${new Date().toISOString().split("T")[0]}.pdf`,
     );
+  } catch (error) {
+    console.error("Error generando PDF de ventas:", error);
+    return new Response(JSON.stringify({ error: "Error generando el reporte PDF" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 
@@ -38,37 +40,37 @@ export async function GET() {
         averagePrice: { ARS: 166667, USD: 333 },
       },
       salesBySeller: {
-        '1': {
-          name: 'Juan Pérez',
+        "1": {
+          name: "Juan Pérez",
           count: 8,
           revenue: { ARS: 1200000, USD: 2400 },
           profit: { ARS: 360000, USD: 720 },
         },
-        '2': {
-          name: 'María García',
+        "2": {
+          name: "María García",
           count: 7,
           revenue: { ARS: 1300000, USD: 2600 },
           profit: { ARS: 390000, USD: 780 },
         },
       },
       salesByBranch: {
-        '1': {
-          name: 'Sucursal Centro',
+        "1": {
+          name: "Sucursal Centro",
           count: 10,
           revenue: { ARS: 1600000, USD: 3200 },
         },
-        '2': {
-          name: 'Sucursal Norte',
+        "2": {
+          name: "Sucursal Norte",
           count: 5,
           revenue: { ARS: 900000, USD: 1800 },
         },
       },
       salesByMonth: {
-        'Enero 2024': {
+        "Enero 2024": {
           count: 5,
           revenue: { ARS: 800000, USD: 1600 },
         },
-        'Febrero 2024': {
+        "Febrero 2024": {
           count: 10,
           revenue: { ARS: 1700000, USD: 3400 },
         },
@@ -76,16 +78,12 @@ export async function GET() {
     };
 
     const pdfBytes = await generateSalesReportPDF(mockReport);
-    return createPDFResponse(pdfBytes, 'reporte-ventas-ejemplo.pdf');
-
+    return createSalesReportPDFResponse(pdfBytes, "reporte-ventas-ejemplo.pdf");
   } catch (error) {
-    console.error('Error generando PDF de ejemplo:', error);
-    return new Response(
-      JSON.stringify({ error: 'Error generando el reporte de ejemplo' }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
+    console.error("Error generando PDF de ejemplo:", error);
+    return new Response(JSON.stringify({ error: "Error generando el reporte de ejemplo" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
-} 
+}

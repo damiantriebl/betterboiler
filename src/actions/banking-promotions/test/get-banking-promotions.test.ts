@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import prisma from "@/lib/prisma";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  getAllBanks,
-  getOrganizationBankingPromotions,
-  getBankingPromotionById,
   calculatePromotionAmount,
+  getAllBanks,
+  getBankingPromotionById,
   getEnabledBankingPromotions,
-} from '../get-banking-promotions';
-import prisma from '@/lib/prisma';
+  getOrganizationBankingPromotions,
+} from "../get-banking-promotions";
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     bank: {
       findMany: vi.fn(),
@@ -29,7 +29,7 @@ const mockConsole = {
 
 const mockPrisma = prisma as any;
 
-describe('Banking Promotions Queries', () => {
+describe("Banking Promotions Queries", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.console = mockConsole as any;
@@ -42,35 +42,35 @@ describe('Banking Promotions Queries', () => {
   const mockBanks = [
     {
       id: 1,
-      name: 'Banco Provincia',
-      logoUrl: 'https://example.com/banco-provincia.png',
+      name: "Banco Provincia",
+      logoUrl: "https://example.com/banco-provincia.png",
     },
     {
       id: 2,
-      name: 'Banco Nación',
+      name: "Banco Nación",
       logoUrl: null,
     },
     {
       id: 3,
-      name: 'Banco Santander',
-      logoUrl: 'https://example.com/santander.png',
+      name: "Banco Santander",
+      logoUrl: "https://example.com/santander.png",
     },
   ];
 
   const mockBankingPromotions = [
     {
       id: 1,
-      name: 'Descuento Visa',
-      description: 'Descuento del 10% con Visa',
-      organizationId: 'org-123',
+      name: "Descuento Visa",
+      description: "Descuento del 10% con Visa",
+      organizationId: "org-123",
       isEnabled: true,
       discountRate: 10.0,
       surchargeRate: null,
-      activeDays: ['lunes', 'martes'],
-      createdAt: new Date('2024-01-01'),
-      paymentMethod: { id: 1, name: 'Tarjeta de crédito' },
+      activeDays: ["lunes", "martes"],
+      createdAt: new Date("2024-01-01"),
+      paymentMethod: { id: 1, name: "Tarjeta de crédito" },
       bankCard: { id: 1, bankId: 1, cardTypeId: 1 },
-      bank: { id: 1, name: 'Banco Provincia' },
+      bank: { id: 1, name: "Banco Provincia" },
       installmentPlans: [
         { id: 1, installments: 3, interestRate: 0, isEnabled: true },
         { id: 2, installments: 6, interestRate: 5.0, isEnabled: true },
@@ -78,24 +78,24 @@ describe('Banking Promotions Queries', () => {
     },
     {
       id: 2,
-      name: 'Recargo Mastercard',
-      description: 'Recargo del 5% con Mastercard',
-      organizationId: 'org-123',
+      name: "Recargo Mastercard",
+      description: "Recargo del 5% con Mastercard",
+      organizationId: "org-123",
       isEnabled: false,
       discountRate: null,
       surchargeRate: 5.0,
       activeDays: [],
-      createdAt: new Date('2024-01-02'),
-      paymentMethod: { id: 2, name: 'Tarjeta de débito' },
+      createdAt: new Date("2024-01-02"),
+      paymentMethod: { id: 2, name: "Tarjeta de débito" },
       bankCard: { id: 2, bankId: 2, cardTypeId: 2 },
-      bank: { id: 2, name: 'Banco Nación' },
+      bank: { id: 2, name: "Banco Nación" },
       installmentPlans: [],
     },
   ];
 
-  describe('🏦 getAllBanks', () => {
-    describe('✅ Successful Retrieval', () => {
-      it('should return all banks ordered by name', async () => {
+  describe("🏦 getAllBanks", () => {
+    describe("✅ Successful Retrieval", () => {
+      it("should return all banks ordered by name", async () => {
         // Arrange
         mockPrisma.bank.findMany.mockResolvedValue(mockBanks);
 
@@ -104,13 +104,13 @@ describe('Banking Promotions Queries', () => {
 
         // Assert
         expect(mockPrisma.bank.findMany).toHaveBeenCalledWith({
-          orderBy: { name: 'asc' },
+          orderBy: { name: "asc" },
         });
         expect(result).toEqual(mockBanks);
         expect(result).toHaveLength(3);
       });
 
-      it('should return empty array when no banks exist', async () => {
+      it("should return empty array when no banks exist", async () => {
         // Arrange
         mockPrisma.bank.findMany.mockResolvedValue([]);
 
@@ -122,11 +122,9 @@ describe('Banking Promotions Queries', () => {
         expect(result).toHaveLength(0);
       });
 
-      it('should handle banks with null logoUrl', async () => {
+      it("should handle banks with null logoUrl", async () => {
         // Arrange
-        const banksWithNullLogo = [
-          { id: 1, name: 'Banco Sin Logo', logoUrl: null },
-        ];
+        const banksWithNullLogo = [{ id: 1, name: "Banco Sin Logo", logoUrl: null }];
         mockPrisma.bank.findMany.mockResolvedValue(banksWithNullLogo);
 
         // Act
@@ -138,44 +136,38 @@ describe('Banking Promotions Queries', () => {
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return empty array and log error on database failure', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return empty array and log error on database failure", async () => {
         // Arrange
-        mockPrisma.bank.findMany.mockRejectedValue(new Error('Database connection failed'));
+        mockPrisma.bank.findMany.mockRejectedValue(new Error("Database connection failed"));
 
         // Act
         const result = await getAllBanks();
 
         // Assert
         expect(result).toEqual([]);
-        expect(mockConsole.error).toHaveBeenCalledWith(
-          'Error fetching banks:',
-          expect.any(Error)
-        );
+        expect(mockConsole.error).toHaveBeenCalledWith("Error fetching banks:", expect.any(Error));
       });
 
-      it('should handle unknown errors gracefully', async () => {
+      it("should handle unknown errors gracefully", async () => {
         // Arrange
-        mockPrisma.bank.findMany.mockRejectedValue('Unknown error');
+        mockPrisma.bank.findMany.mockRejectedValue("Unknown error");
 
         // Act
         const result = await getAllBanks();
 
         // Assert
         expect(result).toEqual([]);
-        expect(mockConsole.error).toHaveBeenCalledWith(
-          'Error fetching banks:',
-          'Unknown error'
-        );
+        expect(mockConsole.error).toHaveBeenCalledWith("Error fetching banks:", "Unknown error");
       });
     });
   });
 
-  describe('🎯 getOrganizationBankingPromotions', () => {
-    const organizationId = 'org-123';
+  describe("🎯 getOrganizationBankingPromotions", () => {
+    const organizationId = "org-123";
 
-    describe('✅ Successful Retrieval', () => {
-      it('should return banking promotions for organization with includes and ordering', async () => {
+    describe("✅ Successful Retrieval", () => {
+      it("should return banking promotions for organization with includes and ordering", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(mockBankingPromotions);
 
@@ -190,16 +182,16 @@ describe('Banking Promotions Queries', () => {
             bankCard: true,
             bank: true,
             installmentPlans: {
-              orderBy: { installments: 'asc' },
+              orderBy: { installments: "asc" },
             },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         });
         expect(result).toEqual(mockBankingPromotions);
         expect(result).toHaveLength(2);
       });
 
-      it('should include all related data in response', async () => {
+      it("should include all related data in response", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(mockBankingPromotions);
 
@@ -207,14 +199,14 @@ describe('Banking Promotions Queries', () => {
         const result = await getOrganizationBankingPromotions(organizationId);
 
         // Assert
-        expect(result[0]).toHaveProperty('paymentMethod');
-        expect(result[0]).toHaveProperty('bankCard');
-        expect(result[0]).toHaveProperty('bank');
-        expect(result[0]).toHaveProperty('installmentPlans');
+        expect(result[0]).toHaveProperty("paymentMethod");
+        expect(result[0]).toHaveProperty("bankCard");
+        expect(result[0]).toHaveProperty("bank");
+        expect(result[0]).toHaveProperty("installmentPlans");
         expect(result[0].installmentPlans).toHaveLength(2);
       });
 
-      it('should handle promotions with different rate types', async () => {
+      it("should handle promotions with different rate types", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(mockBankingPromotions);
 
@@ -228,7 +220,7 @@ describe('Banking Promotions Queries', () => {
         expect(result[1].surchargeRate).toBe(5.0);
       });
 
-      it('should handle empty result for organization with no promotions', async () => {
+      it("should handle empty result for organization with no promotions", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findMany.mockResolvedValue([]);
 
@@ -241,10 +233,10 @@ describe('Banking Promotions Queries', () => {
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return empty array and log error on database failure', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return empty array and log error on database failure", async () => {
         // Arrange
-        mockPrisma.bankingPromotion.findMany.mockRejectedValue(new Error('Database error'));
+        mockPrisma.bankingPromotion.findMany.mockRejectedValue(new Error("Database error"));
 
         // Act
         const result = await getOrganizationBankingPromotions(organizationId);
@@ -252,18 +244,18 @@ describe('Banking Promotions Queries', () => {
         // Assert
         expect(result).toEqual([]);
         expect(mockConsole.error).toHaveBeenCalledWith(
-          'Error fetching banking promotions:',
-          expect.any(Error)
+          "Error fetching banking promotions:",
+          expect.any(Error),
         );
       });
     });
   });
 
-  describe('🔍 getBankingPromotionById', () => {
+  describe("🔍 getBankingPromotionById", () => {
     const promotionId = 1;
 
-    describe('✅ Successful Retrieval', () => {
-      it('should return promotion by ID with all includes', async () => {
+    describe("✅ Successful Retrieval", () => {
+      it("should return promotion by ID with all includes", async () => {
         // Arrange
         const mockPromotion = mockBankingPromotions[0];
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotion);
@@ -279,14 +271,14 @@ describe('Banking Promotions Queries', () => {
             bankCard: true,
             bank: true,
             installmentPlans: {
-              orderBy: { installments: 'asc' },
+              orderBy: { installments: "asc" },
             },
           },
         });
         expect(result).toEqual(mockPromotion);
       });
 
-      it('should return null when promotion not found', async () => {
+      it("should return null when promotion not found", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(null);
 
@@ -297,7 +289,7 @@ describe('Banking Promotions Queries', () => {
         expect(result).toBeNull();
       });
 
-      it('should include installment plans ordered by installments', async () => {
+      it("should include installment plans ordered by installments", async () => {
         // Arrange
         const mockPromotion = mockBankingPromotions[0];
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotion);
@@ -312,10 +304,10 @@ describe('Banking Promotions Queries', () => {
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return null and log error on database failure', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return null and log error on database failure", async () => {
         // Arrange
-        mockPrisma.bankingPromotion.findUnique.mockRejectedValue(new Error('Database error'));
+        mockPrisma.bankingPromotion.findUnique.mockRejectedValue(new Error("Database error"));
 
         // Act
         const result = await getBankingPromotionById(promotionId);
@@ -324,13 +316,13 @@ describe('Banking Promotions Queries', () => {
         expect(result).toBeNull();
         expect(mockConsole.error).toHaveBeenCalledWith(
           `Error fetching banking promotion with id ${promotionId}:`,
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
   });
 
-  describe('💰 calculatePromotionAmount', () => {
+  describe("💰 calculatePromotionAmount", () => {
     const mockPromotionWithPlans = {
       id: 1,
       discountRate: 10.0,
@@ -342,8 +334,8 @@ describe('Banking Promotions Queries', () => {
       ],
     };
 
-    describe('✅ Successful Calculations', () => {
-      it('should calculate discount correctly without installments', async () => {
+    describe("✅ Successful Calculations", () => {
+      it("should calculate discount correctly without installments", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotionWithPlans);
 
@@ -360,7 +352,7 @@ describe('Banking Promotions Queries', () => {
         expect(result.surchargeAmount).toBeUndefined();
       });
 
-      it('should calculate surcharge correctly', async () => {
+      it("should calculate surcharge correctly", async () => {
         // Arrange
         const surchargePromotion = {
           ...mockPromotionWithPlans,
@@ -382,7 +374,7 @@ describe('Banking Promotions Queries', () => {
         expect(result.discountAmount).toBeUndefined();
       });
 
-      it('should calculate installments without interest', async () => {
+      it("should calculate installments without interest", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotionWithPlans);
 
@@ -401,7 +393,7 @@ describe('Banking Promotions Queries', () => {
         expect(result.totalInterest).toBeUndefined();
       });
 
-      it('should calculate installments with interest', async () => {
+      it("should calculate installments with interest", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotionWithPlans);
 
@@ -420,7 +412,7 @@ describe('Banking Promotions Queries', () => {
         expect(result.installments).toBe(6);
       });
 
-      it('should ignore disabled installment plans', async () => {
+      it("should ignore disabled installment plans", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotionWithPlans);
 
@@ -437,7 +429,7 @@ describe('Banking Promotions Queries', () => {
         expect(result.installments).toBeUndefined();
       });
 
-      it('should handle promotion without rates (no discount/surcharge)', async () => {
+      it("should handle promotion without rates (no discount/surcharge)", async () => {
         // Arrange
         const neutralPromotion = {
           ...mockPromotionWithPlans,
@@ -459,7 +451,7 @@ describe('Banking Promotions Queries', () => {
         expect(result.surchargeAmount).toBeUndefined();
       });
 
-      it('should handle single installment (no installment calculation)', async () => {
+      it("should handle single installment (no installment calculation)", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotionWithPlans);
 
@@ -476,8 +468,8 @@ describe('Banking Promotions Queries', () => {
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return original amount when promotion not found', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return original amount when promotion not found", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(null);
 
@@ -491,14 +483,14 @@ describe('Banking Promotions Queries', () => {
         expect(result.originalAmount).toBe(1000);
         expect(result.finalAmount).toBe(1000);
         expect(mockConsole.error).toHaveBeenCalledWith(
-          'Error calculating promotion amount:',
-          expect.any(Error)
+          "Error calculating promotion amount:",
+          expect.any(Error),
         );
       });
 
-      it('should return original amount on database error', async () => {
+      it("should return original amount on database error", async () => {
         // Arrange
-        mockPrisma.bankingPromotion.findUnique.mockRejectedValue(new Error('Database error'));
+        mockPrisma.bankingPromotion.findUnique.mockRejectedValue(new Error("Database error"));
 
         // Act
         const result = await calculatePromotionAmount({
@@ -510,12 +502,12 @@ describe('Banking Promotions Queries', () => {
         expect(result.originalAmount).toBe(1000);
         expect(result.finalAmount).toBe(1000);
         expect(mockConsole.error).toHaveBeenCalledWith(
-          'Error calculating promotion amount:',
-          expect.any(Error)
+          "Error calculating promotion amount:",
+          expect.any(Error),
         );
       });
 
-      it('should handle invalid installment plan gracefully', async () => {
+      it("should handle invalid installment plan gracefully", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockPromotionWithPlans);
 
@@ -534,13 +526,13 @@ describe('Banking Promotions Queries', () => {
     });
   });
 
-  describe('🎯 getEnabledBankingPromotions', () => {
-    const organizationId = 'org-123';
+  describe("🎯 getEnabledBankingPromotions", () => {
+    const organizationId = "org-123";
 
-    describe('✅ Successful Retrieval', () => {
-      it('should return only enabled banking promotions', async () => {
+    describe("✅ Successful Retrieval", () => {
+      it("should return only enabled banking promotions", async () => {
         // Arrange
-        const enabledPromotions = mockBankingPromotions.filter(p => p.isEnabled);
+        const enabledPromotions = mockBankingPromotions.filter((p) => p.isEnabled);
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(enabledPromotions);
 
         // Act
@@ -559,14 +551,14 @@ describe('Banking Promotions Queries', () => {
             installmentPlans: true,
           },
           orderBy: {
-            name: 'asc',
+            name: "asc",
           },
         });
         expect(result).toEqual(enabledPromotions);
-        expect(result.every(p => p.isEnabled)).toBe(true);
+        expect(result.every((p) => p.isEnabled)).toBe(true);
       });
 
-      it('should log promotion count correctly', async () => {
+      it("should log promotion count correctly", async () => {
         // Arrange
         const enabledPromotions = [mockBankingPromotions[0]];
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(enabledPromotions);
@@ -576,14 +568,14 @@ describe('Banking Promotions Queries', () => {
 
         // Assert
         expect(mockConsole.log).toHaveBeenCalledWith(
-          `Obteniendo promociones bancarias habilitadas para organización ${organizationId}`
+          `Obteniendo promociones bancarias habilitadas para organización ${organizationId}`,
         );
         expect(mockConsole.log).toHaveBeenCalledWith(
-          'Se encontraron 1 promociones bancarias habilitadas'
+          "Se encontraron 1 promociones bancarias habilitadas",
         );
       });
 
-      it('should return empty array when no enabled promotions exist', async () => {
+      it("should return empty array when no enabled promotions exist", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findMany.mockResolvedValue([]);
 
@@ -595,7 +587,7 @@ describe('Banking Promotions Queries', () => {
         expect(result).toHaveLength(0);
       });
 
-      it('should include all related data for enabled promotions', async () => {
+      it("should include all related data for enabled promotions", async () => {
         // Arrange
         const enabledPromotions = [mockBankingPromotions[0]];
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(enabledPromotions);
@@ -604,17 +596,17 @@ describe('Banking Promotions Queries', () => {
         const result = await getEnabledBankingPromotions(organizationId);
 
         // Assert
-        expect(result[0]).toHaveProperty('paymentMethod');
-        expect(result[0]).toHaveProperty('bank');
-        expect(result[0]).toHaveProperty('bankCard');
-        expect(result[0]).toHaveProperty('installmentPlans');
+        expect(result[0]).toHaveProperty("paymentMethod");
+        expect(result[0]).toHaveProperty("bank");
+        expect(result[0]).toHaveProperty("bankCard");
+        expect(result[0]).toHaveProperty("installmentPlans");
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return empty array and log error on database failure', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return empty array and log error on database failure", async () => {
         // Arrange
-        mockPrisma.bankingPromotion.findMany.mockRejectedValue(new Error('Database error'));
+        mockPrisma.bankingPromotion.findMany.mockRejectedValue(new Error("Database error"));
 
         // Act
         const result = await getEnabledBankingPromotions(organizationId);
@@ -622,18 +614,18 @@ describe('Banking Promotions Queries', () => {
         // Assert
         expect(result).toEqual([]);
         expect(mockConsole.error).toHaveBeenCalledWith(
-          'Error fetching enabled banking promotions:',
-          expect.any(Error)
+          "Error fetching enabled banking promotions:",
+          expect.any(Error),
         );
       });
     });
   });
 
-  describe('🔍 Integration and Edge Cases', () => {
-    const organizationId = 'org-123';
+  describe("🔍 Integration and Edge Cases", () => {
+    const organizationId = "org-123";
 
-    describe('🎯 Data Consistency', () => {
-      it('should maintain consistent data structure across query functions', async () => {
+    describe("🎯 Data Consistency", () => {
+      it("should maintain consistent data structure across query functions", async () => {
         // Arrange
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(mockBankingPromotions);
         mockPrisma.bankingPromotion.findUnique.mockResolvedValue(mockBankingPromotions[0]);
@@ -645,33 +637,33 @@ describe('Banking Promotions Queries', () => {
 
         // Assert
         if (organizationPromotions.length > 0) {
-          expect(organizationPromotions[0]).toHaveProperty('paymentMethod');
-          expect(organizationPromotions[0]).toHaveProperty('bank');
-          expect(organizationPromotions[0]).toHaveProperty('installmentPlans');
+          expect(organizationPromotions[0]).toHaveProperty("paymentMethod");
+          expect(organizationPromotions[0]).toHaveProperty("bank");
+          expect(organizationPromotions[0]).toHaveProperty("installmentPlans");
         }
 
         if (enabledPromotions.length > 0) {
-          expect(enabledPromotions[0]).toHaveProperty('paymentMethod');
-          expect(enabledPromotions[0]).toHaveProperty('bank');
-          expect(enabledPromotions[0]).toHaveProperty('installmentPlans');
+          expect(enabledPromotions[0]).toHaveProperty("paymentMethod");
+          expect(enabledPromotions[0]).toHaveProperty("bank");
+          expect(enabledPromotions[0]).toHaveProperty("installmentPlans");
         }
 
         if (promotionById) {
-          expect(promotionById).toHaveProperty('paymentMethod');
-          expect(promotionById).toHaveProperty('bank');
-          expect(promotionById).toHaveProperty('installmentPlans');
+          expect(promotionById).toHaveProperty("paymentMethod");
+          expect(promotionById).toHaveProperty("bank");
+          expect(promotionById).toHaveProperty("installmentPlans");
         }
       });
 
-      it('should handle organization with mixed enabled/disabled promotions', async () => {
+      it("should handle organization with mixed enabled/disabled promotions", async () => {
         // Arrange
         const mixedPromotions = [
           { ...mockBankingPromotions[0], isEnabled: true },
           { ...mockBankingPromotions[1], isEnabled: false },
         ];
-        
+
         mockPrisma.bankingPromotion.findMany.mockResolvedValueOnce(mixedPromotions);
-        const enabledOnly = mixedPromotions.filter(p => p.isEnabled);
+        const enabledOnly = mixedPromotions.filter((p) => p.isEnabled);
         mockPrisma.bankingPromotion.findMany.mockResolvedValueOnce(enabledOnly);
 
         // Act
@@ -681,12 +673,12 @@ describe('Banking Promotions Queries', () => {
         // Assert
         expect(allPromotions).toHaveLength(2);
         expect(enabledPromotions).toHaveLength(1);
-        expect(enabledPromotions.every(p => p.isEnabled)).toBe(true);
+        expect(enabledPromotions.every((p) => p.isEnabled)).toBe(true);
       });
     });
 
-    describe('🚀 Performance and Large Data', () => {
-      it('should handle large number of banks efficiently', async () => {
+    describe("🚀 Performance and Large Data", () => {
+      it("should handle large number of banks efficiently", async () => {
         // Arrange
         const largeBanksArray = Array.from({ length: 50 }, (_, i) => ({
           id: i + 1,
@@ -700,11 +692,11 @@ describe('Banking Promotions Queries', () => {
 
         // Assert
         expect(result).toHaveLength(50);
-        expect(result[0]).toHaveProperty('id');
-        expect(result[0]).toHaveProperty('name');
+        expect(result[0]).toHaveProperty("id");
+        expect(result[0]).toHaveProperty("name");
       });
 
-      it('should handle organization with many promotions efficiently', async () => {
+      it("should handle organization with many promotions efficiently", async () => {
         // Arrange
         const largePromotionsArray = Array.from({ length: 100 }, (_, i) => ({
           id: i + 1,
@@ -716,12 +708,12 @@ describe('Banking Promotions Queries', () => {
           surchargeRate: i % 5 === 0 ? 5.0 : null,
           activeDays: [],
           createdAt: new Date(),
-          paymentMethod: { id: 1, name: 'Método' },
-          bank: { id: 1, name: 'Banco' },
+          paymentMethod: { id: 1, name: "Método" },
+          bank: { id: 1, name: "Banco" },
           bankCard: { id: 1, bankId: 1, cardTypeId: 1 },
           installmentPlans: [],
         }));
-        
+
         mockPrisma.bankingPromotion.findMany.mockResolvedValue(largePromotionsArray);
 
         // Act
@@ -729,8 +721,8 @@ describe('Banking Promotions Queries', () => {
 
         // Assert
         expect(result).toHaveLength(100);
-        expect(result.every(p => p.organizationId === organizationId)).toBe(true);
+        expect(result.every((p) => p.organizationId === organizationId)).toBe(true);
       });
     });
   });
-}); 
+});

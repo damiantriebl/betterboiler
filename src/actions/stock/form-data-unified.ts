@@ -1,11 +1,11 @@
 "use server";
 
+import type { BrandForCombobox } from "@/app/(app)/stock/new/types";
 import prisma from "@/lib/prisma";
-import { unstable_noStore as noStore } from "next/cache";
-import { getOrganizationIdFromSession } from "../util";
-import type { BrandForCombobox } from "@/app/(app)/stock/new/page";
 import type { ColorConfig, ColorType } from "@/types/ColorType";
 import type { Brand, Model, MotoColor, Supplier } from "@prisma/client";
+import { unstable_noStore as noStore } from "next/cache";
+import { getOrganizationIdFromSession } from "../util";
 
 // Types
 export interface BranchData {
@@ -132,12 +132,12 @@ async function getBrandsData(organizationId: string): Promise<BrandForCombobox[]
     where: { organizationId },
     include: {
       brand: {
-        select: { 
-          id: true, 
-          name: true, 
-          models: { select: { id: true, name: true } } 
-        }
-      }
+        select: {
+          id: true,
+          name: true,
+          models: { select: { id: true, name: true } },
+        },
+      },
     },
     orderBy: { order: "asc" },
   });
@@ -174,7 +174,9 @@ async function getSuppliersData(organizationId: string): Promise<Supplier[]> {
 }
 
 // Convenience functions for specific use cases
-export async function getFormDataBasic(): Promise<Pick<FormDataResult, 'availableBranches' | 'availableColors'>> {
+export async function getFormDataBasic(): Promise<
+  Pick<FormDataResult, "availableBranches" | "availableColors">
+> {
   const org = await getOrganizationIdFromSession();
 
   if (!org.organizationId) {
@@ -210,4 +212,4 @@ export async function getBrandsWithModels(): Promise<BrandForCombobox[]> {
     console.error("Error fetching brands with models:", error);
     return [];
   }
-} 
+}

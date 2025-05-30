@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { headers } from "next/headers";
 import { auth } from "@/auth";
+import { headers } from "next/headers";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  getSession,
   getOrganizationIdFromSession,
-  validateOrganizationAccess,
+  getSession,
   requireOrganizationId,
   requireUserId,
   requireUserRole,
+  validateOrganizationAccess,
 } from "../auth-session-unified";
 
 // Mock dependencies
@@ -230,7 +230,9 @@ describe("auth-session-unified", () => {
     it("should throw error when organizationId not available", async () => {
       mockAuth.api.getSession.mockResolvedValue(null);
 
-      await expect(requireOrganizationId()).rejects.toThrow("No se encontró el ID de la organización en la sesión.");
+      await expect(requireOrganizationId()).rejects.toThrow(
+        "No se encontró el ID de la organización en la sesión.",
+      );
     });
   });
 
@@ -291,4 +293,4 @@ describe("auth-session-unified", () => {
       await expect(requireUserRole()).rejects.toThrow("Rol de usuario no encontrado");
     });
   });
-}); 
+});

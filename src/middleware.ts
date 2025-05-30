@@ -20,20 +20,20 @@ export default async function authMiddleware(request: NextRequest) {
   const isAdmin = adminRoutes.includes(pathName) || pathName.startsWith("/admin");
   const isRoot = rootRoutes.includes(pathName) || pathName.startsWith("/root");
   const isPublic = publicRoutes.includes(pathName) || pathName.startsWith("/public");
-  
+
   // 🔐 TODAS las rutas requieren autenticación por defecto, excepto auth, password, y public
   const requiresAuth = !isAuth && !isPassword && !isPublic;
 
   // Extraer el token de la cookie para usar como clave de cache
   const cookieHeader = request.headers.get("cookie") || "";
   const sessionToken = cookieHeader.match(/better-auth\.session_token=([^;]+)/)?.[1];
-  
+
   let session: Session | null = null;
-  
+
   // Verificar cache primero
   if (sessionToken) {
     const cached = sessionCache.get(sessionToken);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       session = cached.session;
     } else {
       // Si no está en cache o expiró, hacer la llamada
@@ -44,10 +44,10 @@ export default async function authMiddleware(request: NextRequest) {
         },
       });
       session = data;
-      
+
       // Guardar en cache
       sessionCache.set(sessionToken, { session, timestamp: Date.now() });
-      
+
       // Limpiar cache antiguo periódicamente
       if (sessionCache.size > 1000) {
         const now = Date.now();

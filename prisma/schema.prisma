@@ -88,6 +88,8 @@ model Organization {
   pettyCashDeposits          PettyCashDeposit[]
   pettyCashWithdrawals       PettyCashWithdrawal[]
   pettyCashSpends            PettyCashSpend[]
+  logisticProviders          LogisticProvider[]
+  motorcycleTransfers        MotorcycleTransfer[]
   secureModeEnabled          Boolean  @default(false)
   otpSecret                  String?
   otpAuthUrl                 String?
@@ -119,6 +121,8 @@ model User {
   sales                   Motorcycle[]  @relation("MotorcycleSales")
   sessions                Session[]
   organization            Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transfersRequested      MotorcycleTransfer[] @relation("TransferRequester")
+  transfersConfirmed      MotorcycleTransfer[] @relation("TransferConfirmer")
 
   @@map("user")
 }
@@ -227,6 +231,8 @@ model Branch {
   organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   motorcycles          Motorcycle[]
   pettyCashDeposits    PettyCashDeposit[]
+  transfersFrom        MotorcycleTransfer[] @relation("TransferFromBranch")
+  transfersTo          MotorcycleTransfer[] @relation("TransferToBranch")
 
   @@unique([organizationId, name])
   @@index([organizationId, order])
@@ -330,6 +336,7 @@ model Motorcycle {
   soldAt          DateTime?
   currentAccounts CurrentAccount[]
   reservations    Reservation[]
+  transfers       MotorcycleTransfer[]
   branch          Branch         @relation(fields: [branchId], references: [id])
   brand           Brand            @relation(fields: [brandId], references: [id])
   client          Client?          @relation(fields: [clientId], references: [id])
@@ -574,6 +581,7 @@ enum MotorcycleState {
   RESERVADO
   PROCESANDO
   ELIMINADO
+  EN_TRANSITO
 }
 
 enum PaymentFrequency {
@@ -672,4 +680,80 @@ model PettyCashSpend {
   withdrawal   PettyCashWithdrawal  @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
 
   @@index([withdrawalId])
+}
+
+model LogisticProvider {
+  id                 Int             @id @default(autoincrement())
+  name               String
+  contactName        String?
+  contactPhone       String?
+  contactEmail       String?
+  address            String?
+  transportTypes     String[]        // ["terrestre", "aéreo", "marítimo", "especializado"]
+  vehicleTypes       String[]        // ["camión", "furgoneta", "remolque_especializado", "grúa"]
+  coverageZones      String[]        // ["local", "nacional", "internacional"]
+  pricePerKm         Float?
+  baseFee            Float?
+  currency           String          @default("ARS")
+  insurance          Boolean         @default(false)
+  maxWeight          Float?          // en kg
+  maxVolume          Float?          // en m³
+  specialRequirements String?        // requisitos especiales para motos
+  rating             Float?          // rating del 1-5
+  status             String          @default("activo")
+  notes              String?
+  organizationId     String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  organization       Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transfers          MotorcycleTransfer[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model MotorcycleTransfer {
+  id                    Int                  @id @default(autoincrement())
+  motorcycleId          Int
+  fromBranchId          Int
+  toBranchId            Int
+  logisticProviderId    Int?
+  status                MotorcycleTransferStatus @default(REQUESTED)
+  requestedDate         DateTime
+  scheduledPickupDate   DateTime?
+  actualPickupDate      DateTime?
+  estimatedDeliveryDate DateTime?
+  actualDeliveryDate    DateTime?
+  cost                  Float?
+  currency              String               @default("ARS")
+  notes                 String?
+  requestedBy           String               // user ID
+  confirmedBy           String?              // user ID
+  trackingNumber        String?
+  organizationId        String
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  motorcycle            Motorcycle           @relation(fields: [motorcycleId], references: [id])
+  fromBranch            Branch              @relation("TransferFromBranch", fields: [fromBranchId], references: [id])
+  toBranch              Branch              @relation("TransferToBranch", fields: [toBranchId], references: [id])
+  logisticProvider      LogisticProvider?    @relation(fields: [logisticProviderId], references: [id])
+  requester             User                 @relation("TransferRequester", fields: [requestedBy], references: [id])
+  confirmer             User?                @relation("TransferConfirmer", fields: [confirmedBy], references: [id])
+  organization          Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([motorcycleId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([fromBranchId])
+  @@index([toBranchId])
+  @@index([logisticProviderId])
+}
+
+enum MotorcycleTransferStatus {
+  REQUESTED
+  CONFIRMED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
 }

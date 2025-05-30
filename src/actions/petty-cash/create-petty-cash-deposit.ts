@@ -1,9 +1,9 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import type { CreatePettyCashDepositState } from "@/types/action-states";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { CreatePettyCashDepositState } from "@/types/action-states";
 import { getOrganizationIdFromSession } from "../util";
 
 const initialState: CreatePettyCashDepositState = {

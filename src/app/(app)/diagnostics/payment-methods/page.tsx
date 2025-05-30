@@ -39,7 +39,7 @@ export default function PaymentMethodDiagnostics() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container max-w-none py-8">
       <h1 className="text-3xl font-bold mb-6">Diagnóstico de Métodos de Pago</h1>
 
       <div className="grid gap-6">

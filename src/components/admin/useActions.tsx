@@ -34,6 +34,11 @@ export default function UserActions({ userId, currentStatus, currentRole }: Prop
   const router = useRouter();
   const { data: session, isPending, error } = authClient.useSession();
 
+  // Verificar si el usuario actual puede cambiar roles (admin o root)
+  const canChangeRoles = session?.user.role === "admin" || session?.user.role === "root";
+  // Verificar si el usuario actual puede cambiar organizaciones (solo root)
+  const canChangeOrganizations = session?.user.role === "root";
+
   const toggleStatus = async () => {
     const newStatus = !banned;
     setBanned(newStatus);
@@ -46,11 +51,33 @@ export default function UserActions({ userId, currentStatus, currentRole }: Prop
   };
 
   const handleRoleChange = async (newRole: string) => {
-    setRole(newRole);
-    const updatedUser = await authClient.admin.setRole({
-      userId,
-      role: newRole,
-    });
+    try {
+      setRole(newRole);
+
+      const response = await fetch("/api/update-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al actualizar el rol");
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Error al actualizar el rol");
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error("Error updating role:", error);
+      // Revertir el rol en caso de error
+      setRole(currentRole);
+      // Aquí podrías agregar un toast de error si usas toasts
+    }
   };
 
   const deleteUser = async () => {
@@ -68,16 +95,19 @@ export default function UserActions({ userId, currentStatus, currentRole }: Prop
         {banned ? "Activar" : "Banear"}
       </Button>
 
-      <Select onValueChange={handleRoleChange} defaultValue={role}>
-        <SelectTrigger className="w-[120px]">
-          <SelectValue placeholder="Rol" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="user">User</SelectItem>
-          <SelectItem value="admin">Admin</SelectItem>
-          {session?.user.role === "root" && <SelectItem value="root">Root</SelectItem>}
-        </SelectContent>
-      </Select>
+      {canChangeRoles && (
+        <Select onValueChange={handleRoleChange} defaultValue={role}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="Rol" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="user">User</SelectItem>
+            <SelectItem value="Treasurer">Treasurer</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            {session?.user.role === "root" && <SelectItem value="root">Root</SelectItem>}
+          </SelectContent>
+        </Select>
+      )}
 
       <AlertDialog>
         <AlertDialogTrigger asChild>

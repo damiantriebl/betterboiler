@@ -1,9 +1,11 @@
 "use client";
-import React, { useState } from "react";
-import type { PettyCashDepositStatus, PettyCashWithdrawalStatus } from "@prisma/client"; // Para los enums de estado
 import type { PettyCashData } from "@/actions/petty-cash/get-petty-cash-data"; // Tipos de datos jerárquicos
+import type { PettyCashDepositStatus, PettyCashWithdrawalStatus } from "@prisma/client"; // Para los enums de estado
+import React, { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Table,
   TableBody,
@@ -12,17 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Badge } from "@/components/ui/badge";
 import {
-  PlusCircle,
   ChevronDown,
   ChevronRight,
-  Paperclip,
-  Users,
   Landmark,
+  Paperclip,
+  PlusCircle,
   ShoppingCart,
   Trash2,
+  Users,
 } from "lucide-react";
 
 // Definición local para UserData si no se importa una específica
@@ -203,7 +203,7 @@ const DepositEntry = ({
             variant="default"
             size="sm"
             onClick={() => onDeleteDeposit(deposit.id)}
-            className="bg-pink-500 hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto"
+            className="bg-destructive hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto"
           >
             <Trash2 className="mr-1 h-3 w-3" /> Borrar
           </Button>
@@ -215,8 +215,6 @@ const DepositEntry = ({
           <TableCell colSpan={7} className="p-0">
             {deposit.withdrawals && deposit.withdrawals.length > 0 ? (
               <div className="pl-10 pr-4 py-2">
-                {" "}
-                {/* Indentación para la tabla anidada */}
                 <Table>
                   <TableHeader>
                     <TableRow className="text-xs bg-slate-100 dark:bg-slate-750">
@@ -331,7 +329,7 @@ const WithdrawalEntry = ({
             variant="default"
             size="sm"
             onClick={() => onDeleteWithdrawal(withdrawal.id)}
-            className="bg-pink-500 hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto"
+            className="bg-destructive hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto"
           >
             <Trash2 className="mr-1 h-3 w-3" /> Borrar
           </Button>
@@ -406,7 +404,7 @@ const SpendEntry = ({ spend, onDelete }: SpendEntryProps) => {
           variant="default"
           size="sm"
           onClick={() => onDelete(spend.id)}
-          className="bg-pink-500 hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto"
+          className="bg-destructive hover:bg-pink-600 text-white text-xs px-2 py-1 h-auto"
           aria-label={`Borrar gasto ${spend.description || spend.id}`}
         >
           <Trash2 className="mr-1 h-3 w-3" /> Borrar

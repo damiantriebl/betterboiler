@@ -37,12 +37,14 @@ async function validateOrganizationAccess(): Promise<{ organizationId: string } 
 }
 
 // Validation helper
-function validateSupplierData(formData: SupplierFormData): { success: true; data: SupplierFormData } | { success: false; error: string } {
+function validateSupplierData(
+  formData: SupplierFormData,
+): { success: true; data: SupplierFormData } | { success: false; error: string } {
   const validation = supplierSchema.safeParse(formData);
   if (!validation.success) {
     const errors = validation.error.errors
-      .map(err => `${err.path.join('.')}: ${err.message}`)
-      .join('; ');
+      .map((err) => `${err.path.join(".")}: ${err.message}`)
+      .join("; ");
     return { success: false, error: `Datos inválidos: ${errors}` };
   }
   return { success: true, data: validation.data };
@@ -59,7 +61,7 @@ function revalidateSupplierPaths(supplierId?: number): void {
 // Error handling helper
 function handlePrismaError(error: unknown, operation: string): string {
   console.error(`Error in ${operation}:`, error);
-  
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     switch (error.code) {
       case "P2002":
@@ -72,7 +74,7 @@ function handlePrismaError(error: unknown, operation: string): string {
         return `Error de base de datos: ${error.message}`;
     }
   }
-  
+
   return `Error interno en ${operation}.`;
 }
 
@@ -121,7 +123,6 @@ export async function createSupplier(formData: SupplierFormData): Promise<Suppli
 
     revalidateSupplierPaths();
     return { success: true, supplier: newSupplier };
-
   } catch (error) {
     return { success: false, error: handlePrismaError(error, "createSupplier") };
   }
@@ -232,7 +233,6 @@ export async function updateSupplier(
 
     revalidateSupplierPaths(supplierId);
     return { success: true, supplier: updatedSupplier };
-
   } catch (error) {
     return { success: false, error: handlePrismaError(error, "updateSupplier") };
   }
@@ -264,7 +264,6 @@ export async function deleteSupplier(supplierId: number): Promise<DeleteSupplier
 
     revalidateSupplierPaths();
     return { success: true };
-
   } catch (error) {
     return { success: false, error: handlePrismaError(error, "deleteSupplier") };
   }
@@ -277,7 +276,7 @@ export async function getSuppliersForSelect(): Promise<Array<{ id: number; name:
     return [];
   }
 
-  return result.suppliers.map(supplier => ({
+  return result.suppliers.map((supplier) => ({
     id: supplier.id,
     name: supplier.commercialName || supplier.legalName,
   }));
@@ -291,7 +290,7 @@ export async function getSuppliersByStatus(status: string): Promise<SupplierList
 
   try {
     const suppliers = await prisma.supplier.findMany({
-      where: { 
+      where: {
         organizationId: orgAccess.organizationId,
         status: status,
       },
@@ -303,4 +302,4 @@ export async function getSuppliersByStatus(status: string): Promise<SupplierList
     console.error("Error obteniendo proveedores por estado:", error);
     return { success: false, error: "Error al obtener proveedores.", suppliers: [] };
   }
-} 
+}

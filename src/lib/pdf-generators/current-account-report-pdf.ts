@@ -1,6 +1,6 @@
-import { PDFBuilder, colors, fontSizes, margins } from '@/lib/pdf-lib-utils';
-import type { CurrentAccountForReport } from '@/actions/current-accounts/get-current-account-for-report';
-import type { CurrentAccountStatus, Payment, PaymentFrequency } from '@prisma/client';
+import type { CurrentAccountForReport } from "@/actions/current-accounts/get-current-account-for-report";
+import { PDFBuilder, colors, fontSizes, margins } from "@/lib/pdf-lib-utils";
+import type { CurrentAccountStatus, Payment, PaymentFrequency } from "@prisma/client";
 
 interface AmortizationScheduleEntry {
   installmentNumber: number;
@@ -142,7 +142,7 @@ function generateInstallmentsForPdf(account: CurrentAccountForReport): PdfInstal
     const installmentNumber = i + 1;
     const planEntry = frenchAmortizationPlan.find((p) => p.installmentNumber === installmentNumber);
     const dueDate = new Date(startDate);
-    
+
     switch (account.paymentFrequency) {
       case "WEEKLY":
         dueDate.setDate(startDate.getDate() + 7 * i);
@@ -206,7 +206,7 @@ function generateInstallmentsForPdf(account: CurrentAccountForReport): PdfInstal
         originalPaymentAmount: Math.ceil(dPayment.amountPaid),
       });
     }
-    
+
     if (hPayment) {
       generatedInstallments.push({
         number: installmentNumber,
@@ -259,12 +259,14 @@ function generateInstallmentsForPdf(account: CurrentAccountForReport): PdfInstal
   });
 }
 
-export async function generateCurrentAccountReportPDF(account: CurrentAccountForReport): Promise<Uint8Array> {
+export async function generateCurrentAccountReportPDF(
+  account: CurrentAccountForReport,
+): Promise<Uint8Array> {
   const pdf = await PDFBuilder.create();
   const { width, height } = pdf.getPageDimensions();
-  
+
   let currentY = height - margins.normal;
-  const contentWidth = width - (margins.normal * 2);
+  const contentWidth = width - margins.normal * 2;
 
   const formatDateForPdf = (dateString: string | Date | null | undefined) => {
     if (!dateString) return "-";
@@ -329,13 +331,13 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
   };
 
   // Título principal
-  pdf.addCenteredTitle('Reporte de Cuenta Corriente', currentY);
+  pdf.addCenteredTitle("Reporte de Cuenta Corriente", currentY);
   currentY -= 60;
 
   // Información de la organización
   if (account.organization) {
-    currentY = pdf.addSection('Organización', margins.normal, currentY, contentWidth);
-    
+    currentY = pdf.addSection("Organización", margins.normal, currentY, contentWidth);
+
     pdf.addText(`Nombre: ${account.organization.name}`, {
       x: margins.normal + 10,
       y: currentY,
@@ -345,8 +347,8 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
   }
 
   // Información del cliente
-  currentY = pdf.addSection('Información del Cliente', margins.normal, currentY, contentWidth);
-  
+  currentY = pdf.addSection("Información del Cliente", margins.normal, currentY, contentWidth);
+
   const clientInfo = [
     `Nombre: ${client.firstName} ${client.lastName}`,
     `Email: ${client.email}`,
@@ -358,14 +360,15 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
     `Tipo Cliente: ${client.type === "company" ? "Empresa" : "Particular"}`,
   ];
 
-  clientInfo.forEach((text) => {
+  for (const text of clientInfo) {
     pdf.addText(text, {
-      x: margins.normal + 10,
+      x: margins.normal,
       y: currentY,
-      size: fontSizes.small,
+      size: fontSizes.normal,
+      color: colors.textPrimary,
     });
     currentY -= 12;
-  });
+  }
 
   if (client.notes) {
     currentY -= 5;
@@ -386,8 +389,8 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
       currentY = height - margins.normal;
     }
 
-    currentY = pdf.addSection('Información del Vehículo', margins.normal, currentY, contentWidth);
-    
+    currentY = pdf.addSection("Información del Vehículo", margins.normal, currentY, contentWidth);
+
     const motorcycleInfo = [
       `Marca: ${motorcycle.brand?.name || "N/A"}`,
       `Modelo: ${motorcycle.model?.name || "N/A"}`,
@@ -399,14 +402,15 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
       `Sucursal: ${motorcycle.branch?.name || "N/A"}`,
     ];
 
-    motorcycleInfo.forEach((text) => {
+    for (const text of motorcycleInfo) {
       pdf.addText(text, {
         x: margins.normal + 10,
         y: currentY,
         size: fontSizes.small,
+        color: colors.textSecondary,
       });
       currentY -= 12;
-    });
+    }
 
     if (seller) {
       currentY -= 5;
@@ -437,8 +441,8 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
     currentY = height - margins.normal;
   }
 
-  currentY = pdf.addSection('Resumen de Cuenta Corriente', margins.normal, currentY, contentWidth);
-  
+  currentY = pdf.addSection("Resumen de Cuenta Corriente", margins.normal, currentY, contentWidth);
+
   const accountInfo = [
     `ID Cuenta: ${account.id}`,
     `Estado Cuenta: ${statusTranslations[account.status] || account.status}`,
@@ -453,14 +457,15 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
     `Saldo Pendiente (c/Int.): ${formatCurrencyForPdf(uiRemainingAmountDisplay, account.currency || "$")}`,
   ];
 
-  accountInfo.forEach((text) => {
+  for (const text of accountInfo) {
     pdf.addText(text, {
-      x: margins.normal + 10,
+      x: margins.normal,
       y: currentY,
-      size: fontSizes.small,
+      size: fontSizes.normal,
+      color: colors.textPrimary,
     });
     currentY -= 12;
-  });
+  }
 
   if (account.notes) {
     currentY -= 5;
@@ -480,15 +485,33 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
     currentY = height - margins.normal;
   }
 
-  currentY = pdf.addSection('Detalle de Cuotas', margins.normal, currentY, contentWidth);
-  
-  const installmentHeaders = ['Nº', 'Vencimiento', 'Cap. Inicio', 'Amortización', 'Interés', 'Cuota', 'Estado'];
+  currentY = pdf.addSection("Detalle de Cuotas", margins.normal, currentY, contentWidth);
+
+  const installmentHeaders = [
+    "Nº",
+    "Vencimiento",
+    "Cap. Inicio",
+    "Amortización",
+    "Interés",
+    "Cuota",
+    "Estado",
+  ];
   const installmentRows = installmentsForPdf.map((inst) => [
     `${inst.number}${inst.installmentVersion && inst.installmentVersion !== "Original (Anulado)" ? String(inst.installmentVersion).toUpperCase() : ""}`,
     formatDateForPdf(inst.dueDate),
-    inst.capitalAtPeriodStart !== undefined ? formatCurrencyForPdf(inst.capitalAtPeriodStart, "") : "-",
-    inst.amortization !== undefined && inst.installmentVersion !== "D" && inst.installmentVersion !== "H" ? formatCurrencyForPdf(inst.amortization, "") : "-",
-    inst.interestForPeriod !== undefined && inst.installmentVersion !== "D" && inst.installmentVersion !== "H" ? formatCurrencyForPdf(inst.interestForPeriod, "") : "-",
+    inst.capitalAtPeriodStart !== undefined
+      ? formatCurrencyForPdf(inst.capitalAtPeriodStart, "")
+      : "-",
+    inst.amortization !== undefined &&
+    inst.installmentVersion !== "D" &&
+    inst.installmentVersion !== "H"
+      ? formatCurrencyForPdf(inst.amortization, "")
+      : "-",
+    inst.interestForPeriod !== undefined &&
+    inst.installmentVersion !== "D" &&
+    inst.installmentVersion !== "H"
+      ? formatCurrencyForPdf(inst.interestForPeriod, "")
+      : "-",
     formatCurrencyForPdf(
       (inst.installmentVersion === "H" ? -1 : 1) *
         (inst.isPaid && inst.originalPaymentAmount !== undefined
@@ -516,7 +539,7 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
   });
 
   // Pie de página
-  const now = new Date().toLocaleDateString('es-AR');
+  const now = new Date().toLocaleDateString("es-AR");
   pdf.addText(`Reporte generado el ${reportDate} por ${account.organization?.name || "Sistema"}`, {
     x: margins.normal,
     y: 30,
@@ -528,12 +551,15 @@ export async function generateCurrentAccountReportPDF(account: CurrentAccountFor
 }
 
 // Función para crear una respuesta HTTP con el PDF
-export function createCurrentAccountReportPDFResponse(pdfBytes: Uint8Array, filename: string): Response {
+export function createCurrentAccountReportPDFResponse(
+  pdfBytes: Uint8Array,
+  filename: string,
+): Response {
   return new Response(Buffer.from(pdfBytes), {
     headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': pdfBytes.length.toString(),
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": pdfBytes.length.toString(),
     },
   });
-} 
+}

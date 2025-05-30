@@ -3,8 +3,8 @@
 import {
   type CreateBranchState,
   type DeleteBranchState,
-  type UpdateBranchesOrderState,
   type UpdateBranchState,
+  type UpdateBranchesOrderState,
   createBranch,
   deleteBranch,
   updateBranch,

@@ -65,7 +65,7 @@ export default function SupplierDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 space-y-4">
+      <div className="container max-w-none p-4 space-y-4">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-[600px] w-full" />
       </div>

@@ -39,7 +39,7 @@ export default function PriceModesExamplePage() {
   ];
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container max-w-none py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Ejemplo de Modos de Precio</h1>
         <p className="text-muted-foreground">

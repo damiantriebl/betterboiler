@@ -1,5 +1,5 @@
-import { uploadToS3 } from "@/lib/s3-unified";
 import prisma from "@/lib/prisma";
+import { uploadToS3 } from "@/lib/s3-unified";
 import type { ModelFileWithUrl } from "@/types/motorcycle";
 import { type NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
@@ -100,7 +100,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ mod
   }
 }
 
-export async function POST(request: NextRequest, context: { params: Promise<{ modelId: string }> }) {
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ modelId: string }> },
+) {
   try {
     const params = await context.params;
     const modelId = Number.parseInt(params.modelId);

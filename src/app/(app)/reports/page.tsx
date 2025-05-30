@@ -1,13 +1,19 @@
 "use client";
 
+import { getCurrentAccountsReport } from "@/actions/reports/get-current-accounts-report";
+import type { CurrentAccountsReport as CurrentAccountsReportType } from "@/actions/reports/get-current-accounts-report";
 import { getInventoryStatusReport } from "@/actions/reports/get-inventory-report-unified";
+import { getPettyCashReport } from "@/actions/reports/get-petty-cash-report";
 import { getReservationsReport } from "@/actions/reports/get-reservations-report";
 import { getSalesReport } from "@/actions/reports/get-sales-report";
-import { getSuppliersReport } from "@/actions/reports/get-suppliers-report";
+import { getBranchesForOrganizationAction } from "@/actions/util";
+import { CurrentAccountsReport } from "@/components/custom/reports/CurrentAccountsReport";
 import { InventoryReport } from "@/components/custom/reports/InventoryReport";
+import { PettyCashReport } from "@/components/custom/reports/PettyCashReport";
+import { ReportTabContent } from "@/components/custom/reports/ReportTabContent";
 import { SalesReport } from "@/components/custom/reports/SalesReport";
 import { ReservationsReport } from "@/components/reports/ReservationsReport";
-import { ReportTabContent } from "@/components/custom/reports/ReportTabContent";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
@@ -19,7 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useOrganization } from "@/hooks/use-organization";
+import { useSessionStore } from "@/stores/SessionStore";
+import type { ReportDataForPdf } from "@/types/PettyCashActivity";
 import type {
   InventoryStatusReport,
   ReservationsReport as ReservationsReportType,
@@ -36,10 +43,20 @@ import {
   subMonths,
   subYears,
 } from "date-fns";
-import { Download, Loader2, FileText } from "lucide-react";
-import { useState, useEffect, startTransition } from "react";
+import {
+  AlertCircle,
+  BarChart3,
+  Calendar,
+  CreditCard,
+  Download,
+  FileText,
+  Loader2,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { startTransition, useEffect, useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { getBranchesForOrganizationAction } from "@/actions/util";
 
 type LocalFilters = {
   organizationId: string;
@@ -56,8 +73,9 @@ const reportFetchers = {
   "sales-profitability": getSalesReport,
   "active-reservations": getReservationsReport,
   "reservation-conversion": getReservationsReport,
-  "purchases-by-supplier": getSuppliersReport,
-  "cost-analysis": getSuppliersReport,
+  "purchases-by-supplier": getCurrentAccountsReport,
+  "cost-analysis": getCurrentAccountsReport,
+  "petty-cash": getPettyCashReport,
 } as const;
 
 interface PettyCashReportLocalFilters {
@@ -66,16 +84,27 @@ interface PettyCashReportLocalFilters {
 }
 
 export default function ReportsPage() {
-  const { organization, loading: orgLoading, error: orgError } = useOrganization();
-  const orgId = organization?.id ?? "";
+  const organizationId = useSessionStore((state) => state.organizationId);
+  const organizationName = useSessionStore((state) => state.organizationName);
+
+  const organization = organizationId
+    ? {
+        id: organizationId,
+        name: organizationName || "Organización",
+      }
+    : null;
+
   const [selectedDateRange, setSelectedDateRange] = useState<string>("currentMonth");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [reportLoading, setReportLoading] = useState(false);
   const [inventoryReport, setInventoryReport] = useState<InventoryStatusReport | null>(null);
   const [reservationsReport, setReservationsReport] = useState<ReservationsReportType | null>(null);
   const [salesReport, setSalesReport] = useState<SalesReportType | null>(null);
+  const [currentAccountsReport, setCurrentAccountsReport] =
+    useState<CurrentAccountsReportType | null>(null);
+  const [pettyCashReport, setPettyCashReport] = useState<ReportDataForPdf[] | null>(null);
   const [filters, setFilters] = useState<LocalFilters>({
-    organizationId: orgId,
+    organizationId: organizationId || "",
     branchId: "all",
     brandId: "all",
     modelId: "all",
@@ -90,6 +119,12 @@ export default function ReportsPage() {
     branchId: "all",
   });
   const [isPettyCashReportLoading, setIsPettyCashReportLoading] = useState(false);
+
+  useEffect(() => {
+    if (organizationId) {
+      setFilters((prev) => ({ ...prev, organizationId }));
+    }
+  }, [organizationId]);
 
   const now = new Date();
   const dateRangePresets: Record<string, DateRange> = {
@@ -125,14 +160,14 @@ export default function ReportsPage() {
 
   useEffect(() => {
     const loadBranches = () => {
-      if (!organization?.id) {
+      if (!organizationId) {
         setBranches([]);
         return;
       }
 
       setIsLoadingBranches(true);
       startTransition(() => {
-        getBranchesForOrganizationAction(organization.id)
+        getBranchesForOrganizationAction(organizationId)
           .then((branchesData) => {
             setBranches(branchesData || []);
           })
@@ -147,7 +182,7 @@ export default function ReportsPage() {
     };
 
     loadBranches();
-  }, [organization?.id]);
+  }, [organizationId]);
 
   const handleDateRangeChange = (newRange: DateRange | undefined) => {
     setFilters((prev) => ({
@@ -164,36 +199,55 @@ export default function ReportsPage() {
   };
 
   const handleGenerateReport = async (type: string) => {
-    if (!organization?.id) return;
+    if (!organizationId) return;
 
     setReportLoading(true);
     try {
-      const requestData: LocalFilters = {
-        ...filters,
-        organizationId: organization.id,
-      };
-
-      const response = await fetch(`/api/reports/${type}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) throw new Error("Error generando reporte");
-
-      const data = await response.json();
+      // Usar las acciones directas del servidor en lugar de APIs
       switch (type) {
-        case "inventory-status":
-          setInventoryReport(data);
-          break;
-        case "reservations":
-          setReservationsReport(data);
-          break;
-        case "sales":
-          setSalesReport(data);
-          break;
+        case "inventory-status": {
+          // Para inventario, usamos la acción directa
+          const inventoryData = await getInventoryStatusReport(filters.dateRange);
+          setInventoryReport(inventoryData);
+          return;
+        }
+
+        case "sales-by-period": {
+          // Para sales, usar acción directa con el rango de fechas
+          const salesData = await getSalesReport(filters.dateRange);
+          setSalesReport(salesData);
+          return;
+        }
+
+        case "reservations": {
+          // Para reservas, usar acción directa
+          const reservationsData = await getReservationsReport(filters.dateRange);
+          setReservationsReport(reservationsData);
+          return;
+        }
+
+        case "petty-cash": {
+          // Para caja chica, usar acción directa
+          const pettyCashData = await getPettyCashReport(
+            pettyCashFilters.dateRange,
+            pettyCashFilters.branchId,
+          );
+          setPettyCashReport(pettyCashData);
+          return;
+        }
+
+        case "current-accounts": {
+          // Para cuentas corrientes, usar acción directa
+          const currentAccountsData = await getCurrentAccountsReport(
+            filters.dateRange,
+            filters.branchId,
+          );
+          setCurrentAccountsReport(currentAccountsData);
+          return;
+        }
+
+        default:
+          throw new Error(`Tipo de reporte no soportado: ${type}`);
       }
     } catch (error) {
       console.error("Error generando reporte:", error);
@@ -203,7 +257,7 @@ export default function ReportsPage() {
   };
 
   const handleExportInventoryPDF = async () => {
-    if (!organization?.id) return;
+    if (!organizationId) return;
 
     setReportLoading(true);
     try {
@@ -234,7 +288,7 @@ export default function ReportsPage() {
   };
 
   const handleExportSalesPDF = async () => {
-    if (!organization?.id) return;
+    if (!organizationId) return;
 
     setReportLoading(true);
     try {
@@ -245,7 +299,7 @@ export default function ReportsPage() {
         },
         body: JSON.stringify({
           dateRange: filters.dateRange,
-          organizationId: organization.id,
+          organizationId,
           branchId: filters.branchId,
           brandId: filters.brandId,
         }),
@@ -270,16 +324,20 @@ export default function ReportsPage() {
   };
 
   const handleExportReservationsPDF = async () => {
-    if (!organization?.id) return;
+    if (!organizationId) return;
 
     setReportLoading(true);
     try {
-      const response = await fetch("/api/reports/reservation/generate-pdf", {
+      const response = await fetch("/api/reports/reservations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ dateRange: filters.dateRange }),
+        body: JSON.stringify({
+          dateRange: filters.dateRange,
+          branchId: filters.branchId,
+          brandId: filters.brandId,
+        }),
       });
 
       if (!response.ok) throw new Error("Error generando PDF");
@@ -302,98 +360,161 @@ export default function ReportsPage() {
 
   const handleClearFilters = () => {
     setFilters({
-      organizationId: orgId,
+      organizationId: organizationId || "",
       branchId: "all",
       brandId: "all",
       modelId: "all",
       dateRange: undefined,
     });
-    setSelectedDateRange("");
+    setSelectedDateRange("currentMonth");
+    setCustomDateRange(undefined);
   };
 
   const handleBranchChange = (value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      branchId: value,
-      dateRange: prev.dateRange,
-    }));
+    setFilters((prev) => ({ ...prev, branchId: value }));
+    setPettyCashFilters((prev) => ({ ...prev, branchId: value }));
   };
 
   const handleBrandChange = (value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      brandId: value,
-      dateRange: prev.dateRange,
-    }));
+    setFilters((prev) => ({ ...prev, brandId: value }));
   };
 
   const handleModelChange = (value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      modelId: value,
-      dateRange: prev.dateRange,
-    }));
+    setFilters((prev) => ({ ...prev, modelId: value }));
   };
 
   const handleGeneratePettyCashReportPDF = async () => {
-    if (!organization?.id || !pettyCashFilters.dateRange?.from || !pettyCashFilters.dateRange?.to) {
-      console.error("Por favor, seleccione un rango de fechas para el reporte de caja chica.");
-      return;
-    }
+    if (!organizationId) return;
+
     setIsPettyCashReportLoading(true);
     try {
+      // Verificar que tenemos un rango de fechas
+      if (!pettyCashFilters.dateRange?.from || !pettyCashFilters.dateRange?.to) {
+        throw new Error("Por favor, seleccione un rango de fechas válido");
+      }
+
+      // Construir los parámetros para la API
       const params = new URLSearchParams({
         fromDate: pettyCashFilters.dateRange.from.toISOString(),
         toDate: pettyCashFilters.dateRange.to.toISOString(),
       });
 
+      // Agregar branchId si no es "all"
       if (pettyCashFilters.branchId && pettyCashFilters.branchId !== "all") {
         params.append("branchId", pettyCashFilters.branchId);
       }
 
       const response = await fetch(
         `/api/reports/petty-cash-movements/generate-pdf?${params.toString()}`,
+        {
+          method: "GET",
+        },
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al generar el reporte PDF de caja chica");
+        const errorData = await response.json().catch(() => ({ error: "Error desconocido" }));
+        throw new Error(errorData.error || "Error generando PDF");
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "petty_cash_movements_report.pdf";
+      a.download = "reporte-caja-chica.pdf";
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
       console.error("Error generando PDF de Caja Chica:", error);
+      // Mostrar el error al usuario
+      alert(`Error: ${error instanceof Error ? error.message : "Error desconocido"}`);
     } finally {
       setIsPettyCashReportLoading(false);
     }
   };
 
-  if (orgLoading) {
-    return <p>Cargando organización...</p>;
-  }
+  const handleExportCurrentAccountsPDF = async () => {
+    if (!organizationId) return;
 
-  if (orgError) {
-    return <p>Error al cargar la organización: {orgError.message}</p>;
+    setReportLoading(true);
+    try {
+      const response = await fetch("/api/reports/current-accounts/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRange: filters.dateRange,
+          branchId: filters.branchId,
+          brandId: filters.brandId,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Error generando PDF");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "reporte-cuentas-corrientes.pdf";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error exportando PDF:", error);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  if (!organizationId) {
+    return (
+      <div className="container max-w-none p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error al cargar la organización</AlertTitle>
+          <AlertDescription>
+            No se pudo obtener los datos de la organización. Por favor, recarga la página o contacta
+            al soporte.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <h1 className="text-3xl font-bold mb-6">Reportes</h1>
+    <div className="container max-w-none p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <BarChart3 className="h-8 w-8 text-primary" />
+          Reportes
+        </h1>
+      </div>
+
       <Tabs defaultValue="inventory-status" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="inventory-status">Inventario</TabsTrigger>
-          <TabsTrigger value="sales">Ventas</TabsTrigger>
-          <TabsTrigger value="reservations">Reservas</TabsTrigger>
-          <TabsTrigger value="suppliers">Proveedores</TabsTrigger>
-          <TabsTrigger value="petty-cash">Caja Chica</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="inventory-status" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Inventario
+          </TabsTrigger>
+          <TabsTrigger value="sales" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Ventas
+          </TabsTrigger>
+          <TabsTrigger value="reservations" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Reservas
+          </TabsTrigger>
+          <TabsTrigger value="current-accounts" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Cuentas Corrientes
+          </TabsTrigger>
+          <TabsTrigger value="petty-cash" className="flex items-center gap-2">
+            <Wallet className="h-4 w-4" />
+            Caja Chica
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="inventory-status">
@@ -463,7 +584,7 @@ export default function ReportsPage() {
           </ReportTabContent>
         </TabsContent>
 
-        <TabsContent value="suppliers">
+        <TabsContent value="current-accounts">
           <ReportTabContent
             selectedDateRange={selectedDateRange}
             customDateRange={customDateRange}
@@ -475,99 +596,44 @@ export default function ReportsPage() {
             onBrandChange={handleBrandChange}
             onClearFilters={handleClearFilters}
             branches={branches}
-            onGenerateReport={() => handleGenerateReport("purchases-by-supplier")}
-            onExportPDF={handleExportInventoryPDF}
+            onGenerateReport={() => handleGenerateReport("current-accounts")}
+            onExportPDF={handleExportCurrentAccountsPDF}
             isGenerating={reportLoading}
-            hasData={!!inventoryReport}
+            hasData={!!currentAccountsReport}
           >
-            <div>Reporte de Proveedores (En desarrollo)</div>
+            {currentAccountsReport ? (
+              <CurrentAccountsReport data={currentAccountsReport} />
+            ) : (
+              <div>Seleccione un rango de fechas y genere el reporte</div>
+            )}
           </ReportTabContent>
         </TabsContent>
 
-        <TabsContent value="petty-cash" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="mr-2 h-5 w-5" />
-                Reporte de Movimientos de Caja Chica
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-wrap gap-2 mb-4">
-                {[
-                  { label: "Hoy", value: "today" },
-                  { label: "Este Mes", value: "currentMonth" },
-                  { label: "Mes Anterior", value: "lastMonth" },
-                  { label: "Este Año", value: "ytd" },
-                  { label: "Año Anterior", value: "lastYear" },
-                  { label: "Personalizado", value: "custom" },
-                ].map((preset) => (
-                  <Button
-                    key={preset.value}
-                    variant={selectedDateRange === preset.value ? "default" : "outline"}
-                    onClick={() => updateDateFilters(preset.value)}
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
-              </div>
-
-              {selectedDateRange === "custom" && (
-                <div className="mb-4">
-                  <span className="block text-sm font-medium text-gray-700 mb-1">
-                    Seleccione Rango Personalizado
-                  </span>
-                  <DatePickerWithRange value={customDateRange} onChange={setCustomDateRange} />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                <div>
-                  <label
-                    htmlFor="pettyCashBranch"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Sucursal
-                  </label>
-                  <Select
-                    value={pettyCashFilters.branchId}
-                    onValueChange={(value) =>
-                      setPettyCashFilters((prev) => ({ ...prev, branchId: value }))
-                    }
-                    disabled={isLoadingBranches}
-                  >
-                    <SelectTrigger id="pettyCashBranch" className="w-full">
-                      <SelectValue
-                        placeholder={isLoadingBranches ? "Cargando..." : "Seleccionar sucursal"}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las sucursales</SelectItem>
-                      <SelectItem value="general_account">Cuenta General</SelectItem>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id.toString()}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleGeneratePettyCashReportPDF}
-                disabled={isPettyCashReportLoading || !pettyCashFilters.dateRange?.from}
-                className="w-full md:w-auto"
-              >
-                {isPettyCashReportLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Exportar PDF Caja Chica
-              </Button>
-            </CardContent>
-          </Card>
+        <TabsContent value="petty-cash">
+          <ReportTabContent
+            selectedDateRange={selectedDateRange}
+            customDateRange={customDateRange}
+            onDateRangeChange={updateDateFilters}
+            onCustomDateRangeChange={handleCustomDateRangeChange}
+            branchId={pettyCashFilters.branchId}
+            brandId="all"
+            onBranchChange={(value) =>
+              setPettyCashFilters((prev) => ({ ...prev, branchId: value }))
+            }
+            onBrandChange={() => {}} // No se usa para caja chica
+            onClearFilters={handleClearFilters}
+            branches={branches}
+            onGenerateReport={() => handleGenerateReport("petty-cash")}
+            onExportPDF={handleGeneratePettyCashReportPDF}
+            isGenerating={reportLoading || isPettyCashReportLoading}
+            hasData={!!pettyCashReport}
+          >
+            {pettyCashReport ? (
+              <PettyCashReport data={pettyCashReport} />
+            ) : (
+              <div>Seleccione un rango de fechas y genere el reporte</div>
+            )}
+          </ReportTabContent>
         </TabsContent>
       </Tabs>
     </div>

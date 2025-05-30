@@ -1,13 +1,13 @@
 "use server";
 
-import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
-import {
-  updatePettyCashMovementSchema,
-  type UpdatePettyCashMovementInput,
-} from "@/zod/PettyCashZod";
 import { getOrganizationIdFromSession } from "@/actions/util";
+import prisma from "@/lib/prisma";
+import {
+  type UpdatePettyCashMovementInput,
+  updatePettyCashMovementSchema,
+} from "@/zod/PettyCashZod";
 import type { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 interface UpdatePettyCashMovementResult {
   success: boolean;
@@ -80,13 +80,13 @@ export async function updatePettyCashMovement(
       amount: amount,
     };
 
-    if (description !== undefined && description !== null && description !== '') {
+    if (description !== undefined && description !== null && description !== "") {
       dataForUpdate.description = description;
     }
-    if (ticketNumber !== undefined && ticketNumber !== null && ticketNumber !== '') {
+    if (ticketNumber !== undefined && ticketNumber !== null && ticketNumber !== "") {
       dataForUpdate.motive = ticketNumber;
     }
-    if (receiptUrl !== undefined && receiptUrl !== null && receiptUrl !== '') {
+    if (receiptUrl !== undefined && receiptUrl !== null && receiptUrl !== "") {
       dataForUpdate.ticketUrl = receiptUrl;
     }
 

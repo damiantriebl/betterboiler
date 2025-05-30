@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type { PettyCashDeposit, PettyCashWithdrawal, PettyCashSpend } from "@prisma/client";
+import type { PettyCashDeposit, PettyCashSpend, PettyCashWithdrawal } from "@prisma/client";
 import { getOrganizationIdFromSession } from "../util";
 
 // Definimos un tipo para la estructura de datos anidada que esperamos

@@ -1,5 +1,5 @@
-import PettyCashDataFetcher from "./PettyCashDataFetcher";
 import { Suspense } from "react";
+import PettyCashDataFetcher from "./PettyCashDataFetcher";
 
 // Ya no es necesario 'use client' aquí si toda la lógica de cliente está en PettyCashClientPage
 // y PettyCashDataFetcher es el Server Component que obtiene los datos.

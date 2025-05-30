@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import prisma from "@/lib/prisma";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  clearAssetCache,
+  fetchImageAsBase64,
+  getAssetCacheSize,
+  getAssetWithFallback,
   getLogoUrl,
   getLogoUrlFromOrganization,
-  fetchImageAsBase64,
-  clearAssetCache,
-  getAssetCacheSize,
-  removeFromAssetCache,
-  getAssetWithFallback,
   preloadAssets,
+  removeFromAssetCache,
 } from "../assets-unified";
 
 // Mock dependencies
@@ -60,12 +60,12 @@ describe("assets-unified", () => {
 
     it("should cache valid URLs", async () => {
       const url = "https://example.com/logo.png";
-      
+
       // First call
       await getLogoUrl(url);
       // Second call should use cache
       const result = await getLogoUrl(url);
-      
+
       expect(result).toBe(url);
       expect(getAssetCacheSize()).toBe(1);
     });
@@ -76,16 +76,17 @@ describe("assets-unified", () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          success: { url: signedUrl }
-        }),
+        json: () =>
+          Promise.resolve({
+            success: { url: signedUrl },
+          }),
       });
 
       const result = await getLogoUrl(s3Path);
 
       expect(result).toBe(signedUrl);
       expect(mockFetch).toHaveBeenCalledWith(
-        `/api/s3/get-signed-url?name=${encodeURIComponent(s3Path)}&operation=get`
+        `/api/s3/get-signed-url?name=${encodeURIComponent(s3Path)}&operation=get`,
       );
     });
 
@@ -94,9 +95,10 @@ describe("assets-unified", () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          error: "File not found"
-        }),
+        json: () =>
+          Promise.resolve({
+            error: "File not found",
+          }),
       });
 
       const result = await getLogoUrl(s3Path);
@@ -143,9 +145,10 @@ describe("assets-unified", () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          success: { url: signedUrl }
-        }),
+        json: () =>
+          Promise.resolve({
+            success: { url: signedUrl },
+          }),
       });
 
       const result = await getLogoUrlFromOrganization();
@@ -186,9 +189,7 @@ describe("assets-unified", () => {
         organizationId: "org-1",
       });
 
-      mockPrisma.organization.findUnique.mockRejectedValue(
-        new Error("Database error")
-      );
+      mockPrisma.organization.findUnique.mockRejectedValue(new Error("Database error"));
 
       const result = await getLogoUrlFromOrganization();
 
@@ -206,16 +207,17 @@ describe("assets-unified", () => {
       // Mock getLogoUrl
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          success: { url: signedUrl }
-        }),
+        json: () =>
+          Promise.resolve({
+            success: { url: signedUrl },
+          }),
       });
 
       // Mock image fetch
       mockFetch.mockResolvedValueOnce({
         ok: true,
         headers: {
-          get: (name: string) => name === "content-type" ? "image/png" : null,
+          get: (name: string) => (name === "content-type" ? "image/png" : null),
         },
         arrayBuffer: () => Promise.resolve(mockBuffer),
       });
@@ -230,13 +232,14 @@ describe("assets-unified", () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          error: "File not found"
-        }),
+        json: () =>
+          Promise.resolve({
+            error: "File not found",
+          }),
       });
 
       await expect(fetchImageAsBase64(imagePath)).rejects.toThrow(
-        "No se pudo obtener la URL de la imagen"
+        "No se pudo obtener la URL de la imagen",
       );
     });
 
@@ -247,9 +250,10 @@ describe("assets-unified", () => {
       // Mock getLogoUrl success
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          success: { url: signedUrl }
-        }),
+        json: () =>
+          Promise.resolve({
+            success: { url: signedUrl },
+          }),
       });
 
       // Mock image fetch failure
@@ -257,9 +261,7 @@ describe("assets-unified", () => {
         ok: false,
       });
 
-      await expect(fetchImageAsBase64(imagePath)).rejects.toThrow(
-        "No se pudo obtener la imagen"
-      );
+      await expect(fetchImageAsBase64(imagePath)).rejects.toThrow("No se pudo obtener la imagen");
     });
 
     it("should use default content type when not provided", async () => {
@@ -271,9 +273,10 @@ describe("assets-unified", () => {
       // Mock getLogoUrl
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          success: { url: signedUrl }
-        }),
+        json: () =>
+          Promise.resolve({
+            success: { url: signedUrl },
+          }),
       });
 
       // Mock image fetch without content-type
@@ -304,9 +307,9 @@ describe("assets-unified", () => {
     it("should remove specific item from cache", async () => {
       const url = "https://example.com/logo.png";
       await getLogoUrl(url);
-      
+
       expect(getAssetCacheSize()).toBe(1);
-      
+
       const removed = removeFromAssetCache(url);
       expect(removed).toBe(true);
       expect(getAssetCacheSize()).toBe(0);
@@ -336,9 +339,10 @@ describe("assets-unified", () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          error: "File not found"
-        }),
+        json: () =>
+          Promise.resolve({
+            error: "File not found",
+          }),
       });
 
       const result = await getAssetWithFallback(primaryPath, fallbackUrl);
@@ -355,9 +359,10 @@ describe("assets-unified", () => {
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          error: "File not found"
-        }),
+        json: () =>
+          Promise.resolve({
+            error: "File not found",
+          }),
       });
 
       const result = await getAssetWithFallback(primaryPath, fallbackPath);
@@ -392,9 +397,10 @@ describe("assets-unified", () => {
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          success: { url: "https://s3.amazonaws.com/signed-url" }
-        }),
+        json: () =>
+          Promise.resolve({
+            success: { url: "https://s3.amazonaws.com/signed-url" },
+          }),
       });
 
       await preloadAssets(paths);
@@ -412,4 +418,4 @@ describe("assets-unified", () => {
       await expect(preloadAssets(paths)).resolves.toBeUndefined();
     });
   });
-}); 
+});

@@ -1,26 +1,26 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { revalidatePath } from 'next/cache';
+import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOrganizationIdFromSession } from "../../util";
 import {
-  associateOrganizationBrand,
-  updateOrganizationBrandAssociation,
-  dissociateOrganizationBrand,
-  updateOrganizationBrandsOrder,
-  renameBrandByDuplication,
   addModelToOrganizationBrand,
+  associateOrganizationBrand,
+  dissociateOrganizationBrand,
+  renameBrandByDuplication,
+  updateOrganizationBrandAssociation,
+  updateOrganizationBrandsOrder,
   updateOrganizationModel,
   updateOrganizationModelsOrder,
-} from '../create-edit-brand';
-import prisma from '@/lib/prisma';
-import { getOrganizationIdFromSession } from '../../util';
-import { Prisma } from '@prisma/client';
+} from "../create-edit-brand";
 
 // Mock de Next.js cache
-vi.mock('next/cache', () => ({
+vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
 // Mock de Prisma
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     brand: {
@@ -51,7 +51,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock de getOrganizationIdFromSession
-vi.mock('../../util', () => ({
+vi.mock("../../util", () => ({
   getOrganizationIdFromSession: vi.fn(),
 }));
 
@@ -65,7 +65,7 @@ const mockRevalidatePath = revalidatePath as any;
 const mockPrisma = prisma as any;
 const mockGetOrganization = getOrganizationIdFromSession as any;
 
-describe('Create Edit Brand Actions', () => {
+describe("Create Edit Brand Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.console = mockConsole as any;
@@ -75,18 +75,18 @@ describe('Create Edit Brand Actions', () => {
     vi.restoreAllMocks();
   });
 
-  const mockOrganizationId = 'org-123';
+  const mockOrganizationId = "org-123";
   const mockSessionData = {
     organizationId: mockOrganizationId,
-    userId: 'user-456',
-    userEmail: 'test@example.com',
-    userRole: 'ADMIN',
+    userId: "user-456",
+    userEmail: "test@example.com",
+    userRole: "ADMIN",
     error: null,
   };
 
   const mockBrand = {
     id: 1,
-    name: 'Toyota',
+    name: "Toyota",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -96,14 +96,14 @@ describe('Create Edit Brand Actions', () => {
     organizationId: mockOrganizationId,
     brandId: 1,
     order: 0,
-    color: '#FF0000',
+    color: "#FF0000",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
   const mockModel = {
     id: 1,
-    name: 'Corolla',
+    name: "Corolla",
     brandId: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -119,20 +119,20 @@ describe('Create Edit Brand Actions', () => {
     updatedAt: new Date(),
   };
 
-  describe('🏷️ associateOrganizationBrand', () => {
-    describe('✅ Successful Association', () => {
-      it('should create new brand and associate it successfully', async () => {
+  describe("🏷️ associateOrganizationBrand", () => {
+    describe("✅ Successful Association", () => {
+      it("should create new brand and associate it successfully", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('name', 'honda');
-        formData.set('color', '#0066CC');
+        formData.set("name", "honda");
+        formData.set("color", "#0066CC");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.$transaction.mockImplementation(async (callback: any) => {
           return await callback({
             brand: {
               findUnique: vi.fn().mockResolvedValue(null), // Brand doesn't exist
-              create: vi.fn().mockResolvedValue({ ...mockBrand, name: 'Honda' }),
+              create: vi.fn().mockResolvedValue({ ...mockBrand, name: "Honda" }),
             },
             organizationBrand: {
               findUnique: vi.fn().mockResolvedValue(null), // Association doesn't exist
@@ -142,7 +142,7 @@ describe('Create Edit Brand Actions', () => {
                 id: 2,
                 brandId: 1,
                 order: 3,
-                color: '#0066CC',
+                color: "#0066CC",
               }),
             },
           });
@@ -153,18 +153,18 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(mockPrisma.$transaction).toHaveBeenCalled();
-        expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+        expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
         expect(result.success).toBe(true);
         expect(result.organizationBrandId).toBe(2);
-        expect(result.message).toContain('Honda');
-        expect(result.message).toContain('creada globalmente');
+        expect(result.message).toContain("Honda");
+        expect(result.message).toContain("creada globalmente");
       });
 
-      it('should associate existing brand successfully', async () => {
+      it("should associate existing brand successfully", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('name', 'toyota');
-        formData.set('color', '#CC0000');
+        formData.set("name", "toyota");
+        formData.set("color", "#CC0000");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.$transaction.mockImplementation(async (callback: any) => {
@@ -178,7 +178,7 @@ describe('Create Edit Brand Actions', () => {
               aggregate: vi.fn().mockResolvedValue({ _max: { order: 1 } }),
               create: vi.fn().mockResolvedValue({
                 ...mockOrganizationBrand,
-                color: '#CC0000',
+                color: "#CC0000",
                 order: 2,
               }),
             },
@@ -191,14 +191,14 @@ describe('Create Edit Brand Actions', () => {
         // Assert
         expect(result.success).toBe(true);
         expect(result.organizationBrandId).toBe(1);
-        expect(result.message).toContain('Toyota');
-        expect(result.message).not.toContain('creada globalmente');
+        expect(result.message).toContain("Toyota");
+        expect(result.message).not.toContain("creada globalmente");
       });
 
-      it('should handle already existing association', async () => {
+      it("should handle already existing association", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('name', 'toyota');
+        formData.set("name", "toyota");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.$transaction.mockImplementation(async (callback: any) => {
@@ -218,21 +218,21 @@ describe('Create Edit Brand Actions', () => {
         // Assert
         expect(result.success).toBe(true);
         expect(result.organizationBrandId).toBe(1);
-        expect(result.message).toContain('ya estaba asociada');
+        expect(result.message).toContain("ya estaba asociada");
       });
 
-      it('should normalize brand name correctly', async () => {
+      it("should normalize brand name correctly", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('name', 'hONdA'); // Mixed case
-        formData.set('color', '#0066CC');
+        formData.set("name", "hONdA"); // Mixed case
+        formData.set("color", "#0066CC");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.$transaction.mockImplementation(async (callback: any) => {
           const mockTx = {
             brand: {
               findUnique: vi.fn().mockResolvedValue(null),
-              create: vi.fn().mockResolvedValue({ ...mockBrand, name: 'Honda' }),
+              create: vi.fn().mockResolvedValue({ ...mockBrand, name: "Honda" }),
             },
             organizationBrand: {
               findUnique: vi.fn().mockResolvedValue(null),
@@ -248,13 +248,13 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(true);
-        expect(result.message).toContain('Honda'); // Properly normalized
+        expect(result.message).toContain("Honda"); // Properly normalized
       });
 
-      it('should handle null color correctly', async () => {
+      it("should handle null color correctly", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('name', 'nissan');
+        formData.set("name", "nissan");
         // No color set
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
@@ -262,7 +262,7 @@ describe('Create Edit Brand Actions', () => {
           const mockTx = {
             brand: {
               findUnique: vi.fn().mockResolvedValue(null),
-              create: vi.fn().mockResolvedValue({ ...mockBrand, name: 'Nissan' }),
+              create: vi.fn().mockResolvedValue({ ...mockBrand, name: "Nissan" }),
             },
             organizationBrand: {
               findUnique: vi.fn().mockResolvedValue(null),
@@ -284,50 +284,50 @@ describe('Create Edit Brand Actions', () => {
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return error when user is not authenticated', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return error when user is not authenticated", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({
           organizationId: null,
-          error: 'Not authenticated',
+          error: "Not authenticated",
         });
 
         const formData = new FormData();
-        formData.set('name', 'toyota');
+        formData.set("name", "toyota");
 
         // Act
         const result = await associateOrganizationBrand(null, formData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Usuario no autenticado o sin organización.');
+        expect(result.error).toBe("Usuario no autenticado o sin organización.");
         expect(mockPrisma.$transaction).not.toHaveBeenCalled();
       });
 
-      it('should handle validation errors', async () => {
+      it("should handle validation errors", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
 
         const formData = new FormData();
-        formData.set('name', ''); // Empty name
-        formData.set('color', 'invalid-color'); // Invalid color
+        formData.set("name", ""); // Empty name
+        formData.set("color", "invalid-color"); // Invalid color
 
         // Act
         const result = await associateOrganizationBrand(null, formData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Datos inválidos');
+        expect(result.error).toContain("Datos inválidos");
         expect(mockPrisma.$transaction).not.toHaveBeenCalled();
       });
 
-      it('should handle database transaction errors', async () => {
+      it("should handle database transaction errors", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('name', 'toyota');
+        formData.set("name", "toyota");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        const dbError = new Error('Transaction failed');
+        const dbError = new Error("Transaction failed");
         mockPrisma.$transaction.mockRejectedValue(dbError);
 
         // Act
@@ -335,45 +335,45 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al asociar la marca: Transaction failed');
+        expect(result.error).toBe("Error al asociar la marca: Transaction failed");
         expect(mockConsole.error).toHaveBeenCalledWith(
-          '🔥 ERROR SERVER ACTION (associateOrganizationBrand):',
-          dbError
+          "🔥 ERROR SERVER ACTION (associateOrganizationBrand):",
+          dbError,
         );
       });
 
-      it('should handle unknown errors', async () => {
+      it("should handle unknown errors", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('name', 'toyota');
+        formData.set("name", "toyota");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        mockPrisma.$transaction.mockRejectedValue('Unknown error');
+        mockPrisma.$transaction.mockRejectedValue("Unknown error");
 
         // Act
         const result = await associateOrganizationBrand(null, formData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al asociar la marca: Error inesperado.');
+        expect(result.error).toBe("Error al asociar la marca: Error inesperado.");
       });
     });
   });
 
-  describe('✏️ updateOrganizationBrandAssociation', () => {
-    describe('✅ Successful Update', () => {
-      it('should update brand association color successfully', async () => {
+  describe("✏️ updateOrganizationBrandAssociation", () => {
+    describe("✅ Successful Update", () => {
+      it("should update brand association color successfully", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
-        formData.set('color', '#00FF00');
+        formData.set("organizationBrandId", "1");
+        formData.set("color", "#00FF00");
         // Note: order no se pasa, pero z.coerce.number() convierte null/undefined a 0
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.organizationBrand.findUnique.mockResolvedValue(mockOrganizationBrand);
         mockPrisma.organizationBrand.update.mockResolvedValue({
           ...mockOrganizationBrand,
-          color: '#00FF00',
+          color: "#00FF00",
         });
 
         // Act
@@ -383,17 +383,17 @@ describe('Create Edit Brand Actions', () => {
         // La implementación incluye order: 0 debido a z.coerce.number() que convierte valores ausentes a 0
         expect(mockPrisma.organizationBrand.update).toHaveBeenCalledWith({
           where: { id: 1 },
-          data: { color: '#00FF00', order: 0 },
+          data: { color: "#00FF00", order: 0 },
         });
-        expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+        expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
         expect(result.success).toBe(true);
       });
 
-      it('should update brand association order successfully', async () => {
+      it("should update brand association order successfully", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
-        formData.set('order', '5');
+        formData.set("organizationBrandId", "1");
+        formData.set("order", "5");
         // Note: color no se pasa, pero el campo opcional puede incluir null
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
@@ -415,12 +415,12 @@ describe('Create Edit Brand Actions', () => {
         expect(result.success).toBe(true);
       });
 
-      it('should update both color and order', async () => {
+      it("should update both color and order", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
-        formData.set('color', '#FFFF00');
-        formData.set('order', '3');
+        formData.set("organizationBrandId", "1");
+        formData.set("color", "#FFFF00");
+        formData.set("order", "3");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.organizationBrand.findUnique.mockResolvedValue(mockOrganizationBrand);
@@ -432,52 +432,52 @@ describe('Create Edit Brand Actions', () => {
         // Assert
         expect(mockPrisma.organizationBrand.update).toHaveBeenCalledWith({
           where: { id: 1 },
-          data: { color: '#FFFF00', order: 3 },
+          data: { color: "#FFFF00", order: 3 },
         });
         expect(result.success).toBe(true);
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return error when user is not authenticated', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return error when user is not authenticated", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({
           organizationId: null,
-          error: 'Not authenticated',
+          error: "Not authenticated",
         });
 
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
+        formData.set("organizationBrandId", "1");
 
         // Act
         const result = await updateOrganizationBrandAssociation(null, formData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Usuario no autenticado o sin organización.');
+        expect(result.error).toBe("Usuario no autenticado o sin organización.");
       });
 
-      it('should handle validation errors', async () => {
+      it("should handle validation errors", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
 
         const formData = new FormData();
-        formData.set('organizationBrandId', 'invalid'); // Invalid ID
-        formData.set('color', 'invalid-color'); // Invalid color
+        formData.set("organizationBrandId", "invalid"); // Invalid ID
+        formData.set("color", "invalid-color"); // Invalid color
 
         // Act
         const result = await updateOrganizationBrandAssociation(null, formData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Datos inválidos');
+        expect(result.error).toContain("Datos inválidos");
       });
 
-      it('should return error when association not found', async () => {
+      it("should return error when association not found", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '999');
-        formData.set('color', '#FF0000');
+        formData.set("organizationBrandId", "999");
+        formData.set("color", "#FF0000");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.organizationBrand.findUnique.mockResolvedValue(null);
@@ -487,20 +487,20 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
         expect(mockPrisma.organizationBrand.update).not.toHaveBeenCalled();
       });
 
-      it('should return error when association belongs to different organization', async () => {
+      it("should return error when association belongs to different organization", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
-        formData.set('color', '#FF0000');
+        formData.set("organizationBrandId", "1");
+        formData.set("color", "#FF0000");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.organizationBrand.findUnique.mockResolvedValue({
           ...mockOrganizationBrand,
-          organizationId: 'different-org',
+          organizationId: "different-org",
         });
 
         // Act
@@ -508,19 +508,19 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
         expect(mockPrisma.organizationBrand.update).not.toHaveBeenCalled();
       });
 
-      it('should handle database errors', async () => {
+      it("should handle database errors", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
-        formData.set('color', '#FF0000');
+        formData.set("organizationBrandId", "1");
+        formData.set("color", "#FF0000");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.organizationBrand.findUnique.mockResolvedValue(mockOrganizationBrand);
-        const dbError = new Error('Update failed');
+        const dbError = new Error("Update failed");
         mockPrisma.organizationBrand.update.mockRejectedValue(dbError);
 
         // Act
@@ -528,24 +528,24 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al actualizar la asociación.');
+        expect(result.error).toBe("Error al actualizar la asociación.");
         expect(mockConsole.error).toHaveBeenCalledWith(
-          '🔥 ERROR SERVER ACTION (updateOrganizationBrandAssociation):',
-          dbError
+          "🔥 ERROR SERVER ACTION (updateOrganizationBrandAssociation):",
+          dbError,
         );
       });
     });
   });
 
-  describe('🗑️ dissociateOrganizationBrand', () => {
-    describe('✅ Successful Dissociation', () => {
-      it('should dissociate brand successfully', async () => {
+  describe("🗑️ dissociateOrganizationBrand", () => {
+    describe("✅ Successful Dissociation", () => {
+      it("should dissociate brand successfully", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
+        formData.set("organizationBrandId", "1");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        
+
         // Mock the transaction implementation
         mockPrisma.$transaction.mockImplementation(async (callback: any) => {
           return await callback({
@@ -567,55 +567,55 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(mockPrisma.$transaction).toHaveBeenCalled();
-        expect(mockRevalidatePath).toHaveBeenCalledWith('/configuration');
+        expect(mockRevalidatePath).toHaveBeenCalledWith("/configuration");
         expect(result.success).toBe(true);
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return error when user is not authenticated', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return error when user is not authenticated", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({
           organizationId: null,
-          error: 'Not authenticated',
+          error: "Not authenticated",
         });
 
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
+        formData.set("organizationBrandId", "1");
 
         // Act
         const result = await dissociateOrganizationBrand(null, formData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Usuario no autenticado o sin organización.');
+        expect(result.error).toBe("Usuario no autenticado o sin organización.");
       });
 
-      it('should handle validation errors', async () => {
+      it("should handle validation errors", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
 
         const formData = new FormData();
-        formData.set('organizationBrandId', 'invalid'); // Invalid ID
+        formData.set("organizationBrandId", "invalid"); // Invalid ID
 
         // Act
         const result = await dissociateOrganizationBrand(null, formData);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('ID de asociación inválido.');
+        expect(result.error).toBe("ID de asociación inválido.");
       });
 
-      it('should return error when association not found', async () => {
+      it("should return error when association not found", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '999');
+        formData.set("organizationBrandId", "999");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        
+
         // Mock transaction that throws error for association not found
         mockPrisma.$transaction.mockRejectedValue(
-          new Error('Asociación no encontrada o no pertenece a tu organización.')
+          new Error("Asociación no encontrada o no pertenece a tu organización."),
         );
 
         // Act
@@ -623,19 +623,19 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
       });
 
-      it('should return error when association belongs to different organization', async () => {
+      it("should return error when association belongs to different organization", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
+        formData.set("organizationBrandId", "1");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        
+
         // Mock transaction that throws error for different organization
         mockPrisma.$transaction.mockRejectedValue(
-          new Error('Asociación no encontrada o no pertenece a tu organización.')
+          new Error("Asociación no encontrada o no pertenece a tu organización."),
         );
 
         // Act
@@ -643,16 +643,16 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Asociación no encontrada o no pertenece a tu organización.');
+        expect(result.error).toBe("Asociación no encontrada o no pertenece a tu organización.");
       });
 
-      it('should handle database errors', async () => {
+      it("should handle database errors", async () => {
         // Arrange
         const formData = new FormData();
-        formData.set('organizationBrandId', '1');
+        formData.set("organizationBrandId", "1");
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        const dbError = new Error('Transaction failed');
+        const dbError = new Error("Transaction failed");
         mockPrisma.$transaction.mockRejectedValue(dbError);
 
         // Act
@@ -660,18 +660,18 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al desasociar la marca.');
+        expect(result.error).toBe("Error al desasociar la marca.");
         expect(mockConsole.error).toHaveBeenCalledWith(
-          '🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):',
-          dbError
+          "🔥 ERROR SERVER ACTION (dissociateOrganizationBrand):",
+          dbError,
         );
       });
     });
   });
 
-  describe('🔄 updateOrganizationBrandsOrder', () => {
-    describe('✅ Successful Reordering', () => {
-      it('should update brands order successfully', async () => {
+  describe("🔄 updateOrganizationBrandsOrder", () => {
+    describe("✅ Successful Reordering", () => {
+      it("should update brands order successfully", async () => {
         // Arrange
         const orderedAssociations = [
           { id: 3, order: 0 },
@@ -680,9 +680,7 @@ describe('Create Edit Brand Actions', () => {
         ];
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
-        mockPrisma.organizationBrand.findMany.mockResolvedValue([
-          { id: 1 }, { id: 2 }, { id: 3 }
-        ]);
+        mockPrisma.organizationBrand.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }, { id: 3 }]);
         mockPrisma.$transaction.mockResolvedValue([{}, {}, {}]);
 
         // Act
@@ -697,11 +695,11 @@ describe('Create Edit Brand Actions', () => {
           select: { id: true },
         });
         expect(mockPrisma.$transaction).toHaveBeenCalled();
-        expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+        expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
         expect(result.success).toBe(true);
       });
 
-      it('should handle empty array', async () => {
+      it("should handle empty array", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.organizationBrand.findMany.mockResolvedValue([]);
@@ -715,12 +713,12 @@ describe('Create Edit Brand Actions', () => {
       });
     });
 
-    describe('❌ Error Handling', () => {
-      it('should return error when user is not authenticated', async () => {
+    describe("❌ Error Handling", () => {
+      it("should return error when user is not authenticated", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue({
           organizationId: null,
-          error: 'Not authenticated',
+          error: "Not authenticated",
         });
 
         // Act
@@ -728,15 +726,15 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Usuario no autenticado o sin organización.');
+        expect(result.error).toBe("Usuario no autenticado o sin organización.");
       });
 
-      it('should handle validation errors', async () => {
+      it("should handle validation errors", async () => {
         // Arrange
         mockGetOrganization.mockResolvedValue(mockSessionData);
 
         const invalidData = [
-          { id: 'invalid' as any, order: 0 }, // Invalid ID
+          { id: "invalid" as any, order: 0 }, // Invalid ID
         ];
 
         // Act
@@ -744,10 +742,10 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Datos de orden inválidos');
+        expect(result.error).toContain("Datos de orden inválidos");
       });
 
-      it('should return error when brands do not belong to organization', async () => {
+      it("should return error when brands do not belong to organization", async () => {
         // Arrange
         const orderedAssociations = [
           { id: 1, order: 0 },
@@ -757,26 +755,24 @@ describe('Create Edit Brand Actions', () => {
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         // Only return 2 brands instead of 3
-        mockPrisma.organizationBrand.findMany.mockResolvedValue([
-          { id: 1 }, { id: 2 }
-        ]);
+        mockPrisma.organizationBrand.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
 
         // Act
         const result = await updateOrganizationBrandsOrder(null, orderedAssociations);
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error: Una o más asociaciones no pertenecen a tu organización.');
+        expect(result.error).toBe("Error: Una o más asociaciones no pertenecen a tu organización.");
         expect(mockPrisma.$transaction).not.toHaveBeenCalled();
       });
 
-      it('should handle database transaction errors', async () => {
+      it("should handle database transaction errors", async () => {
         // Arrange
         const orderedAssociations = [{ id: 1, order: 0 }];
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
         mockPrisma.organizationBrand.findMany.mockResolvedValue([{ id: 1 }]);
-        const dbError = new Error('Transaction failed');
+        const dbError = new Error("Transaction failed");
         mockPrisma.$transaction.mockRejectedValue(dbError);
 
         // Act
@@ -784,23 +780,23 @@ describe('Create Edit Brand Actions', () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Error al actualizar el orden de las marcas.');
+        expect(result.error).toBe("Error al actualizar el orden de las marcas.");
         expect(mockConsole.error).toHaveBeenCalledWith(
-          '🔥 ERROR SERVER ACTION (updateOrganizationBrandsOrder):',
-          dbError
+          "🔥 ERROR SERVER ACTION (updateOrganizationBrandsOrder):",
+          dbError,
         );
       });
     });
   });
 
-  describe('🔄 Cache Revalidation', () => {
-    it('should revalidate correct path on all successful operations', async () => {
+  describe("🔄 Cache Revalidation", () => {
+    it("should revalidate correct path on all successful operations", async () => {
       const testCases = [
         // Test associateOrganizationBrand - calls '/configuracion'
         async () => {
           const formData = new FormData();
-          formData.set('name', 'test-brand');
-          
+          formData.set("name", "test-brand");
+
           mockGetOrganization.mockResolvedValue(mockSessionData);
           mockPrisma.$transaction.mockImplementation(async (callback: any) => {
             return await callback({
@@ -815,32 +811,32 @@ describe('Create Edit Brand Actions', () => {
               },
             });
           });
-          
+
           const result = await associateOrganizationBrand(null, formData);
-          expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+          expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
           return result;
         },
         // Test updateOrganizationBrandAssociation - calls '/configuracion'
         async () => {
           const formData = new FormData();
-          formData.set('organizationBrandId', '1');
-          formData.set('color', '#FF0000');
-          
+          formData.set("organizationBrandId", "1");
+          formData.set("color", "#FF0000");
+
           mockGetOrganization.mockResolvedValue(mockSessionData);
           mockPrisma.organizationBrand.findUnique.mockResolvedValue(mockOrganizationBrand);
           mockPrisma.organizationBrand.update.mockResolvedValue(mockOrganizationBrand);
-          
+
           const result = await updateOrganizationBrandAssociation(null, formData);
-          expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+          expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
           return result;
         },
         // Test dissociateOrganizationBrand - calls '/configuration' (note different path)
         async () => {
           const formData = new FormData();
-          formData.set('organizationBrandId', '1');
-          
+          formData.set("organizationBrandId", "1");
+
           mockGetOrganization.mockResolvedValue(mockSessionData);
-          
+
           // Mock the transaction implementation for dissociateOrganizationBrand
           mockPrisma.$transaction.mockImplementation(async (callback: any) => {
             return await callback({
@@ -856,9 +852,9 @@ describe('Create Edit Brand Actions', () => {
               },
             });
           });
-          
+
           const result = await dissociateOrganizationBrand(null, formData);
-          expect(mockRevalidatePath).toHaveBeenCalledWith('/configuration');
+          expect(mockRevalidatePath).toHaveBeenCalledWith("/configuration");
           return result;
         },
         // Test updateOrganizationBrandsOrder - calls '/configuracion'
@@ -866,9 +862,9 @@ describe('Create Edit Brand Actions', () => {
           mockGetOrganization.mockResolvedValue(mockSessionData);
           mockPrisma.organizationBrand.findMany.mockResolvedValue([{ id: 1 }]);
           mockPrisma.$transaction.mockResolvedValue([{}]);
-          
+
           const result = await updateOrganizationBrandsOrder(null, [{ id: 1, order: 0 }]);
-          expect(mockRevalidatePath).toHaveBeenCalledWith('/configuracion');
+          expect(mockRevalidatePath).toHaveBeenCalledWith("/configuracion");
           return result;
         },
       ];
@@ -880,47 +876,47 @@ describe('Create Edit Brand Actions', () => {
       }
     });
 
-    it('should not revalidate on errors', async () => {
+    it("should not revalidate on errors", async () => {
       // Test authentication error
       mockGetOrganization.mockResolvedValue({
         organizationId: null,
-        error: 'Not authenticated',
+        error: "Not authenticated",
       });
-      
+
       const formData = new FormData();
-      formData.set('name', 'test');
-      
+      formData.set("name", "test");
+
       await associateOrganizationBrand(null, formData);
       expect(mockRevalidatePath).not.toHaveBeenCalled();
 
       // Test validation error
       vi.clearAllMocks();
       mockGetOrganization.mockResolvedValue(mockSessionData);
-      
+
       const invalidFormData = new FormData();
-      invalidFormData.set('name', ''); // Invalid
-      
+      invalidFormData.set("name", ""); // Invalid
+
       await associateOrganizationBrand(null, invalidFormData);
       expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
   });
 
-  describe('🎯 Edge Cases', () => {
-    describe('Brand Name Normalization', () => {
-      it('should handle various name formats', async () => {
+  describe("🎯 Edge Cases", () => {
+    describe("Brand Name Normalization", () => {
+      it("should handle various name formats", async () => {
         // Arrange
         const testCases = [
-          { input: 'toyota', expected: 'Toyota' },
-          { input: 'HONDA', expected: 'Honda' },
-          { input: 'mErCeDeS', expected: 'Mercedes' },
-          { input: 'bmw', expected: 'Bmw' },
+          { input: "toyota", expected: "Toyota" },
+          { input: "HONDA", expected: "Honda" },
+          { input: "mErCeDeS", expected: "Mercedes" },
+          { input: "bmw", expected: "Bmw" },
         ];
 
         mockGetOrganization.mockResolvedValue(mockSessionData);
 
         for (const testCase of testCases) {
           const formData = new FormData();
-          formData.set('name', testCase.input);
+          formData.set("name", testCase.input);
 
           mockPrisma.$transaction.mockImplementation(async (callback: any) => {
             const mockTx = {
@@ -953,8 +949,8 @@ describe('Create Edit Brand Actions', () => {
       });
     });
 
-    describe('Order Calculation', () => {
-      it('should handle various max order scenarios', async () => {
+    describe("Order Calculation", () => {
+      it("should handle various max order scenarios", async () => {
         // Arrange
         const testCases = [
           { maxOrder: null, expectedNext: 0 },
@@ -967,7 +963,7 @@ describe('Create Edit Brand Actions', () => {
 
         for (const testCase of testCases) {
           const formData = new FormData();
-          formData.set('name', 'test-brand');
+          formData.set("name", "test-brand");
 
           const mockCreate = vi.fn().mockResolvedValue(mockOrganizationBrand);
           mockPrisma.$transaction.mockImplementation(async (callback: any) => {
@@ -1000,17 +996,17 @@ describe('Create Edit Brand Actions', () => {
       });
     });
 
-    describe('Color Handling', () => {
-      it('should handle various color formats', async () => {
+    describe("Color Handling", () => {
+      it("should handle various color formats", async () => {
         // Arrange
-        const validColors = ['#FF0000', '#00FF00', '#0000FF', '#ABCDEF'];
-        
+        const validColors = ["#FF0000", "#00FF00", "#0000FF", "#ABCDEF"];
+
         mockGetOrganization.mockResolvedValue(mockSessionData);
 
         for (const color of validColors) {
           const formData = new FormData();
-          formData.set('name', 'test-brand');
-          formData.set('color', color);
+          formData.set("name", "test-brand");
+          formData.set("color", color);
 
           const mockCreate = vi.fn().mockResolvedValue(mockOrganizationBrand);
           mockPrisma.$transaction.mockImplementation(async (callback: any) => {
@@ -1045,14 +1041,14 @@ describe('Create Edit Brand Actions', () => {
     });
   });
 
-  describe('📊 Console Logging', () => {
-    it('should log errors during database operations', async () => {
+  describe("📊 Console Logging", () => {
+    it("should log errors during database operations", async () => {
       // Arrange
       const formData = new FormData();
-      formData.set('name', 'test-brand');
+      formData.set("name", "test-brand");
 
       mockGetOrganization.mockResolvedValue(mockSessionData);
-      const dbError = new Error('Database connection failed');
+      const dbError = new Error("Database connection failed");
       mockPrisma.$transaction.mockRejectedValue(dbError);
 
       // Act
@@ -1060,20 +1056,20 @@ describe('Create Edit Brand Actions', () => {
 
       // Assert
       expect(mockConsole.error).toHaveBeenCalledWith(
-        '🔥 ERROR SERVER ACTION (associateOrganizationBrand):',
-        dbError
+        "🔥 ERROR SERVER ACTION (associateOrganizationBrand):",
+        dbError,
       );
     });
 
-    it('should log errors in update operations', async () => {
+    it("should log errors in update operations", async () => {
       // Arrange
       const formData = new FormData();
-      formData.set('organizationBrandId', '1');
-      formData.set('color', '#FF0000');
+      formData.set("organizationBrandId", "1");
+      formData.set("color", "#FF0000");
 
       mockGetOrganization.mockResolvedValue(mockSessionData);
       mockPrisma.organizationBrand.findUnique.mockResolvedValue(mockOrganizationBrand);
-      const updateError = new Error('Update operation failed');
+      const updateError = new Error("Update operation failed");
       mockPrisma.organizationBrand.update.mockRejectedValue(updateError);
 
       // Act
@@ -1081,9 +1077,9 @@ describe('Create Edit Brand Actions', () => {
 
       // Assert
       expect(mockConsole.error).toHaveBeenCalledWith(
-        '🔥 ERROR SERVER ACTION (updateOrganizationBrandAssociation):',
-        updateError
+        "🔥 ERROR SERVER ACTION (updateOrganizationBrandAssociation):",
+        updateError,
       );
     });
   });
-}); 
+});

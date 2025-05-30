@@ -1,8 +1,8 @@
+import { Readable } from "node:stream";
+import { getOrganizationIdFromSession } from "@/actions/util";
 import type { ReportFilters } from "@/types/SalesReportType";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateSalesReportPDF } from "./actions";
-import { Readable } from "node:stream";
-import { getOrganizationIdFromSession } from "@/actions/util";
 
 export async function POST(request: NextRequest) {
   try {

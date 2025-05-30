@@ -17,10 +17,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"; // Para el estado de carga
 
 import { authClient } from "@/auth-client";
+import { useSessionStore } from "@/stores/SessionStore";
 import { createAuthClient } from "better-auth/react";
 import { useRouter } from "next/navigation";
 import AvatarUser from "./AvatarUser";
-import { useSessionStore } from "@/stores/SessionStore";
 
 const { useSession } = createAuthClient();
 
@@ -28,8 +28,7 @@ export function UserButton() {
   const router = useRouter();
   const userName = useSessionStore((state) => state.userName);
   const userImage = useSessionStore((state) => state.userImage);
-  console.log(userImage, "user image");
-  console.log(userName, "user name");
+
   const handleSignOut = async () => {
     await authClient.signOut({
       fetchOptions: {

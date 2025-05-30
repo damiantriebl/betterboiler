@@ -18,57 +18,64 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { MotorcycleState } from "@prisma/client";
+import {
+  estadosDisponibles,
+  estadosVentaPrisma,
+  useMotorcycleFiltersStore,
+} from "@/stores/motorcycle-filters-store";
+import type { MotorcycleState } from "@prisma/client";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 interface FilterSectionProps {
-  filters: {
-    search: string;
-    marca: string;
-    tipo: string;
-    ubicacion: string;
-    estadosVenta: MotorcycleState[];
-    years: number[];
-  };
-  onFilterChange: (filterType: string, value: string | MotorcycleState[] | number[]) => void;
-  availableYears?: number[];
-  availableBrands?: string[];
-  availableModels?: string[];
-  availableBranches?: string[];
+  onFilterChange?: (filterType: string, value: string | MotorcycleState[] | number[]) => void;
 }
 
-const estadosVentaPrisma = Object.values(MotorcycleState);
+export default function FilterSection({ onFilterChange }: FilterSectionProps) {
+  // Usar el store para obtener estado y acciones
+  const {
+    filters,
+    availableYears,
+    availableBrands,
+    availableModels,
+    availableBranches,
+    setSearch,
+    setMarca,
+    setTipo,
+    setUbicacion,
+    setEstadosVenta,
+    setYears,
+    getEstadoVentaButtonText,
+  } = useMotorcycleFiltersStore();
 
-export default function FilterSection({
-  filters,
-  onFilterChange,
-  availableYears = [],
-  availableBrands = [],
-  availableModels = [],
-  availableBranches = [],
-}: FilterSectionProps) {
   const formatEstadoVenta = (estado: MotorcycleState) => {
     return estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase();
   };
 
   const handleEstadoVentaSelect = (estadoValue: string) => {
-    const estado = estadoValue as MotorcycleState;
-
-    if (estadoValue === "ver-todo") {
-      onFilterChange("estadosVenta", [...estadosVentaPrisma]);
-      return;
-    }
-
-    const isSelected = filters.estadosVenta.includes(estado);
     let newEstados: MotorcycleState[];
 
-    if (isSelected) {
-      newEstados = filters.estadosVenta.filter((e) => e !== estado);
+    if (estadoValue === "ver-todos-disponibles") {
+      newEstados = [...estadosDisponibles];
+    } else if (estadoValue === "ver-todo") {
+      newEstados = [...estadosVentaPrisma];
     } else {
-      newEstados = [...filters.estadosVenta, estado];
+      const estado = estadoValue as MotorcycleState;
+      const isSelected = filters.estadosVenta.includes(estado);
+
+      if (isSelected) {
+        newEstados = filters.estadosVenta.filter((e) => e !== estado);
+      } else {
+        newEstados = [...filters.estadosVenta, estado];
+      }
     }
 
-    onFilterChange("estadosVenta", newEstados);
+    // Actualizar en el store
+    setEstadosVenta(newEstados);
+
+    // Llamar al callback si existe (para compatibilidad con componentes padre)
+    if (onFilterChange) {
+      onFilterChange("estadosVenta", newEstados);
+    }
   };
 
   const formatYear = (year: number) => {
@@ -76,23 +83,28 @@ export default function FilterSection({
   };
 
   const handleYearSelect = (yearValue: string) => {
-    const year = Number(yearValue);
-
-    if (yearValue === "todos-años") {
-      onFilterChange("years", [...availableYears]);
-      return;
-    }
-
-    const isSelected = filters.years.includes(year);
     let newYears: number[];
 
-    if (isSelected) {
-      newYears = filters.years.filter((y) => y !== year);
+    if (yearValue === "todos-años") {
+      newYears = [...availableYears];
     } else {
-      newYears = [...filters.years, year];
+      const year = Number(yearValue);
+      const isSelected = filters.years.includes(year);
+
+      if (isSelected) {
+        newYears = filters.years.filter((y) => y !== year);
+      } else {
+        newYears = [...filters.years, year];
+      }
     }
 
-    onFilterChange("years", newYears);
+    // Actualizar en el store
+    setYears(newYears);
+
+    // Llamar al callback si existe
+    if (onFilterChange) {
+      onFilterChange("years", newYears);
+    }
   };
 
   return (
@@ -104,13 +116,26 @@ export default function FilterSection({
           placeholder="Buscar por modelo, marca..."
           className="w-full"
           value={filters.search}
-          onChange={(e) => onFilterChange("search", e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            if (onFilterChange) {
+              onFilterChange("search", e.target.value);
+            }
+          }}
         />
       </div>
 
       <div className="flex flex-col gap-2">
         <Label>Marca</Label>
-        <Select value={filters.marca} onValueChange={(value) => onFilterChange("marca", value)}>
+        <Select
+          value={filters.marca}
+          onValueChange={(value) => {
+            setMarca(value);
+            if (onFilterChange) {
+              onFilterChange("marca", value);
+            }
+          }}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Seleccionar marca" />
           </SelectTrigger>
@@ -127,7 +152,15 @@ export default function FilterSection({
 
       <div className="flex flex-col gap-2">
         <Label>Modelo</Label>
-        <Select value={filters.tipo} onValueChange={(value) => onFilterChange("tipo", value)}>
+        <Select
+          value={filters.tipo}
+          onValueChange={(value) => {
+            setTipo(value);
+            if (onFilterChange) {
+              onFilterChange("tipo", value);
+            }
+          }}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Seleccionar tipo" />
           </SelectTrigger>
@@ -146,7 +179,12 @@ export default function FilterSection({
         <Label>Ubicación</Label>
         <Select
           value={filters.ubicacion}
-          onValueChange={(value) => onFilterChange("ubicacion", value)}
+          onValueChange={(value) => {
+            setUbicacion(value);
+            if (onFilterChange) {
+              onFilterChange("ubicacion", value);
+            }
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Seleccionar ubicación" />
@@ -223,7 +261,10 @@ export default function FilterSection({
                 className="cursor-pointer"
                 onClick={() => {
                   const newYears = filters.years.filter((y) => y !== year);
-                  onFilterChange("years", newYears.length > 0 ? newYears : []);
+                  setYears(newYears.length > 0 ? newYears : []);
+                  if (onFilterChange) {
+                    onFilterChange("years", newYears.length > 0 ? newYears : []);
+                  }
                 }}
               >
                 {formatYear(year)}
@@ -243,12 +284,7 @@ export default function FilterSection({
               role="combobox"
               className={cn("justify-between", filters.estadosVenta.length > 0 && "text-primary")}
             >
-              {filters.estadosVenta.length === estadosVentaPrisma.length ||
-              filters.estadosVenta.length === 0
-                ? "Ver todo"
-                : filters.estadosVenta.length === 1
-                  ? formatEstadoVenta(filters.estadosVenta[0])
-                  : `${filters.estadosVenta.length} seleccionados`}
+              {getEstadoVentaButtonText()}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -257,12 +293,29 @@ export default function FilterSection({
               <CommandInput placeholder="Buscar estado..." />
               <CommandEmpty>No se encontraron estados.</CommandEmpty>
               <CommandGroup>
+                <CommandItem
+                  key="ver-todos-disponibles"
+                  onSelect={() => handleEstadoVentaSelect("ver-todos-disponibles")}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      filters.estadosVenta.length === estadosDisponibles.length &&
+                        estadosDisponibles.every((estado) =>
+                          filters.estadosVenta.includes(estado),
+                        ) &&
+                        filters.estadosVenta.every((estado) => estadosDisponibles.includes(estado))
+                        ? "opacity-100"
+                        : "opacity-0",
+                    )}
+                  />
+                  Ver todos disponibles
+                </CommandItem>
                 <CommandItem key="ver-todo" onSelect={() => handleEstadoVentaSelect("ver-todo")}>
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      filters.estadosVenta.length === estadosVentaPrisma.length ||
-                        filters.estadosVenta.length === 0
+                      filters.estadosVenta.length === estadosVentaPrisma.length
                         ? "opacity-100"
                         : "opacity-0",
                     )}
@@ -298,7 +351,12 @@ export default function FilterSection({
                   className="cursor-pointer"
                   onClick={() => {
                     const newEstados = filters.estadosVenta.filter((e) => e !== estado);
-                    onFilterChange("estadosVenta", newEstados.length > 0 ? newEstados : []);
+                    const finalEstados =
+                      newEstados.length > 0 ? newEstados : [...estadosDisponibles];
+                    setEstadosVenta(finalEstados);
+                    if (onFilterChange) {
+                      onFilterChange("estadosVenta", finalEstados);
+                    }
                   }}
                 >
                   {formatEstadoVenta(estado)}

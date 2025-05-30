@@ -1,9 +1,9 @@
 "use client";
 import { fetchImageAsBase64 } from "@/actions/util";
 import { getLogoUrl } from "@/components/custom/OrganizationLogo";
+import { useSessionStore } from "@/stores/SessionStore";
 import type { QuotePDFProps } from "@/types/quote";
 import { useEffect, useState } from "react";
-import { useSessionStore } from "@/stores/SessionStore";
 
 interface QuoteBridgePdfProps
   extends Omit<QuotePDFProps, "organizationLogo" | "organizationName" | "userName" | "userImage"> {
@@ -47,7 +47,7 @@ export default function QuoteBridgePdf({
           if (imgFile) {
             if (imgFile.url) {
               motoImageUrl = imgFile.url;
-            } else if (imgFile.s3Key && typeof imgFile.s3Key === 'string') {
+            } else if (imgFile.s3Key && typeof imgFile.s3Key === "string") {
               motoImageUrl = await getLogoUrl(imgFile.s3Key);
             }
           }
@@ -94,8 +94,7 @@ export default function QuoteBridgePdf({
     };
   }, [fileName, organizationLogoKey, onReady]);
 
-  if (loading) return <div>Generando PDF…</div>;
-  if (error) return <div>Error: {error}</div>;
+  // No mostrar nada visual - el botón padre maneja toda la UX
   return null;
 }
 

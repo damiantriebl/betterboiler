@@ -119,8 +119,28 @@ export default function ManagePaymentMethods({
         formData.append("methodId", methodId.toString());
         formData.append("isEnabled", (!currentStatus).toString());
 
-        togglePaymentMethod(organizationId, formData).then((result) => {
-          if (!result.success) {
+        togglePaymentMethod(organizationId, formData)
+          .then((result) => {
+            // Verificar que result existe y tiene la estructura esperada
+            if (!result || typeof result !== "object" || !result.success) {
+              // Revert optimistic update on error
+              setOrganizationMethods((prev) =>
+                prev.map((method) =>
+                  method.card.id === methodId ? { ...method, isEnabled: currentStatus } : method,
+                ),
+              );
+
+              toast({
+                title: "Error",
+                description:
+                  result?.error || "Ha ocurrido un error al cambiar el estado del método de pago.",
+                variant: "destructive",
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error in togglePaymentMethod:", error);
+
             // Revert optimistic update on error
             setOrganizationMethods((prev) =>
               prev.map((method) =>
@@ -131,11 +151,10 @@ export default function ManagePaymentMethods({
             toast({
               title: "Error",
               description:
-                result.error || "Ha ocurrido un error al cambiar el estado del método de pago.",
+                "Ha ocurrido un error inesperado al cambiar el estado del método de pago.",
               variant: "destructive",
             });
-          }
-        });
+          });
       });
     },
     [organizationId, toast],

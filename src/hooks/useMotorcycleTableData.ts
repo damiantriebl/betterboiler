@@ -1,6 +1,6 @@
-import { useMemo } from "react";
 import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 import { MotorcycleState } from "@prisma/client";
+import { useMemo } from "react";
 
 interface UseMotorcycleTableDataProps {
   motorcycles: MotorcycleWithFullDetails[];
@@ -29,11 +29,19 @@ export function useMotorcycleTableData({
 }: UseMotorcycleTableDataProps) {
   // 🚀 OPTIMIZACIÓN 1: Memoizar datos para filtros
   const filterOptions = useMemo(() => {
-    const brands = [...new Set(motorcycles.map((m) => m.brand?.name).filter(Boolean))].sort() as string[];
-    const models = [...new Set(motorcycles.map((m) => m.model?.name).filter(Boolean))].sort() as string[];
-    const branches = [...new Set(motorcycles.map((m) => m.branch?.name).filter(Boolean))].sort() as string[];
-    const years = [...new Set(motorcycles.map((m) => m.year).filter((y) => typeof y === "number"))].sort((a, b) => b - a) as number[];
-    
+    const brands = [
+      ...new Set(motorcycles.map((m) => m.brand?.name).filter(Boolean)),
+    ].sort() as string[];
+    const models = [
+      ...new Set(motorcycles.map((m) => m.model?.name).filter(Boolean)),
+    ].sort() as string[];
+    const branches = [
+      ...new Set(motorcycles.map((m) => m.branch?.name).filter(Boolean)),
+    ].sort() as string[];
+    const years = [
+      ...new Set(motorcycles.map((m) => m.year).filter((y) => typeof y === "number")),
+    ].sort((a, b) => b - a) as number[];
+
     return {
       availableBrands: brands,
       availableModels: models,
@@ -83,7 +91,9 @@ export function useMotorcycleTableData({
 
     if (!key || !direction) return filteredData;
 
-        return [...filteredData].sort((a, b) => {      const aValue = a[key as keyof MotorcycleWithFullDetails];      const bValue = b[key as keyof MotorcycleWithFullDetails];
+    return [...filteredData].sort((a, b) => {
+      const aValue = a[key as keyof MotorcycleWithFullDetails];
+      const bValue = b[key as keyof MotorcycleWithFullDetails];
 
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return direction === "asc" ? -1 : 1;
@@ -105,7 +115,7 @@ export function useMotorcycleTableData({
     const startIndex = (currentPage - 1) * pageSize;
     const paginatedData = sortedData.slice(startIndex, startIndex + pageSize);
     const totalPages = Math.ceil(sortedData.length / pageSize);
-    
+
     return {
       paginatedData,
       totalPages,
@@ -119,4 +129,4 @@ export function useMotorcycleTableData({
     ...filterOptions,
     ...paginationData,
   };
-} 
+}

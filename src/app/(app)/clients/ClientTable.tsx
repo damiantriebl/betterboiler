@@ -37,9 +37,9 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import type { Client } from "@prisma/client";
 import { ChevronDown, ChevronUp, ChevronsUpDown, MoreHorizontal } from "lucide-react";
 import React, { useState, useTransition } from "react";
-import type { Client } from "@prisma/client";
 
 interface ClientTableProps {
   initialData: Client[];
@@ -47,7 +47,7 @@ interface ClientTableProps {
   onDelete?: (clientId: string) => void;
 }
 
-type SortableKeys = "firstName" | "lastName" | "companyName" | "email" | "status";
+type SortableKeys = "firstName" | "lastName" | "email" | "type" | "status";
 
 type SortConfig = {
   key: SortableKeys | null;
@@ -57,11 +57,43 @@ type SortConfig = {
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 export default function ClientTable({ initialData, onEdit, onDelete }: ClientTableProps) {
+  const [isDeleting, startDeleteTransition] = useTransition();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [isDeleting, startDeleteTransition] = useTransition();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleEditClick = (client: Client) => {
+    if (onEdit) onEdit(client);
+  };
+
+  const handleDeleteClick = (client: Client) => {
+    if (
+      !confirm(
+        `¿Estás seguro de eliminar al cliente "${client.firstName} ${client.lastName || ""}"?`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(client.id);
+    startDeleteTransition(async () => {
+      try {
+        await deleteClient(client.id);
+        toast({
+          title: "Cliente eliminado",
+          description: `Se eliminó al cliente ${client.firstName} ${client.lastName || ""}.`,
+        });
+        if (onDelete) onDelete(client.id);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error al eliminar",
+          description: "No se pudo eliminar el cliente.",
+        });
+      }
+      setDeletingId(null);
+    });
+  };
 
   const handleSort = (key: SortableKeys) => {
     let direction: "asc" | "desc" | null = "asc";
@@ -106,81 +138,48 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
     setCurrentPage(1);
   };
 
-  const handleEditClick = (client: Client) => {
-    if (onEdit) onEdit(client);
-  };
-
-  const handleDeleteClick = (client: Client) => {
-    if (
-      !confirm(
-        `¿Estás seguro de eliminar al cliente "${client.firstName} ${client.lastName || ""}"?`,
-      )
-    ) {
-      return;
-    }
-    setDeletingId(client.id);
-    startDeleteTransition(async () => {
-      try {
-        await deleteClient(client.id);
-        toast({
-          title: "Cliente eliminado",
-          description: `Se eliminó al cliente ${client.firstName} ${client.lastName || ""}.`,
-        });
-        if (onDelete) onDelete(client.id);
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error al eliminar",
-          description: "No se pudo eliminar el cliente.",
-        });
-      }
-      setDeletingId(null);
-    });
-  };
-
   return (
-    <div>
-      <div className="flex items-center justify-between p-4 bg-muted/50 border-t border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Clientes por página:</span>
-          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-[80px] h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a
-          {Math.min(startIndex + pageSize, sortedData.length)} de {sortedData.length} clientes
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("firstName")} className="px-1">
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("firstName")}
+                className="px-1 hover:bg-muted/50"
+              >
                 Nombre
                 {getSortIcon("firstName")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("email")} className="px-1">
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("email")}
+                className="px-1 hover:bg-muted/50"
+              >
                 Email
                 {getSortIcon("email")}
               </Button>
             </TableHead>
-            <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
-            <TableHead className="hidden sm:table-cell">CUIT/CUIL</TableHead>
+            <TableHead className="hidden sm:table-cell">Contacto</TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("status")} className="px-1">
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("type")}
+                className="px-1 hover:bg-muted/50"
+              >
+                Tipo
+                {getSortIcon("type")}
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                onClick={() => handleSort("status")}
+                className="px-1 hover:bg-muted/50"
+              >
                 Estado
                 {getSortIcon("status")}
               </Button>
@@ -199,28 +198,52 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
           {paginatedData.map((client: Client) => (
             <TableRow
               key={client.id}
-              className={cn(isDeleting && deletingId === client.id && "opacity-50")}
+              className={cn(
+                "hover:bg-muted/50 transition-colors",
+                isDeleting && deletingId === client.id && "opacity-50",
+              )}
             >
               <TableCell className="font-medium">
-                {client.firstName} {client.lastName}
-                {client.companyName && (
-                  <span className="block text-xs text-muted-foreground">{client.companyName}</span>
-                )}
+                <div>
+                  <div className="font-medium">
+                    {client.firstName} {client.lastName || ""}
+                  </div>
+                  {client.companyName && (
+                    <div className="text-sm text-muted-foreground mt-1">{client.companyName}</div>
+                  )}
+                </div>
               </TableCell>
-              <TableCell>{client.email}</TableCell>
-              <TableCell className="hidden sm:table-cell">
-                {client.phone || <span className="text-muted-foreground italic">N/A</span>}
+              <TableCell>
+                <span className="text-blue-600 dark:text-blue-400">{client.email}</span>
               </TableCell>
               <TableCell className="hidden sm:table-cell">
-                {client.taxId || <span className="text-muted-foreground italic">N/A</span>}
+                <div className="space-y-1">
+                  {client.phone && <div className="text-sm">📞 {client.phone}</div>}
+                  {client.mobile && <div className="text-sm">📱 {client.mobile}</div>}
+                  {!client.phone && !client.mobile && (
+                    <span className="text-muted-foreground italic">Sin contacto</span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    client.type === "Individual"
+                      ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200"
+                      : "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900 dark:text-purple-200",
+                  )}
+                >
+                  {client.type === "Individual" ? "Persona Física" : "Persona Jurídica"}
+                </Badge>
               </TableCell>
               <TableCell>
                 <Badge
                   variant={client.status === "active" ? "default" : "outline"}
                   className={cn(
                     client.status === "active"
-                      ? "bg-green-100 text-green-800 border-green-300"
-                      : "bg-gray-100 text-gray-600 border-gray-300",
+                      ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-200"
+                      : "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-400",
                   )}
                 >
                   {client.status === "active" ? "Activo" : "Inactivo"}
@@ -229,7 +252,11 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
+                    <Button
+                      variant="ghost"
+                      className="h-8 w-8 p-0 hover:bg-muted"
+                      disabled={isDeleting && deletingId === client.id}
+                    >
                       <span className="sr-only">Abrir menú</span>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
@@ -261,8 +288,32 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
         </TableBody>
       </Table>
 
+      {/* Información de paginación y controles en la parte inferior */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Clientes por página:</span>
+          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="w-[80px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          Mostrando {sortedData.length === 0 ? 0 : startIndex + 1} a{" "}
+          {Math.min(startIndex + pageSize, sortedData.length)} de {sortedData.length} clientes
+        </div>
+      </div>
+
       {totalPages > 1 && (
-        <div className="p-4 border-t">
+        <div className="flex justify-center">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -273,17 +324,34 @@ export default function ClientTable({ initialData, onEdit, onDelete }: ClientTab
                   }
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <PaginationItem key={page}>
-                  <PaginationLink
-                    onClick={() => handlePageChange(page)}
-                    isActive={currentPage === page}
-                    className="cursor-pointer"
-                  >
-                    {page}
-                  </PaginationLink>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let page = i + 1;
+                if (totalPages > 5) {
+                  if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                }
+                return (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(page)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
                 </PaginationItem>
-              ))}
+              )}
               <PaginationItem>
                 <PaginationNext
                   onClick={() => handlePageChange(currentPage + 1)}
