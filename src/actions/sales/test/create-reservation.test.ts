@@ -1,10 +1,10 @@
+import prisma from "@/lib/prisma";
 import type { CreateReservationInput } from "@/zod/ReservationZod";
+import { createReservationSchema } from "@/zod/ReservationZod";
 import { MotorcycleState } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createReservation } from "../create-reservation";
-import { createReservationSchema } from "@/zod/ReservationZod";
 import { getOrganizationIdFromSession } from "../../util";
-import prisma from "@/lib/prisma";
+import { createReservation } from "../create-reservation";
 
 // Mock de dependencias
 vi.mock("@/lib/prisma", () => ({
@@ -402,9 +402,7 @@ describe("createReservation", () => {
         error: null,
       });
 
-      mockPrisma.$transaction.mockRejectedValue(
-        new Error("Database connection failed"),
-      );
+      mockPrisma.$transaction.mockRejectedValue(new Error("Database connection failed"));
 
       // Act
       const result = await createReservation(validReservationData);

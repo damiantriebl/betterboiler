@@ -81,17 +81,29 @@ describe("generatePettyCashActivityPDF", () => {
   });
 
   it("should generate a PDF without errors", async () => {
-    const result = await generatePettyCashActivityPDF(mockData, new Date("2024-01-01"), new Date("2024-01-31"));
+    const result = await generatePettyCashActivityPDF(
+      mockData,
+      new Date("2024-01-01"),
+      new Date("2024-01-31"),
+    );
     expect(result).toBeInstanceOf(Uint8Array);
   });
 
   it("should handle empty data", async () => {
-    const result = await generatePettyCashActivityPDF([], new Date("2024-01-01"), new Date("2024-01-31"));
+    const result = await generatePettyCashActivityPDF(
+      [],
+      new Date("2024-01-01"),
+      new Date("2024-01-31"),
+    );
     expect(result).toBeInstanceOf(Uint8Array);
   });
 
   it("should handle data with withdrawals", async () => {
-    const result = await generatePettyCashActivityPDF(mockData, new Date("2024-01-01"), new Date("2024-01-31"));
+    const result = await generatePettyCashActivityPDF(
+      mockData,
+      new Date("2024-01-01"),
+      new Date("2024-01-31"),
+    );
     expect(result).toBeInstanceOf(Uint8Array);
   });
 });

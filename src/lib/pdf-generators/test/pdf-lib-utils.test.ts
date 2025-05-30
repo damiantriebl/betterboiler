@@ -158,9 +158,9 @@ describe("PDFBuilder", () => {
       // Assert
       // Check that rectangles were drawn (exact colors may vary based on implementation)
       expect(mockPage.drawRectangle).toHaveBeenCalled();
-      
+
       // Should return a Y position
-      expect(typeof finalY).toBe('number');
+      expect(typeof finalY).toBe("number");
     });
 
     it("should add section with title", () => {
@@ -176,7 +176,7 @@ describe("PDFBuilder", () => {
       // Assert
       // Should draw section elements
       expect(mockPage.drawRectangle).toHaveBeenCalled();
-      expect(typeof finalY).toBe('number');
+      expect(typeof finalY).toBe("number");
     });
 
     it("should calculate text height", () => {
@@ -237,4 +237,3 @@ describe("PDFBuilder", () => {
     });
   });
 });
-

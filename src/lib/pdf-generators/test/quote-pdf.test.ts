@@ -1,7 +1,7 @@
 import { createQuotePDFResponse, generateQuotePDF } from "@/lib/pdf-generators/quote-pdf";
-import type { QuotePDFProps } from "@/types/quote";
 import { PDFBuilder } from "@/lib/pdf-lib-utils";
 import type { MotorcycleWithDetails } from "@/types/motorcycle";
+import type { QuotePDFProps } from "@/types/quote";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock PDFBuilder

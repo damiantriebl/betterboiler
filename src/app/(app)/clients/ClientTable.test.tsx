@@ -121,9 +121,7 @@ describe("ClientTable", () => {
   });
 
   it("permite cambiar el tamaño de página", async () => {
-    render(
-      <ClientTable initialData={mockClients} />
-    );
+    render(<ClientTable initialData={mockClients} />);
 
     // Solo verificar que el componente se renderiza
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -137,9 +135,7 @@ describe("ClientTable", () => {
   });
 
   it("llama a onEdit cuando se hace clic en editar", () => {
-    render(
-      <ClientTable initialData={mockClients} />
-    );
+    render(<ClientTable initialData={mockClients} />);
 
     // Solo verificar que el componente se renderiza
     expect(screen.getByRole("table")).toBeInTheDocument();

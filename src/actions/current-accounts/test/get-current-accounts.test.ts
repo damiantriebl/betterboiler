@@ -1,9 +1,9 @@
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { headers } from "next/headers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCurrentAccounts } from "../get-current-accounts";
-import { auth } from "@/auth";
-import { headers } from "next/headers";
 
 // Mock dependencies
 vi.mock("@/lib/prisma", () => ({
@@ -48,7 +48,7 @@ describe("getCurrentAccounts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // No configurar console spy aquí, se hace en beforeAll
-    
+
     // Setup default mocks
     mockHeaders.mockResolvedValue({});
     mockGetOrganizationIdFromSession.mockResolvedValue({

@@ -32,11 +32,11 @@ afterEach(() => {
 // Helper para crear FormData con tipado correcto
 const createFormData = (data: Record<string, string | undefined>): FormData => {
   const formData = new FormData();
-  Object.entries(data).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(data)) {
     if (value !== undefined && value !== null) {
       formData.append(key, value);
     }
-  });
+  }
   return formData;
 };
 
@@ -148,7 +148,7 @@ describe("undoPayment", () => {
     it("debería fallar cuando el pago no existe", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "nonexistent-payment" });
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
@@ -171,7 +171,7 @@ describe("undoPayment", () => {
     it("debería fallar cuando el pago no tiene cuenta corriente", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
@@ -197,7 +197,7 @@ describe("undoPayment", () => {
     it("debería fallar cuando el pago ya está anulado (versión D)", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
@@ -223,7 +223,7 @@ describe("undoPayment", () => {
     it("debería anular el pago exitosamente sin OTP", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
@@ -254,7 +254,7 @@ describe("undoPayment", () => {
         secureMode: "true",
         otp: "123456",
       });
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
@@ -283,11 +283,11 @@ describe("undoPayment", () => {
     it("debería manejar errores de Prisma", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
-      const prismaError = new Prisma.PrismaClientKnownRequestError(
-        "Database error",
-        { code: "P2002", clientVersion: "4.0.0" }
-      );
-      
+      const prismaError = new Prisma.PrismaClientKnownRequestError("Database error", {
+        code: "P2002",
+        clientVersion: "4.0.0",
+      });
+
       vi.mocked(prisma.$transaction).mockRejectedValue(prismaError);
 
       // Act
@@ -302,7 +302,7 @@ describe("undoPayment", () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
       const generalError = new Error("General error");
-      
+
       vi.mocked(prisma.$transaction).mockRejectedValue(generalError);
 
       // Act
@@ -316,7 +316,7 @@ describe("undoPayment", () => {
     it("debería manejar errores desconocidos", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
-      
+
       vi.mocked(prisma.$transaction).mockRejectedValue("Unknown error");
 
       // Act
@@ -332,7 +332,7 @@ describe("undoPayment", () => {
     it("debería recalcular las cuotas correctamente después de anular", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
@@ -367,12 +367,14 @@ describe("undoPayment", () => {
           interestRate: 0,
         },
       };
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
             findUnique: vi.fn().mockResolvedValue(mockPaymentZeroInterest),
-            update: vi.fn().mockResolvedValue({ ...mockPaymentZeroInterest, installmentVersion: "D" }),
+            update: vi
+              .fn()
+              .mockResolvedValue({ ...mockPaymentZeroInterest, installmentVersion: "D" }),
             create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
             count: vi.fn().mockResolvedValue(5),
           },
@@ -393,7 +395,7 @@ describe("undoPayment", () => {
     it("debería manejar casos sin cuotas restantes", async () => {
       // Arrange
       const formData = createFormData({ paymentId: "payment-123" });
-      
+
       vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         const tx = {
           payment: {
@@ -426,7 +428,7 @@ describe("undoPayment", () => {
       { frequency: "ANNUALLY", expectedPeriods: 1 },
     ];
 
-    testFrequencies.forEach(({ frequency }) => {
+    for (const { frequency } of testFrequencies) {
       it(`debería manejar frecuencia de pago ${frequency}`, async () => {
         // Arrange
         const formData = createFormData({ paymentId: "payment-123" });
@@ -437,12 +439,14 @@ describe("undoPayment", () => {
             paymentFrequency: frequency,
           },
         };
-        
+
         vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
           const tx = {
             payment: {
               findUnique: vi.fn().mockResolvedValue(mockPaymentWithFrequency),
-              update: vi.fn().mockResolvedValue({ ...mockPaymentWithFrequency, installmentVersion: "D" }),
+              update: vi
+                .fn()
+                .mockResolvedValue({ ...mockPaymentWithFrequency, installmentVersion: "D" }),
               create: vi.fn().mockResolvedValue({ id: "new-payment-id" }),
               count: vi.fn().mockResolvedValue(5),
             },
@@ -459,6 +463,6 @@ describe("undoPayment", () => {
         // Assert
         expect(result.success).toBe(true);
       });
-    });
+    }
   });
 });

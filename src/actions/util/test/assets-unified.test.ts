@@ -17,7 +17,7 @@ vi.mock("../auth-session-unified", () => ({
 describe("assets-unified", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Mock getOrganizationIdFromSession
     const mockGetOrganization = vi.fn();
     mockGetOrganization.mockResolvedValue({

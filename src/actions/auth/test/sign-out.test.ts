@@ -57,7 +57,9 @@ describe("signOutAction", () => {
 
       await expect(signOutAction()).rejects.toEqual(new Error("NEXT_REDIRECT"));
 
-      expect(mockCookieStore.delete).toHaveBeenCalledWith(process.env.AUTH_SESSION_COOKIE_NAME || "better-auth-session-token");
+      expect(mockCookieStore.delete).toHaveBeenCalledWith(
+        process.env.AUTH_SESSION_COOKIE_NAME || "better-auth-session-token",
+      );
       expect(redirect).toHaveBeenCalledWith("/sign-in");
     });
 
@@ -230,7 +232,9 @@ describe("signOutAction", () => {
 
       await expect(signOutAction()).rejects.toEqual(new Error("NEXT_REDIRECT"));
 
-      expect(extendedCookieStore.delete).toHaveBeenCalledWith(process.env.AUTH_SESSION_COOKIE_NAME || "better-auth-session-token");
+      expect(extendedCookieStore.delete).toHaveBeenCalledWith(
+        process.env.AUTH_SESSION_COOKIE_NAME || "better-auth-session-token",
+      );
       expect(extendedCookieStore.get).not.toHaveBeenCalled();
       expect(extendedCookieStore.set).not.toHaveBeenCalled();
       expect(redirect).toHaveBeenCalledWith("/sign-in");
