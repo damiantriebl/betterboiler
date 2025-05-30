@@ -18,22 +18,24 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("@/lib/prisma", () => ({
-  default: {
-    model: {
-      findUnique: vi.fn(),
-    },
-    modelFile: {
-      create: vi.fn(),
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      delete: vi.fn(),
-    },
+// Creo un mock completo para prisma
+const mockPrisma = {
+  model: {
+    findUnique: vi.fn(),
   },
+  modelFile: {
+    create: vi.fn(),
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    delete: vi.fn(),
+  },
+};
+
+vi.mock("@/lib/prisma", () => ({
+  default: mockPrisma,
 }));
 
 import { getSession } from "@/actions/util";
-import prisma from "@/lib/prisma";
 import { deleteFromS3, uploadToS3 } from "@/lib/s3-unified";
 import sharp from "sharp";
 // Import after mocks
@@ -121,7 +123,7 @@ describe("model-files-actions", () => {
       };
 
       vi.mocked(getSession).mockResolvedValue(mockSession);
-      vi.mocked(prisma.modelFile.findUnique).mockResolvedValue(null);
+      vi.mocked(mockPrisma.modelFile.findUnique).mockResolvedValue(null);
 
       const result = await deleteModelFile("nonexistent");
 
