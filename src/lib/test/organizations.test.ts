@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getOrganizationBrands } from "../organizations";
 
 // Mock de Prisma usando vitest-mock-extended
-vi.mock("@/lib/prisma");
+vi.mock("@/lib/prisma", () => ({
+  default: {
+    organizationBrand: {
+      findMany: vi.fn(),
+    },
+  },
+}));
 
 import prisma from "@/lib/prisma";
-import type { MockPrisma } from "@/lib/__mocks__/prisma";
 
-const mockPrisma = prisma as MockPrisma;
+const mockPrisma = prisma as any;
 
 describe("organizations", () => {
   beforeEach(() => {
