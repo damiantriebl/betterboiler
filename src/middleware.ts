@@ -1,5 +1,4 @@
 import type { Session } from "@/auth";
-import { betterFetch } from "@better-fetch/fetch";
 import { type NextRequest, NextResponse } from "next/server";
 
 // Cache de sesiones en memoria para reducir llamadas a la DB
@@ -24,49 +23,28 @@ export default async function authMiddleware(request: NextRequest) {
   // 🔐 TODAS las rutas requieren autenticación por defecto, excepto auth, password, y public
   const requiresAuth = !isAuth && !isPassword && !isPublic;
 
-  // Extraer el token de la cookie para usar como clave de cache
-  const cookieHeader = request.headers.get("cookie") || "";
-  const sessionToken = cookieHeader.match(/better-auth\.session_token=([^;]+)/)?.[1];
+  // Construir la URL completa para better-auth usando el request
+  const baseUrl = new URL(request.url).origin;
+  const sessionUrl = `${baseUrl}/api/auth/get-session`;
 
   let session: Session | null = null;
 
-  // Verificar cache primero
-  if (sessionToken) {
-    const cached = sessionCache.get(sessionToken);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      session = cached.session;
-    } else {
-      // Si no está en cache o expiró, hacer la llamada
-      const { data } = await betterFetch<Session>("/api/auth/get-session", {
-        baseURL: process.env.BETTER_AUTH_URL,
-        headers: {
-          cookie: cookieHeader,
-        },
-      });
-      session = data;
-
-      // Guardar en cache
-      sessionCache.set(sessionToken, { session, timestamp: Date.now() });
-
-      // Limpiar cache antiguo periódicamente
-      if (sessionCache.size > 1000) {
-        const now = Date.now();
-        for (const [key, value] of sessionCache.entries()) {
-          if (now - value.timestamp > CACHE_TTL) {
-            sessionCache.delete(key);
-          }
-        }
-      }
-    }
-  } else {
-    // Si no hay token, hacer la llamada normal
-    const { data } = await betterFetch<Session>("/api/auth/get-session", {
-      baseURL: process.env.BETTER_AUTH_URL,
+  try {
+    // Usar fetch nativo en lugar de betterFetch
+    const response = await fetch(sessionUrl, {
       headers: {
-        cookie: cookieHeader,
+        cookie: request.headers.get("cookie") || "",
       },
     });
-    session = data;
+
+    if (response.ok) {
+      const data = await response.json();
+      session = data;
+    }
+  } catch (error) {
+    // En caso de error, asumir que no hay sesión
+    console.error("Error fetching session in middleware:", error);
+    session = null;
   }
 
   const response = NextResponse.next();
