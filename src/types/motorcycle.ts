@@ -12,7 +12,7 @@ import {
 // Enum local para usar en componentes cliente
 export enum MotorcycleState {
   STOCK = "STOCK",
-  PAUSADO = "PAUSADO", 
+  PAUSADO = "PAUSADO",
   RESERVADO = "RESERVADO",
   PROCESANDO = "PROCESANDO",
   VENDIDO = "VENDIDO",
@@ -78,7 +78,10 @@ export interface ReservationUpdate {
   reservationId: number;
 }
 
-export const estadoVentaConfig: Record<PrismaMotorcycleState, { label: string; className: string }> = {
+export const estadoVentaConfig: Record<
+  PrismaMotorcycleState,
+  { label: string; className: string }
+> = {
   [PrismaMotorcycleState.STOCK]: { label: "En Stock", className: "text-green-600" },
   [PrismaMotorcycleState.PAUSADO]: { label: "Pausado", className: "text-yellow-600" },
   [PrismaMotorcycleState.RESERVADO]: { label: "Reservado", className: "text-blue-600" },

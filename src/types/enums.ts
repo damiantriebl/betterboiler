@@ -3,7 +3,7 @@
 
 export enum MotorcycleState {
   STOCK = "STOCK",
-  PAUSADO = "PAUSADO", 
+  PAUSADO = "PAUSADO",
   RESERVADO = "RESERVADO",
   PROCESANDO = "PROCESANDO",
   VENDIDO = "VENDIDO",
@@ -19,4 +19,4 @@ export const estadoVentaConfig: Record<MotorcycleState, { label: string; classNa
   [MotorcycleState.VENDIDO]: { label: "Vendido", className: "text-gray-600" },
   [MotorcycleState.ELIMINADO]: { label: "Eliminado", className: "text-red-600" },
   [MotorcycleState.EN_TRANSITO]: { label: "En Tránsito", className: "text-orange-600" },
-}; 
+};
