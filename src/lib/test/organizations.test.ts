@@ -1,18 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getOrganizationBrands } from "../organizations";
 
-// Mock de Prisma
-vi.mock("@/lib/prisma", () => ({
-  default: {
-    organizationBrand: {
-      findMany: vi.fn(),
-    },
-  },
-}));
+// Mock de Prisma usando vitest-mock-extended
+vi.mock("@/lib/prisma");
 
 import prisma from "@/lib/prisma";
+import type { MockPrisma } from "@/lib/__mocks__/prisma";
 
-const mockPrisma = vi.mocked(prisma);
+const mockPrisma = prisma as MockPrisma;
 
 describe("organizations", () => {
   beforeEach(() => {
@@ -24,8 +19,12 @@ describe("organizations", () => {
       const mockBrands = [
         {
           id: 1,
+          createdAt: new Date("2024-01-01"),
+          updatedAt: new Date("2024-01-01"),
           organizationId: "org-1",
           brandId: 1,
+          order: 1,
+          color: "#000000",
           brand: {
             id: 1,
             name: "Honda",
@@ -35,8 +34,12 @@ describe("organizations", () => {
         },
         {
           id: 2,
+          createdAt: new Date("2024-01-01"),
+          updatedAt: new Date("2024-01-01"),
           organizationId: "org-1",
           brandId: 2,
+          order: 2,
+          color: "#000000",
           brand: {
             id: 2,
             name: "Yamaha",
@@ -73,8 +76,12 @@ describe("organizations", () => {
       const mockBrands = [
         {
           id: 1,
+          createdAt: new Date("2024-01-01"),
+          updatedAt: new Date("2024-01-01"),
           organizationId: "uuid-format-123-456",
           brandId: 1,
+          order: 1,
+          color: "#000000",
           brand: {
             id: 1,
             name: "Kawasaki",
@@ -122,8 +129,12 @@ describe("organizations", () => {
       const mockBrands = [
         {
           id: 1,
+          createdAt: new Date("2024-01-01"),
+          updatedAt: new Date("2024-01-15"),
           organizationId: "org-1",
           brandId: 1,
+          order: 1,
+          color: "#FF0000",
           brand: {
             id: 1,
             name: "Suzuki",
