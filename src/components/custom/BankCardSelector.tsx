@@ -54,22 +54,24 @@ export function BankCardSelector({
   const [cardPopoverOpen, setCardPopoverOpen] = React.useState(false);
 
   // Find selected bank from the list
-  const selectedBank = React.useMemo(() => {
+  const selectedBank = () => {
     if (!selectedBankId) return null;
     return banksWithCards.find((bank) => bank.bank.id === selectedBankId) || null;
-  }, [selectedBankId, banksWithCards]);
+  };
 
   // Find selected card from the selected bank
-  const selectedCard = React.useMemo(() => {
-    if (!selectedCardId || !selectedBank) return null;
-    return selectedBank.cards.find((card) => card.id === selectedCardId) || null;
-  }, [selectedCardId, selectedBank]);
+  const selectedCard = () => {
+    const bank = selectedBank();
+    if (!selectedCardId || !bank) return null;
+    return bank.cards.find((card) => card.id === selectedCardId) || null;
+  };
 
   // Get available cards for the selected bank
-  const availableCards = React.useMemo(() => {
-    if (!selectedBank) return [];
-    return selectedBank.cards.filter((card) => card.isEnabled);
-  }, [selectedBank]);
+  const availableCards = () => {
+    const bank = selectedBank();
+    if (!bank) return [];
+    return bank.cards.filter((card) => card.isEnabled);
+  };
 
   // Handle selecting all banks
   const handleSelectAllBanks = () => {
@@ -79,8 +81,8 @@ export function BankCardSelector({
 
   // Handle selecting all cards for the selected bank
   const handleSelectAllCards = () => {
-    if (selectedBank) {
-      onSelectCard(null, selectedBank.bank.id);
+    if (selectedBank()) {
+      onSelectCard(null, selectedBank()?.bank.id || null);
     }
   };
 
@@ -96,7 +98,7 @@ export function BankCardSelector({
             className="w-full justify-between h-10"
             disabled={disabled}
           >
-            {selectedBank ? selectedBank.bank.name : bankPlaceholder}
+            {selectedBank() ? selectedBank()?.bank.name : bankPlaceholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -160,9 +162,9 @@ export function BankCardSelector({
             role="combobox"
             aria-expanded={cardPopoverOpen}
             className="w-full justify-between h-10"
-            disabled={!selectedBank || disabled}
+            disabled={!selectedBank() || disabled}
           >
-            {selectedCard ? selectedCard.cardType.name : cardPlaceholder}
+            {selectedCard() ? selectedCard()?.cardType.name : cardPlaceholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -171,7 +173,7 @@ export function BankCardSelector({
             <CommandInput placeholder={cardSearchPlaceholder} />
             <CommandList>
               <CommandEmpty>{cardNotFoundMessage}</CommandEmpty>
-              {allowAllCards && selectedBank && (
+              {allowAllCards && selectedBank() && (
                 <CommandItem
                   value="all_cards"
                   onSelect={handleSelectAllCards}
@@ -183,11 +185,11 @@ export function BankCardSelector({
                       !selectedCardId && selectedBankId ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  Todas las tarjetas de {selectedBank.bank.name}
+                  Todas las tarjetas de {selectedBank()?.bank.name}
                 </CommandItem>
               )}
               <CommandGroup>
-                {availableCards.map((card) => (
+                {availableCards().map((card) => (
                   <CommandItem
                     key={card.id}
                     value={card.cardType.name}

@@ -1,8 +1,5 @@
-import {
-  type QuotePDFProps,
-  createQuotePDFResponse,
-  generateQuotePDF,
-} from "@/lib/pdf-generators/quote-pdf";
+import { createQuotePDFResponse, generateQuotePDF } from "@/lib/pdf-generators/quote-pdf";
+import type { QuotePDFProps } from "@/types/quote";
 import { NextResponse } from "next/server";
 
 export const config = {

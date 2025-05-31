@@ -1,16 +1,16 @@
-"use client"; // Asegurarse de que es un Client Component por los hooks
+"use client";
 
-import { createSupplier, updateSupplier } from "@/actions/suppliers/suppliers-unified"; // Importar ambas acciones
-import LoadingButton from "@/components/custom/LoadingButton"; // Asumo que tienes este componente
+import { createSupplier, updateSupplier } from "@/actions/suppliers/suppliers-unified";
+import LoadingButton from "@/components/custom/LoadingButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importar Tabs
-import { toast } from "@/hooks/use-toast"; // Añadir import para toast
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 import { type SupplierFormData, supplierSchema } from "@/zod/SuppliersZod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Supplier } from "@prisma/client"; // Importar tipo Supplier
-import React, { useTransition, useEffect, useCallback } from "react";
+import type { Supplier } from "@prisma/client";
+import React, { useTransition, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { AdicionalSection } from "./form-sections/AdicionalSection";
 import { BancariaSection } from "./form-sections/BancariaSection";
@@ -22,10 +22,10 @@ import { IdentificacionSection } from "./form-sections/IdentificacionSection";
 import { LogisticaSection } from "./form-sections/LogisticaSection";
 
 interface SupplierFormProps {
-  onSuccess?: (data: SupplierFormData) => void; // Use imported type
-  onCancel?: () => void; // Para cerrar el modal
-  initialData?: Supplier | null; // Hacer initialData opcional y permitir null
-  supplierId?: number | null; // ID para saber si estamos editando
+  onSuccess?: (data: SupplierFormData) => void;
+  onCancel?: () => void;
+  initialData?: Supplier | null;
+  supplierId?: number | null;
 }
 
 // Helper function para asegurar que el valor esté en el enum o devolver un default
@@ -40,6 +40,97 @@ const ensureEnumOrDefault = <T extends string>(
   return defaultValue;
 };
 
+// Obtener los valores permitidos de los enums Zod para usarlos en la comprobación
+const allowedVatConditions = supplierSchema.shape.vatCondition._def.values;
+const allowedVoucherTypes = supplierSchema.shape.voucherType._def.values;
+const allowedStatuses = supplierSchema.shape.status._def.innerType._def.values; // Acceder a innerType
+
+const prepareDefaultValues = (data: Supplier | null): SupplierFormData => {
+  if (!data) {
+    return {
+      legalName: "",
+      commercialName: "",
+      taxIdentification: "",
+      vatCondition: "Responsable Inscripto",
+      voucherType: "Factura A",
+      grossIncome: "",
+      localTaxRegistration: "",
+      contactName: "",
+      contactPosition: "",
+      landlineNumber: "",
+      mobileNumber: "",
+      email: "",
+      website: "",
+      legalAddress: "",
+      commercialAddress: "",
+      deliveryAddress: "",
+      bank: "",
+      accountTypeNumber: "",
+      cbu: "",
+      bankAlias: "",
+      swiftBic: "",
+      paymentCurrency: "ARS",
+      paymentMethods: [],
+      paymentTermDays: null,
+      discountsConditions: "",
+      creditLimit: null,
+      returnPolicy: "",
+      shippingMethods: "",
+      shippingCosts: "",
+      deliveryTimes: "",
+      transportConditions: "",
+      itemsCategories: "",
+      certifications: "",
+      commercialReferences: "",
+      status: "activo",
+      notesObservations: "",
+    };
+  }
+  // Valores por defecto para EDICIÓN (basados en initialData)
+  return {
+    legalName: data.legalName,
+    commercialName: data.commercialName ?? "",
+    taxIdentification: data.taxIdentification,
+    vatCondition: ensureEnumOrDefault(
+      data.vatCondition,
+      allowedVatConditions,
+      "Responsable Inscripto",
+    ),
+    voucherType: ensureEnumOrDefault(data.voucherType, allowedVoucherTypes, "Factura A"),
+    grossIncome: data.grossIncome ?? "",
+    localTaxRegistration: data.localTaxRegistration ?? "",
+    contactName: data.contactName ?? "",
+    contactPosition: data.contactPosition ?? "",
+    landlineNumber: data.landlineNumber ?? "",
+    mobileNumber: data.mobileNumber ?? "",
+    email: data.email ?? "",
+    website: data.website ?? "",
+    legalAddress: data.legalAddress ?? "",
+    commercialAddress: data.commercialAddress ?? "",
+    deliveryAddress: data.deliveryAddress ?? "",
+    bank: data.bank ?? "",
+    accountTypeNumber: data.accountTypeNumber ?? "",
+    cbu: data.cbu ?? "",
+    bankAlias: data.bankAlias ?? "",
+    swiftBic: data.swiftBic ?? "",
+    paymentCurrency: data.paymentCurrency ?? "ARS",
+    paymentMethods: data.paymentMethods ?? [],
+    paymentTermDays: data.paymentTermDays,
+    discountsConditions: data.discountsConditions ?? "",
+    creditLimit: data.creditLimit,
+    returnPolicy: data.returnPolicy ?? "",
+    shippingMethods: data.shippingMethods ?? "",
+    shippingCosts: data.shippingCosts ?? "",
+    deliveryTimes: data.deliveryTimes ?? "",
+    transportConditions: data.transportConditions ?? "",
+    itemsCategories: data.itemsCategories ?? "",
+    certifications: data.certifications ?? "",
+    commercialReferences: data.commercialReferences ?? "",
+    status: ensureEnumOrDefault(data.status, allowedStatuses, "activo"),
+    notesObservations: data.notesObservations ?? "",
+  };
+};
+
 export default function SupplierForm({
   onSuccess,
   onCancel,
@@ -49,102 +140,6 @@ export default function SupplierForm({
   const [isPending, startTransition] = useTransition(); // Hook para manejar estado pendiente
   const isEditing = !!supplierId; // ✅ Detecta automáticamente si es edición
 
-  // Obtener los valores permitidos de los enums Zod para usarlos en la comprobación
-  const allowedVatConditions = supplierSchema.shape.vatCondition._def.values;
-  const allowedVoucherTypes = supplierSchema.shape.voucherType._def.values;
-  const allowedStatuses = supplierSchema.shape.status._def.innerType._def.values; // Acceder a innerType
-
-  // Wrap prepareDefaultValues in useCallback
-  const prepareDefaultValues = useCallback(
-    (data: Supplier | null): SupplierFormData => {
-      if (!data) {
-        // Valores por defecto para CREACIÓN
-        return {
-          legalName: "",
-          commercialName: "",
-          taxIdentification: "",
-          vatCondition: "Responsable Inscripto",
-          voucherType: "Factura A",
-          grossIncome: "",
-          localTaxRegistration: "",
-          contactName: "",
-          contactPosition: "",
-          landlineNumber: "",
-          mobileNumber: "",
-          email: "",
-          website: "",
-          legalAddress: "",
-          commercialAddress: "",
-          deliveryAddress: "",
-          bank: "",
-          accountTypeNumber: "",
-          cbu: "",
-          bankAlias: "",
-          swiftBic: "",
-          paymentCurrency: "ARS",
-          paymentMethods: [],
-          paymentTermDays: null,
-          discountsConditions: "",
-          creditLimit: null,
-          returnPolicy: "",
-          shippingMethods: "",
-          shippingCosts: "",
-          deliveryTimes: "",
-          transportConditions: "",
-          itemsCategories: "",
-          certifications: "",
-          commercialReferences: "",
-          status: "activo",
-          notesObservations: "",
-        };
-      }
-      // Valores por defecto para EDICIÓN (basados en initialData)
-      return {
-        legalName: data.legalName,
-        commercialName: data.commercialName ?? "",
-        taxIdentification: data.taxIdentification,
-        vatCondition: ensureEnumOrDefault(
-          data.vatCondition,
-          allowedVatConditions,
-          "Responsable Inscripto",
-        ),
-        voucherType: ensureEnumOrDefault(data.voucherType, allowedVoucherTypes, "Factura A"),
-        grossIncome: data.grossIncome ?? "",
-        localTaxRegistration: data.localTaxRegistration ?? "",
-        contactName: data.contactName ?? "",
-        contactPosition: data.contactPosition ?? "",
-        landlineNumber: data.landlineNumber ?? "",
-        mobileNumber: data.mobileNumber ?? "",
-        email: data.email ?? "",
-        website: data.website ?? "",
-        legalAddress: data.legalAddress ?? "",
-        commercialAddress: data.commercialAddress ?? "",
-        deliveryAddress: data.deliveryAddress ?? "",
-        bank: data.bank ?? "",
-        accountTypeNumber: data.accountTypeNumber ?? "",
-        cbu: data.cbu ?? "",
-        bankAlias: data.bankAlias ?? "",
-        swiftBic: data.swiftBic ?? "",
-        paymentCurrency: data.paymentCurrency ?? "ARS",
-        paymentMethods: data.paymentMethods ?? [],
-        paymentTermDays: data.paymentTermDays,
-        discountsConditions: data.discountsConditions ?? "",
-        creditLimit: data.creditLimit,
-        returnPolicy: data.returnPolicy ?? "",
-        shippingMethods: data.shippingMethods ?? "",
-        shippingCosts: data.shippingCosts ?? "",
-        deliveryTimes: data.deliveryTimes ?? "",
-        transportConditions: data.transportConditions ?? "",
-        itemsCategories: data.itemsCategories ?? "",
-        certifications: data.certifications ?? "",
-        commercialReferences: data.commercialReferences ?? "",
-        status: ensureEnumOrDefault(data.status, allowedStatuses, "activo"),
-        notesObservations: data.notesObservations ?? "",
-      };
-    },
-    [allowedStatuses, allowedVatConditions, allowedVoucherTypes],
-  );
-
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
     defaultValues: prepareDefaultValues(initialData ?? null),
@@ -152,8 +147,7 @@ export default function SupplierForm({
 
   useEffect(() => {
     form.reset(prepareDefaultValues(initialData ?? null));
-    // Now prepareDefaultValues is stable due to useCallback
-  }, [initialData, form.reset, prepareDefaultValues]);
+  }, [initialData, form.reset]);
 
   function onSubmit(data: SupplierFormData) {
     startTransition(async () => {

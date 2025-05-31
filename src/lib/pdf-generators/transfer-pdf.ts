@@ -179,7 +179,7 @@ export async function generateTransferPDF(data: TransferPDFData): Promise<Uint8A
               let workingY = currentY;
 
               // Dividir las notas en líneas para mejor presentación
-              const lines = transfer.notes?.split("\n");
+              const lines = transfer.notes?.split("\n") || [];
               for (const line of lines) {
                 if (workingY < 100) {
                   pdf.addPage();

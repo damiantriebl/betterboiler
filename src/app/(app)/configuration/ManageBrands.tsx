@@ -26,9 +26,8 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { Model } from "@prisma/client"; // Assuming Model type is available
 import { Plus } from "lucide-react";
-import React, { useState, useEffect, useTransition, useCallback } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import CreateBrandModal from "./CreateBrandModal";
 import type { DisplayModelData, OrganizationBrandDisplayData } from "./Interfaces";
 import SingleBrandColumn from "./SingleBrandColumn";

@@ -46,7 +46,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { HexColorPicker } from "react-colorful";
 import { AddOrSelectModelModal } from "./AddOrSelectModelModal";
 import BrandContainer from "./BrandContainer";

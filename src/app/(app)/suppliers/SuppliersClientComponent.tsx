@@ -21,8 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Supplier } from "@prisma/client"; // Usar el tipo Supplier de Prisma
-import { Filter, PlusCircle, Search, Users } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import { PlusCircle, Search, Users } from "lucide-react";
+import React, { useState } from "react";
 import SupplierForm from "./SupplierForm";
 import SupplierTable from "./SupplierTable"; // Necesitamos importar SupplierTable aquí
 // import { SupplierFormData } from '@/zod/SuppliersZod'; // Ya no necesitamos SupplierFormData aquí
@@ -72,7 +72,7 @@ export default function SuppliersClientComponent({ initialData }: SuppliersClien
   };
 
   // Filtros aplicados a los datos
-  const filteredData = useMemo(() => {
+  const filteredData = () => {
     return initialData.filter((supplier) => {
       const matchesSearch =
         supplier.legalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -83,7 +83,7 @@ export default function SuppliersClientComponent({ initialData }: SuppliersClien
 
       return matchesSearch && matchesStatus;
     });
-  }, [initialData, searchTerm, statusFilter]);
+  };
 
   // Función para limpiar filtros
   const clearFilters = () => {
@@ -169,7 +169,7 @@ export default function SuppliersClientComponent({ initialData }: SuppliersClien
         <CardContent>
           {/* Renderizar la tabla, pasando los datos filtrados y los handlers */}
           <SupplierTable
-            initialData={filteredData} // Pasar los datos filtrados
+            initialData={filteredData()} // Pasar los datos filtrados
             onEdit={handleEditSupplier} // Pasar la función de editar
             onDelete={handleDeleteSupplierPlaceholder} // Pasar la función de eliminar (placeholder)
           />

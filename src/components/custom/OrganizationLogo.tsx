@@ -4,7 +4,7 @@
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/SessionStore";
 import { Building } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface OrganizationLogoProps {
   logo?: string | null;
@@ -71,16 +71,16 @@ export default function OrganizationLogo({
   const isCustomSize = typeof size === "number";
 
   // Estilos para tamaños personalizados (usando style)
-  const customContainerStyles = useMemo(() => {
+  const customContainerStyles = () => {
     if (!isCustomSize) return {};
     const sizeValue = size as number;
     return {
       height: `${sizeValue}rem`,
       transition: "height 0.3s ease-out, background-color 0.3s ease-out, box-shadow 0.3s ease-out",
     };
-  }, [size, isCustomSize]);
+  };
 
-  const customIconStyles = useMemo(() => {
+  const customIconStyles = () => {
     if (!isCustomSize) return {};
     const sizeValue = size as number;
     const iconSize = sizeValue * 0.6;
@@ -88,10 +88,10 @@ export default function OrganizationLogo({
       height: `${iconSize}rem`,
       transition: "height 0.3s ease-out",
     };
-  }, [size, isCustomSize]);
+  };
 
   // Clases para tamaños predefinidos (usando Tailwind)
-  const containerSizeClasses = useMemo(() => {
+  const containerSizeClasses = () => {
     if (isCustomSize) return "w-auto";
     return (
       {
@@ -100,9 +100,9 @@ export default function OrganizationLogo({
         lg: "w-auto h-40",
       }[size] || "w-auto h-32"
     );
-  }, [size, isCustomSize]);
+  };
 
-  const iconSizeClasses = useMemo(() => {
+  const iconSizeClasses = () => {
     if (isCustomSize) return "w-auto";
     return (
       {
@@ -111,35 +111,29 @@ export default function OrganizationLogo({
         lg: "w-auto h-24",
       }[size] || "w-auto h-[7.68rem]"
     );
-  }, [size, isCustomSize]);
+  };
 
   // Clases combinadas para el contenedor
-  const containerClasses = useMemo(
-    () =>
-      cn(
-        "relative overflow-hidden flex items-center justify-center",
-        "text-xl font-bold transition-opacity duration-200 ease-out",
-        containerSizeClasses,
-        variant === "default" && "bg-muted shadow-md  ",
-        variant === "bare" && "bg-transparent shadow-none",
-        !isCustomSize && "transition-all duration-300 ease-out",
-      ),
-    [containerSizeClasses, variant, isCustomSize],
-  );
+  const containerClasses = () =>
+    cn(
+      "relative overflow-hidden flex items-center justify-center",
+      "text-xl font-bold transition-opacity duration-200 ease-out",
+      containerSizeClasses(),
+      variant === "default" && "bg-muted shadow-md  ",
+      variant === "bare" && "bg-transparent shadow-none",
+      !isCustomSize && "transition-all duration-300 ease-out",
+    );
 
   // Clases combinadas para el icono de fallback
-  const fallbackIconClasses = useMemo(
-    () =>
-      cn(
-        "text-muted-foreground",
-        iconSizeClasses,
-        !isCustomSize && "transition-all duration-300 ease-out",
-      ),
-    [iconSizeClasses, isCustomSize],
-  );
+  const fallbackIconClasses = () =>
+    cn(
+      "text-muted-foreground",
+      iconSizeClasses(),
+      !isCustomSize && "transition-all duration-300 ease-out",
+    );
 
   // Determinar el padding para la imagen con escalado suave
-  const imagePadding = useMemo(() => {
+  const imagePadding = () => {
     let paddingClass = "p-2"; // Default padding
     if (isCustomSize) {
       const sizeValue = size as number;
@@ -155,20 +149,18 @@ export default function OrganizationLogo({
     }
     // Si la variante es 'bare', siempre es p-0
     return variant === "bare" ? "p-0" : paddingClass;
-  }, [size, variant, isCustomSize]);
+  };
 
   // Clases para la imagen
-  const imgClasses = useMemo(
-    () => cn("w-auto h-full object-contain transition-all duration-300", imagePadding),
-    [imagePadding],
-  );
+  const imgClasses = () =>
+    cn("w-auto h-full object-contain transition-all duration-300", imagePadding());
 
   // preload thumbnail
   useEffect(() => {
     if (thumbnail) getLogoUrl(thumbnail).catch(() => {});
   }, [thumbnail]);
 
-  const fetchLogoUrl = useCallback(async (key: string) => {
+  const fetchLogoUrl = async (key: string) => {
     setIsLoading(true);
     setHasError(false);
     try {
@@ -180,18 +172,20 @@ export default function OrganizationLogo({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchLogoUrl es estable dentro del componente
   useEffect(() => {
     if (typeof displayLogo === "string" && displayLogo.length > 0) {
       fetchLogoUrl(displayLogo);
     } else {
       setHasError(true);
+      setImageUrl(null);
     }
-  }, [displayLogo, fetchLogoUrl]);
+  }, [displayLogo]);
 
   const renderFallback = () => (
-    <Building className={fallbackIconClasses} style={isCustomSize ? customIconStyles : {}} />
+    <Building className={fallbackIconClasses()} style={isCustomSize ? customIconStyles() : {}} />
   );
 
   const renderImage = () => (
@@ -199,15 +193,15 @@ export default function OrganizationLogo({
       key={imageUrl}
       src={imageUrl || ""}
       alt={displayName || "Organization Logo"}
-      className={imgClasses}
+      className={imgClasses()}
       onError={() => setHasError(true)}
     />
   );
 
   return (
     <div
-      className={containerClasses}
-      style={isCustomSize ? customContainerStyles : {}}
+      className={containerClasses()}
+      style={isCustomSize ? customContainerStyles() : {}}
       role="img"
       aria-label={`${displayName || "Organization"} logo container`}
     >

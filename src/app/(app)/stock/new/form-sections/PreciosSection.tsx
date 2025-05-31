@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
 import type React from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { Control, UseFormSetValue, UseFormWatch } from "react-hook-form";
 
 interface PreciosSectionProps {
@@ -73,24 +73,21 @@ export function PreciosSection({
   };
 
   // Función con debounce para actualizar valores
-  const debouncedSetValue = useCallback(
-    (fieldName: keyof MotorcycleBatchFormData, value: number) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+  const debouncedSetValue = (fieldName: keyof MotorcycleBatchFormData, value: number) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
-      timeoutRef.current = setTimeout(() => {
-        if (!isCalculatingRef.current) {
-          isCalculatingRef.current = true;
-          setValue(fieldName, value);
-          setTimeout(() => {
-            isCalculatingRef.current = false;
-          }, 100);
-        }
-      }, 500); // 500ms de delay
-    },
-    [setValue],
-  );
+    timeoutRef.current = setTimeout(() => {
+      if (!isCalculatingRef.current) {
+        isCalculatingRef.current = true;
+        setValue(fieldName, value);
+        setTimeout(() => {
+          isCalculatingRef.current = false;
+        }, 100);
+      }
+    }, 500); // 500ms de delay
+  };
 
   // Observar cambios en los campos para cálculos automáticos
   const watchedValues = watch([
@@ -144,13 +141,7 @@ export function PreciosSection({
         debouncedSetValue("wholesalePrice", precioRedondeado);
       }
     }
-  }, [
-    costPrice,
-    ivaPorcentajeMayorista,
-    otrosImpuestosMayorista,
-    gananciaPorcentajeMayorista,
-    debouncedSetValue,
-  ]);
+  }, [costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista, gananciaPorcentajeMayorista]);
 
   // Efecto para calcular ganancia mayorista cuando cambia el precio final
   // biome-ignore lint/correctness/useExhaustiveDependencies: Evitar loop infinito con funciones dependientes
@@ -179,13 +170,7 @@ export function PreciosSection({
         debouncedSetValue("gananciaPorcentajeMayorista", gananciaRedondeada);
       }
     }
-  }, [
-    wholesalePrice,
-    costPrice,
-    ivaPorcentajeMayorista,
-    otrosImpuestosMayorista,
-    debouncedSetValue,
-  ]);
+  }, [wholesalePrice, costPrice, ivaPorcentajeMayorista, otrosImpuestosMayorista]);
 
   // Efecto para calcular precio minorista cuando cambian costo, IVA, otros impuestos o ganancia
   // biome-ignore lint/correctness/useExhaustiveDependencies: Evitar loop infinito con funciones dependientes
@@ -214,13 +199,7 @@ export function PreciosSection({
         debouncedSetValue("retailPrice", precioRedondeado);
       }
     }
-  }, [
-    costPrice,
-    ivaPorcentajeMinorista,
-    otrosImpuestosMinorista,
-    gananciaPorcentajeMinorista,
-    debouncedSetValue,
-  ]);
+  }, [costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista, gananciaPorcentajeMinorista]);
 
   // Efecto para calcular ganancia minorista cuando cambia el precio final
   // biome-ignore lint/correctness/useExhaustiveDependencies: Evitar loop infinito con funciones dependientes
@@ -249,7 +228,7 @@ export function PreciosSection({
         debouncedSetValue("gananciaPorcentajeMinorista", gananciaRedondeada);
       }
     }
-  }, [retailPrice, costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista, debouncedSetValue]);
+  }, [retailPrice, costPrice, ivaPorcentajeMinorista, otrosImpuestosMinorista]);
 
   // Cleanup del timeout cuando el componente se desmonta
   useEffect(() => {

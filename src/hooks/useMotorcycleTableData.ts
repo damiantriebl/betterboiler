@@ -1,6 +1,5 @@
 import type { MotorcycleWithFullDetails } from "@/types/motorcycle";
 import { MotorcycleState } from "@prisma/client";
-import { useMemo } from "react";
 
 interface UseMotorcycleTableDataProps {
   motorcycles: MotorcycleWithFullDetails[];
@@ -27,8 +26,8 @@ export function useMotorcycleTableData({
   currentPage,
   pageSize,
 }: UseMotorcycleTableDataProps) {
-  // 🚀 OPTIMIZACIÓN 1: Memoizar datos para filtros
-  const filterOptions = useMemo(() => {
+  // 🚀 OPTIMIZACIÓN 1: Datos para filtros
+  const filterOptions = () => {
     const brands = [
       ...new Set(motorcycles.map((m) => m.brand?.name).filter(Boolean)),
     ].sort() as string[];
@@ -48,10 +47,10 @@ export function useMotorcycleTableData({
       availableBranches: branches,
       availableYears: years,
     };
-  }, [motorcycles]);
+  };
 
-  // 🚀 OPTIMIZACIÓN 2: Memoizar filtrado
-  const filteredData = useMemo(() => {
+  // 🚀 OPTIMIZACIÓN 2: Filtrado
+  const filteredData = () => {
     let filtered = [...motorcycles];
 
     if (filters.search) {
@@ -83,15 +82,15 @@ export function useMotorcycleTableData({
     }
 
     return filtered;
-  }, [motorcycles, filters]);
+  };
 
-  // 🚀 OPTIMIZACIÓN 3: Memoizar ordenamiento
-  const sortedData = useMemo(() => {
+  // 🚀 OPTIMIZACIÓN 3: Ordenamiento
+  const sortedData = () => {
     const { key, direction } = sortConfig;
 
-    if (!key || !direction) return filteredData;
+    if (!key || !direction) return filteredData();
 
-    return [...filteredData].sort((a, b) => {
+    return [...filteredData()].sort((a, b) => {
       const aValue = a[key as keyof MotorcycleWithFullDetails];
       const bValue = b[key as keyof MotorcycleWithFullDetails];
 
@@ -108,25 +107,29 @@ export function useMotorcycleTableData({
 
       return 0;
     });
-  }, [filteredData, sortConfig]);
+  };
 
-  // 🚀 OPTIMIZACIÓN 4: Memoizar paginación
-  const paginationData = useMemo(() => {
+  // 🚀 OPTIMIZACIÓN 4: Paginación
+  const paginationData = () => {
+    const sortedDataResult = sortedData();
     const startIndex = (currentPage - 1) * pageSize;
-    const paginatedData = sortedData.slice(startIndex, startIndex + pageSize);
-    const totalPages = Math.ceil(sortedData.length / pageSize);
+    const paginatedData = sortedDataResult.slice(startIndex, startIndex + pageSize);
+    const totalPages = Math.ceil(sortedDataResult.length / pageSize);
 
     return {
       paginatedData,
       totalPages,
-      totalItems: sortedData.length,
+      totalItems: sortedDataResult.length,
       startIndex: startIndex + 1,
-      endIndex: Math.min(startIndex + pageSize, sortedData.length),
+      endIndex: Math.min(startIndex + pageSize, sortedDataResult.length),
     };
-  }, [sortedData, currentPage, pageSize]);
+  };
+
+  const filterOptionsResult = filterOptions();
+  const paginationDataResult = paginationData();
 
   return {
-    ...filterOptions,
-    ...paginationData,
+    ...filterOptionsResult,
+    ...paginationDataResult,
   };
 }

@@ -40,9 +40,9 @@ export function ColorSelector({
 }: ColorSelectorProps) {
   const [open, setOpen] = React.useState(false);
 
-  const selectedColor = React.useMemo(() => {
+  const selectedColor = () => {
     return colors.find((c) => c.dbId === selectedColorId);
-  }, [selectedColorId, colors]);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -54,25 +54,25 @@ export function ColorSelector({
           className={cn("w-full justify-between h-10", className)}
         >
           <span className="flex items-center gap-2 flex-grow min-w-0">
-            {selectedColor ? (
+            {selectedColor() ? (
               <>
                 <ColorItem
-                  colorConfig={selectedColor}
+                  colorConfig={selectedColor() || { id: "temp", name: "", type: "SOLIDO" }}
                   size="sm"
                   displayMode={true}
                   showName={false}
                 />
-                <span className="truncate">{selectedColor.name}</span>
+                <span className="truncate">{selectedColor()?.name}</span>
               </>
             ) : (
-              placeholder
+              <span className="text-muted-foreground">Selecciona un color</span>
             )}
           </span>
           <span className="flex items-center ml-auto pl-2">
-            {selectedColor &&
-              (selectedColor.type === "BITONO" || selectedColor.type === "PATRON") && (
+            {selectedColor() &&
+              (selectedColor()?.type === "BITONO" || selectedColor()?.type === "PATRON") && (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                  {selectedColor.type === "BITONO" ? "Bitono" : "Patrón"}
+                  {selectedColor()?.type === "BITONO" ? "Bitono" : "Patrón"}
                 </Badge>
               )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

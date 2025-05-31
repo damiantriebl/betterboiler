@@ -48,7 +48,7 @@ import {
   User,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import AnnulPaymentButton from "./AnnulPaymentButton";
 import PaymentModal from "./PaymentModal";
 
@@ -194,7 +194,7 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
   };
 
   // Filtrado y sorting
-  const filteredAndSortedData = useMemo(() => {
+  const filteredAndSortedData = () => {
     let result = [...accounts];
 
     // Filtrado
@@ -244,12 +244,13 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
     }
 
     return result;
-  }, [accounts, searchTerm, sortConfig]);
+  };
 
   // Paginación
-  const totalPages = Math.ceil(filteredAndSortedData.length / pageSize);
+  const filteredAndSortedResult = filteredAndSortedData();
+  const totalPages = Math.ceil(filteredAndSortedResult.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedData = filteredAndSortedData.slice(startIndex, startIndex + pageSize);
+  const paginatedData = filteredAndSortedResult.slice(startIndex, startIndex + pageSize);
 
   const handleSort = (key: keyof CurrentAccountWithDetails | string) => {
     let direction: "asc" | "desc" | null = "asc";
@@ -310,7 +311,8 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
               {refreshing ? "Actualizando..." : "Actualizar"}
             </Button>
             <span className="text-sm text-muted-foreground">
-              {filteredAndSortedData.length} cuenta{filteredAndSortedData.length !== 1 ? "s" : ""}
+              {filteredAndSortedResult.length} cuenta
+              {filteredAndSortedResult.length !== 1 ? "s" : ""}
             </span>
           </div>
         </div>
@@ -836,10 +838,10 @@ export default function CurrentAccountsTable({ accounts }: CurrentAccountsTableP
         )}
 
         {/* Información de resultados */}
-        <div className="flex-1 text-sm text-muted-foreground">
+        <div className="px-4 py-3 text-sm text-muted-foreground border-t">
           Mostrando {startIndex + 1} a{" "}
-          {Math.min(startIndex + pageSize, filteredAndSortedData.length)} de{" "}
-          {filteredAndSortedData.length} cuenta{filteredAndSortedData.length !== 1 ? "s" : ""}.
+          {Math.min(startIndex + pageSize, filteredAndSortedResult.length)} de{" "}
+          {filteredAndSortedResult.length} cuenta{filteredAndSortedResult.length !== 1 ? "s" : ""}.
         </div>
       </div>
 

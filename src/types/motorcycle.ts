@@ -5,9 +5,23 @@ import {
   type ModelFile,
   type MotoColor,
   type Motorcycle,
-  MotorcycleState,
+  MotorcycleState as PrismaMotorcycleState,
   type Reservation,
 } from "@prisma/client";
+
+// Enum local para usar en componentes cliente
+export enum MotorcycleState {
+  STOCK = "STOCK",
+  PAUSADO = "PAUSADO", 
+  RESERVADO = "RESERVADO",
+  PROCESANDO = "PROCESANDO",
+  VENDIDO = "VENDIDO",
+  ELIMINADO = "ELIMINADO",
+  EN_TRANSITO = "EN_TRANSITO",
+}
+
+// Type que mapea al enum de Prisma para compatibilidad
+export type PrismaMotorcycleStateType = PrismaMotorcycleState;
 
 export interface ModelFileWithUrl {
   id: string;
@@ -64,12 +78,12 @@ export interface ReservationUpdate {
   reservationId: number;
 }
 
-export const estadoVentaConfig: Record<MotorcycleState, { label: string; className: string }> = {
-  [MotorcycleState.STOCK]: { label: "En Stock", className: "text-green-600" },
-  [MotorcycleState.PAUSADO]: { label: "Pausado", className: "text-yellow-600" },
-  [MotorcycleState.RESERVADO]: { label: "Reservado", className: "text-blue-600" },
-  [MotorcycleState.PROCESANDO]: { label: "En Proceso", className: "text-purple-600" },
-  [MotorcycleState.VENDIDO]: { label: "Vendido", className: "text-gray-600" },
-  [MotorcycleState.ELIMINADO]: { label: "Eliminado", className: "text-red-600" },
-  [MotorcycleState.EN_TRANSITO]: { label: "En Tránsito", className: "text-orange-600" },
+export const estadoVentaConfig: Record<PrismaMotorcycleState, { label: string; className: string }> = {
+  [PrismaMotorcycleState.STOCK]: { label: "En Stock", className: "text-green-600" },
+  [PrismaMotorcycleState.PAUSADO]: { label: "Pausado", className: "text-yellow-600" },
+  [PrismaMotorcycleState.RESERVADO]: { label: "Reservado", className: "text-blue-600" },
+  [PrismaMotorcycleState.PROCESANDO]: { label: "En Proceso", className: "text-purple-600" },
+  [PrismaMotorcycleState.VENDIDO]: { label: "Vendido", className: "text-gray-600" },
+  [PrismaMotorcycleState.ELIMINADO]: { label: "Eliminado", className: "text-red-600" },
+  [PrismaMotorcycleState.EN_TRANSITO]: { label: "En Tránsito", className: "text-orange-600" },
 };

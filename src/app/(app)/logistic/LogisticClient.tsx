@@ -139,7 +139,9 @@ export default function LogisticClient({
   // Obtener marcas únicas para el filtro
   const uniqueBrands = Array.from(
     new Set(motorcycles.filter((m) => m.brand?.name).map((m) => m.brand?.name)),
-  ).sort((a, b) => a.localeCompare(b));
+  )
+    .filter((name): name is string => name !== undefined)
+    .sort((a, b) => a.localeCompare(b));
 
   console.log("🎯 RENDER - Estado actual:");
   console.log("🎯 selectedMotorcycles:", selectedMotorcycles);

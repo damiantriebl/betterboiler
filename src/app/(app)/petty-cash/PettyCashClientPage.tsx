@@ -97,7 +97,6 @@ export default function PettyCashClientPage({
     setPettyCashDataState(initialPettyCashData);
   }, [initialPettyCashData]);
 
-  // Filtrar datos sin useMemo (React 19 optimiza automáticamente)
   const filteredPettyCashData = (() => {
     if (!pettyCashDataState) return [];
     if (selectedBranchId === GENERAL_ACCOUNT_VALUE) {
