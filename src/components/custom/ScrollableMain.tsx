@@ -1,6 +1,7 @@
 "use client";
 
-import { useScrollAmount } from "@/hooks/useScrollAmount";
+import type React from "react";
+import { useScrollAmount } from "@/hooks/use-scroll-amount";
 import NavbarSticky from "./NavbarSticky";
 
 interface ScrollableMainProps {

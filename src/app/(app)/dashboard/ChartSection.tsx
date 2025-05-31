@@ -1,7 +1,8 @@
 "use client";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
-import { mockSales } from "./mockSale";
+import { mockSales } from "./MockSale";
 
 type ChartData = {
   label: string | number;

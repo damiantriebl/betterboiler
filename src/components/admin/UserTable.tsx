@@ -12,7 +12,7 @@ import prisma from "@/lib/prisma";
 import type { Organization, User } from "@prisma/client";
 import { headers } from "next/headers";
 import OrganizationSelect from "./OrganizationSelect";
-import UserActions from "./useActions";
+import UserActions from "./UseActions";
 
 export default async function UsersTable() {
   const h = await headers();
