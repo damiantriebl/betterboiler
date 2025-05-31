@@ -3,7 +3,6 @@
 import { PriceModeSelector } from "@/components/ui/price-mode-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSessionStore } from "@/stores/SessionStore";
-import { useMemo } from "react";
 import OrganizationLogo from "./OrganizationLogo";
 
 interface NavbarStickyProps {
@@ -17,44 +16,46 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
   const storeOrgLogo = useSessionStore((state) => state.organizationLogo);
 
   // Usar los datos del store o los proporcionados como props
-  const orgData = useMemo(() => {
+  const orgData = () => {
     if (organization) return organization;
     return {
       logo: storeOrgLogo,
       thumbnail: null, // No tenemos thumbnail en el store todavía
       name: storeOrgName || "Organización",
     };
-  }, [organization, storeOrgLogo, storeOrgName]);
+  };
 
-  const logoKey = useMemo(() => {
-    if (!orgData.logo && !orgData.thumbnail) return null;
-    return scrollAmount > 0.5 && orgData.thumbnail ? orgData.thumbnail : orgData.logo;
-  }, [orgData.logo, orgData.thumbnail, scrollAmount]);
+  const logoKey = () => {
+    const orgDataResult = orgData();
+    if (!orgDataResult.logo && !orgDataResult.thumbnail) return null;
+    return scrollAmount > 0.5 && orgDataResult.thumbnail
+      ? orgDataResult.thumbnail
+      : orgDataResult.logo;
+  };
 
-  // Todos los hooks useMemo deben llamarse ANTES del retorno condicional.
-  const height = useMemo(() => {
+  const height = () => {
     const startHeight = 9; // Reducido para evitar que se extienda demasiado
     const endHeight = 3.5;
     return startHeight - scrollAmount * (startHeight - endHeight);
-  }, [scrollAmount]);
+  };
 
-  const paddingY = useMemo(() => {
+  const paddingY = () => {
     const startPadding = 1; // Reducido para menos altura total
     const endPadding = 0.5;
     return startPadding - scrollAmount * (startPadding - endPadding);
-  }, [scrollAmount]);
+  };
 
-  const logoSize = useMemo(() => {
+  const logoSize = () => {
     const startSize = 7; // Logo aún más grande
     const endSize = 3.5;
     return Math.max(endSize, startSize - scrollAmount * (startSize - endSize));
-  }, [scrollAmount]);
+  };
 
-  const logoVariant = useMemo(() => {
+  const logoVariant = () => {
     return scrollAmount > 0.3 ? "default" : "bare";
-  }, [scrollAmount]);
+  };
 
-  const nameOpacity = useMemo(() => {
+  const nameOpacity = () => {
     const startFade = 0.8;
     const endFade = 0.95;
     let calculatedOpacity = 0;
@@ -66,14 +67,14 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
       calculatedOpacity = (scrollAmount - startFade) / (endFade - startFade);
     }
     return calculatedOpacity;
-  }, [scrollAmount]);
+  };
 
   // Padding top dinámico para evitar que se corte
-  const paddingTop = useMemo(() => {
+  const paddingTop = () => {
     const startPadding = 0.75; // Reducido para menos altura total
     const endPadding = 0.25;
     return startPadding - scrollAmount * (startPadding - endPadding);
-  }, [scrollAmount]);
+  };
 
   return (
     <div
@@ -98,14 +99,14 @@ export default function NavbarSticky({ organization, scrollAmount }: NavbarStick
 
       {/* Logo en el centro */}
       <div className="flex items-center space-x-4">
-        {logoKey && (
+        {logoKey() && (
           <OrganizationLogo
-            logo={logoKey}
-            thumbnail={orgData.thumbnail}
-            name={orgData.name}
-            size={logoSize}
-            variant={logoVariant}
-            nameDisplayOpacity={nameOpacity}
+            logo={logoKey()}
+            thumbnail={orgData().thumbnail}
+            name={orgData().name}
+            size={logoSize()}
+            variant={logoVariant()}
+            nameDisplayOpacity={nameOpacity()}
           />
         )}
       </div>

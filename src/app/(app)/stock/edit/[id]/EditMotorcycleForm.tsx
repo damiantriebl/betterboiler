@@ -39,7 +39,7 @@ export function EditMotorcycleForm({ motorcycle, formData }: EditMotorcycleFormP
       } else {
         // Si es un objeto de errores, mostrar solo el primer error
         const firstError = Object.values(state.error)[0];
-        if (firstError) {
+        if (firstError && Array.isArray(firstError) && firstError[0]) {
           toast({ title: "Error", description: firstError[0], variant: "destructive" });
         }
       }

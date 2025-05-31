@@ -23,7 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import type { ClientFormData } from "@/zod/ClientsZod";
 import type { Client } from "@prisma/client";
 import { Filter, PlusCircle, Search, Users } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import ClientForm from "./ClientForm";
 import ClientTable from "./ClientTable";
 
@@ -81,22 +81,20 @@ export default function ClientComponent({ initialData }: Props) {
   };
 
   // Filtros aplicados a los datos
-  const filteredData = useMemo(() => {
-    return initialData.filter((client) => {
-      const matchesSearch =
-        client.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-        (client.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.phone?.includes(searchTerm) ?? false) ||
-        (client.mobile?.includes(searchTerm) ?? false);
+  const filteredData = initialData.filter((client) => {
+    const matchesSearch =
+      client.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (client.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.phone?.includes(searchTerm) ?? false) ||
+      (client.mobile?.includes(searchTerm) ?? false);
 
-      const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-      const matchesType = typeFilter === "all" || client.type === typeFilter;
+    const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+    const matchesType = typeFilter === "all" || client.type === typeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
-    });
-  }, [initialData, searchTerm, statusFilter, typeFilter]);
+    return matchesSearch && matchesStatus && matchesType;
+  });
 
   return (
     <div className="space-y-6">

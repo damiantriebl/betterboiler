@@ -17,7 +17,7 @@ import {
   isPromotionActiveOnDay,
 } from "@/utils/promotion-utils";
 import type { Day } from "@/zod/banking-promotion-schemas";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PromotionDayFilterProps {
   promotions: BankingPromotionDisplay[];
@@ -45,19 +45,19 @@ export function PromotionDayFilter({
   const [selectedDay, setSelectedDay] = useState<Day | "all">("all");
 
   // Filter promotions based on selected day - ahora usando la función client-side
-  const filterPromotions = useCallback(() => {
+  const filterPromotions = () => {
     if (selectedDay === "all") {
       onFilteredPromotionsChange(promotions);
     } else {
       const filtered = filterPromotionsByDay(promotions, selectedDay);
       onFilteredPromotionsChange(filtered);
     }
-  }, [selectedDay, promotions, onFilteredPromotionsChange]);
+  };
 
-  // Re-filter when dependencies change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: filterPromotions es estable dentro del componente
   useEffect(() => {
     filterPromotions();
-  }, [filterPromotions]);
+  }, [selectedDay]);
 
   // Count how many promotions are active for each day
   const dayPromotionCounts = Object.entries(DAYS_MAP).map(([dayKey, dayLabel]) => {

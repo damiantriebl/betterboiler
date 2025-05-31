@@ -29,7 +29,7 @@ import type { MotorcycleWithFullDetails, ReservationWithDetails } from "@/types/
 import { type Client, type CurrentAccount, type Motorcycle, MotorcycleState } from "@prisma/client";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import DeleteConfirmationDialog from "../DeleteDialog";
 import { MotorcycleDetailModal } from "../MotorcycleDetailModal";
 import { ColumnSelector } from "./ColumnSelector";
@@ -164,7 +164,7 @@ export default function MotorcycleTable({
   }, [filters.estadosVenta, onCurrentStatesChange]);
 
   // 🚀 OPTIMIZACIÓN: Memoizar filtrado de datos
-  const filteredData = useMemo(() => {
+  const filteredData = () => {
     let filtered = [...optimisticMotorcycles];
 
     if (filters.search) {
@@ -196,15 +196,15 @@ export default function MotorcycleTable({
     }
 
     return filtered;
-  }, [optimisticMotorcycles, filters]);
+  };
 
   // 🚀 OPTIMIZACIÓN: Memoizar ordenamiento
-  const sortedData = useMemo(() => {
+  const sortedData = () => {
     const { key, direction } = sortConfig;
 
-    if (!key || !direction) return filteredData;
+    if (!key || !direction) return filteredData();
 
-    return [...filteredData].sort((a, b) => {
+    return [...filteredData()].sort((a, b) => {
       const aValue = a[key as keyof MotorcycleWithFullDetails];
       const bValue = b[key as keyof MotorcycleWithFullDetails];
 
@@ -221,21 +221,24 @@ export default function MotorcycleTable({
 
       return 0;
     });
-  }, [filteredData, sortConfig]);
+  };
 
   // 🚀 OPTIMIZACIÓN: Paginación eficiente
-  const { paginatedData, totalPages, totalItems } = useMemo(() => {
+  const getPaginationData = () => {
+    const sortedDataResult = sortedData();
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    const paginated = sortedData.slice(startIndex, endIndex);
-    const pages = Math.ceil(sortedData.length / pageSize);
+    const paginated = sortedDataResult.slice(startIndex, endIndex);
+    const pages = Math.ceil(sortedDataResult.length / pageSize);
 
     return {
       paginatedData: paginated,
       totalPages: pages,
-      totalItems: sortedData.length,
+      totalItems: sortedDataResult.length,
     };
-  }, [sortedData, currentPage, pageSize]);
+  };
+
+  const { paginatedData, totalPages, totalItems } = getPaginationData();
 
   const handleSort = (column: ManualColumnDefinition) => {
     if (!column.isSortable || !column.sortKey) return;

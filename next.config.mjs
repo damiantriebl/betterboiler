@@ -8,6 +8,25 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
+  // Configuración de webpack para manejar Prisma
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Para el cliente, asegurar que Prisma se resuelva correctamente
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        path: false,
+        os: false,
+        stream: false,
+        util: false,
+      };
+    }
+    return config;
+  },
+
   // Corregir configuración de Turbopack
   turbopack: {},
 

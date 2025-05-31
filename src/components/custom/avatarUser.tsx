@@ -1,6 +1,6 @@
 "use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getLogoUrl } from "./OrganizationLogo";
 
 interface AvatarUserProps {
@@ -42,37 +42,34 @@ const AvatarUser = ({ src, name }: AvatarUserProps) => {
   const displayName = name || "";
   const displaySrc = src || "";
 
-  const fetchImageUrl = useCallback(
-    async (key: string) => {
-      if (isLoading) return;
-      setIsLoading(true);
-      setHasError(false);
-      try {
-        if (key.startsWith("http://") || key.startsWith("https://")) {
-          setImageUrl(key);
-        } else {
-          const url = await getLogoUrl(key);
-          setImageUrl(url);
-        }
-      } catch (error) {
-        console.error("Error obteniendo URL de imagen:", error);
-        setHasError(true);
-        setImageUrl(null);
-      } finally {
-        setIsLoading(false);
+  const fetchImageUrl = async (key: string) => {
+    if (isLoading) return;
+    setIsLoading(true);
+    setHasError(false);
+    try {
+      if (key.startsWith("http://") || key.startsWith("https://")) {
+        setImageUrl(key);
+      } else {
+        const url = await getLogoUrl(key);
+        setImageUrl(url);
       }
-    },
-    [isLoading],
-  );
+    } catch (error) {
+      console.error("Error obteniendo URL de imagen:", error);
+      setHasError(true);
+      setImageUrl(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchImageUrl es estable dentro del componente
   useEffect(() => {
     if (displaySrc && displaySrc.length > 0) {
       fetchImageUrl(displaySrc);
     } else {
       setHasError(true);
-      setImageUrl(null);
     }
-  }, [displaySrc, fetchImageUrl]);
+  }, [displaySrc]);
 
   const { bg, text, border } = getColorScheme(displayName);
 

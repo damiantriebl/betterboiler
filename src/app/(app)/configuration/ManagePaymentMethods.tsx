@@ -23,7 +23,7 @@ import {
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowRightLeft, Check, CreditCard, Trash2, Wallet } from "lucide-react";
-import { useCallback, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import PaymentMethodItem from "./PaymentMethodItem";
 
 interface ManagePaymentMethodsProps {
@@ -61,86 +61,64 @@ export default function ManagePaymentMethods({
   );
 
   // Handler for drag end (reordering payment methods)
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-      if (!over || active.id === over.id) {
-        return;
-      }
+    if (!over || active.id === over.id) {
+      return;
+    }
 
-      setOrganizationMethods((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+    setOrganizationMethods((items) => {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
 
-        const newArray = arrayMove(items, oldIndex, newIndex);
+      const newArray = arrayMove(items, oldIndex, newIndex);
 
-        // Update order property based on new positions
-        const updatedArray = newArray.map((item, index) => ({
-          ...item,
-          order: index,
-        }));
+      // Update order property based on new positions
+      const updatedArray = newArray.map((item, index) => ({
+        ...item,
+        order: index,
+      }));
 
-        // Send the updated order to the server
-        startTransition(() => {
-          updatePaymentMethodsOrder(
-            organizationId,
-            updatedArray.map((item) => ({ id: item.id, order: item.order })),
-          ).then((result) => {
-            if (!result.success) {
-              toast({
-                title: "Error",
-                description: result.error || "Ha ocurrido un error al actualizar el orden.",
-                variant: "destructive",
-              });
-            }
-          });
+      // Send the updated order to the server
+      startTransition(() => {
+        updatePaymentMethodsOrder(
+          organizationId,
+          updatedArray.map((item) => ({ id: item.id, order: item.order })),
+        ).then((result) => {
+          if (!result.success) {
+            toast({
+              title: "Error",
+              description: result.error || "Ha ocurrido un error al actualizar el orden.",
+              variant: "destructive",
+            });
+          }
         });
-
-        return updatedArray;
       });
-    },
-    [organizationId, toast],
-  );
+
+      return updatedArray;
+    });
+  };
 
   // Handler for toggling a payment method's enabled status
-  const handleToggleMethod = useCallback(
-    (methodId: number, currentStatus: boolean) => {
-      // Optimistically update UI
-      setOrganizationMethods((prev) =>
-        prev.map((method) =>
-          method.card.id === methodId ? { ...method, isEnabled: !currentStatus } : method,
-        ),
-      );
+  const handleToggleMethod = (methodId: number, currentStatus: boolean) => {
+    // Optimistically update UI
+    setOrganizationMethods((prev) =>
+      prev.map((method) =>
+        method.card.id === methodId ? { ...method, isEnabled: !currentStatus } : method,
+      ),
+    );
 
-      // Send update to server
-      startTransition(() => {
-        const formData = new FormData();
-        formData.append("methodId", methodId.toString());
-        formData.append("isEnabled", (!currentStatus).toString());
+    // Send update to server
+    startTransition(() => {
+      const formData = new FormData();
+      formData.append("methodId", methodId.toString());
+      formData.append("isEnabled", (!currentStatus).toString());
 
-        togglePaymentMethod(organizationId, formData)
-          .then((result) => {
-            // Verificar que result existe y tiene la estructura esperada
-            if (!result || typeof result !== "object" || !result.success) {
-              // Revert optimistic update on error
-              setOrganizationMethods((prev) =>
-                prev.map((method) =>
-                  method.card.id === methodId ? { ...method, isEnabled: currentStatus } : method,
-                ),
-              );
-
-              toast({
-                title: "Error",
-                description:
-                  result?.error || "Ha ocurrido un error al cambiar el estado del método de pago.",
-                variant: "destructive",
-              });
-            }
-          })
-          .catch((error) => {
-            console.error("Error in togglePaymentMethod:", error);
-
+      togglePaymentMethod(organizationId, formData)
+        .then((result) => {
+          // Verificar que result existe y tiene la estructura esperada
+          if (!result || typeof result !== "object" || !result.success) {
             // Revert optimistic update on error
             setOrganizationMethods((prev) =>
               prev.map((method) =>
@@ -151,104 +129,109 @@ export default function ManagePaymentMethods({
             toast({
               title: "Error",
               description:
-                "Ha ocurrido un error inesperado al cambiar el estado del método de pago.",
+                result?.error || "Ha ocurrido un error al cambiar el estado del método de pago.",
               variant: "destructive",
             });
+          }
+        })
+        .catch((error) => {
+          console.error("Error in togglePaymentMethod:", error);
+
+          // Revert optimistic update on error
+          setOrganizationMethods((prev) =>
+            prev.map((method) =>
+              method.card.id === methodId ? { ...method, isEnabled: currentStatus } : method,
+            ),
+          );
+
+          toast({
+            title: "Error",
+            description: "Ha ocurrido un error inesperado al cambiar el estado del método de pago.",
+            variant: "destructive",
           });
-      });
-    },
-    [organizationId, toast],
-  );
+        });
+    });
+  };
 
   // Handler for adding a method to the organization
-  const handleAddMethod = useCallback(
-    (methodId: number) => {
-      // Find the method that's being added
-      const methodToAdd = localAvailableMethods.find((method) => method.id === methodId);
-      if (!methodToAdd) return;
+  const handleAddMethod = (methodId: number) => {
+    // Find the method that's being added
+    const methodToAdd = localAvailableMethods.find((method) => method.id === methodId);
+    if (!methodToAdd) return;
 
-      // Optimistically remove from available methods
-      setLocalAvailableMethods((prev) => prev.filter((method) => method.id !== methodId));
+    // Optimistically remove from available methods
+    setLocalAvailableMethods((prev) => prev.filter((method) => method.id !== methodId));
 
-      // Get the highest current order
-      const highestOrder = organizationMethods.reduce(
-        (max, method) => (method.order > max ? method.order : max),
-        -1,
-      );
+    // Get the highest current order
+    const highestOrder = organizationMethods.reduce(
+      (max, method) => (method.order > max ? method.order : max),
+      -1,
+    );
 
-      // Create optimistic new organization method
-      const newOrgMethod: OrganizationPaymentMethodDisplay = {
-        // Temporary ID (will be replaced with the real one from the server)
-        id: Date.now(), // Use timestamp as temporary ID
-        order: highestOrder + 1,
-        isEnabled: true,
-        card: methodToAdd,
-      };
+    // Create optimistic new organization method
+    const newOrgMethod: OrganizationPaymentMethodDisplay = {
+      // Temporary ID (will be replaced with the real one from the server)
+      id: Date.now(), // Use timestamp as temporary ID
+      order: highestOrder + 1,
+      isEnabled: true,
+      card: methodToAdd,
+    };
 
-      // Optimistically add to organization methods
-      setOrganizationMethods((prev) => [...prev, newOrgMethod]);
+    // Optimistically add to organization methods
+    setOrganizationMethods((prev) => [...prev, newOrgMethod]);
 
-      // Send the request to the server
-      startTransition(() => {
-        associatePaymentMethod(organizationId, methodId).then((result) => {
-          if (!result.success) {
-            // Revert optimistic updates on error
-            setOrganizationMethods((prev) =>
-              prev.filter((method) => method.id !== newOrgMethod.id),
-            );
-            setLocalAvailableMethods((prev) => [...prev, methodToAdd]);
+    // Send the request to the server
+    startTransition(() => {
+      associatePaymentMethod(organizationId, methodId).then((result) => {
+        if (!result.success) {
+          // Revert optimistic updates on error
+          setOrganizationMethods((prev) => prev.filter((method) => method.id !== newOrgMethod.id));
+          setLocalAvailableMethods((prev) => [...prev, methodToAdd]);
 
-            toast({
-              title: "Error",
-              description: result.error || "Ha ocurrido un error al añadir el método de pago.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Éxito",
-              description: "Método de pago añadido correctamente.",
-            });
-          }
-        });
+          toast({
+            title: "Error",
+            description: result.error || "Ha ocurrido un error al añadir el método de pago.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Éxito",
+            description: "Método de pago añadido correctamente.",
+          });
+        }
       });
-    },
-    [localAvailableMethods, organizationId, organizationMethods, toast],
-  );
+    });
+  };
 
   // Handler for removing a payment method from the organization
-  const handleRemoveMethod = useCallback(
-    (organizationMethodId: number) => {
-      // Find the method to remove
-      const methodToRemove = organizationMethods.find(
-        (method) => method.id === organizationMethodId,
-      );
-      if (!methodToRemove) return;
+  const handleRemoveMethod = (organizationMethodId: number) => {
+    // Find the method to remove
+    const methodToRemove = organizationMethods.find((method) => method.id === organizationMethodId);
+    if (!methodToRemove) return;
 
-      // Optimistically update UI
-      setOrganizationMethods((prev) => prev.filter((method) => method.id !== organizationMethodId));
-      setLocalAvailableMethods((prev) => [...prev, methodToRemove.card]);
+    // Optimistically update UI
+    setOrganizationMethods((prev) => prev.filter((method) => method.id !== organizationMethodId));
+    setLocalAvailableMethods((prev) => [...prev, methodToRemove.card]);
 
-      // Send request to server
-      startTransition(() => {
-        removePaymentMethod(organizationId, organizationMethodId).then((result) => {
-          if (!result.success) {
-            // Revert optimistic updates on error
-            setOrganizationMethods((prev) => [...prev, methodToRemove]);
-            setLocalAvailableMethods((prev) =>
-              prev.filter((method) => method.id !== methodToRemove.card.id),
-            );
+    // Send request to server
+    startTransition(() => {
+      removePaymentMethod(organizationId, organizationMethodId).then((result) => {
+        if (!result.success) {
+          // Revert optimistic updates on error
+          setOrganizationMethods((prev) => [...prev, methodToRemove]);
+          setLocalAvailableMethods((prev) =>
+            prev.filter((method) => method.id !== methodToRemove.card.id),
+          );
 
-            toast({
-              title: "Error",
-              description: result.error || "Ha ocurrido un error al eliminar el método de pago.",
-              variant: "destructive",
-            });
-          }
-        });
+          toast({
+            title: "Error",
+            description: result.error || "Ha ocurrido un error al eliminar el método de pago.",
+            variant: "destructive",
+          });
+        }
       });
-    },
-    [organizationId, organizationMethods, toast],
-  );
+    });
+  };
 
   return (
     <div className="space-y-4">

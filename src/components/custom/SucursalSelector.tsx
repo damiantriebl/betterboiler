@@ -37,10 +37,9 @@ export function SucursalSelector({
 }: SucursalSelectorProps) {
   const [open, setOpen] = React.useState(false);
 
-  const selectedSucursal = React.useMemo(() => {
-    // Buscar por id (numérico)
+  const selectedSucursal = () => {
     return sucursales.find((s) => s.id === selectedSucursalId);
-  }, [selectedSucursalId, sucursales]);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -52,7 +51,7 @@ export function SucursalSelector({
           className={cn("w-full justify-between h-10", className)} // Asegurar altura consistente
         >
           <span className="truncate">
-            {selectedSucursal ? selectedSucursal.nombre : placeholder}
+            {selectedSucursal() ? selectedSucursal()?.nombre : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
