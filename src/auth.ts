@@ -11,11 +11,11 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   trustedOrigins: [
-    "http://localhost:3000", 
+    "http://localhost:3000",
     "http://localhost:3001",
     ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-    ...(process.env.PRODUCTION_URL ? [process.env.PRODUCTION_URL] : [])
+    ...(process.env.PRODUCTION_URL ? [process.env.PRODUCTION_URL] : []),
   ],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 días
