@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { mockSales } from "./mockSale";
+import { mockSales } from "./MockSale";
 
 export type Sale = {
   date: string;

@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
-import OrganizationTable from "@/components/admin/organizationTable";
-import UsersTable from "@/components/admin/userTable";
+import OrganizationTable from "@/components/admin/OrganizationTable";
+import UsersTable from "@/components/admin/UserTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import CreateOrganization from "./CreateOrEditOrganization";
+import CreateOrEditOrganization from "./CreateOrEditOrganization";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export default async function RootDashboard() {
         <div className="flex flex-col gap-2 mb-8">
           <h1 className="text-3xl font-bold">Root Dashboard</h1>
           <p className="text-muted-foreground">Para uso interno de APEX.com</p>
-          <CreateOrganization currentUserOrganizationId={currentUserOrganizationId} />
+          <CreateOrEditOrganization currentUserOrganizationId={currentUserOrganizationId} />
         </div>
 
         <Card>
