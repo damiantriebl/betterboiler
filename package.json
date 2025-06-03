@@ -165,5 +165,11 @@
 		"vite-tsconfig-paths": "^5.1.4",
 		"vitest": "^3.1.1",
 		"vitest-mock-extended": "^3.1.0"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@prisma/client",
+			"@prisma/engines"
+		]
 	}
 }

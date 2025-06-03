@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ExternalLink, AlertCircle, CheckCircle, Copy, Eye, EyeOff, CreditCard, Building } from 'lucide-react';
+import { Loader2, ExternalLink, AlertCircle, CheckCircle, Copy, Eye, EyeOff, CreditCard, Building, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TestMercadoPagoProps {
@@ -21,6 +21,7 @@ interface ConfigStatus {
     environment: 'sandbox' | 'production' | 'unknown';
     integrationMode: 'oauth' | 'direct' | 'incomplete';
     organizationConnected: boolean;
+    canConnectVendors: boolean;
 }
 
 export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps) {
@@ -39,6 +40,7 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
         const urlParams = new URLSearchParams(window.location.search);
         const mpSuccess = urlParams.get('mp_success');
         const mpError = urlParams.get('mp_error');
+        const errorDetail = urlParams.get('detail');
 
         if (mpSuccess === 'true') {
             toast({
@@ -57,11 +59,34 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
         }
 
         if (mpError) {
+            let errorMessage = `Error: ${mpError}`;
+            let errorSolution = '';
+
+            // Proporcionar soluciones específicas para errores comunes
+            switch (mpError) {
+                case 'token_exchange_failed':
+                    errorMessage = '🔧 Error de Intercambio de Token';
+                    errorSolution = errorDetail ?
+                        `Detalle: ${errorDetail}. Verifica que el Redirect URI esté configurado en MercadoPago: https://apex-one-lemon.vercel.app/api/configuration/mercadopago/callback` :
+                        'Verifica la configuración del Redirect URI en el panel de MercadoPago';
+                    break;
+                case 'no_code_received':
+                    errorMessage = '❌ No se recibió código OAuth';
+                    errorSolution = 'MercadoPago no envió el código de autorización. Intenta nuevamente.';
+                    break;
+                case 'no_session_or_organization':
+                    errorMessage = '👤 Error de Sesión';
+                    errorSolution = 'No hay sesión válida. Refresca la página e intenta nuevamente.';
+                    break;
+                default:
+                    errorSolution = 'Verifica la configuración en el panel de MercadoPago';
+            }
+
             toast({
-                title: "❌ Error OAuth",
-                description: `Error: ${mpError}`,
+                title: errorMessage,
+                description: errorSolution,
                 variant: "destructive",
-                duration: 7000,
+                duration: 10000,
             });
 
             // Limpiar URL
@@ -163,67 +188,149 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
         }
     };
 
-    const connectOrganization = async () => {
+    const connectToMercadoPago = async () => {
+        if (!configStatus?.canConnectVendors) {
+            setError('No se pueden conectar organizaciones. Verifica la configuración global.');
+            return;
+        }
+
         setLoading(true);
         setError(null);
-        setSuccess(null);
-        setDebugInfo(null);
 
         try {
-            console.log('🔧 Iniciando conexión OAuth para organización...');
-
             const response = await fetch('/api/configuration/mercadopago/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                console.log('🔗 Abriendo OAuth de MercadoPago:', data);
+
+                // Abrir OAuth en nueva ventana/pestaña
+                const authWindow = window.open(
+                    data.authUrl,
+                    'mercadopago-oauth',
+                    'width=600,height=700,scrollbars=yes,resizable=yes'
+                );
+
+                if (authWindow) {
+                    toast({
+                        title: "🔗 OAuth Iniciado",
+                        description: "Se abrió MercadoPago en nueva ventana. Completa la autorización.",
+                        duration: 8000,
+                    });
+                } else {
+                    // Fallback si el popup fue bloqueado
+                    window.location.href = data.authUrl;
+                }
+            } else {
+                setError(data.error || 'Error iniciando OAuth');
+            }
+        } catch (error) {
+            setError(`Error conectando con MercadoPago: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const forceLogoutAndReconnect = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            // Paso 1: Desconectar la organización actual
+            const disconnectResponse = await fetch('/api/configuration/mercadopago/disconnect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!disconnectResponse.ok) {
+                throw new Error('Error desconectando MercadoPago');
+            }
+
+            toast({
+                title: "🔌 Desconectado",
+                description: "Organización desconectada de MercadoPago",
+                duration: 3000,
+            });
+
+            // Paso 2: Conectar con logout forzado
+            const connectResponse = await fetch('/api/configuration/mercadopago/connect', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    organizationId,
-                    webhookUrl: `${window.location.origin}/api/webhooks/mercadopago/${organizationId}`,
-                    notificationUrl: `${window.location.origin}/api/notifications/mercadopago/${organizationId}`
+                    forceLogout: true
                 })
             });
 
-            const responseText = await response.text();
+            const connectData = await connectResponse.json();
 
-            if (response.ok) {
-                const data = JSON.parse(responseText);
-                setSuccess('✅ URL de conexión generada');
-                setDebugInfo(data);
+            if (connectResponse.ok && connectData.success) {
+                console.log('🔗 Abriendo OAuth de MercadoPago con logout forzado:', connectData.authUrl);
 
-                if (data.authUrl) {
-                    console.log('🚀 Abriendo URL de autorización de Mercado Pago...');
+                // Abrir OAuth en nueva ventana
+                const authWindow = window.open(
+                    connectData.authUrl,
+                    'mercadopago-oauth-logout',
+                    'width=600,height=700,scrollbars=yes,resizable=yes'
+                );
 
-                    // Mostrar instrucciones antes de abrir la ventana
+                if (authWindow) {
                     toast({
-                        title: "Abriendo MercadoPago",
-                        description: "Se abre en nueva pestaña. Si hay error 400, verifica la configuración del callback.",
-                        duration: 5000,
+                        title: "🔗 Reconectando...",
+                        description: "Se abrió MercadoPago con logout forzado. Si persiste la misma cuenta, prueba las opciones manuales.",
+                        duration: 10000,
                     });
-
-                    // Abrir en nueva pestaña
-                    const newWindow = window.open(data.authUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-
-                    if (!newWindow) {
-                        toast({
-                            title: "Bloqueador de ventanas",
-                            description: "Permite ventanas emergentes y vuelve a intentar",
-                            variant: "destructive"
-                        });
-                    }
+                } else {
+                    // Fallback si el popup fue bloqueado
+                    window.location.href = connectData.authUrl;
                 }
             } else {
-                const errorData = JSON.parse(responseText);
-                setError(`❌ Error OAuth: ${errorData.error}`);
-                setDebugInfo(errorData);
+                throw new Error(connectData.error || 'Error iniciando OAuth');
             }
 
         } catch (error) {
-            console.error('💥 Error OAuth:', error);
-            setError(`💥 Error OAuth: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            setError(`Error reconectando: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
+    };
+
+    const manualLogoutInstructions = () => {
+        const instructions = [
+            "🌐 Logout desde MercadoPago:",
+            "1. Ir a mercadopago.com → Cerrar sesión",
+            "2. Esperar 30 segundos y reconectar",
+            "",
+            "🔒 Navegador Incógnito:",
+            "1. Abrir ventana incógnita/privada",
+            "2. Ir a tu app y conectar desde ahí",
+            "",
+            "🧹 Limpiar Cookies:",
+            "1. DevTools (F12) → Application",
+            "2. Storage → Cookies → mercadopago.com",
+            "3. Eliminar todas las cookies de MP",
+            "",
+            "⚡ Solución Rápida:",
+            "1. Ctrl+Shift+Del → Cookies del último día",
+            "2. Reiniciar navegador y conectar",
+            "",
+            `🎯 URL Callback: ${window.location.origin}/api/configuration/mercadopago/callback`
+        ].join('\n');
+
+        toast({
+            title: "🔧 Soluciones para Logout de MercadoPago",
+            description: instructions,
+            duration: 15000,
+        });
     };
 
     const copyToClipboard = (text: string) => {
@@ -362,70 +469,135 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
                     Organización ID: <code>{organizationId}</code>
                 </div>
 
-                {/* Botones de acción según configuración */}
-                <div className="flex gap-2 flex-wrap">
-                    {configStatus?.hasGlobalAccessToken && (
-                        <Button
-                            onClick={testGlobalCredentials}
-                            disabled={loading}
-                            variant="outline"
-                        >
-                            {loading ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {/* Sección OAuth */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-gray-900">🏢 Estado OAuth</h4>
+                        <div className="flex items-center gap-2">
+                            {configStatus?.organizationConnected ? (
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm text-green-600">Conectado</span>
+                                </div>
                             ) : (
-                                <CheckCircle className="h-4 w-4 mr-2" />
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                                    <span className="text-sm text-orange-600">No conectado</span>
+                                </div>
                             )}
-                            1. Validar Credenciales Globales
-                        </Button>
-                    )}
-
-                    {configStatus?.integrationMode === 'direct' && (
-                        <>
                             <Button
-                                onClick={testDirectPayment}
+                                variant="outline"
+                                size="sm"
+                                onClick={checkConfiguration}
                                 disabled={loading}
-                                className="bg-green-500 hover:bg-green-600"
                             >
-                                {loading ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                    <CreditCard className="h-4 w-4 mr-2" />
-                                )}
-                                2. Test Pago Directo
+                                🔄
                             </Button>
+                        </div>
+                    </div>
 
-                            {!configStatus.organizationConnected && (
+                    {configStatus?.organizationConnected ? (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                            <p className="text-sm text-green-700">
+                                ✅ Esta organización está conectada a MercadoPago y puede procesar pagos como marketplace.
+                            </p>
+                            <div className="flex gap-2">
                                 <Button
-                                    onClick={connectOrganization}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={forceLogoutAndReconnect}
                                     disabled={loading}
-                                    className="bg-blue-500 hover:bg-blue-600"
+                                >
+                                    🔄 Reconectar
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={manualLogoutInstructions}
+                                >
+                                    🔧 Ayuda Logout
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                            <div className="space-y-2">
+                                <p className="text-sm text-orange-700">
+                                    <strong>⚠️ Siguiente paso:</strong> Conectar esta organización a MercadoPago
+                                </p>
+                                <ul className="text-sm text-orange-600 list-disc list-inside space-y-1">
+                                    <li>Conectar organizaciones para marketplace</li>
+                                    <li>Procesar pagos de terceros</li>
+                                    <li>Comisiones automáticas</li>
+                                </ul>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={connectToMercadoPago}
+                                    disabled={loading || !configStatus?.canConnectVendors}
+                                    size="sm"
+                                >
+                                    {loading ? 'Conectando...' : '🔗 Conectar Organización'}
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={forceLogoutAndReconnect}
+                                    disabled={loading}
+                                >
+                                    🔄 Reconectar (Logout)
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={manualLogoutInstructions}
+                                >
+                                    🔧 Ayuda Logout
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Botones de acción según configuración */}
+                {configStatus && (
+                    <div className="flex flex-wrap gap-3">
+                        {(configStatus.hasGlobalAccessToken && configStatus.hasGlobalPublicKey) && (
+                            <>
+                                <Button
+                                    onClick={testGlobalCredentials}
+                                    disabled={loading}
+                                    variant="outline"
+                                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                 >
                                     {loading ? (
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                     ) : (
-                                        <Building className="h-4 w-4 mr-2" />
+                                        <CheckCircle className="h-4 w-4 mr-2" />
                                     )}
-                                    3. Conectar Organización
+                                    1. Test Credenciales
                                 </Button>
-                            )}
-                        </>
-                    )}
 
-                    {configStatus?.integrationMode === 'oauth' && (
-                        <Button
-                            onClick={testDirectPayment}
-                            disabled={loading}
-                            className="bg-green-500 hover:bg-green-600"
-                        >
-                            {loading ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                                <CreditCard className="h-4 w-4 mr-2" />
-                            )}
-                            Test Pago (Marketplace)
-                        </Button>
-                    )}
-                </div>
+                                <Button
+                                    onClick={testDirectPayment}
+                                    disabled={loading}
+                                    variant="outline"
+                                    className="border-green-500 text-green-600 hover:bg-green-50"
+                                >
+                                    {loading ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <CreditCard className="h-4 w-4 mr-2" />
+                                    )}
+                                    2. Test Pago Directo
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {/* Alerts de estado */}
                 {error && (

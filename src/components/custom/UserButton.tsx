@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton"; // Para el estado de carga
 
-import { signOutAction } from "@/actions/auth/sign-out";
+import { authClient } from "@/auth-client";
 import { useSessionStore } from "@/stores/SessionStore";
 import { useRouter } from "next/navigation";
 import AvatarUser from "./AvatarUser";
@@ -27,19 +27,31 @@ export function UserButton() {
   const userImage = useSessionStore((state) => state.userImage);
   const clearSession = useSessionStore((state) => state.clearSession);
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
-      // Limpiar el session store local inmediatamente
+      console.log(`🚪 [USER BUTTON] Iniciando logout completo...`);
+
+      // 1. Limpiar el store de Zustand
       clearSession();
 
-      // Llamar a la server action
-      await signOutAction();
-    } catch (error) {
-      console.error("Error during sign out:", error);
+      // 2. Limpiar localStorage completo para evitar estados inconsistentes
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('session-store');
+        console.log(`🧹 [USER BUTTON] localStorage limpiado`);
+      }
 
-      // Si hay error, redirigir manualmente
-      router.push("/sign-in");
-      router.refresh();
+      // 3. Hacer logout en Better Auth
+      await authClient.signOut();
+      console.log(`✅ [USER BUTTON] Logout de Better Auth completado`);
+
+      // 4. Redirigir con recarga completa para limpiar cualquier estado residual
+      window.location.href = '/sign-in';
+
+    } catch (error) {
+      console.error(`❌ [USER BUTTON] Error durante logout:`, error);
+
+      // Fallback: redirigir con recarga forzada
+      window.location.href = '/sign-in';
     }
   };
 
@@ -66,7 +78,7 @@ export function UserButton() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Cerrar sesión</span>
         </DropdownMenuItem>

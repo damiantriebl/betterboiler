@@ -1,172 +1,218 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const error = url.searchParams.get('error');
+  const state = url.searchParams.get('state');
+
+  console.log('🔄 [OAUTH CALLBACK] Callback recibido:', {
+    hasCode: !!code,
+    hasError: !!error,
+    error,
+    hasState: !!state,
+    state,
+    fullURL: request.url,
+    searchParams: Object.fromEntries(url.searchParams.entries())
+  });
+
+  // Verificar si viene con error de MercadoPago
+  if (error) {
+    console.error('❌ [OAUTH CALLBACK] Error de MercadoPago:', error);
+    return NextResponse.redirect(
+      `${process.env.BASE_URL}/configuration?mp_error=${encodeURIComponent(error)}`
+    );
+  }
+
+  // Verificar que tenemos el código
+  if (!code) {
+    console.error('❌ [OAUTH CALLBACK] No se recibió código OAuth');
+    return NextResponse.redirect(
+      `${process.env.BASE_URL}/configuration?mp_error=no_code_received`
+    );
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const error = searchParams.get('error');
+    // Obtener la sesión actual
+    const session = await auth.api.getSession({
+      headers: request.headers
+    });
 
-    // Verificar si hubo un error en la autorización
-    if (error) {
-      console.error('Error en autorización OAuth:', error);
+    console.log('👤 [OAUTH CALLBACK] Sesión verificada:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      hasOrganizationId: !!session?.user?.organizationId,
+      userId: session?.user?.id,
+      organizationId: session?.user?.organizationId
+    });
+
+    if (!session?.user?.organizationId) {
+      console.error('❌ [OAUTH CALLBACK] No hay sesión u organización válida');
       return NextResponse.redirect(
-        `${process.env.BASE_URL || 'http://localhost:3001'}/configuration?mp_error=${encodeURIComponent(error)}`
+        `${process.env.BASE_URL}/configuration?mp_error=no_session_or_organization`
       );
     }
 
-    // Verificar que tenemos el código de autorización
-    if (!code || !state) {
-      console.error('Faltan parámetros requeridos:', { code: !!code, state: !!state });
+    // Intercambiar código por token con logging detallado
+    const tokenResult = await exchangeCodeForToken(code);
+    
+    if (!tokenResult.success) {
+      console.error('❌ [OAUTH CALLBACK] Falló intercambio de token:', tokenResult.error);
       return NextResponse.redirect(
-        `${process.env.BASE_URL || 'http://localhost:3001'}/configuration?mp_error=missing_params`
+        `${process.env.BASE_URL}/configuration?mp_error=token_exchange_failed&detail=${encodeURIComponent(tokenResult.error || 'unknown')}`
       );
     }
 
-    // Extraer organizationId del state
-    const [organizationId] = state.split('-');
-    if (!organizationId) {
-      console.error('State inválido:', state);
-      return NextResponse.redirect(
-        `${process.env.BASE_URL || 'http://localhost:3001'}/configuration?mp_error=invalid_state`
-      );
-    }
+    console.log('✅ [OAUTH CALLBACK] Token obtenido exitosamente:', {
+      hasAccessToken: !!tokenResult.accessToken,
+      hasRefreshToken: !!tokenResult.refreshToken,
+      userEmail: tokenResult.userInfo?.email
+    });
 
-    // Intercambiar código por access token
-    const tokenResponse = await exchangeCodeForToken(code);
-    if (!tokenResponse.success) {
-      console.error('Error intercambiando código por token:', tokenResponse.error);
-      return NextResponse.redirect(
-        `${process.env.BASE_URL || 'http://localhost:3001'}/configuration?mp_error=token_exchange_failed`
-      );
-    }
-
-    // Obtener información del usuario de Mercado Pago
-    const userInfo = await getMercadoPagoUserInfo(tokenResponse.data.access_token);
-    if (!userInfo.success) {
-      console.error('Error obteniendo información del usuario:', userInfo.error);
-      return NextResponse.redirect(
-        `${process.env.BASE_URL || 'http://localhost:3001'}/configuration?mp_error=user_info_failed`
-      );
-    }
-
-    // Guardar o actualizar la configuración OAuth en la base de datos
+    // Guardar en la base de datos
     await prisma.mercadoPagoOAuth.upsert({
       where: {
-        organizationId: organizationId
+        organizationId: session.user.organizationId
       },
       update: {
-        mercadoPagoUserId: userInfo.data.id.toString(),
-        accessToken: tokenResponse.data.access_token,
-        refreshToken: tokenResponse.data.refresh_token || null,
-        email: userInfo.data.email,
-        publicKey: tokenResponse.data.public_key || null,
-        scopes: tokenResponse.data.scope ? tokenResponse.data.scope.split(' ') : [],
-        expiresAt: tokenResponse.data.expires_in 
-          ? new Date(Date.now() + tokenResponse.data.expires_in * 1000) 
-          : null,
+        accessToken: tokenResult.accessToken,
+        refreshToken: tokenResult.refreshToken,
+        email: tokenResult.userInfo?.email,
+        mercadoPagoUserId: tokenResult.userInfo?.id?.toString(),
+        expiresAt: tokenResult.expiresIn ? 
+          new Date(Date.now() + tokenResult.expiresIn * 1000) : undefined,
         updatedAt: new Date()
       },
       create: {
-        organizationId: organizationId,
-        mercadoPagoUserId: userInfo.data.id.toString(),
-        accessToken: tokenResponse.data.access_token,
-        refreshToken: tokenResponse.data.refresh_token || null,
-        email: userInfo.data.email,
-        publicKey: tokenResponse.data.public_key || null,
-        scopes: tokenResponse.data.scope ? tokenResponse.data.scope.split(' ') : [],
-        expiresAt: tokenResponse.data.expires_in 
-          ? new Date(Date.now() + tokenResponse.data.expires_in * 1000) 
-          : null
+        organizationId: session.user.organizationId,
+        accessToken: tokenResult.accessToken!,
+        refreshToken: tokenResult.refreshToken,
+        email: tokenResult.userInfo?.email || 'unknown@example.com',
+        mercadoPagoUserId: tokenResult.userInfo?.id?.toString() || 'unknown',
+        expiresAt: tokenResult.expiresIn ? 
+          new Date(Date.now() + tokenResult.expiresIn * 1000) : undefined
       }
     });
 
-    console.log('✅ OAuth de Mercado Pago configurado exitosamente para organización:', organizationId);
+    console.log('✅ [OAUTH CALLBACK] Configuración OAuth guardada en BD');
 
-    // Redirigir de vuelta a la página de configuración con éxito
+    // Redirigir con éxito
     return NextResponse.redirect(
-      `${process.env.BASE_URL || 'http://localhost:3001'}/configuration?mp_success=true`
+      `${process.env.BASE_URL}/configuration?mp_success=true`
     );
 
   } catch (error) {
-    console.error('Error en callback OAuth:', error);
+    console.error('💥 [OAUTH CALLBACK] Error general:', error);
     return NextResponse.redirect(
-      `${process.env.BASE_URL || 'http://localhost:3001'}/configuration?mp_error=internal_error`
+      `${process.env.BASE_URL}/configuration?mp_error=callback_error&detail=${encodeURIComponent(error instanceof Error ? error.message : 'unknown_error')}`
     );
   }
 }
 
 async function exchangeCodeForToken(code: string) {
   try {
-    const clientId = process.env.MERCADOPAGO_CLIENT_ID;
-    const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET;
-    const baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
-    const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/configuration/mercadopago/callback`;
+    console.log('🔄 [OAUTH] Intercambiando código por token...', {
+      code: code.substring(0, 10) + '...',
+      clientId: process.env.MERCADOPAGO_CLIENT_ID ? 'CONFIGURADO' : 'NO CONFIGURADO',
+      clientSecret: process.env.MERCADOPAGO_CLIENT_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO',
+      redirectUri: `${process.env.BASE_URL}/api/configuration/mercadopago/callback`
+    });
 
-    const response = await fetch('https://api.mercadopago.com/oauth/token', {
+    const tokenResponse = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: new URLSearchParams({
-        client_id: clientId!,
-        client_secret: clientSecret!,
-        grant_type: 'authorization_code',
+        client_id: process.env.MERCADOPAGO_CLIENT_ID!,
+        client_secret: process.env.MERCADOPAGO_CLIENT_SECRET!,
         code: code,
-        redirect_uri: redirectUri
+        grant_type: 'authorization_code',
+        redirect_uri: `${process.env.BASE_URL}/api/configuration/mercadopago/callback`
       })
     });
 
-    const data = await response.json();
+    const tokenData = await tokenResponse.json();
 
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || 'Error intercambiando código por token'
-      };
-    }
-
-    return {
-      success: true,
-      data
-    };
-
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
-    };
-  }
-}
-
-async function getMercadoPagoUserInfo(accessToken: string) {
-  try {
-    const response = await fetch('https://api.mercadopago.com/users/me', {
+    console.log('🔍 [OAUTH] Respuesta de intercambio:', {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      ok: tokenResponse.ok,
       headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
+        contentType: tokenResponse.headers.get('content-type'),
+        contentLength: tokenResponse.headers.get('content-length')
+      },
+      dataKeys: Object.keys(tokenData || {}),
+      hasAccessToken: !!tokenData?.access_token,
+      hasError: !!tokenData?.error
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
+    if (!tokenResponse.ok) {
+      const errorDetail = tokenData?.error_description || tokenData?.message || tokenData?.error || `HTTP ${tokenResponse.status}`;
+      console.error('❌ [OAUTH] Error en respuesta de MercadoPago:', {
+        status: tokenResponse.status,
+        data: tokenData,
+        errorDetail
+      });
+      
       return {
         success: false,
-        error: data.error || 'Error obteniendo información del usuario'
+        error: errorDetail,
+        httpStatus: tokenResponse.status,
+        fullResponse: tokenData
       };
+    }
+
+    if (!tokenData?.access_token) {
+      console.error('❌ [OAUTH] No se recibió access_token en respuesta válida:', tokenData);
+      return {
+        success: false,
+        error: 'No access_token in response',
+        fullResponse: tokenData
+      };
+    }
+
+    // Obtener información del usuario
+    let userInfo = null;
+    try {
+      const userResponse = await fetch('https://api.mercadopago.com/users/me', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`
+        }
+      });
+      
+      if (userResponse.ok) {
+        userInfo = await userResponse.json();
+        console.log('👤 [OAUTH] Info del usuario obtenida:', {
+          email: userInfo?.email,
+          id: userInfo?.id,
+          siteId: userInfo?.site_id
+        });
+      } else {
+        console.warn('⚠️ [OAUTH] No se pudo obtener info del usuario:', userResponse.status);
+      }
+    } catch (error) {
+      console.warn('⚠️ [OAUTH] Error obteniendo info del usuario:', error);
     }
 
     return {
       success: true,
-      data
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      tokenType: tokenData.token_type,
+      expiresIn: tokenData.expires_in,
+      userInfo
     };
 
   } catch (error) {
+    console.error('💥 [OAUTH] Error en intercambio de token:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      exception: error
     };
   }
 } 
