@@ -197,7 +197,7 @@ export default function PaymentMethodStep({
     moto?.currency || "USD", // totalCurrency
     isReserved ? reservationAmount : 0, // reservationAmount
     reservationCurrency, // reservationCurrency
-    // exchangeRate no se pasa, se usará undefined
+    1, // exchangeRate por defecto - se puede mejorar con tipo de cambio real
   );
 
   // Si hay un downPayment, réstalo del monto después de la reserva

@@ -37,11 +37,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('🎯 [CREATE-PREFERENCE] Iniciando para organización:', {
+      organizationId: session.user.organizationId,
+      amount,
+      description,
+      motorcycleId,
+      saleId
+    });
+
     // Obtener configuración OAuth de la organización
     const oauthConfig = await prisma.mercadoPagoOAuth.findUnique({
       where: {
         organizationId: session.user.organizationId
       }
+    });
+
+    console.log('🔍 [CREATE-PREFERENCE] Configuración encontrada:', {
+      organizationId: session.user.organizationId,
+      configExists: !!oauthConfig,
+      hasAccessToken: !!oauthConfig?.accessToken,
+      hasPublicKey: !!oauthConfig?.publicKey,
+      publicKeyType: typeof oauthConfig?.publicKey,
+      accessTokenType: typeof oauthConfig?.accessToken,
+      publicKeyLength: oauthConfig?.publicKey?.length || 0,
+      accessTokenLength: oauthConfig?.accessToken?.length || 0,
     });
 
     if (!oauthConfig?.accessToken || !oauthConfig?.publicKey) {

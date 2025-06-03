@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Payment, initMercadoPago } from '@mercadopago/sdk-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,12 +42,19 @@ export default function MercadoPagoBrick({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
+    const initializationRef = useRef(false); // Ref para evitar inicialización múltiple
     const { toast } = useToast();
 
-    // Inicializar SDK y crear preferencia
+    // Inicializar SDK y crear preferencia - SOLO UNA VEZ
     useEffect(() => {
+        // Evitar re-inicialización si ya se está ejecutando
+        if (initializationRef.current || !amount || amount <= 0 || !description) {
+            return;
+        }
+
         const initializePayment = async () => {
             try {
+                initializationRef.current = true; // Marcar como en proceso
                 setIsLoading(true);
                 setError(null);
 
@@ -109,14 +116,12 @@ export default function MercadoPagoBrick({
                 });
             } finally {
                 setIsLoading(false);
+                initializationRef.current = false; // Permitir reintento
             }
         };
 
-        // Solo inicializar si tenemos los datos necesarios
-        if (amount > 0 && description) {
-            initializePayment();
-        }
-    }, [amount, description, motorcycleId, saleId, toast]);
+        initializePayment();
+    }, []); // DEPENDENCIAS VACÍAS - solo ejecutar una vez al montar
 
     // Configuración del Payment Brick
     const initialization = {
