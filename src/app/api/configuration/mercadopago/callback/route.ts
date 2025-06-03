@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Intercambiar código por token con logging detallado
-    const tokenResult = await exchangeCodeForToken(code);
+    const tokenResult = await exchangeCodeForToken(code, request);
     
     if (!tokenResult.success) {
       console.error('❌ [OAUTH CALLBACK] Falló intercambio de token:', tokenResult.error);
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function exchangeCodeForToken(code: string) {
+async function exchangeCodeForToken(code: string, request: NextRequest) {
   try {
     console.log('🔄 [OAUTH] Intercambiando código por token...', {
       code: code.substring(0, 10) + '...',
@@ -122,7 +122,7 @@ async function exchangeCodeForToken(code: string) {
 
     // Obtener la sesión para obtener organizationId
     const session = await auth.api.getSession({
-      headers: {} // Esto necesita mejorarse, pero por ahora usaremos el contexto global
+      headers: request.headers
     });
 
     if (!session?.user?.organizationId) {
