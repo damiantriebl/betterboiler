@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
         email: tokenResult.userInfo?.email,
         mercadoPagoUserId: tokenResult.userInfo?.id?.toString(),
         publicKey: tokenResult.publicKey,
+        scopes: tokenResult.scope ? tokenResult.scope.split(' ') : ['read', 'write', 'offline_access'],
         expiresAt: tokenResult.expiresIn ? 
           new Date(Date.now() + tokenResult.expiresIn * 1000) : undefined,
         updatedAt: new Date()
@@ -93,6 +94,7 @@ export async function GET(request: NextRequest) {
         email: tokenResult.userInfo?.email || 'unknown@example.com',
         mercadoPagoUserId: tokenResult.userInfo?.id?.toString() || 'unknown',
         publicKey: tokenResult.publicKey,
+        scopes: tokenResult.scope ? tokenResult.scope.split(' ') : ['read', 'write', 'offline_access'],
         expiresAt: tokenResult.expiresIn ? 
           new Date(Date.now() + tokenResult.expiresIn * 1000) : undefined
       }
@@ -329,7 +331,8 @@ async function exchangeCodeForToken(code: string, request: NextRequest) {
       hasAccessToken: !!tokenData.access_token,
       hasPublicKey: !!publicKey,
       publicKeyType: typeof publicKey,
-      userEmail: userInfo?.email
+      userEmail: userInfo?.email,
+      scope: tokenData.scope || 'no_scope_in_response'
     });
 
     return {
@@ -338,6 +341,7 @@ async function exchangeCodeForToken(code: string, request: NextRequest) {
       refreshToken: tokenData.refresh_token,
       tokenType: tokenData.token_type,
       expiresIn: tokenData.expires_in,
+      scope: tokenData.scope,
       userInfo,
       publicKey
     };

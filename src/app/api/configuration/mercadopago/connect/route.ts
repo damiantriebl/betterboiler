@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
       codeChallenge: pkcePair.codeChallenge,
       codeChallengeMethod: pkcePair.codeChallengeMethod,
       state: session.user.organizationId, // Para validar en el callback
+      scope: 'read write offline_access' // ✅ Agregar scopes necesarios
     });
 
     // Agregar parámetros de logout forzado si se solicitó
@@ -160,6 +161,7 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set('platform_id', 'mp'); 
     authUrl.searchParams.set('state', session.user.organizationId || 'default');
     authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('scope', 'read write offline_access'); // ✅ Agregar scopes necesarios
 
     console.log('🔗 [OAUTH] URL de autorización generada:', {
       authUrl: authUrl.toString(),
