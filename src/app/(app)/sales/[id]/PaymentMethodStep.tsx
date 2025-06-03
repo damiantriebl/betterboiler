@@ -18,7 +18,7 @@ import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { OrganizationPaymentMethodDisplay } from "@/types/payment-methods";
 import { Check, Loader2 } from "lucide-react";
 import CurrentAccountPaymentFields from "./CurrentAccountPaymentFields";
-import MercadoPagoBricks from "@/components/custom/MercadoPagoBricks";
+import MercadoPagoBrick from "@/components/custom/MercadoPagoBrick";
 import type { MotorcycleWithRelations, PaymentFormData } from "./types";
 import {
   calculateFinalPrice,
@@ -519,25 +519,29 @@ export default function PaymentMethodStep({
                       paymentData?.mercadopagoPayerLastName &&
                       paymentData?.mercadopagoPayerDocument && (
                         <div className="mt-4">
-                          <MercadoPagoBricks
-                            organizationId={moto?.organizationId || ''}
+                          <MercadoPagoBrick
                             amount={remainingAmount}
                             description={paymentData?.mercadopagoDescription || `Motocicleta ${moto?.brand?.name || ''} ${moto?.model?.name || ''}`}
-                            payerInfo={{
+                            motorcycleId={moto?.id}
+                            saleId={`sale-${Date.now()}`}
+                            additionalInfo={{
+                              brand: moto?.brand?.name,
+                              model: moto?.model?.name,
+                              year: moto?.year
+                            }}
+                            buyerData={{
                               email: paymentData.mercadopagoPayerEmail,
                               firstName: paymentData.mercadopagoPayerFirstName,
                               lastName: paymentData.mercadopagoPayerLastName,
-                              identification: {
-                                type: 'DNI', // Puedes hacer esto configurable si es necesario
-                                number: paymentData.mercadopagoPayerDocument
-                              }
+                              dni: paymentData.mercadopagoPayerDocument
                             }}
                             onPaymentSuccess={(paymentData: any) => {
-                              console.log('Pago exitoso:', paymentData);
+                              console.log('✅ [PaymentMethodStep] Pago exitoso:', paymentData);
                               // Aquí puedes manejar el éxito del pago
+                              // Por ejemplo, avanzar al siguiente paso
                             }}
                             onPaymentError={(error: any) => {
-                              console.error('Error en pago:', error);
+                              console.error('❌ [PaymentMethodStep] Error en pago:', error);
                               // Aquí puedes manejar errores
                             }}
                           />

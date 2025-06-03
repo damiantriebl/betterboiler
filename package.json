@@ -77,6 +77,7 @@
 		"@dnd-kit/sortable": "^10.0.0",
 		"@dnd-kit/utilities": "^3.2.2",
 		"@hookform/resolvers": "^3.10.0",
+		"@mercadopago/sdk-react": "^1.0.3",
 		"@prisma/client": "^6.7.0",
 		"@radix-ui/react-accordion": "^1.2.8",
 		"@radix-ui/react-alert-dialog": "^1.1.6",

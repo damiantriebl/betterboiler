@@ -239,21 +239,69 @@ async function exchangeCodeForToken(code: string, request: NextRequest) {
         // Obtener la public key del usuario
         if (userInfo?.id) {
           try {
-            const credentialsResponse = await fetch(`https://api.mercadopago.com/users/${userInfo.id}/mercadopago_credentials`, {
+            // Intentar obtener las aplicaciones del usuario
+            const appsResponse = await fetch(`https://api.mercadopago.com/users/${userInfo.id}/mercadopago_account/applications`, {
               headers: {
                 'Authorization': `Bearer ${tokenData.access_token}`
               }
             });
 
-            if (credentialsResponse.ok) {
-              const credentials = await credentialsResponse.json();
-              publicKey = credentials.public_key;
-              console.log('🔑 [OAUTH] Public key obtenida:', {
-                hasPublicKey: !!publicKey,
-                publicKeyPrefix: publicKey ? publicKey.substring(0, 20) + '...' : null
-              });
+            console.log('🔍 [OAUTH] Apps response status:', appsResponse.status);
+
+            if (appsResponse.ok) {
+              const appsData = await appsResponse.json();
+              console.log('📱 [OAUTH] Apps data estructura completa:', JSON.stringify(appsData, null, 2));
+              
+              // Buscar la aplicación actual usando CLIENT_ID
+              const currentApp = appsData.find((app: any) => 
+                app.id?.toString() === process.env.MERCADOPAGO_CLIENT_ID
+              );
+
+              if (currentApp?.public_key) {
+                publicKey = currentApp.public_key;
+                console.log('🔑 [OAUTH] Public key obtenida de aplicación:', {
+                  hasPublicKey: !!publicKey,
+                  publicKeyType: typeof publicKey,
+                  publicKeyPrefix: typeof publicKey === 'string' ? publicKey.substring(0, 20) + '...' : 'NOT_STRING'
+                });
+              } else {
+                console.warn('⚠️ [OAUTH] No se encontró aplicación actual o public_key en:', {
+                  clientId: process.env.MERCADOPAGO_CLIENT_ID,
+                  foundApps: appsData.length,
+                  currentApp: !!currentApp
+                });
+              }
             } else {
-              console.warn('⚠️ [OAUTH] No se pudo obtener credentials:', credentialsResponse.status);
+              console.warn('⚠️ [OAUTH] Error obteniendo apps:', appsResponse.status);
+              
+              // Fallback: intentar el endpoint de credentials
+              const credentialsResponse = await fetch(`https://api.mercadopago.com/users/${userInfo.id}/mercadopago_credentials`, {
+                headers: {
+                  'Authorization': `Bearer ${tokenData.access_token}`
+                }
+              });
+
+              if (credentialsResponse.ok) {
+                const credentials = await credentialsResponse.json();
+                console.log('🔍 [OAUTH] Credentials estructura completa:', JSON.stringify(credentials, null, 2));
+                
+                // Manejar diferentes estructuras posibles
+                if (typeof credentials.public_key === 'string') {
+                  publicKey = credentials.public_key;
+                } else if (credentials.public_key?.key) {
+                  publicKey = credentials.public_key.key;
+                } else if (Array.isArray(credentials) && credentials[0]?.public_key) {
+                  publicKey = credentials[0].public_key;
+                }
+                
+                console.log('🔑 [OAUTH] Public key extraída de credentials:', {
+                  hasPublicKey: !!publicKey,
+                  publicKeyType: typeof publicKey,
+                  publicKeyPrefix: typeof publicKey === 'string' ? publicKey.substring(0, 20) + '...' : 'NOT_STRING'
+                });
+              } else {
+                console.warn('⚠️ [OAUTH] No se pudo obtener credentials tampoco:', credentialsResponse.status);
+              }
             }
           } catch (error) {
             console.warn('⚠️ [OAUTH] Error obteniendo public key:', error);
@@ -267,6 +315,22 @@ async function exchangeCodeForToken(code: string, request: NextRequest) {
     }
 
     console.log('✅ [OAUTH] Intercambio PKCE exitoso con MercadoPago');
+
+    // Validación final de public key
+    if (publicKey && typeof publicKey !== 'string') {
+      console.error('❌ [OAUTH] Public key no es string:', {
+        publicKeyType: typeof publicKey,
+        publicKeyValue: publicKey
+      });
+      publicKey = null;
+    }
+
+    console.log('🔍 [OAUTH] Resultado final:', {
+      hasAccessToken: !!tokenData.access_token,
+      hasPublicKey: !!publicKey,
+      publicKeyType: typeof publicKey,
+      userEmail: userInfo?.email
+    });
 
     return {
       success: true,
