@@ -34,6 +34,39 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
 
     useEffect(() => {
         checkConfiguration();
+
+        // Detectar si venimos del callback de MercadoPago
+        const urlParams = new URLSearchParams(window.location.search);
+        const mpSuccess = urlParams.get('mp_success');
+        const mpError = urlParams.get('mp_error');
+
+        if (mpSuccess === 'true') {
+            toast({
+                title: "✅ OAuth Exitoso",
+                description: "Conexión con MercadoPago completada, actualizando estado...",
+                duration: 5000,
+            });
+
+            // Refrescar estado después de un momento para asegurar que la BD se actualizó
+            setTimeout(() => {
+                checkConfiguration();
+            }, 2000);
+
+            // Limpiar URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        if (mpError) {
+            toast({
+                title: "❌ Error OAuth",
+                description: `Error: ${mpError}`,
+                variant: "destructive",
+                duration: 7000,
+            });
+
+            // Limpiar URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }, []);
 
     const checkConfiguration = async () => {
@@ -244,12 +277,23 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    🧪 Test Mercado Pago
-                    <Badge variant="outline">
-                        {configStatus?.environment === 'sandbox' ? 'Sandbox' :
-                            configStatus?.environment === 'production' ? 'Production' : 'Sin configurar'}
-                    </Badge>
+                <CardTitle className="flex items-center gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                        🧪 Test Mercado Pago
+                        <Badge variant="outline">
+                            {configStatus?.environment === 'sandbox' ? 'Sandbox' :
+                                configStatus?.environment === 'production' ? 'Production' : 'Sin configurar'}
+                        </Badge>
+                    </div>
+                    <Button
+                        onClick={checkConfiguration}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Actualizar estado"
+                    >
+                        🔄
+                    </Button>
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
