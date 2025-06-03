@@ -36,16 +36,8 @@ export async function POST(request: NextRequest) {
       payer: {
         email: body.payer?.email || 'test@testuser.com'
       },
-      // Para testing en sandbox, usamos datos de tarjeta directos
-      card: {
-        number: '4509953566233704',
-        security_code: '123',
-        expiration_month: 11,
-        expiration_year: 2030,
-        cardholder: {
-          name: 'APRO'
-        }
-      },
+      // Para testing en sandbox - usar approach simplificado
+      token: 'ff8080814c11e237014c1ff593b57b4d', // Token de testing válido para sandbox
       installments: 1,
       metadata: {
         organization_id: organizationId,
@@ -86,7 +78,7 @@ export async function POST(request: NextRequest) {
         message: 'Pago de prueba creado exitosamente en sandbox',
         test_data: {
           environment: 'sandbox',
-          token_used: 'card_token_example',
+          token_used: 'ff8080814c11e237014c1ff593b57b4d',
           organization_id: organizationId
         }
       });
