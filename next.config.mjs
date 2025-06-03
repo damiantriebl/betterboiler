@@ -72,7 +72,7 @@ const nextConfig = {
           // 🔒 MITIGACIÓN: Headers para extensiones Chrome problemáticas
           {
             key: 'Content-Security-Policy',
-            value: "script-src 'self' 'unsafe-inline' 'unsafe-eval'; object-src 'none'; base-uri 'self';"
+            value: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com https://js.mercadopago.com https://secure.mlstatic.com; object-src 'none'; base-uri 'self'; connect-src 'self' https://api.mercadopago.com https://js.mercadopago.com; frame-src 'self' https://js.mercadopago.com https://mercadopago.com; style-src 'self' 'unsafe-inline' https://js.mercadopago.com;"
           },
           {
             key: 'X-Extension-Protection',

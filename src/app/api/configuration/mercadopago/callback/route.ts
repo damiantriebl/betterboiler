@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         refreshToken: tokenResult.refreshToken,
         email: tokenResult.userInfo?.email,
         mercadoPagoUserId: tokenResult.userInfo?.id?.toString(),
+        publicKey: tokenResult.publicKey,
         expiresAt: tokenResult.expiresIn ? 
           new Date(Date.now() + tokenResult.expiresIn * 1000) : undefined,
         updatedAt: new Date()
@@ -91,6 +92,7 @@ export async function GET(request: NextRequest) {
         refreshToken: tokenResult.refreshToken,
         email: tokenResult.userInfo?.email || 'unknown@example.com',
         mercadoPagoUserId: tokenResult.userInfo?.id?.toString() || 'unknown',
+        publicKey: tokenResult.publicKey,
         expiresAt: tokenResult.expiresIn ? 
           new Date(Date.now() + tokenResult.expiresIn * 1000) : undefined
       }
@@ -218,6 +220,7 @@ async function exchangeCodeForToken(code: string, request: NextRequest) {
 
     // Obtener información del usuario
     let userInfo = null;
+    let publicKey = null;
     try {
       const userResponse = await fetch('https://api.mercadopago.com/users/me', {
         headers: {
@@ -232,6 +235,30 @@ async function exchangeCodeForToken(code: string, request: NextRequest) {
           id: userInfo?.id,
           siteId: userInfo?.site_id
         });
+
+        // Obtener la public key del usuario
+        if (userInfo?.id) {
+          try {
+            const credentialsResponse = await fetch(`https://api.mercadopago.com/users/${userInfo.id}/mercadopago_credentials`, {
+              headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+              }
+            });
+
+            if (credentialsResponse.ok) {
+              const credentials = await credentialsResponse.json();
+              publicKey = credentials.public_key;
+              console.log('🔑 [OAUTH] Public key obtenida:', {
+                hasPublicKey: !!publicKey,
+                publicKeyPrefix: publicKey ? publicKey.substring(0, 20) + '...' : null
+              });
+            } else {
+              console.warn('⚠️ [OAUTH] No se pudo obtener credentials:', credentialsResponse.status);
+            }
+          } catch (error) {
+            console.warn('⚠️ [OAUTH] Error obteniendo public key:', error);
+          }
+        }
       } else {
         console.warn('⚠️ [OAUTH] No se pudo obtener info del usuario:', userResponse.status);
       }
@@ -247,7 +274,8 @@ async function exchangeCodeForToken(code: string, request: NextRequest) {
       refreshToken: tokenData.refresh_token,
       tokenType: tokenData.token_type,
       expiresIn: tokenData.expires_in,
-      userInfo
+      userInfo,
+      publicKey
     };
 
   } catch (error) {
