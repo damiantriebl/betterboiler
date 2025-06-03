@@ -160,11 +160,24 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
 
                 if (data.authUrl) {
                     console.log('🚀 Abriendo URL de autorización de Mercado Pago...');
-                    window.open(data.authUrl, '_blank');
+
+                    // Mostrar instrucciones antes de abrir la ventana
                     toast({
-                        title: "Conectando organización",
-                        description: "Se abrió la ventana de autorización de Mercado Pago",
+                        title: "Abriendo MercadoPago",
+                        description: "Se abre en nueva pestaña. Si hay error 400, verifica la configuración del callback.",
+                        duration: 5000,
                     });
+
+                    // Abrir en nueva pestaña
+                    const newWindow = window.open(data.authUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+
+                    if (!newWindow) {
+                        toast({
+                            title: "Bloqueador de ventanas",
+                            description: "Permite ventanas emergentes y vuelve a intentar",
+                            variant: "destructive"
+                        });
+                    }
                 }
             } else {
                 const errorData = JSON.parse(responseText);
@@ -419,6 +432,17 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
                         <div>
                             <p className="font-medium text-blue-900">🏢 Credenciales por Organización (BD):</p>
                             <p className="text-xs text-blue-700">Se van agregando cuando las organizaciones se conectan via OAuth</p>
+                        </div>
+
+                        <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                            <p className="font-medium text-yellow-800 mb-2">⚠️ Si OAuth da Error 400:</p>
+                            <div className="text-xs text-yellow-700 space-y-1">
+                                <p>1. Ve a: <strong>https://www.mercadopago.com.ar/developers/panel/app</strong></p>
+                                <p>2. Selecciona tu app con CLIENT_ID: <strong>8619959583573876</strong></p>
+                                <p>3. Configuración → Redirect URIs → Agregar:</p>
+                                <p className="font-mono bg-white p-1 rounded">https://apex-one-lemon.vercel.app/api/configuration/mercadopago/callback</p>
+                                <p>4. Guarda los cambios</p>
+                            </div>
                         </div>
 
                         {showCredentials && (
