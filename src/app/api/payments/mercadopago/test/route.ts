@@ -12,11 +12,10 @@ export async function POST(request: NextRequest) {
     }
 
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-    const publicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
     
-    if (!accessToken || !publicKey) {
+    if (!accessToken) {
       return NextResponse.json(
-        { error: 'Credenciales de Mercado Pago no configuradas' },
+        { error: 'Access token de Mercado Pago no configurado' },
         { status: 400 }
       );
     }
@@ -30,58 +29,43 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    console.log('🧪 Creando token de tarjeta para testing...');
+    console.log('🧪 Creando pago de prueba directo en sandbox...');
 
-    // Paso 1: Crear token de tarjeta para testing
-    const cardTokenData = {
-      card_number: '4509953566233704',
-      security_code: '123',
-      expiration_month: 11,
-      expiration_year: 2030,
-      cardholder: {
-        name: 'APRO'
-      }
-    };
-
-    const tokenResponse = await fetch('https://api.mercadopago.com/v1/card_tokens', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${publicKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(cardTokenData)
-    });
-
-    const tokenData = await tokenResponse.json();
-
-    if (!tokenResponse.ok) {
-      console.error('❌ Error creando token de tarjeta:', tokenData);
-      return NextResponse.json({
-        error: 'Error creando token de tarjeta',
-        details: tokenData.message || 'Error desconocido',
-        mercadopago_error: tokenData
-      }, { status: tokenResponse.status });
-    }
-
-    console.log('✅ Token de tarjeta creado:', tokenData.id);
-
-    // Paso 2: Crear pago usando el token
+    // Para testing en sandbox - usar enfoque directo con datos de testing
     const paymentData = {
       transaction_amount: body.transaction_amount || 100,
       description: body.description || 'Test de Mercado Pago Sandbox',
       payment_method_id: 'visa',
       payer: {
-        email: body.payer?.email || 'test@testuser.com'
+        email: body.payer?.email || 'test@testuser.com',
+        identification: {
+          type: 'DNI',
+          number: '12345678'
+        }
       },
-      token: tokenData.id,
+      // Para testing en sandbox - usar datos directos que MercadoPago acepta
+      card: {
+        number: '4509953566233704',
+        security_code: '123',
+        expiration_month: 11,
+        expiration_year: 2030,
+        cardholder: {
+          name: 'APRO',
+          identification: {
+            type: 'DNI',
+            number: '12345678'
+          }
+        }
+      },
       installments: 1,
+      capture: true,
       metadata: {
         organization_id: organizationId,
         test: true
       }
     };
 
-    console.log('🧪 Creando pago de prueba en sandbox con token:', tokenData.id);
+    console.log('🧪 Enviando pago de prueba a MercadoPago:', paymentData);
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -94,6 +78,12 @@ export async function POST(request: NextRequest) {
     });
 
     const responseData = await response.json();
+
+    console.log('📋 Respuesta de MercadoPago:', {
+      status: response.status,
+      ok: response.ok,
+      data: responseData
+    });
 
     if (response.ok) {
       console.log('✅ Pago de prueba creado:', responseData.id);
@@ -114,9 +104,9 @@ export async function POST(request: NextRequest) {
         message: 'Pago de prueba creado exitosamente en sandbox',
         test_data: {
           environment: 'sandbox',
-          token_used: tokenData.id,
+          method: 'direct_card_data',
           organization_id: organizationId,
-          card_token_created: true
+          card_number_used: '4509953566233704 (testing)'
         }
       });
     } else {
@@ -125,7 +115,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         error: 'Error al crear pago de prueba',
         details: responseData.message || 'Error desconocido',
-        mercadopago_error: responseData
+        mercadopago_error: responseData,
+        debug_info: {
+          access_token_prefix: accessToken.substring(0, 10) + '...',
+          request_data: paymentData
+        }
       }, { status: response.status });
     }
 
