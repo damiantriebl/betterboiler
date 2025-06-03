@@ -16,27 +16,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton"; // Para el estado de carga
 
-import { authClient } from "@/auth-client";
+import { signOutAction } from "@/actions/auth/sign-out";
 import { useSessionStore } from "@/stores/SessionStore";
-import { createAuthClient } from "better-auth/react";
 import { useRouter } from "next/navigation";
 import AvatarUser from "./AvatarUser";
-
-const { useSession } = createAuthClient();
 
 export function UserButton() {
   const router = useRouter();
   const userName = useSessionStore((state) => state.userName);
   const userImage = useSessionStore((state) => state.userImage);
+  const clearSession = useSessionStore((state) => state.clearSession);
 
   const handleSignOut = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/sign-in"); // redirect to login page
-        },
-      },
-    });
+    try {
+      // Limpiar el session store local inmediatamente
+      clearSession();
+
+      // Llamar a la server action
+      await signOutAction();
+    } catch (error) {
+      console.error("Error during sign out:", error);
+
+      // Si hay error, redirigir manualmente
+      router.push("/sign-in");
+      router.refresh();
+    }
   };
 
   return (

@@ -100,6 +100,11 @@ export default function QuoteBridgePdf({
 
 export async function convertImageToPngBase64(imageUrl: string): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("convertImageToPngBase64 can only be used on the client side"));
+      return;
+    }
+
     const img = new window.Image();
     img.crossOrigin = "Anonymous";
     img.onload = function () {

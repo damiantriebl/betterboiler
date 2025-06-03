@@ -12,9 +12,30 @@ interface SessionStoreProviderProps {
 export default function SessionStoreProvider({ sessionData, children }: SessionStoreProviderProps) {
   const setSession = useSessionStore((state) => state.setSession);
 
+  console.log(`🏪 [SESSION STORE] SessionStoreProvider renderizado:`, {
+    hasSessionData: !!sessionData,
+    hasUserId: !!sessionData?.userId,
+    hasError: !!sessionData?.error,
+    error: sessionData?.error,
+    userId: sessionData?.userId,
+    userEmail: sessionData?.userEmail,
+    organizationId: sessionData?.organizationId
+  });
+
   useEffect(() => {
-    // Solo actualizar el store si tenemos datos válidos
-    if (sessionData && !sessionData.error) {
+    console.log(`🔄 [SESSION STORE] useEffect ejecutado con sessionData:`, {
+      hasSessionData: !!sessionData,
+      hasError: !!sessionData?.error,
+      error: sessionData?.error,
+      userId: sessionData?.userId
+    });
+
+    // Actualizar el store si tenemos sessionData Y (no hay error O el usuario está autenticado)
+    // Esto permite que usuarios sin organización aún puedan estar "logueados"
+    const shouldUpdateStore = sessionData && (!sessionData.error || sessionData.userId);
+
+    if (shouldUpdateStore) {
+      console.log(`✅ [SESSION STORE] Actualizando store con datos (usuario autenticado=${!!sessionData.userId})`);
       setSession({
         organizationId: sessionData.organizationId,
         organizationName: sessionData.organizationName,
@@ -25,6 +46,8 @@ export default function SessionStoreProvider({ sessionData, children }: SessionS
         userImage: sessionData.userImage,
         userRole: sessionData.userRole,
       });
+    } else {
+      console.warn(`⚠️ [SESSION STORE] No se actualiza el store - sessionData inválido sin userId`);
     }
   }, [sessionData, setSession]);
 

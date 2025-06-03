@@ -27,6 +27,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useTransition } from "react";
 import CreateBrandModal from "./CreateBrandModal";
 import type { DisplayModelData, OrganizationBrandDisplayData } from "./Interfaces";
@@ -45,6 +46,7 @@ export default function ManageBrands({
     initialOrganizationBrands || [],
   );
   const { toast } = useToast();
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOrderPending, startOrderTransition] = useTransition();
   const [isDissociatePending, startDissociateTransition] = useTransition();
@@ -163,6 +165,7 @@ export default function ManageBrands({
         });
       } else {
         toast({ title: "Modelo añadido", description: result.message });
+        router.refresh();
       }
     });
   };

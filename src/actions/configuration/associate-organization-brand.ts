@@ -52,30 +52,25 @@ export const associateOrganizationBrand = async ({
         },
       });
 
-      // 3. Create OrganizationModelConfig for each model of the brand
-      if (globalBrandWithModels.models && globalBrandWithModels.models.length > 0) {
-        const modelConfigs = globalBrandWithModels.models.map((model, index) => ({
-          organizationId,
-          modelId: model.id,
-          isVisible: true,
-          order: index,
-        }));
-        console.log(
-          "associateOrganizationBrand: modelConfigs a crear:",
-          JSON.stringify(modelConfigs, null, 2),
-        );
-        await tx.organizationModelConfig.createMany({
-          data: modelConfigs,
-          skipDuplicates: true,
-        });
-      }
+      // 3. NO crear automáticamente configuraciones de modelos visibles
+      // Los modelos se agregarán manualmente usando el modal AddOrSelectModel
+      // Esto restaura la funcionalidad original donde primero asocias la marca
+      // y luego vas agregando modelos uno por uno según necesites
+
+      console.log(
+        `associateOrganizationBrand: Marca ${globalBrandWithModels.name} asociada. ` +
+          `${globalBrandWithModels.models.length} modelos disponibles para agregar manualmente.`,
+      );
     });
 
     if (pathToRevalidate) {
       revalidatePath(pathToRevalidate);
     }
 
-    return { success: true, message: "Marca asociada y modelos configurados correctamente." };
+    return {
+      success: true,
+      message: `Marca "${globalBrandWithModels.name}" asociada correctamente. Ahora puedes agregar modelos específicos.`,
+    };
   } catch (error: unknown) {
     if (
       (error instanceof PrismaClientKnownRequestError && error.code === "P2002") ||
@@ -89,10 +84,7 @@ export const associateOrganizationBrand = async ({
     console.error("Error associating brand:", error); // Log the actual error
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Error al asociar la marca y configurar sus modelos.",
+      error: error instanceof Error ? error.message : "Error al asociar la marca.",
     };
   }
 };

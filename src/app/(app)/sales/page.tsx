@@ -1,5 +1,5 @@
-import { getOrganizationBankingPromotions } from "@/actions/banking-promotions/get-banking-promotions";
 import { getClients } from "@/actions/clients/manage-clients";
+import { searchMotorcyclesFuzzy } from "@/actions/sales/fuzzy-search-motorcycles";
 import {
   type MotorcycleTableData,
   getMotorcyclesOptimized,
@@ -15,11 +15,8 @@ import { Suspense } from "react";
 import SalesClientComponent from "./SalesClientComponent";
 
 // Estados disponibles por defecto (motos que se pueden vender/gestionar)
-const estadosDisponibles: MotorcycleState[] = [
-  MotorcycleState.STOCK,
-  MotorcycleState.RESERVADO,
-  MotorcycleState.PAUSADO,
-];
+// RESERVADO no se considera disponible para venta
+const estadosDisponibles: MotorcycleState[] = [MotorcycleState.STOCK, MotorcycleState.PAUSADO];
 
 // 🚀 ADAPTADOR: Convertir MotorcycleTableData a formato compatible
 function adaptOptimizedToRowData(optimized: MotorcycleTableData[]): MotorcycleTableData[] {
@@ -61,8 +58,15 @@ function SalesError({ error }: { error: string }) {
 }
 
 // 🚀 OPTIMIZACIÓN 3: Componente separado para datos async con cache
-async function SalesContent() {
+async function SalesContent({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   try {
+    // Await the searchParams promise
+    const params = await searchParams;
+
     // Obtener session una sola vez
     const session = await auth.api.getSession({ headers: await headers() });
     const organizationId = session?.user?.organizationId;
@@ -71,29 +75,126 @@ async function SalesContent() {
       throw new Error("No se pudo obtener la organización del usuario");
     }
 
-    // 🚀 OPTIMIZACIÓN 4: Carga paralela optimizada con filtros
-    const [motorcyclesRawData, clientsData, promotionsData] = await Promise.all([
-      // Cargar por defecto con estados disponibles (STOCK, RESERVADO, PAUSADO)
-      getMotorcyclesOptimized({
-        state: estadosDisponibles,
-      }),
-      getClients(),
-      // Promociones solo si son necesarias
-      getOrganizationBankingPromotions(organizationId).catch(() => []),
-    ]);
+    // Parsear parámetros de paginación
+    const page = Number(params.page) || 1;
+    const pageSize = Math.min(Number(params.pageSize) || 25, 100); // Límite máximo de 100
+    const sortBy = typeof params.sortBy === "string" ? params.sortBy : "id";
+    const sortOrder = typeof params.sortOrder === "string" ? params.sortOrder : "desc";
+
+    // 🔍 FUZZY SEARCH: Extraer término de búsqueda
+    const searchTerm = typeof params.search === "string" ? params.search.trim() : "";
+
+    // DEBUG: Log de parámetros recibidos
+    console.log("📝 [PAGE DEBUG] Parámetros recibidos:", {
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      searchTerm,
+      allParams: params,
+    });
+
+    // Parsear filtros
+    const stateFilter = params.state
+      ? Array.isArray(params.state)
+        ? params.state
+        : [params.state]
+      : estadosDisponibles.map((estado) => estado.toString());
+
+    const states = stateFilter
+      .map((state) => {
+        const motorcycleState = Object.values(MotorcycleState).find((s) => s.toString() === state);
+        return motorcycleState;
+      })
+      .filter(Boolean) as MotorcycleState[];
+
+    console.log(
+      `[SALES] Loading page: page=${page}, pageSize=${pageSize}, sortBy=${sortBy}, states=${states.length}, search="${searchTerm}"`,
+    );
+
+    // 🚀 OPTIMIZACIÓN 4: Carga paralela optimizada con fuzzy search
+    let motorcyclesRawData: any;
+
+    // 🔍 FUZZY SEARCH: Si hay término de búsqueda, usar fuzzy search
+    if (searchTerm && searchTerm.length > 0) {
+      console.log(`🔍 [PAGE DEBUG] Usando fuzzy search para "${searchTerm}"`);
+
+      // Para fuzzy search, obtenemos todos los resultados y luego paginamos en cliente
+      // ya que el fuzzy search tiene su propio scoring
+      const fuzzyResults = await searchMotorcyclesFuzzy(searchTerm, {
+        filter: {
+          state: states.length > 0 ? states : estadosDisponibles,
+          limit: 500, // Límite alto para fuzzy search
+        },
+        optimization: {
+          useCache: false,
+          includeReservations: true,
+          includeSupplier: false,
+        },
+      });
+
+      console.log(`🔍 [PAGE DEBUG] Fuzzy search devolvió ${fuzzyResults.length} resultados`);
+
+      // Simular estructura de paginación para compatibilidad
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedResults = fuzzyResults.slice(startIndex, endIndex);
+
+      motorcyclesRawData = {
+        data: paginatedResults,
+        total: fuzzyResults.length,
+        totalPages: Math.ceil(fuzzyResults.length / pageSize),
+        currentPage: page,
+        pageSize: pageSize,
+      };
+
+      console.log(
+        `🔍 [PAGE DEBUG] Datos paginados: ${paginatedResults.length}/${fuzzyResults.length}`,
+      );
+    } else {
+      console.log("📊 [PAGE DEBUG] Sin término de búsqueda, usando método optimizado normal");
+      // Sin búsqueda, usar el método optimizado normal
+      motorcyclesRawData = await getMotorcyclesOptimized({
+        state: states.length > 0 ? states : estadosDisponibles,
+        pagination: {
+          page,
+          pageSize,
+          sortBy,
+          sortOrder: sortOrder as "asc" | "desc",
+        },
+      });
+      console.log(
+        `📊 [PAGE DEBUG] Método normal devolvió ${motorcyclesRawData.data?.length || 0} resultados`,
+      );
+    }
+
+    // Cargar datos auxiliares en paralelo
+    const clientsData = await getClients();
 
     // Adaptar datos optimizados al formato esperado
-    const motorcyclesData = adaptOptimizedToRowData(motorcyclesRawData);
+    const motorcyclesData = adaptOptimizedToRowData(motorcyclesRawData.data || []);
+
+    console.log(
+      `[SALES] Data loaded successfully | Items: ${motorcyclesData.length}/${motorcyclesRawData.total} | Search: "${searchTerm}"`,
+    );
 
     return (
       <SalesClientComponent
         initialData={motorcyclesData}
         clients={clientsData as Client[]}
-        promotions={promotionsData as BankingPromotionDisplay[]}
+        promotions={[]} // Sin promociones en sales
+        pagination={{
+          currentPage: page,
+          pageSize,
+          totalItems: motorcyclesRawData.total || 0,
+          totalPages: motorcyclesRawData.totalPages || 1,
+        }}
+        searchParams={params}
       />
     );
   } catch (error) {
-    console.error("Error cargando datos para la página de ventas:", error);
+    console.error("[SALES] Error loading data:", error);
+
     const errorMessage =
       error instanceof Error ? error.message : "Error desconocido al cargar datos";
     return <SalesError error={errorMessage} />;
@@ -101,12 +202,24 @@ async function SalesContent() {
 }
 
 // 🚀 OPTIMIZACIÓN 5: Página principal con Suspense y metadata
-export default async function VentasPage() {
+export default async function VentasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   return (
     <div className="container max-w-none w-full p-4">
       <Suspense fallback={<SalesTableSkeleton />}>
-        <SalesContent />
+        <SalesContent searchParams={searchParams} />
       </Suspense>
     </div>
   );
+}
+
+// 🚀 METADATA OPTIMIZADA para mejor SEO y performance
+export async function generateMetadata() {
+  return {
+    title: "Catálogo de Ventas - Better",
+    description: "Gestiona y visualiza el inventario de motocicletas disponibles para venta",
+  };
 }

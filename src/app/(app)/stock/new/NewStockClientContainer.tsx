@@ -9,7 +9,8 @@ import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
 import { motorcycleBatchSchema } from "@/zod/NewBikeZod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Supplier } from "@prisma/client";
-import React, { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import React, { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { BatchPreview } from "./BatchPreview";
 import { NewMotoFormRefactored } from "./NewMotoForm";
@@ -24,12 +25,15 @@ interface NewStockClientContainerProps {
 
 export function NewStockClientContainer({
   availableColors,
-  availableBrands,
+  availableBrands: initialBrands,
   availableBranches,
   suppliers,
 }: NewStockClientContainerProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [brands, setBrands] = useState<BrandForCombobox[]>(initialBrands);
+
   const form = useForm<MotorcycleBatchFormData>({
     resolver: zodResolver(motorcycleBatchSchema),
     defaultValues: {
@@ -81,6 +85,11 @@ export function NewStockClientContainer({
     });
   };
 
+  const handleBrandsUpdate = () => {
+    // Refrescar la página para obtener las marcas actualizadas
+    router.refresh();
+  };
+
   const watchedFormData = form.watch();
 
   return (
@@ -88,7 +97,7 @@ export function NewStockClientContainer({
       <div className="w-full">
         <BatchPreview
           formData={watchedFormData}
-          availableBrands={availableBrands}
+          availableBrands={brands}
           availableColors={availableColors}
           availableBranches={availableBranches}
           suppliers={suppliers}
@@ -105,11 +114,12 @@ export function NewStockClientContainer({
           <NewMotoFormRefactored
             form={form}
             availableColors={availableColors}
-            availableBrands={availableBrands}
+            availableBrands={brands}
             availableBranches={availableBranches}
             suppliers={suppliers}
             isSubmitting={isPending}
             onSubmit={form.handleSubmit(onSubmit)}
+            onBrandsUpdate={handleBrandsUpdate}
             submitButtonLabel="Guardar Lote"
           />
         </CardContent>

@@ -25,6 +25,7 @@ import {
 } from "@/stores/motorcycle-filters-store";
 import type { MotorcycleState } from "@prisma/client";
 import { Check, ChevronsUpDown } from "lucide-react";
+import FuzzySearchInput from "./FuzzySearchInput";
 
 interface FilterSectionProps {
   onFilterChange?: (filterType: string, value: string | MotorcycleState[] | number[]) => void;
@@ -110,18 +111,16 @@ export default function FilterSection({ onFilterChange }: FilterSectionProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
       <div className="flex flex-col gap-2">
-        <Label>Buscar</Label>
-        <Input
-          type="text"
-          placeholder="Buscar por modelo, marca..."
-          className="w-full"
+        <FuzzySearchInput
           value={filters.search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+          onChange={(value) => {
+            setSearch(value);
             if (onFilterChange) {
-              onFilterChange("search", e.target.value);
+              onFilterChange("search", value);
             }
           }}
+          placeholder="Buscar por marca, modelo, chasis..."
+          showSuggestions={true}
         />
       </div>
 

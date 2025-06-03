@@ -11,7 +11,7 @@ import type { BrandForCombobox } from "./types";
 async function getAvailableBrandsAndModels(organizationId: string): Promise<BrandForCombobox[]> {
   console.warn("Verificando getAvailableBrandsAndModels para Org:", organizationId);
   try {
-    // Consulta simplificada: Obtener marcas asociadas y todos sus modelos globales
+    // Consulta mejorada: Obtener marcas asociadas y solo sus modelos configurados
     const orgBrands = await prisma.organizationBrand.findMany({
       where: { organizationId: organizationId },
       orderBy: { order: "asc" },
@@ -20,23 +20,47 @@ async function getAvailableBrandsAndModels(organizationId: string): Promise<Bran
           // Incluir la marca relacionada
           include: {
             models: {
-              // Incluir todos los modelos de esa marca
+              // Solo incluir modelos que están configurados para esta organización
+              where: {
+                organizationModelConfigs: {
+                  some: {
+                    organizationId: organizationId,
+                    isVisible: true,
+                  },
+                },
+              },
               orderBy: { name: "asc" },
+              include: {
+                organizationModelConfigs: {
+                  where: {
+                    organizationId: organizationId,
+                    isVisible: true,
+                  },
+                  select: { order: true },
+                },
+              },
             },
           },
         },
       },
     });
 
-    // Transformación a BrandForCombobox (ahora brand está incluido)
+    // Transformación a BrandForCombobox (solo modelos configurados)
     const transformedBrands: BrandForCombobox[] = orgBrands.map((orgBrand) => ({
       id: orgBrand.brand.id,
       name: orgBrand.brand.name,
       color: orgBrand.color,
-      models: orgBrand.brand.models.map((model) => ({
-        id: model.id,
-        name: model.name,
-      })),
+      models: orgBrand.brand.models
+        .sort((a, b) => {
+          // Ordenar por el order de OrganizationModelConfig
+          const orderA = a.organizationModelConfigs[0]?.order ?? 999;
+          const orderB = b.organizationModelConfigs[0]?.order ?? 999;
+          return orderA - orderB;
+        })
+        .map((model) => ({
+          id: model.id,
+          name: model.name,
+        })),
     }));
     return transformedBrands;
   } catch (error) {

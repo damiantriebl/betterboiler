@@ -37,4 +37,40 @@ ANALYZE "Organization";
 ANALYZE "OrganizationBrand";
 ANALYZE "Supplier";
 ANALYZE "Branch";
-ANALYZE "MotoColor"; 
+ANALYZE "MotoColor";
+
+-- Agregar índices para mejorar performance de consultas de motocicletas
+-- Script de migración manual para optimización
+
+-- 🚀 Índice compuesto principal para consultas paginadas
+CREATE INDEX IF NOT EXISTS "idx_motorcycle_org_state_id" ON "Motorcycle" ("organizationId", "state", "id" DESC);
+
+-- 🚀 Índice para ordenamiento por año
+CREATE INDEX IF NOT EXISTS "idx_motorcycle_org_year_id" ON "Motorcycle" ("organizationId", "year" DESC, "id" DESC);
+
+-- 🚀 Índice para ordenamiento por precio
+CREATE INDEX IF NOT EXISTS "idx_motorcycle_org_price_id" ON "Motorcycle" ("organizationId", "retailPrice" DESC, "id" DESC);
+
+-- 🚀 Índice para búsquedas por número de chasis
+CREATE INDEX IF NOT EXISTS "idx_motorcycle_chassis" ON "Motorcycle" ("chassisNumber");
+
+-- 🚀 Índice para join con marcas (para ordenamiento)
+CREATE INDEX IF NOT EXISTS "idx_motorcycle_brand_id" ON "Motorcycle" ("brandId");
+
+-- 🚀 Índice para join con modelos (para ordenamiento)
+CREATE INDEX IF NOT EXISTS "idx_motorcycle_model_id" ON "Motorcycle" ("modelId");
+
+-- 🚀 Índice para consultas de reservas activas
+CREATE INDEX IF NOT EXISTS "idx_reservation_motorcycle_status" ON "Reservation" ("motorcycleId", "status") WHERE "status" = 'active';
+
+-- 🚀 Índice para brand names (ordenamiento)
+CREATE INDEX IF NOT EXISTS "idx_brand_name" ON "Brand" ("name");
+
+-- 🚀 Índice para model names (ordenamiento)
+CREATE INDEX IF NOT EXISTS "idx_model_name" ON "Model" ("name");
+
+-- Análisis de estadísticas para optimizar el query planner
+ANALYZE "Motorcycle";
+ANALYZE "Brand";
+ANALYZE "Model";
+ANALYZE "Reservation"; 

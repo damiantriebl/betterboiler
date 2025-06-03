@@ -421,6 +421,13 @@ export default function SingleBrandColumn({
                 items={models.map((m) => m.id.toString())}
                 strategy={modelVerticalListSortingStrategy}
               >
+                {models.length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    <p>No hay modelos asociados</p>
+                    <p className="text-xs mt-1">Usa el botón "Añadir Modelo" para comenzar</p>
+                  </div>
+                )}
+
                 {models.map((model) => (
                   <ModelItem
                     key={model.id}

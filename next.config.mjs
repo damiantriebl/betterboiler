@@ -68,6 +68,20 @@ const nextConfig = {
           {
             key: 'Connection',
             value: 'keep-alive'
+          },
+          // 🔒 MITIGACIÓN: Headers para extensiones Chrome problemáticas
+          {
+            key: 'Content-Security-Policy',
+            value: "script-src 'self' 'unsafe-inline' 'unsafe-eval'; object-src 'none'; base-uri 'self';"
+          },
+          {
+            key: 'X-Extension-Protection',
+            value: 'block-script-injection'
+          },
+          // 🔒 MITIGACIÓN: Headers para React Server Components
+          {
+            key: 'X-RSC-Prefetch',
+            value: 'enabled'
           }
         ],
       },
@@ -78,6 +92,24 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable'
+          }
+        ],
+      },
+      // 🔒 MITIGACIÓN: Headers específicos para API routes y RSC
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate'
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache'
+          },
+          {
+            key: 'Expires',
+            value: '0'
           }
         ],
       }

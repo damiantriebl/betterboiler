@@ -30,7 +30,7 @@ alwaysApply: true
 - en estilo tailwind 3.4
 - en estado zustand
 - en pdf se usa @pdf-lib siempre trantando de que sea siempre del lado de el servidor
-
+- el middleware.ts esta dentro de src/ . NUNCA EN EL RAIZ DEL PROYECTO
 # Test
 
 - los test se hacen con vitest y con https://testing-library.com/

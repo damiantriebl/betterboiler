@@ -123,7 +123,9 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
 
   const steps = ["Confirmar Moto", "Método de Pago", "Seleccionar Cliente", "Confirmación"];
 
-  // Persistent state with Local Storage
+  // 🔧 FIXED: Arreglar problemas de hidratación
+  const [isMounted, setIsMounted] = useState(false);
+
   const localStorageKey = `saleProcess-${id}`;
 
   const initialSaleState: SaleProcessState = {
@@ -155,35 +157,48 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
     showClientTable: false,
   };
 
-  // Use a custom initializer to ensure we merge with initialSaleState
-  const getSavedState = () => {
-    try {
-      const saved = localStorage.getItem(localStorageKey);
-      if (saved) {
-        const parsedState = JSON.parse(saved) as Partial<SaleProcessState>;
+  // 🔧 FIXED: Estado inicial sin usar localStorage directamente
+  const [saleState, setSaleState] = useState<SaleProcessState>(initialSaleState);
 
-        return {
-          ...initialSaleState,
-          ...parsedState,
-          paymentData: {
-            ...initialSaleState.paymentData,
-            ...(parsedState.paymentData || {}),
-            selectedPromotions: parsedState.paymentData?.selectedPromotions || [],
-          },
-        };
+  // 🔧 FIXED: Cargar desde localStorage solo después del mount
+  useEffect(() => {
+    setIsMounted(true);
+
+    // Solo cargar localStorage cuando estamos en el cliente
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(localStorageKey);
+        if (saved) {
+          const parsedState = JSON.parse(saved) as Partial<SaleProcessState>;
+
+          const mergedState = {
+            ...initialSaleState,
+            ...parsedState,
+            paymentData: {
+              ...initialSaleState.paymentData,
+              ...(parsedState.paymentData || {}),
+              selectedPromotions: parsedState.paymentData?.selectedPromotions || [],
+            },
+          };
+
+          setSaleState(mergedState);
+        }
+      } catch (error) {
+        console.error("Error reading from localStorage:", error);
       }
-    } catch (error) {
-      console.error("Error reading from localStorage:", error);
     }
+  }, []);
 
-    return initialSaleState;
-  };
-
-  const [saleState, setSaleState] = useLocalStorage<SaleProcessState>(
-    localStorageKey,
-    initialSaleState,
-    { initializer: getSavedState },
-  );
+  // 🔧 FIXED: Guardar en localStorage solo cuando está montado
+  useEffect(() => {
+    if (isMounted && typeof window !== "undefined") {
+      try {
+        localStorage.setItem(localStorageKey, JSON.stringify(saleState));
+      } catch (error) {
+        console.error("Error saving to localStorage:", error);
+      }
+    }
+  }, [saleState, localStorageKey, isMounted]);
 
   // Derive selectedClient from persistent state
   const selectedClient = clients.find((c) => c.id === saleState.selectedClientId) || null;
@@ -393,6 +408,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           qr: "qr",
           cheque: "check",
           rapipago: "rapipago",
+          mercadopago: "mercadopago", // ✅ AGREGADO: Soporte para MercadoPago
         };
 
         const paymentMethodType = methodMap[saleState.paymentData.metodoPago];

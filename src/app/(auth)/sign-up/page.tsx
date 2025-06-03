@@ -1,5 +1,6 @@
 "use client";
 
+import GoogleSignInButton from "@/components/custom/GoogleSignInButton";
 import LoadingButton from "@/components/custom/LoadingButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -80,47 +81,60 @@ export default function SignUp() {
   ] as const;
 
   return (
-    <div className="grow flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-gray-800">
-            Crear Cuenta
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {fields.map(({ name, label, type }) => (
-                <FormField
-                  control={form.control}
-                  key={name}
-                  name={name as keyof z.infer<typeof signUpSchema>}
-                  render={({ field: fieldProps }) => (
-                    <FormItem>
-                      <FormLabel>{label}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type={type}
-                          placeholder={`Ingrese ${label.toLowerCase()}`}
-                          {...fieldProps}
-                          autoComplete="off"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-              <LoadingButton pending={pending}>Crear cuenta</LoadingButton>
-            </form>
-          </Form>
-          <div className="mt-4 text-center text-sm">
-            <Link href="/sign-in" className="text-primary hover:underline">
-              Ya tenes una cuenta, inicia sesión
-            </Link>
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        {/* Botón de Google */}
+        <GoogleSignInButton mode="signup" />
+
+        {/* Separador */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">O regístrate con</span>
+          </div>
+        </div>
+
+        {/* Formulario de registro */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+            {fields.map(({ name, label, type }) => (
+              <FormField
+                control={form.control}
+                key={name}
+                name={name as keyof z.infer<typeof signUpSchema>}
+                render={({ field: fieldProps }) => (
+                  <FormItem>
+                    <FormLabel>{label}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type={type}
+                        placeholder={`Ingrese ${label.toLowerCase()}`}
+                        {...fieldProps}
+                        autoComplete="off"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ))}
+            <LoadingButton pending={pending}>Crear cuenta</LoadingButton>
+          </form>
+        </Form>
+
+        {/* Link a sign-in */}
+        <div className="text-center text-sm text-muted-foreground">
+          ¿Ya tienes cuenta?{" "}
+          <Link href="/sign-in" className="underline text-primary">
+            Inicia sesión aquí
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

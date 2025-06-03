@@ -73,9 +73,13 @@ const AvatarUser = ({ src, name }: AvatarUserProps) => {
 
   const { bg, text, border } = getColorScheme(displayName);
 
+  // Usar borde gris para imágenes, borde de color solo para fallbacks
+  const hasImage = !hasError && imageUrl;
+  const borderClass = hasImage ? "border-gray-600" : border;
+
   return (
-    <Avatar className={`border-2 ${border} size-14`}>
-      {!hasError && imageUrl ? (
+    <Avatar className={`border-2 ${borderClass} size-14`}>
+      {hasImage ? (
         <AvatarImage src={imageUrl} />
       ) : (
         <AvatarFallback className={`${bg} ${text} font-bold text-lg`}>

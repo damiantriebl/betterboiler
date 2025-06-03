@@ -57,7 +57,6 @@ export default defineConfig({
         // Archivos de configuración del proyecto
         "src/auth.ts",
         "src/auth-client.ts",
-        "src/middleware.ts",
         
         // Archivos de datos estáticos
         "src/data/**",

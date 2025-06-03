@@ -94,8 +94,26 @@ model Organization {
   suppliers                  Supplier[]
   motorcycles                Motorcycle[]
   users                      User[]
+  mercadoPagoOAuth           MercadoPagoOAuth?
 
   @@map("organization")
+}
+
+model MercadoPagoOAuth {
+  id                   String       @id @default(cuid())
+  organizationId       String       @unique
+  mercadoPagoUserId    String
+  accessToken          String
+  refreshToken         String?
+  email                String
+  publicKey            String?
+  scopes               String[]
+  expiresAt            DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("mercadopago_oauth")
 }
 
 model User {
@@ -431,8 +449,25 @@ model OrganizationPaymentMethod {
   updatedAt      DateTime      @updatedAt
   method         PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Relación con configuraciones
+  configurations PaymentMethodConfiguration[]
 
   @@unique([organizationId, methodId])
+}
+
+model PaymentMethodConfiguration {
+  id                         Int                        @id @default(autoincrement())
+  organizationPaymentMethodId Int
+  configKey                  String
+  configValue                String
+  isEncrypted                Boolean                    @default(false)
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  organizationPaymentMethod  OrganizationPaymentMethod  @relation(fields: [organizationPaymentMethodId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationPaymentMethodId, configKey])
+  @@index([organizationPaymentMethodId])
 }
 
 model Bank {
