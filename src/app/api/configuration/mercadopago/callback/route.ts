@@ -120,6 +120,38 @@ async function exchangeCodeForToken(code: string) {
       redirectUri: `${process.env.BASE_URL}/api/configuration/mercadopago/callback`
     });
 
+    // Obtener la sesión para obtener organizationId
+    const session = await auth.api.getSession({
+      headers: {} // Esto necesita mejorarse, pero por ahora usaremos el contexto global
+    });
+
+    if (!session?.user?.organizationId) {
+      throw new Error('No hay sesión válida para recuperar code_verifier');
+    }
+
+    // Recuperar code_verifier de la base de datos
+    const oauthTemp = await prisma.mercadoPagoOAuthTemp.findUnique({
+      where: { organizationId: session.user.organizationId }
+    });
+
+    if (!oauthTemp) {
+      throw new Error('No se encontró code_verifier. El flujo OAuth no fue iniciado correctamente.');
+    }
+
+    if (oauthTemp.expiresAt < new Date()) {
+      // Limpiar registro expirado
+      await prisma.mercadoPagoOAuthTemp.delete({
+        where: { organizationId: session.user.organizationId }
+      });
+      throw new Error('El code_verifier ha expirado. Reinicia el flujo OAuth.');
+    }
+
+    console.log('🔐 [OAUTH] Code verifier recuperado:', {
+      codeVerifierLength: oauthTemp.codeVerifier.length,
+      expiresAt: oauthTemp.expiresAt,
+      organizationId: session.user.organizationId
+    });
+
     const tokenResponse = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -131,8 +163,17 @@ async function exchangeCodeForToken(code: string) {
         client_secret: process.env.MERCADOPAGO_CLIENT_SECRET!,
         code: code,
         grant_type: 'authorization_code',
-        redirect_uri: `${process.env.BASE_URL}/api/configuration/mercadopago/callback`
+        redirect_uri: `${process.env.BASE_URL}/api/configuration/mercadopago/callback`,
+        code_verifier: oauthTemp.codeVerifier  // ← ¡Este es el parámetro que faltaba!
       })
+    });
+
+    // Limpiar code_verifier después del intercambio (éxito o error)
+    await prisma.mercadoPagoOAuthTemp.delete({
+      where: { organizationId: session.user.organizationId }
+    }).catch(() => {
+      // Ignorar errores de limpieza
+      console.warn('⚠️ [OAUTH] No se pudo limpiar code_verifier temporal');
     });
 
     const tokenData = await tokenResponse.json();
@@ -197,6 +238,8 @@ async function exchangeCodeForToken(code: string) {
     } catch (error) {
       console.warn('⚠️ [OAUTH] Error obteniendo info del usuario:', error);
     }
+
+    console.log('✅ [OAUTH] Intercambio PKCE exitoso con MercadoPago');
 
     return {
       success: true,

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { generatePKCEPair, buildAuthorizationUrl } from '@/lib/mercadopago-pkce';
+import prisma from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,46 +24,86 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
     const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/configuration/mercadopago/callback`;
 
-    // Construir URL de autorización de Mercado Pago
-    const authUrl = new URL('https://auth.mercadopago.com.ar/authorization');
-    authUrl.searchParams.set('client_id', process.env.MERCADOPAGO_CLIENT_ID!);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('platform_id', 'mp');
-    authUrl.searchParams.set('state', session.user.organizationId || 'default');
-    authUrl.searchParams.set('redirect_uri', redirectUri);
+    console.log('🔗 [OAUTH CONNECT] Iniciando flujo OAuth con PKCE:', {
+      organizationId: session.user.organizationId,
+      forceLogout,
+      redirectUri,
+      clientId: process.env.MERCADOPAGO_CLIENT_ID ? 'PRESENTE' : 'FALTANTE'
+    });
 
-    // Si se solicita logout forzado, agregar parámetros adicionales
+    // Generar par PKCE (code_verifier + code_challenge)
+    const pkcePair = await generatePKCEPair();
+    
+    console.log('🔐 [OAUTH CONNECT] PKCE generado:', {
+      codeVerifierLength: pkcePair.codeVerifier.length,
+      codeChallengeLength: pkcePair.codeChallenge.length,
+      method: pkcePair.codeChallengeMethod
+    });
+
+    // Guardar code_verifier en caché temporal (Redis/DB/Memory)
+    // Por simplicidad, lo guardamos en la DB temporalmente
+    await prisma.mercadoPagoOAuthTemp.upsert({
+      where: {
+        organizationId: session.user.organizationId
+      },
+      update: {
+        codeVerifier: pkcePair.codeVerifier,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutos
+        updatedAt: new Date()
+      },
+      create: {
+        organizationId: session.user.organizationId,
+        codeVerifier: pkcePair.codeVerifier,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutos
+      }
+    });
+
+    // Construir URL de autorización con parámetros adicionales
+    let authUrl = buildAuthorizationUrl({
+      clientId: process.env.MERCADOPAGO_CLIENT_ID!,
+      redirectUri,
+      codeChallenge: pkcePair.codeChallenge,
+      codeChallengeMethod: pkcePair.codeChallengeMethod,
+      state: session.user.organizationId, // Para validar en el callback
+    });
+
+    // Agregar parámetros de logout forzado si se solicitó
     if (forceLogout) {
-      // Agregar timestamp único para evitar caché
-      authUrl.searchParams.set('_t', Date.now().toString());
-      // Agregar parámetro para indicar logout (algunos proveedores lo respetan)
-      authUrl.searchParams.set('prompt', 'login');
-      authUrl.searchParams.set('max_age', '0');
+      const urlObj = new URL(authUrl);
+      urlObj.searchParams.set('prompt', 'login');
+      urlObj.searchParams.set('max_age', '0');
+      authUrl = urlObj.toString();
+      
+      console.log('🔄 [OAUTH CONNECT] Logout forzado agregado a URL');
     }
 
-    console.log('🔗 [OAUTH] URL de autorización generada:', {
-      authUrl: authUrl.toString(),
-      redirectUri,
-      clientId: process.env.MERCADOPAGO_CLIENT_ID ? 'CONFIGURADO' : 'NO CONFIGURADO',
-      organizationId: session.user.organizationId,
-      forceLogout
+    console.log('✅ [OAUTH CONNECT] URL de autorización generada:', {
+      url: authUrl.substring(0, 100) + '...',
+      hasPKCE: authUrl.includes('code_challenge'),
+      hasState: authUrl.includes('state'),
+      hasPrompt: authUrl.includes('prompt')
     });
 
     return NextResponse.json({
       success: true,
-      authUrl: authUrl.toString(),
-      redirectUri,
-      organizationId: session.user.organizationId,
-      forceLogout
+      authUrl,
+      debug: {
+        redirectUri,
+        pkcePair: {
+          codeChallengeMethod: pkcePair.codeChallengeMethod,
+          codeVerifierLength: pkcePair.codeVerifier.length,
+          codeChallengeLength: pkcePair.codeChallenge.length
+        }
+      }
     });
 
   } catch (error) {
-    console.error('❌ [OAUTH] Error generando URL de conexión:', error);
+    console.error('❌ [OAUTH CONNECT] Error:', error);
     return NextResponse.json(
       { 
-        success: false,
-        error: 'Error interno del servidor',
-        details: error instanceof Error ? error.message : 'Error desconocido'
+        success: false, 
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        stack: process.env.NODE_ENV === 'development' ? (error as Error)?.stack : undefined
       },
       { status: 500 }
     );
