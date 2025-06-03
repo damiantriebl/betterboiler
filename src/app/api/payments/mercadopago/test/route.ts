@@ -12,10 +12,11 @@ export async function POST(request: NextRequest) {
     }
 
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    const publicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
     
-    if (!accessToken) {
+    if (!accessToken || !publicKey) {
       return NextResponse.json(
-        { error: 'Access token de Mercado Pago no configurado' },
+        { error: 'Credenciales de Mercado Pago no configuradas' },
         { status: 400 }
       );
     }
@@ -28,7 +29,43 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
+    console.log('🧪 Creando token de tarjeta para testing...');
+
+    // Paso 1: Crear token de tarjeta para testing
+    const cardTokenData = {
+      card_number: '4509953566233704',
+      security_code: '123',
+      expiration_month: 11,
+      expiration_year: 2030,
+      cardholder: {
+        name: 'APRO'
+      }
+    };
+
+    const tokenResponse = await fetch('https://api.mercadopago.com/v1/card_tokens', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${publicKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(cardTokenData)
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenResponse.ok) {
+      console.error('❌ Error creando token de tarjeta:', tokenData);
+      return NextResponse.json({
+        error: 'Error creando token de tarjeta',
+        details: tokenData.message || 'Error desconocido',
+        mercadopago_error: tokenData
+      }, { status: tokenResponse.status });
+    }
+
+    console.log('✅ Token de tarjeta creado:', tokenData.id);
+
+    // Paso 2: Crear pago usando el token
     const paymentData = {
       transaction_amount: body.transaction_amount || 100,
       description: body.description || 'Test de Mercado Pago Sandbox',
@@ -36,8 +73,7 @@ export async function POST(request: NextRequest) {
       payer: {
         email: body.payer?.email || 'test@testuser.com'
       },
-      // Para testing en sandbox - usar approach simplificado
-      token: 'ff8080814c11e237014c1ff593b57b4d', // Token de testing válido para sandbox
+      token: tokenData.id,
       installments: 1,
       metadata: {
         organization_id: organizationId,
@@ -45,7 +81,7 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    console.log('🧪 Creando pago de prueba en sandbox:', paymentData);
+    console.log('🧪 Creando pago de prueba en sandbox con token:', tokenData.id);
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -78,8 +114,9 @@ export async function POST(request: NextRequest) {
         message: 'Pago de prueba creado exitosamente en sandbox',
         test_data: {
           environment: 'sandbox',
-          token_used: 'ff8080814c11e237014c1ff593b57b4d',
-          organization_id: organizationId
+          token_used: tokenData.id,
+          organization_id: organizationId,
+          card_token_created: true
         }
       });
     } else {
