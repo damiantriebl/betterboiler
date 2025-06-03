@@ -29,6 +29,24 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
 
     useEffect(() => {
         loadMercadoPagoStatus();
+
+        // Escuchar mensajes de ventanas popup OAuth
+        const handleMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
+
+            if (event.data.type === 'mp_oauth_success') {
+                toast.success('🎉 OAuth Completado - MercadoPago conectado exitosamente');
+                // Recargar el estado después de un OAuth exitoso
+                setTimeout(() => {
+                    loadMercadoPagoStatus();
+                }, 2000);
+            } else if (event.data.type === 'mp_oauth_error') {
+                toast.error(`Error OAuth: ${event.data.error}${event.data.detail ? ` - ${event.data.detail}` : ''}`);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
     }, [organizationId]);
 
     const loadMercadoPagoStatus = async () => {
@@ -37,7 +55,19 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
             const response = await fetch(`/api/configuration/mercadopago/status`);
             if (response.ok) {
                 const data = await response.json();
-                setAccount(data.account);
+
+                // Mapear respuesta del endpoint de status al formato de account
+                if (data.organizationConnected && data.oauthEmail) {
+                    setAccount({
+                        id: organizationId, // Usar organizationId como ID
+                        email: data.oauthEmail,
+                        connected: true,
+                        webhookUrl: `${window.location.origin}/api/webhooks/mercadopago/${organizationId}`,
+                        notificationUrl: `${window.location.origin}/api/notifications/mercadopago/${organizationId}`
+                    });
+                } else {
+                    setAccount(null);
+                }
             }
         } catch (error) {
             console.error('Error cargando estado de Mercado Pago:', error);
@@ -50,31 +80,34 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
         try {
             setConnecting(true);
 
-            // Generar URLs únicas para esta organización
-            const baseUrl = window.location.origin;
-            const uniqueWebhookUrl = `${baseUrl}/api/webhooks/mercadopago/${organizationId}`;
-            const uniqueNotificationUrl = `${baseUrl}/api/notifications/mercadopago/${organizationId}`;
-
-            // Iniciar el flujo OAuth de Mercado Pago
+            // Iniciar el flujo OAuth de Mercado Pago (sin parámetros adicionales)
             const response = await fetch('/api/configuration/mercadopago/connect', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    organizationId,
-                    webhookUrl: uniqueWebhookUrl,
-                    notificationUrl: uniqueNotificationUrl
-                })
+                }
             });
 
-            if (response.ok) {
-                const { authUrl } = await response.json();
-                // Redirigir al usuario a Mercado Pago para autorizar
-                window.location.href = authUrl;
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                console.log('🔗 Abriendo OAuth de MercadoPago:', data);
+
+                // Abrir OAuth en nueva ventana/pestaña
+                const authWindow = window.open(
+                    data.authUrl,
+                    'mercadopago-oauth-manage',
+                    'width=600,height=700,scrollbars=yes,resizable=yes'
+                );
+
+                if (authWindow) {
+                    toast.success('🔗 OAuth Iniciado - Se abrió MercadoPago en nueva ventana. Completa la autorización.');
+                } else {
+                    // Fallback si el popup fue bloqueado
+                    window.location.href = data.authUrl;
+                }
             } else {
-                const error = await response.json();
-                toast.error(error.message || 'Error al conectar con Mercado Pago');
+                toast.error(data.error || 'Error al conectar con Mercado Pago');
             }
         } catch (error) {
             console.error('Error conectando con Mercado Pago:', error);
@@ -90,13 +123,13 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ organizationId })
+                }
             });
 
             if (response.ok) {
                 setAccount(null);
                 toast.success('Mercado Pago desconectado exitosamente');
+                await loadMercadoPagoStatus(); // Recargar estado
             } else {
                 toast.error('Error al desconectar Mercado Pago');
             }

@@ -36,6 +36,7 @@ import ManagePaymentMethods from "./ManagePaymentMethods";
 import ManageMercadoPago from "./ManageMercadoPago";
 import TestMercadoPago from "./TestMercadoPago";
 import SecuritySettings from "./SecuritySettings";
+import OAuthCallback from "./OAuthCallback";
 
 // We'll use these default payment methods if the schema doesn't exist yet
 const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -342,6 +343,7 @@ export default async function ConfigurationPage() {
 
   return (
     <div className="container max-w-none p-4">
+      <OAuthCallback />
       <h1 className="text-3xl font-bold mb-6">Configuración de la Organización</h1>
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 mb-4">

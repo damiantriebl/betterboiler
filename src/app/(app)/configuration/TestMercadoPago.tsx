@@ -34,67 +34,32 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
     const { toast } = useToast();
 
     useEffect(() => {
-        checkConfiguration();
+        loadConfigStatus();
 
-        // Detectar si venimos del callback de MercadoPago
-        const urlParams = new URLSearchParams(window.location.search);
-        const mpSuccess = urlParams.get('mp_success');
-        const mpError = urlParams.get('mp_error');
-        const errorDetail = urlParams.get('detail');
+        // Escuchar mensajes de ventanas popup OAuth
+        const handleMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
 
-        if (mpSuccess === 'true') {
-            toast({
-                title: "✅ OAuth Exitoso",
-                description: "Conexión con MercadoPago completada, actualizando estado...",
-                duration: 5000,
-            });
-
-            // Refrescar estado después de un momento para asegurar que la BD se actualizó
-            setTimeout(() => {
-                checkConfiguration();
-            }, 2000);
-
-            // Limpiar URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
-        if (mpError) {
-            let errorMessage = `Error: ${mpError}`;
-            let errorSolution = '';
-
-            // Proporcionar soluciones específicas para errores comunes
-            switch (mpError) {
-                case 'token_exchange_failed':
-                    errorMessage = '🔧 Error de Intercambio de Token';
-                    errorSolution = errorDetail ?
-                        `Detalle: ${errorDetail}. Verifica que el Redirect URI esté configurado en MercadoPago: https://apex-one-lemon.vercel.app/api/configuration/mercadopago/callback` :
-                        'Verifica la configuración del Redirect URI en el panel de MercadoPago';
-                    break;
-                case 'no_code_received':
-                    errorMessage = '❌ No se recibió código OAuth';
-                    errorSolution = 'MercadoPago no envió el código de autorización. Intenta nuevamente.';
-                    break;
-                case 'no_session_or_organization':
-                    errorMessage = '👤 Error de Sesión';
-                    errorSolution = 'No hay sesión válida. Refresca la página e intenta nuevamente.';
-                    break;
-                default:
-                    errorSolution = 'Verifica la configuración en el panel de MercadoPago';
+            if (event.data.type === 'mp_oauth_success') {
+                toast({
+                    title: "🎉 OAuth Completado",
+                    description: 'MercadoPago conectado exitosamente. Actualizando configuración...',
+                    duration: 5000,
+                });
+                // Recargar el estado después de un OAuth exitoso
+                setTimeout(() => {
+                    loadConfigStatus();
+                }, 2000);
+            } else if (event.data.type === 'mp_oauth_error') {
+                setError(`Error OAuth: ${event.data.error}${event.data.detail ? ` - ${event.data.detail}` : ''}`);
             }
+        };
 
-            toast({
-                title: errorMessage,
-                description: errorSolution,
-                variant: "destructive",
-                duration: 10000,
-            });
-
-            // Limpiar URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
     }, []);
 
-    const checkConfiguration = async () => {
+    const loadConfigStatus = async () => {
         try {
             const response = await fetch('/api/configuration/mercadopago/status');
             if (response.ok) {
@@ -242,7 +207,7 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
         setError(null);
 
         try {
-            // Paso 1: Desconectar la organización actual
+            // Solo hacer disconnect - el usuario debe reconectar manualmente
             const disconnectResponse = await fetch('/api/configuration/mercadopago/disconnect', {
                 method: 'POST',
                 headers: {
@@ -255,50 +220,16 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
             }
 
             toast({
-                title: "🔌 Desconectado",
-                description: "Organización desconectada de MercadoPago",
-                duration: 3000,
+                title: "🔌 Desconectado Exitosamente",
+                description: "Organización desconectada de MercadoPago. Ahora puedes conectar una cuenta diferente.",
+                duration: 5000,
             });
 
-            // Paso 2: Conectar con logout forzado
-            const connectResponse = await fetch('/api/configuration/mercadopago/connect', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    forceLogout: true
-                })
-            });
-
-            const connectData = await connectResponse.json();
-
-            if (connectResponse.ok && connectData.success) {
-                console.log('🔗 Abriendo OAuth de MercadoPago con logout forzado:', connectData.authUrl);
-
-                // Abrir OAuth en nueva ventana
-                const authWindow = window.open(
-                    connectData.authUrl,
-                    'mercadopago-oauth-logout',
-                    'width=600,height=700,scrollbars=yes,resizable=yes'
-                );
-
-                if (authWindow) {
-                    toast({
-                        title: "🔗 Reconectando...",
-                        description: "Se abrió MercadoPago con logout forzado. Si persiste la misma cuenta, prueba las opciones manuales.",
-                        duration: 10000,
-                    });
-                } else {
-                    // Fallback si el popup fue bloqueado
-                    window.location.href = connectData.authUrl;
-                }
-            } else {
-                throw new Error(connectData.error || 'Error iniciando OAuth');
-            }
+            // Recargar estado para mostrar botón de conexión
+            await loadConfigStatus();
 
         } catch (error) {
-            setError(`Error reconectando: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            setError(`Error desconectando: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         } finally {
             setLoading(false);
         }
@@ -393,7 +324,7 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
                         </Badge>
                     </div>
                     <Button
-                        onClick={checkConfiguration}
+                        onClick={loadConfigStatus}
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
@@ -488,7 +419,7 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={checkConfiguration}
+                                onClick={loadConfigStatus}
                                 disabled={loading}
                             >
                                 🔄
@@ -508,7 +439,7 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
                                     onClick={forceLogoutAndReconnect}
                                     disabled={loading}
                                 >
-                                    🔄 Reconectar
+                                    🔌 Desconectar
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -547,7 +478,7 @@ export default function TestMercadoPago({ organizationId }: TestMercadoPagoProps
                                     onClick={forceLogoutAndReconnect}
                                     disabled={loading}
                                 >
-                                    🔄 Reconectar (Logout)
+                                    🔌 Desconectar
                                 </Button>
 
                                 <Button
