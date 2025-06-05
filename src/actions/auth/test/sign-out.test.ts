@@ -65,7 +65,8 @@ describe("signOutAction", () => {
 
     it("should use default cookie name when AUTH_SESSION_COOKIE_NAME is not set", async () => {
       // Arrange
-      process.env.AUTH_SESSION_COOKIE_NAME = undefined;
+      const originalValue = process.env.AUTH_SESSION_COOKIE_NAME;
+      process.env.AUTH_SESSION_COOKIE_NAME = "";
 
       // Act & Assert
       await expect(signOutAction()).rejects.toEqual(new Error("NEXT_REDIRECT"));
