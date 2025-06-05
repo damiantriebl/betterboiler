@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useMotorcycleFiltersStore } from "@/stores/motorcycle-filters-store";
 import { useSecurityStore } from "@/stores/security-store";
@@ -50,6 +51,15 @@ interface MotorcycleTableProps {
   onFilterChange?: (selectedStates: MotorcycleState[]) => Promise<void>;
   onCurrentStatesChange?: (currentStates: MotorcycleState[]) => void;
   isLoading?: boolean;
+  serverPagination?: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (pageSize: number) => void;
+    onFilterChange: (filterType: string, value: string | MotorcycleState[] | number[]) => void;
+  };
 }
 
 type SortableKey = keyof Pick<
@@ -97,22 +107,32 @@ export default function MotorcycleTable({
   onFilterChange,
   onCurrentStatesChange,
   isLoading,
+  serverPagination,
 }: MotorcycleTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  // Usar el store de filtros
+  // Determinar si usamos paginación del servidor o cliente
+  const useServerPagination = !!serverPagination;
+
+  // Usar el store de filtros solo si no usamos paginación del servidor
   const {
     filters,
-    currentPage,
-    pageSize,
+    currentPage: clientCurrentPage,
+    pageSize: clientPageSize,
     sortConfig,
-    setCurrentPage,
-    setPageSize,
+    setCurrentPage: setClientCurrentPage,
+    setPageSize: setClientPageSize,
     setSortConfig,
     initializeFromData,
   } = useMotorcycleFiltersStore();
+
+  // Estados para paginación (pueden ser del cliente o servidor)
+  const currentPage = useServerPagination ? serverPagination.currentPage : clientCurrentPage;
+  const pageSize = useServerPagination ? serverPagination.pageSize : clientPageSize;
+  const totalItems = useServerPagination ? serverPagination.totalItems : 0;
+  const totalPages = useServerPagination ? serverPagination.totalPages : 0;
 
   const [motorcycles, setMotorcycles] = useState<MotorcycleWithFullDetails[]>(initialData);
   const [selectedMotoToDelete, setSelectedMotoToDelete] =
@@ -148,23 +168,30 @@ export default function MotorcycleTable({
     },
   );
 
-  // Inicializar el store con los datos cuando cambien
+  // Inicializar el store con los datos cuando cambien (solo para cliente)
   useEffect(() => {
-    console.log("[DEBUG] initialData changed, initializing store");
-    initializeFromData(initialData);
+    if (!useServerPagination) {
+      console.log("[DEBUG] initialData changed, initializing store");
+      initializeFromData(initialData);
+    }
     setMotorcycles(initialData);
-  }, [initialData, initializeFromData]);
+  }, [initialData, initializeFromData, useServerPagination]);
 
-  // Notificar al padre sobre los estados del filtro cuando cambien
+  // Notificar al padre sobre los estados del filtro cuando cambien (solo para cliente)
   useEffect(() => {
-    if (onCurrentStatesChange) {
+    if (!useServerPagination && onCurrentStatesChange) {
       console.log("[DEBUG] Notificando estados del filtro al padre:", filters.estadosVenta);
       onCurrentStatesChange(filters.estadosVenta);
     }
-  }, [filters.estadosVenta, onCurrentStatesChange]);
+  }, [filters.estadosVenta, onCurrentStatesChange, useServerPagination]);
 
-  // 🚀 OPTIMIZACIÓN: Memoizar filtrado de datos
-  const filteredData = () => {
+  // 🚀 OPTIMIZACIÓN: Convertir funciones a constantes asignadas (React 19 compiler-friendly)
+  const filteredMotorcycles = (() => {
+    if (useServerPagination) {
+      // Si usamos paginación del servidor, los datos ya vienen filtrados
+      return optimisticMotorcycles;
+    }
+
     let filtered = [...optimisticMotorcycles];
 
     if (filters.search) {
@@ -196,15 +223,20 @@ export default function MotorcycleTable({
     }
 
     return filtered;
-  };
+  })();
 
-  // 🚀 OPTIMIZACIÓN: Memoizar ordenamiento
-  const sortedData = () => {
+  // 🚀 OPTIMIZACIÓN: Memoizar ordenamiento (React 19 compiler-friendly)
+  const sortedMotorcycles = (() => {
+    if (useServerPagination) {
+      // Si usamos paginación del servidor, los datos ya vienen ordenados
+      return filteredMotorcycles;
+    }
+
     const { key, direction } = sortConfig;
 
-    if (!key || !direction) return filteredData();
+    if (!key || !direction) return filteredMotorcycles;
 
-    return [...filteredData()].sort((a, b) => {
+    return [...filteredMotorcycles].sort((a, b) => {
       const aValue = a[key as keyof MotorcycleWithFullDetails];
       const bValue = b[key as keyof MotorcycleWithFullDetails];
 
@@ -221,44 +253,80 @@ export default function MotorcycleTable({
 
       return 0;
     });
-  };
+  })();
 
-  // 🚀 OPTIMIZACIÓN: Paginación eficiente
-  const getPaginationData = () => {
-    const sortedDataResult = sortedData();
+  // 🚀 OPTIMIZACIÓN: Paginación eficiente (React 19 compiler-friendly)
+  const paginationData = (() => {
+    if (useServerPagination) {
+      // Para paginación del servidor, todos los datos son para la página actual
+      return {
+        paginatedData: sortedMotorcycles,
+        totalPages,
+        totalItems,
+      };
+    }
+
+    // Lógica original para paginación del cliente
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    const paginated = sortedDataResult.slice(startIndex, endIndex);
-    const pages = Math.ceil(sortedDataResult.length / pageSize);
+    const paginated = sortedMotorcycles.slice(startIndex, endIndex);
+    const pages = Math.ceil(sortedMotorcycles.length / pageSize);
 
     return {
       paginatedData: paginated,
       totalPages: pages,
-      totalItems: sortedDataResult.length,
+      totalItems: sortedMotorcycles.length,
     };
-  };
+  })();
 
-  const { paginatedData, totalPages, totalItems } = getPaginationData();
+  // Extraer valores para usar en el render
+  const {
+    paginatedData,
+    totalPages: calculatedTotalPages,
+    totalItems: calculatedTotalItems,
+  } = paginationData;
 
   const handleSort = (column: ManualColumnDefinition) => {
     if (!column.isSortable || !column.sortKey) return;
-    const key = column.sortKey;
 
-    let direction: "asc" | "desc" | null = "asc";
-    if (sortConfig.key === key) {
-      if (sortConfig.direction === "asc") direction = "desc";
-      else if (sortConfig.direction === "desc") direction = null;
+    if (useServerPagination) {
+      // Para paginación del servidor, notificar al padre
+      const currentDirection = sortConfig.key === column.sortKey ? sortConfig.direction : null;
+      const newDirection = currentDirection === "asc" ? "desc" : "asc";
+
+      serverPagination.onFilterChange("sortBy", column.sortKey);
+      serverPagination.onFilterChange("sortOrder", newDirection);
+    } else {
+      // Lógica original para cliente
+      const key = column.sortKey;
+      let direction: "asc" | "desc" | null = "asc";
+      if (sortConfig.key === key) {
+        if (sortConfig.direction === "asc") direction = "desc";
+        else if (sortConfig.direction === "desc") direction = null;
+      }
+      setSortConfig({ key: direction ? key : null, direction });
     }
-
-    setSortConfig({ key: direction ? key : null, direction });
   };
 
+  // Usar los valores calculados para paginación del cliente, o los del servidor
+  const finalTotalPages = useServerPagination ? totalPages : calculatedTotalPages;
+  const finalTotalItems = useServerPagination ? totalItems : calculatedTotalItems;
+
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+    if (useServerPagination) {
+      serverPagination.onPageChange(page);
+    } else {
+      setClientCurrentPage(page);
+    }
   };
 
   const handlePageSizeChange = (size: string) => {
-    setPageSize(Number(size));
+    const newSize = Number.parseInt(size, 10);
+    if (useServerPagination) {
+      serverPagination.onPageSizeChange(newSize);
+    } else {
+      setClientPageSize(newSize);
+    }
   };
 
   const handleFilterChange = async (
@@ -276,6 +344,24 @@ export default function MotorcycleTable({
         } catch (error) {
           console.error("Error en recarga de datos:", error);
         }
+      }
+    }
+
+    // 🔍 FUZZY SEARCH: Si es un cambio de búsqueda, usar la función del servidor
+    else if (filterType === "search" && serverPagination?.onFilterChange) {
+      try {
+        serverPagination.onFilterChange(filterType, value);
+      } catch (error) {
+        console.error("Error en búsqueda:", error);
+      }
+    }
+
+    // 🔄 Para otros tipos de filtros, también usar la función del servidor si está disponible
+    else if (serverPagination?.onFilterChange) {
+      try {
+        serverPagination.onFilterChange(filterType, value);
+      } catch (error) {
+        console.error("Error en filtro:", error);
       }
     }
   };
@@ -642,181 +728,191 @@ export default function MotorcycleTable({
         error={otpError}
       />
 
-      {/* Overlay de loading */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            <p className="text-sm text-muted-foreground">Cargando motocicletas...</p>
-          </div>
-        </div>
-      )}
-
       <div className="mb-6">
         <FilterSection onFilterChange={handleFilterChange} />
       </div>
 
-      <div className="flex items-center justify-between p-4 bg-muted/50 gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Motos por página:</span>
-          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-[80px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* 🎨 Wrapper con overlay específico para la tabla */}
+      <div className="relative">
+        {/* 🔄 Overlay centrado solo en la tabla cuando está cargando */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="flex flex-col items-center gap-3 p-6 bg-card border rounded-lg shadow-lg">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              <span className="text-sm font-medium">Actualizando catálogo...</span>
+            </div>
+          </div>
+        )}
 
-        <ColumnSelector
-          columns={AVAILABLE_COLUMNS}
-          visibleColumns={visibleColumns}
-          onColumnToggle={handleColumnToggle}
-        />
+        {/* 🦴 Contenido: tabla normal o skeleton */}
+        {isLoading ? (
+          <TableSkeleton />
+        ) : (
+          <>
+            <div className="flex items-center justify-between p-4 bg-muted/50 gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Motos por página:</span>
+                <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div className="text-sm text-muted-foreground">
-          Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
-          {Math.min(currentPage * pageSize, totalItems)} de
-          {totalItems} motos
-        </div>
+              <ColumnSelector
+                columns={AVAILABLE_COLUMNS}
+                visibleColumns={visibleColumns}
+                onColumnToggle={handleColumnToggle}
+              />
+
+              <div className="text-sm text-muted-foreground">
+                Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
+                {Math.min(currentPage * pageSize, finalTotalItems)} de
+                {finalTotalItems} motos
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {AVAILABLE_COLUMNS.map(
+                    (col) =>
+                      visibleColumns.includes(col.id) && (
+                        <TableHead
+                          key={col.id}
+                          className={
+                            col.id === "year"
+                              ? "w-[100px]"
+                              : col.id === "state"
+                                ? "w-[130px] text-center"
+                                : col.id === "price"
+                                  ? "text-right"
+                                  : ""
+                          }
+                        >
+                          {col.isSortable ? (
+                            <Button
+                              variant="ghost"
+                              onClick={() => handleSort(col)}
+                              className="p-0 hover:bg-transparent font-semibold"
+                            >
+                              {col.label} {getSortIcon(col.sortKey)}
+                            </Button>
+                          ) : (
+                            col.label
+                          )}
+                        </TableHead>
+                      ),
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                      No se encontraron motocicletas.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedData.map((moto) => (
+                    <MotorcycleRow
+                      key={moto.id}
+                      moto={moto}
+                      onAction={handleAction}
+                      onToggleStatus={handleToggleStatus}
+                      onCancelProcess={handleCancelProcess}
+                      onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
+                      onRowDoubleClick={handleOpenDetailModal}
+                      isPending={isPending}
+                    >
+                      {visibleColumns.includes("brandModel") && (
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-2xl font-bold uppercase">
+                              {moto.brand?.name || "N/A"}
+                            </span>
+                            <span className="text-base text-muted-foreground">
+                              {moto.model?.name || "N/A"}
+                            </span>
+                          </div>
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("chassisId") && (
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span className="font-mono text-xl">{moto.chassisNumber}</span>
+                          </div>
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("year") && (
+                        <TableCell className="text-xl w-[100px]">{moto.year}</TableCell>
+                      )}
+                      {visibleColumns.includes("displacement") && (
+                        <TableCell className="text-xl">{moto.displacement ?? "N/A"} cc</TableCell>
+                      )}
+                      {visibleColumns.includes("branch") && (
+                        <TableCell className="text-xl text-muted-foreground">
+                          {moto.branch?.name || "N/A"}
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("state") && (
+                        <TableCell className="w-[130px] text-center">
+                          <MotorcycleStatusBadge state={moto.state} />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("price") && (
+                        <TableCell className="text-right">
+                          <PriceDisplay
+                            costPrice={moto.costPrice}
+                            wholesalePrice={moto.wholesalePrice}
+                            retailPrice={moto.retailPrice}
+                            size="sm"
+                            currency={moto.currency}
+                          />
+                        </TableCell>
+                      )}
+                      {visibleColumns.includes("actions") && (
+                        <TableCell className="text-right print:hidden">
+                          <ActionButtons
+                            moto={moto}
+                            onAction={handleAction}
+                            onToggleStatus={handleToggleStatus}
+                            onCancelProcess={handleCancelProcess}
+                            onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
+                          />
+                          <ActionMenu
+                            moto={moto}
+                            onAction={handleAction}
+                            onToggleStatus={handleToggleStatus}
+                            onCancelProcess={handleCancelProcess}
+                            onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
+                          />
+                        </TableCell>
+                      )}
+                    </MotorcycleRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+
+            <PaginationControl
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={finalTotalItems}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
+        )}
       </div>
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {AVAILABLE_COLUMNS.map(
-              (col) =>
-                visibleColumns.includes(col.id) && (
-                  <TableHead
-                    key={col.id}
-                    className={
-                      col.id === "year"
-                        ? "w-[100px]"
-                        : col.id === "state"
-                          ? "w-[130px] text-center"
-                          : col.id === "price"
-                            ? "text-right"
-                            : ""
-                    }
-                  >
-                    {col.isSortable ? (
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort(col)}
-                        className="p-0 hover:bg-transparent font-semibold"
-                      >
-                        {col.label} {getSortIcon(col.sortKey)}
-                      </Button>
-                    ) : (
-                      col.label
-                    )}
-                  </TableHead>
-                ),
-            )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginatedData.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
-                No se encontraron motocicletas.
-              </TableCell>
-            </TableRow>
-          ) : (
-            paginatedData.map((moto) => (
-              <MotorcycleRow
-                key={moto.id}
-                moto={moto}
-                onAction={handleAction}
-                onToggleStatus={handleToggleStatus}
-                onCancelProcess={handleCancelProcess}
-                onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                onRowDoubleClick={handleOpenDetailModal}
-                isPending={isPending}
-              >
-                {visibleColumns.includes("brandModel") && (
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-2xl font-bold uppercase">
-                        {moto.brand?.name || "N/A"}
-                      </span>
-                      <span className="text-base text-muted-foreground">
-                        {moto.model?.name || "N/A"}
-                      </span>
-                    </div>
-                  </TableCell>
-                )}
-                {visibleColumns.includes("chassisId") && (
-                  <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span className="font-mono text-xl">{moto.chassisNumber}</span>
-                    </div>
-                  </TableCell>
-                )}
-                {visibleColumns.includes("year") && (
-                  <TableCell className="text-xl w-[100px]">{moto.year}</TableCell>
-                )}
-                {visibleColumns.includes("displacement") && (
-                  <TableCell className="text-xl">{moto.displacement ?? "N/A"} cc</TableCell>
-                )}
-                {visibleColumns.includes("branch") && (
-                  <TableCell className="text-xl text-muted-foreground">
-                    {moto.branch?.name || "N/A"}
-                  </TableCell>
-                )}
-                {visibleColumns.includes("state") && (
-                  <TableCell className="w-[130px] text-center">
-                    <MotorcycleStatusBadge state={moto.state} />
-                  </TableCell>
-                )}
-                {visibleColumns.includes("price") && (
-                  <TableCell className="text-right">
-                    <PriceDisplay
-                      costPrice={moto.costPrice}
-                      wholesalePrice={moto.wholesalePrice}
-                      retailPrice={moto.retailPrice}
-                      size="sm"
-                      currency={moto.currency}
-                    />
-                  </TableCell>
-                )}
-                {visibleColumns.includes("actions") && (
-                  <TableCell className="text-right print:hidden">
-                    <ActionButtons
-                      moto={moto}
-                      onAction={handleAction}
-                      onToggleStatus={handleToggleStatus}
-                      onCancelProcess={handleCancelProcess}
-                      onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                    />
-                    <ActionMenu
-                      moto={moto}
-                      onAction={handleAction}
-                      onToggleStatus={handleToggleStatus}
-                      onCancelProcess={handleCancelProcess}
-                      onNavigateToDetail={(id) => router.push(`/sales/${id}`)}
-                    />
-                  </TableCell>
-                )}
-              </MotorcycleRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-
-      <PaginationControl
-        currentPage={currentPage}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        pageSizeOptions={PAGE_SIZE_OPTIONS}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
     </div>
   );
 }

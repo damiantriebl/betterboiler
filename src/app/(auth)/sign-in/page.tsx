@@ -1,6 +1,9 @@
 "use client";
 
+import AuthGuard from "@/components/custom/AuthGuard";
+import GoogleSignInButton from "@/components/custom/GoogleSignInButton";
 import LoadingButton from "@/components/custom/LoadingButton";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -38,6 +41,7 @@ export default function SignIn() {
       password: "",
     },
   });
+
   useEffect(() => {
     if (searchParams.get("error") === "not-logged") {
       toast({
@@ -47,6 +51,7 @@ export default function SignIn() {
       });
     }
   }, [searchParams, toast]);
+
   const handleCredentialsSignIn = async (values: z.infer<typeof signInSchema>) => {
     await authClient.signIn.email(
       {
@@ -74,46 +79,84 @@ export default function SignIn() {
   };
 
   return (
-    <div className="grow flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <AuthGuard requireAuth={false}>
+      <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-gray-800">Ingresar</CardTitle>
+          <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-4">
+          {/* Botón de Google */}
+          <GoogleSignInButton mode="signin" />
+
+          {/* Separador */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
+            </div>
+          </div>
+
+          {/* Formulario de email/password */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCredentialsSignIn)} className="space-y-6">
-              {["email", "password"].map((field) => (
-                <FormField
-                  control={form.control}
-                  key={field}
-                  name={field as keyof z.infer<typeof signInSchema>}
-                  render={({ field: fieldProps }) => (
-                    <FormItem>
-                      <FormLabel>{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type={field === "password" ? "password" : "email"}
-                          placeholder={`Enter your ${field}`}
-                          {...fieldProps}
-                          autoComplete={field === "password" ? "current-password" : "email"}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-              <LoadingButton pending={pendingCredentials}>Ingresar</LoadingButton>
+            <form onSubmit={form.handleSubmit(handleCredentialsSignIn)} className="grid gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="m@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contraseña</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <LoadingButton pending={pendingCredentials}>Iniciar Sesión</LoadingButton>
             </form>
           </Form>
 
-          <div className="mt-4 text-center text-sm">
-            <Link href="/forgot-password" className="text-primary hover:underline">
-              Olvidaste tu contraseña?
+          {/* Separador para el botón de crear cuenta */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                O puedes crear una cuenta nueva
+              </span>
+            </div>
+          </div>
+
+          {/* Botón prominente para crear cuenta */}
+          <Button variant="secondary" className="w-full" asChild>
+            <Link href="/sign-up">🆕 Crear cuenta nueva</Link>
+          </Button>
+
+          {/* Link pequeño adicional */}
+          <div className="text-center text-sm text-muted-foreground">
+            ¿Olvidaste tu contraseña?{" "}
+            <Link href="/forgot-password" className="underline text-primary">
+              Recupérala aquí
             </Link>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthGuard>
   );
 }

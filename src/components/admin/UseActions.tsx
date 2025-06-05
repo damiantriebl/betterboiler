@@ -1,6 +1,5 @@
 "use client";
 
-import { authClient } from "@/auth-client";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -19,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSessionStore } from "@/stores/SessionStore";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -32,12 +32,14 @@ export default function UserActions({ userId, currentStatus, currentRole }: Prop
   const [banned, setBanned] = useState(currentStatus);
   const [role, setRole] = useState(currentRole);
   const router = useRouter();
-  const { data: session, isPending, error } = authClient.useSession();
+
+  // Usar SessionStore en lugar de authClient.useSession()
+  const userRole = useSessionStore((state) => state.userRole);
 
   // Verificar si el usuario actual puede cambiar roles (admin o root)
-  const canChangeRoles = session?.user.role === "admin" || session?.user.role === "root";
+  const canChangeRoles = userRole === "admin" || userRole === "root";
   // Verificar si el usuario actual puede cambiar organizaciones (solo root)
-  const canChangeOrganizations = session?.user.role === "root";
+  const canChangeOrganizations = userRole === "root";
 
   const toggleStatus = async () => {
     const newStatus = !banned;
@@ -104,7 +106,7 @@ export default function UserActions({ userId, currentStatus, currentRole }: Prop
             <SelectItem value="user">User</SelectItem>
             <SelectItem value="Treasurer">Treasurer</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
-            {session?.user.role === "root" && <SelectItem value="root">Root</SelectItem>}
+            {userRole === "root" && <SelectItem value="root">Root</SelectItem>}
           </SelectContent>
         </Select>
       )}

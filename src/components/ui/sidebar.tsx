@@ -14,7 +14,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-import { authClient } from "@/auth-client";
 import { UserButton } from "@/components/custom/UserButton";
 import { useSessionStore } from "@/stores/SessionStore";
 import {
@@ -399,30 +398,16 @@ const SidebarContent = React.forwardRef<
 >(({ className, skeleton, ...props }, ref) => {
   const { state } = useSidebar();
   const pathname = usePathname();
-  const { useSession } = authClient;
-  const { data: session, isPending, error } = useSession();
 
-  // Obtener datos del SessionStore de Zustand
+  // Obtener datos del SessionStore de Zustand (ya cargados por SessionStoreProvider)
   const storeOrganizationName = useSessionStore((state) => state.organizationName);
   const storeUserName = useSessionStore((state) => state.userName);
+  const storeUserId = useSessionStore((state) => state.userId);
 
-  // Usar type assertion más específica
-  interface OrganizationInfo {
-    id: string;
-    name: string;
-  }
-
-  function hasOrganization(user: unknown): user is { organization: OrganizationInfo } {
-    return typeof user === "object" && user !== null && "organization" in user;
-  }
-
-  // Priorizar datos del store, fallback a sesión
-  const organizationName =
-    storeOrganizationName ||
-    (session?.user && hasOrganization(session.user)
-      ? session.user.organization?.name
-      : "Organización");
-  const userName = storeUserName || session?.user?.name || "Usuario";
+  // Usar los datos del store directamente
+  const organizationName = storeOrganizationName || "Organización";
+  const userName = storeUserName || "Usuario";
+  const isLoading = !storeUserId; // Si no hay userId, aún está cargando
 
   const isActive = (path: string) => {
     return pathname.startsWith(path);
@@ -441,7 +426,7 @@ const SidebarContent = React.forwardRef<
     { href: "/configuration", icon: Settings, label: "Configuración" },
   ];
 
-  if (skeleton || isPending) {
+  if (skeleton || isLoading) {
     return <> {/* Placeholder Skeleton */} </>;
   }
 

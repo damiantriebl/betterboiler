@@ -1,41 +1,27 @@
-import { auth } from "@/auth"; // Asegúrate que esta ruta a tu config de better-auth sea correcta
-import { headers as nextHeaders } from "next/headers"; // Renombrar para evitar colisión
-import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const readonlyHeaders = await nextHeaders();
-    const standardHeaders = new Headers();
-    readonlyHeaders.forEach((value, key) => {
-      standardHeaders.append(key, value);
+    const session = await auth.api.getSession({
+      headers: request.headers,
     });
 
-    const session = await auth.api.getSession({ headers: standardHeaders }); // Pasar Headers estándar
-
     if (!session || !session.user) {
-      return NextResponse.json({ isAuthenticated: false, user: null }, { status: 200 });
+      return NextResponse.json({ error: "No hay sesión activa" }, { status: 401 });
     }
 
-    // Devuelve la información relevante del usuario.
-    // ¡Ten cuidado de no exponer información sensible que el cliente no necesite!
-    return NextResponse.json(
-      {
-        isAuthenticated: true,
-        user: {
-          id: session.user.id,
-          email: session.user.email, // Ejemplo
-          name: session.user.name, // Ejemplo
-          organizationId: session.user.organizationId, // Ejemplo
-          // Añade otros campos del usuario que sean seguros y necesarios para el cliente
-        },
+    // Devolver información básica de la sesión (sin datos sensibles)
+    return NextResponse.json({
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        organizationId: session.user.organizationId,
       },
-      { status: 200 },
-    );
+    });
   } catch (error) {
-    console.error("[API getSession] Error getting session:", error);
-    return NextResponse.json(
-      { isAuthenticated: false, user: null, error: "Error al obtener la sesión" },
-      { status: 500 },
-    );
+    console.error("Error obteniendo sesión:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

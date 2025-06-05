@@ -6,25 +6,56 @@ import { jwt } from "better-auth/plugins";
 import { sendEmail } from "./actions/auth/email";
 import prisma from "./lib/prisma";
 
+// Helper para determinar la URL base
+function getBaseUrl() {
+  // En producción, usar variables de entorno específicas
+  if (process.env.NODE_ENV === "production") {
+    return process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL;
+  }
+  // En desarrollo, usar localhost
+  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+}
+
+// Configurar orígenes confiables de manera más robusta
+function getTrustedOrigins() {
+  const origins = ["http://localhost:3000", "http://localhost:3001"];
+
+  // Agregar URLs de producción
+  if (process.env.BETTER_AUTH_URL) {
+    origins.push(process.env.BETTER_AUTH_URL);
+  }
+
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  }
+
+  // Para Vercel, agregar wildcards y URL específica
+  if (process.env.VERCEL_URL) {
+    origins.push(`https://${process.env.VERCEL_URL}`);
+  }
+
+  // Wildcards para todos los dominios de Vercel
+  origins.push("https://*.vercel.app");
+
+  // Eliminar duplicados y valores undefined/null
+  return [...new Set(origins.filter(Boolean))];
+}
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    // Wildcards para Vercel - automáticamente cubre todas las URLs preview
-    "https://*.vercel.app",
-    // Variables de entorno específicas (opcional)
-    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
-    ...(process.env.PRODUCTION_URL ? [process.env.PRODUCTION_URL] : []),
-  ],
+
+  baseURL: getBaseUrl(),
+
+  trustedOrigins: getTrustedOrigins(),
+
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 días
     updateAge: 60 * 60 * 24, // 1 día
     cookieCache: {
       enabled: true,
-      maxAge: 10 * 60, // Aumentar a 10 minutos
+      maxAge: 10 * 60, // 10 minutos
     },
   },
 
@@ -35,6 +66,7 @@ export const auth = betterAuth({
       profileCrop: { type: "string", required: false },
     },
   },
+
   plugins: [
     openAPI(),
     admin({
@@ -62,9 +94,10 @@ export const auth = betterAuth({
       },
     }),
   ],
+
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: false, // TEMPORALMENTE DESHABILITADO para debugging
     sendResetPassword: async ({ user, url }) => {
       await sendEmail({
         to: user.email,
@@ -73,11 +106,13 @@ export const auth = betterAuth({
       });
     },
   },
+
   emailVerification: {
-    sendOnSignUp: true,
+    sendOnSignUp: false, // TEMPORALMENTE DESHABILITADO
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, token }) => {
-      const verificationUrl = `${process.env.BETTER_AUTH_URL}/api/auth/verify-email?token=${token}&callbackURL=${process.env.EMAIL_VERIFICATION_CALLBACK_URL}`;
+      const baseUrl = getBaseUrl();
+      const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${token}&callbackURL=${baseUrl}/dashboard`;
       await sendEmail({
         to: user.email,
         subject: "Verificar direccion de mail",
@@ -85,6 +120,29 @@ export const auth = betterAuth({
       });
     },
   },
+
+  // Configuración adicional para debugging en producción
+  logger: {
+    level: process.env.NODE_ENV === "production" ? "error" : "debug",
+    disabled: false,
+  },
+
+  // Rate limiting más estricto en producción
+  rateLimit: {
+    window: 60, // 1 minuto
+    max: process.env.NODE_ENV === "production" ? 10 : 100, // Más estricto en producción
+  },
 } satisfies BetterAuthOptions);
 
 export type Session = typeof auth.$Infer.Session;
+
+// Log de configuración para debugging
+if (process.env.NODE_ENV === "development" || process.env.DEBUG_AUTH === "true") {
+  console.log("🔐 [AUTH CONFIG] Configuración de autenticación:", {
+    baseURL: getBaseUrl(),
+    trustedOrigins: getTrustedOrigins(),
+    nodeEnv: process.env.NODE_ENV,
+    hasSecret: !!process.env.BETTER_AUTH_SECRET,
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+  });
+}

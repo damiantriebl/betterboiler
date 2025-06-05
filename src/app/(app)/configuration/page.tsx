@@ -32,8 +32,11 @@ import ManageBankCards from "./ManageBankCards";
 import ManageBankingPromotions from "./ManageBankingPromotions";
 import ManageBranches from "./ManageBranches";
 import ManageColors from "./ManageColors";
+import ManageMercadoPago from "./ManageMercadoPago";
 import ManagePaymentMethods from "./ManagePaymentMethods";
+import OAuthCallback from "./OAuthCallback";
 import SecuritySettings from "./SecuritySettings";
+import TestMercadoPago from "./TestMercadoPago";
 
 // We'll use these default payment methods if the schema doesn't exist yet
 const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -340,9 +343,10 @@ export default async function ConfigurationPage() {
 
   return (
     <div className="container max-w-none p-4">
+      <OAuthCallback />
       <h1 className="text-3xl font-bold mb-6">Configuración de la Organización</h1>
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 mb-4">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 mb-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="branches">Sucursales</TabsTrigger>
           <TabsTrigger value="brandsModels">Marcas y Modelos</TabsTrigger>
@@ -350,6 +354,7 @@ export default async function ConfigurationPage() {
           <TabsTrigger value="paymentMethods">Métodos de Pago</TabsTrigger>
           <TabsTrigger value="bankCards">Tarjetas Bancarias</TabsTrigger>
           <TabsTrigger value="bankingPromotions">Promociones</TabsTrigger>
+          <TabsTrigger value="mercadoPago">MercadoPago</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -427,6 +432,18 @@ export default async function ConfigurationPage() {
               organizationId={organizationId}
             />
           </Suspense>
+        </TabsContent>
+
+        <TabsContent value="mercadoPago">
+          <div className="space-y-6">
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <TestMercadoPago organizationId={organizationId} />
+            </Suspense>
+
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <ManageMercadoPago organizationId={organizationId} />
+            </Suspense>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -49,19 +49,35 @@ export function useMotorcycleTableData({
     };
   };
 
-  // 🚀 OPTIMIZACIÓN 2: Filtrado
+  // 🚀 OPTIMIZACIÓN 2: Filtrado con soporte para fuzzy search
   const filteredData = () => {
     let filtered = [...motorcycles];
 
+    // ✨ BÚSQUEDA MEJORADA: Si hay término de búsqueda, usar fuzzy matching
     if (filters.search) {
-      const search = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (moto) =>
-          moto.brand?.name?.toLowerCase().includes(search) ||
-          moto.model?.name?.toLowerCase().includes(search) ||
-          moto.chassisNumber?.toLowerCase().includes(search),
-      );
+      const searchTerm = filters.search.toLowerCase();
+
+      // Implementar fuzzy search básico en el cliente como fallback
+      // (el fuzzy search avanzado se hace en el servidor)
+      filtered = filtered.filter((moto) => {
+        const brandMatch = moto.brand?.name?.toLowerCase().includes(searchTerm);
+        const modelMatch = moto.model?.name?.toLowerCase().includes(searchTerm);
+        const chassisMatch = moto.chassisNumber?.toLowerCase().includes(searchTerm);
+
+        // Búsqueda con tolerancia a errores tipográficos básica
+        const fuzzyBrandMatch = moto.brand?.name
+          ?.toLowerCase()
+          .replace(/[aeiou]/g, "")
+          .includes(searchTerm.replace(/[aeiou]/g, ""));
+        const fuzzyModelMatch = moto.model?.name
+          ?.toLowerCase()
+          .replace(/[aeiou]/g, "")
+          .includes(searchTerm.replace(/[aeiou]/g, ""));
+
+        return brandMatch || modelMatch || chassisMatch || fuzzyBrandMatch || fuzzyModelMatch;
+      });
     }
+
     if (filters.marca !== "todas") {
       filtered = filtered.filter((moto) => moto.brand?.name === filters.marca);
     }

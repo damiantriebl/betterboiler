@@ -19,6 +19,7 @@ export interface PaymentFormData {
   isMayorista: boolean;
   discountType: "percentage" | "fixed" | "none";
   discountValue: number;
+  discountPercentage?: number;
   selectedPromotions: number[];
   // Card payment fields
   tarjetaNumero?: string;
@@ -38,6 +39,18 @@ export interface PaymentFormData {
   todoPagoWidget?: boolean;
   rapipagoCodigo?: string;
   qrCode?: string;
+  // PayWay payment fields
+  paywayCodigoPagador?: string;
+  paywayDocumento?: string;
+  paywayTelefono?: string;
+  paywayEmail?: string;
+  paywayReferencia?: string;
+  // MercadoPago payment fields
+  mercadopagoPayerEmail?: string;
+  mercadopagoPayerDocument?: string;
+  mercadopagoPayerFirstName?: string;
+  mercadopagoPayerLastName?: string;
+  mercadopagoDescription?: string;
   // Current Account (Cuenta Corriente) fields
   downPayment?: number;
   currentAccountInstallments?: number;

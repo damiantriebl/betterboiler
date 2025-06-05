@@ -135,7 +135,20 @@ async function getBrandsData(organizationId: string): Promise<BrandForCombobox[]
         select: {
           id: true,
           name: true,
-          models: { select: { id: true, name: true } },
+          models: {
+            select: {
+              id: true,
+              name: true,
+              organizationModelConfigs: {
+                where: {
+                  organizationId: organizationId,
+                  isVisible: true,
+                },
+                select: { order: true, isVisible: true },
+              },
+            },
+            orderBy: { name: "asc" },
+          },
         },
       },
     },
@@ -145,7 +158,14 @@ async function getBrandsData(organizationId: string): Promise<BrandForCombobox[]
   return brandsData.map((orgBrand) => ({
     id: orgBrand.brand.id,
     name: orgBrand.brand.name,
-    models: orgBrand.brand.models.map((model) => ({ id: model.id, name: model.name })),
+    // Solo incluir modelos que están configurados Y visibles para esta organización
+    models: orgBrand.brand.models
+      .filter(
+        (model) =>
+          model.organizationModelConfigs.length > 0 && model.organizationModelConfigs[0].isVisible,
+      )
+      .map((model) => ({ id: model.id, name: model.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
     color: orgBrand.color,
   }));
 }

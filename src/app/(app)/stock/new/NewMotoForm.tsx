@@ -2,7 +2,7 @@
 
 import type { MotorcycleWithRelations } from "@/actions/sales/get-motorcycle-by-id";
 import type { BranchData } from "@/actions/stock/form-data-unified";
-import { BrandModelCombobox } from "@/components/custom/BrandModelCombobox";
+import { BrandModelComboboxEnhanced } from "@/components/custom/BrandModelComboboxEnhanced";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,6 +82,7 @@ interface NewMotoFormRefactoredProps {
   suppliers: Supplier[];
   isSubmitting: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onBrandsUpdate?: () => void;
   selectedBrand?: BrandForCombobox | null;
   selectedModel?: ModelInfo | null;
   availableSuppliers?: Supplier[];
@@ -101,6 +102,7 @@ export function NewMotoFormRefactored({
   suppliers,
   isSubmitting,
   onSubmit,
+  onBrandsUpdate,
   selectedBrand,
   selectedModel,
   availableSuppliers,
@@ -226,7 +228,7 @@ export function NewMotoFormRefactored({
             <FormItem className="md:col-span-2">
               <FormLabel>Marca y Modelo *</FormLabel>
               <FormControl>
-                <BrandModelCombobox
+                <BrandModelComboboxEnhanced
                   brands={availableBrands}
                   selectedModelId={getValues("modelId") || null}
                   onSelect={(modelId: number, brandId: number) => {
@@ -235,6 +237,7 @@ export function NewMotoFormRefactored({
                     clearErrors(["brandId", "modelId"]);
                   }}
                   placeholder="Selecciona marca y modelo"
+                  onBrandsUpdate={onBrandsUpdate}
                 />
               </FormControl>
               <FormMessage />

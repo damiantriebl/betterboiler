@@ -33,7 +33,7 @@ vi.mock("next/cache", () => ({
 }));
 
 // Mock suppliers module to avoid validation issues
-vi.mock("../../suppliers/suppliers-unified", () => ({
+vi.mock("@/actions/suppliers/suppliers-unified", () => ({
   getSuppliers: vi.fn(),
 }));
 
@@ -48,7 +48,7 @@ describe("form-data-unified", () => {
     (getOrganizationIdFromSession as any).mockResolvedValue(mockOrganizationId);
 
     // Configure suppliers mock
-    const { getSuppliers } = await import("../../suppliers/suppliers-unified");
+    const { getSuppliers } = await import("@/actions/suppliers/suppliers-unified");
     (getSuppliers as any).mockResolvedValue({
       success: true,
       suppliers: [{ id: 1, legalName: "Proveedor Test" }],
@@ -65,7 +65,13 @@ describe("form-data-unified", () => {
         brand: {
           id: 1,
           name: "Honda",
-          models: [{ id: 1, name: "CBR150" }],
+          models: [
+            {
+              id: 1,
+              name: "CBR150",
+              organizationModelConfigs: [{ order: 0, isVisible: true }],
+            },
+          ],
         },
         color: "#FF0000",
       },
@@ -273,7 +279,13 @@ describe("form-data-unified", () => {
           brand: {
             id: 1,
             name: "Honda",
-            models: [{ id: 1, name: "CBR150" }],
+            models: [
+              {
+                id: 1,
+                name: "CBR150",
+                organizationModelConfigs: [{ order: 0, isVisible: true }],
+              },
+            ],
           },
           color: "#FF0000",
         },
@@ -299,7 +311,13 @@ describe("form-data-unified", () => {
       (prisma.default.organizationBrand.findMany as any).mockResolvedValue(mockBrandsData);
       (prisma.default.motoColor.findMany as any).mockResolvedValue(mockColorsData);
       (prisma.default.branch.findMany as any).mockResolvedValue(mockBranches);
-      (prisma.default.supplier.findMany as any).mockResolvedValue(mockSuppliers);
+
+      // Mock getSuppliers function - already mocked at module level
+      const { getSuppliers } = await import("@/actions/suppliers/suppliers-unified");
+      (getSuppliers as any).mockResolvedValue({
+        success: true,
+        suppliers: mockSuppliers,
+      });
 
       // Act
       const result = await getFormData();
@@ -431,8 +449,16 @@ describe("form-data-unified", () => {
             id: 1,
             name: "Honda",
             models: [
-              { id: 1, name: "CBR150" },
-              { id: 2, name: "CBR250" },
+              {
+                id: 1,
+                name: "CBR150",
+                organizationModelConfigs: [{ order: 0, isVisible: true }],
+              },
+              {
+                id: 2,
+                name: "CBR250",
+                organizationModelConfigs: [{ order: 1, isVisible: true }],
+              },
             ],
           },
           color: "#FF0000",

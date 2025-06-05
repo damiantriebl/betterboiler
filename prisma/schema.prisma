@@ -87,6 +87,7 @@ model Organization {
   organizationPaymentCards   OrganizationPaymentCard[]
   organizationPaymentMethods OrganizationPaymentMethod[]
   payments                   Payment[]
+  paymentNotifications       PaymentNotification[]
   pettyCashDeposits          PettyCashDeposit[]
   pettyCashSpends            PettyCashSpend[]
   pettyCashWithdrawals       PettyCashWithdrawal[]
@@ -94,8 +95,39 @@ model Organization {
   suppliers                  Supplier[]
   motorcycles                Motorcycle[]
   users                      User[]
+  mercadoPagoOAuth           MercadoPagoOAuth?
+  mercadoPagoOAuthTemp       MercadoPagoOAuthTemp?
 
   @@map("organization")
+}
+
+model MercadoPagoOAuth {
+  id                   String       @id @default(cuid())
+  organizationId       String       @unique
+  mercadoPagoUserId    String
+  accessToken          String
+  refreshToken         String?
+  email                String
+  publicKey            String?
+  scopes               String[]
+  expiresAt            DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("mercadopago_oauth")
+}
+
+model MercadoPagoOAuthTemp {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  codeVerifier   String
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("mercadopago_oauth_temp")
 }
 
 model User {
@@ -431,8 +463,25 @@ model OrganizationPaymentMethod {
   updatedAt      DateTime      @updatedAt
   method         PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Relación con configuraciones
+  configurations PaymentMethodConfiguration[]
 
   @@unique([organizationId, methodId])
+}
+
+model PaymentMethodConfiguration {
+  id                         Int                        @id @default(autoincrement())
+  organizationPaymentMethodId Int
+  configKey                  String
+  configValue                String
+  isEncrypted                Boolean                    @default(false)
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  organizationPaymentMethod  OrganizationPaymentMethod  @relation(fields: [organizationPaymentMethodId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationPaymentMethodId, configKey])
+  @@index([organizationPaymentMethodId])
 }
 
 model Bank {
@@ -754,4 +803,21 @@ enum MotorcycleTransferStatus {
   IN_TRANSIT
   DELIVERED
   CANCELLED
+}
+
+model PaymentNotification {
+  id             String       @id @default(cuid())
+  organizationId String
+  paymentId      String
+  mercadopagoId  String
+  message        String
+  amount         Float
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime     // Las notificaciones expiran después de un tiempo
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isRead])
+  @@index([expiresAt])
+  @@map("payment_notification")
 }

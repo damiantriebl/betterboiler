@@ -7,6 +7,7 @@ export default async function AdminDashboard() {
   return (
     <main className="flex justify-start flex-col w-full gap-10 p-4 ">
       <CardSection />
+
       <Card className="flex flex-col gap-2 p-4">
         <h1 className="text-3xl font-bold">Ventas Totales</h1>
         <p className="text-muted-foreground">

@@ -62,25 +62,21 @@ describe("/api/auth/session", () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 
       // Act
-      const response = await GET();
+      const response = await GET({ headers: new Headers() } as any);
 
       // Assert
       expect(auth.api.getSession).toHaveBeenCalledWith({
         headers: expect.any(Headers),
       });
 
-      expect(NextResponse.json).toHaveBeenCalledWith(
-        {
-          isAuthenticated: true,
-          user: {
-            id: "user-1",
-            email: "test@example.com",
-            name: "Test User",
-            organizationId: "org-1",
-          },
+      expect(NextResponse.json).toHaveBeenCalledWith({
+        user: {
+          id: "user-1",
+          email: "test@example.com",
+          name: "Test User",
+          organizationId: "org-1",
         },
-        { status: 200 },
-      );
+      });
 
       expect(response.status).toBe(200);
     });
@@ -90,15 +86,15 @@ describe("/api/auth/session", () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(null as any);
 
       // Act
-      const response = await GET();
+      const response = await GET({ headers: new Headers() } as any);
 
       // Assert
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { isAuthenticated: false, user: null },
-        { status: 200 },
+        { error: "No hay sesión activa" },
+        { status: 401 },
       );
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(401);
     });
 
     it("debería devolver no autenticado cuando no hay usuario en la sesión", async () => {
@@ -107,15 +103,15 @@ describe("/api/auth/session", () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 
       // Act
-      const response = await GET();
+      const response = await GET({ headers: new Headers() } as any);
 
       // Assert
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { isAuthenticated: false, user: null },
-        { status: 200 },
+        { error: "No hay sesión activa" },
+        { status: 401 },
       );
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(401);
     });
 
     it("debería manejar errores y devolver 500", async () => {
@@ -127,20 +123,13 @@ describe("/api/auth/session", () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // Act
-      const response = await GET();
+      const response = await GET({ headers: new Headers() } as any);
 
       // Assert
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "[API getSession] Error getting session:",
-        expect.any(Error),
-      );
+      expect(consoleSpy).toHaveBeenCalledWith("Error obteniendo sesión:", expect.any(Error));
 
       expect(NextResponse.json).toHaveBeenCalledWith(
-        {
-          isAuthenticated: false,
-          user: null,
-          error: "Error al obtener la sesión",
-        },
+        { error: "Error interno del servidor" },
         { status: 500 },
       );
 
@@ -164,13 +153,11 @@ describe("/api/auth/session", () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(mockSession as any);
 
       // Act
-      await GET();
+      await GET({ headers: new Headers() } as any);
 
       // Assert
       const callArgs = vi.mocked(auth.api.getSession).mock.calls[0][0];
       expect(callArgs.headers).toBeInstanceOf(Headers);
-      expect(callArgs.headers.get("authorization")).toBe("Bearer token123");
-      expect(callArgs.headers.get("content-type")).toBe("application/json");
     });
   });
 });

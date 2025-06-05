@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import type { ActionState, CreateBrandState } from "@/types/action-states";
 import type { Brand } from "@prisma/client";
 import { Check, Info, Loader2, Palette, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useActionState } from "react";
@@ -56,6 +57,7 @@ export default function CreateBrandModal({
   existingBrandIds = [],
 }: CreateBrandModalProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isFetchingBrands, startFetchingBrands] = useTransition();
   const [availableBrands, setAvailableBrands] = useState<Brand[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string>("");
@@ -148,7 +150,10 @@ export default function CreateBrandModal({
       toast({ title: "Marca Asociada", description: associateState.message });
       onSuccess?.();
       // Use timeout to avoid state updates during rendering
-      setTimeout(() => onOpenChange(false), 0);
+      setTimeout(() => {
+        onOpenChange(false);
+        router.refresh();
+      }, 100);
     } else if (associateState?.error) {
       toast({
         title: "Error al asociar",
@@ -163,6 +168,7 @@ export default function CreateBrandModal({
     toast,
     onSuccess,
     onOpenChange,
+    router,
   ]);
 
   // Handle create success/error
@@ -175,6 +181,7 @@ export default function CreateBrandModal({
       });
       onSuccess?.();
       onOpenChange(false);
+      router.refresh();
     }
     if (createState?.error && !successHandledRef.current.create) {
       successHandledRef.current.create = true;
@@ -191,6 +198,7 @@ export default function CreateBrandModal({
     toast,
     onSuccess,
     onOpenChange,
+    router,
   ]);
 
   // Actualizar el color seleccionado cuando cambia la marca seleccionada
@@ -228,6 +236,7 @@ export default function CreateBrandModal({
         toast({ title: "Marca asociada correctamente." });
         onSuccess?.();
         onOpenChange(false);
+        router.refresh();
       } else {
         toast({
           title: "Error",

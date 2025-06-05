@@ -1,74 +1,116 @@
-import type { Session } from "@/auth";
 import { type NextRequest, NextResponse } from "next/server";
 
-// Cache de sesiones en memoria para reducir llamadas a la DB
-const sessionCache = new Map<string, { session: Session | null; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+export function middleware(request: NextRequest) {
+  const timestamp = new Date().toISOString();
+  const pathname = request.nextUrl.pathname;
+  const method = request.method;
+  const isProduction = process.env.NODE_ENV === "production";
 
-const authRoutes = ["/sign-in", "/sign-up"];
-const passwordRoutes = ["/reset-password", "/forgot-password"];
-const adminRoutes = ["/admin"];
-const rootRoutes = ["/root"];
-const publicRoutes = ["/public", "/api/health"]; // Rutas que NO requieren autenticación
+  // Solo log extensivo en desarrollo o si hay una variable de debug
+  const shouldLog = !isProduction || process.env.DEBUG_MIDDLEWARE === "true";
 
-export default async function authMiddleware(request: NextRequest) {
-  const pathName = request.nextUrl.pathname;
+  if (shouldLog) {
+    console.log(`🔍 [MIDDLEWARE] ${timestamp} - ${method} ${pathname}`);
+  }
 
-  const isAuth = authRoutes.includes(pathName);
-  const isPassword = passwordRoutes.includes(pathName);
-  const isAdmin = adminRoutes.includes(pathName) || pathName.startsWith("/admin");
-  const isRoot = rootRoutes.includes(pathName) || pathName.startsWith("/root");
-  const isPublic = publicRoutes.includes(pathName) || pathName.startsWith("/public");
+  // Rutas que no necesitan middleware
+  const skipRoutes = ["/api/auth/", "/_next/", "/favicon.ico", "/api/debug/", "/api/health"];
 
-  // 🔐 TODAS las rutas requieren autenticación por defecto, excepto auth, password, y public
-  const requiresAuth = !isAuth && !isPassword && !isPublic;
-
-  // Construir la URL completa para better-auth usando el request
-  const baseUrl = new URL(request.url).origin;
-  const sessionUrl = `${baseUrl}/api/auth/get-session`;
-
-  let session: Session | null = null;
-
-  try {
-    // Usar fetch nativo en lugar de betterFetch
-    const response = await fetch(sessionUrl, {
-      headers: {
-        cookie: request.headers.get("cookie") || "",
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      session = data;
+  if (skipRoutes.some((route) => pathname.startsWith(route))) {
+    if (shouldLog && pathname.startsWith("/api/auth/")) {
+      console.log(`🔐 [MIDDLEWARE] Ruta de auth, permitiendo paso: ${pathname}`);
     }
-  } catch (error) {
-    // En caso de error, asumir que no hay sesión
-    console.error("Error fetching session in middleware:", error);
-    session = null;
+    return NextResponse.next();
   }
 
+  // Rutas protegidas que requieren autenticación
+  const protectedRoutes = [
+    "/dashboard",
+    "/admin",
+    "/profile",
+    "/settings",
+    "/clients",
+    "/sales",
+    "/stock",
+    "/suppliers",
+    "/current-accounts",
+    "/petty-cash",
+    "/logistic",
+    "/reports",
+    "/configuration",
+  ];
+
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+
+  if (isProtectedRoute) {
+    // En producción, ser más estricto con las cookies de autenticación
+    const cookieHeader = request.headers.get("cookie") || "";
+    const hasAuthCookies = cookieHeader.includes("better-auth") || cookieHeader.includes("session");
+
+    if (shouldLog) {
+      console.log(`🔒 [MIDDLEWARE] Ruta protegida: ${pathname}`);
+      console.log(`🍪 [MIDDLEWARE] Cookies de auth presentes: ${hasAuthCookies ? "Sí" : "No"}`);
+    }
+
+    // Si no hay cookies de auth en una ruta protegida, redirigir al sign-in
+    if (!hasAuthCookies) {
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("callbackUrl", pathname);
+
+      if (shouldLog) {
+        console.log(`❌ [MIDDLEWARE] Sin cookies de auth, redirigiendo a: ${signInUrl.toString()}`);
+      }
+
+      return NextResponse.redirect(signInUrl);
+    }
+  }
+
+  // Headers de seguridad adicionales para producción
   const response = NextResponse.next();
-  response.headers.set("x-session", session ? "true" : "false");
 
-  if (isAuth || isPassword) {
-    return session ? NextResponse.redirect(new URL("/", request.url)) : response;
+  if (isProduction) {
+    // Headers de seguridad para producción
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-XSS-Protection", "1; mode=block");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   }
 
-  if (!session && requiresAuth) {
-    return NextResponse.redirect(new URL("/sign-in?error=not-logged", request.url));
+  // Información del entorno para debugging
+  if (shouldLog) {
+    const debugInfo = {
+      host: request.headers.get("host"),
+      origin: request.nextUrl.origin,
+      userAgent: request.headers.get("user-agent") ? "presente" : "ausente",
+      forwardedHost: request.headers.get("x-forwarded-host"),
+      forwardedProto: request.headers.get("x-forwarded-proto"),
+    };
+    console.log("📋 [MIDDLEWARE] Debug info:", debugInfo);
   }
 
-  if (isAdmin && session?.user.role !== "admin" && session?.user.role !== "root") {
-    return NextResponse.redirect(new URL("/?error=not-admin-privilegies", request.url));
-  }
-
-  if (isRoot && session?.user.role !== "root") {
-    return NextResponse.redirect(new URL("/?error=not-root-privilegies", request.url));
+  if (shouldLog) {
+    console.log(`✅ [MIDDLEWARE] Permitiendo acceso a: ${pathname}`);
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|.*\\.png$).*)"],
+  matcher: [
+    /*
+     * Aplicar middleware a todas las rutas excepto:
+     * - API routes de auth (/api/auth)
+     * - Archivos estáticos (_next/static)
+     * - Imágenes de Next.js (_next/image)
+     * - favicon.ico
+     * - Archivos públicos con extensión
+     */
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.[^/]*$).*)",
+  ],
 };
+
+if (process.env.NODE_ENV === "development" || process.env.DEBUG_MIDDLEWARE === "true") {
+  console.log(
+    `🚀 [MIDDLEWARE] Middleware cargado - Env: ${process.env.NODE_ENV} - Config: ${JSON.stringify(config.matcher)}`,
+  );
+}

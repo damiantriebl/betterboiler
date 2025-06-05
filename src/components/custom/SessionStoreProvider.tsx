@@ -11,10 +11,48 @@ interface SessionStoreProviderProps {
 
 export default function SessionStoreProvider({ sessionData, children }: SessionStoreProviderProps) {
   const setSession = useSessionStore((state) => state.setSession);
+  const clearSession = useSessionStore((state) => state.clearSession);
+  const currentUserId = useSessionStore((state) => state.userId);
+
+  console.log("🏪 [SESSION STORE] SessionStoreProvider renderizado:", {
+    hasSessionData: !!sessionData,
+    hasUserId: !!sessionData?.userId,
+    hasError: !!sessionData?.error,
+    error: sessionData?.error,
+    userId: sessionData?.userId,
+    userEmail: sessionData?.userEmail,
+    organizationId: sessionData?.organizationId,
+    currentStoreUserId: currentUserId,
+  });
 
   useEffect(() => {
-    // Solo actualizar el store si tenemos datos válidos
-    if (sessionData && !sessionData.error) {
+    console.log("🔄 [SESSION STORE] useEffect ejecutado con sessionData:", {
+      hasSessionData: !!sessionData,
+      hasError: !!sessionData?.error,
+      error: sessionData?.error,
+      userId: sessionData?.userId,
+      currentStoreUserId: currentUserId,
+    });
+
+    // Verificar inconsistencia: store tiene userId pero sessionData no
+    const hasInconsistentState = currentUserId && !sessionData?.userId;
+
+    if (hasInconsistentState) {
+      console.warn("🧹 [SESSION STORE] Estado inconsistente detectado - limpiando store corrupto");
+      console.warn(`   Store tenía userId: ${currentUserId}`);
+      console.warn(`   SessionData userId: ${sessionData?.userId || "null"}`);
+      clearSession();
+      return;
+    }
+
+    // Actualizar el store si tenemos sessionData Y (no hay error O el usuario está autenticado)
+    // Esto permite que usuarios sin organización aún puedan estar "logueados"
+    const shouldUpdateStore = sessionData && (!sessionData.error || sessionData.userId);
+
+    if (shouldUpdateStore) {
+      console.log(
+        `✅ [SESSION STORE] Actualizando store con datos (usuario autenticado=${!!sessionData.userId})`,
+      );
       setSession({
         organizationId: sessionData.organizationId,
         organizationName: sessionData.organizationName,
@@ -25,8 +63,16 @@ export default function SessionStoreProvider({ sessionData, children }: SessionS
         userImage: sessionData.userImage,
         userRole: sessionData.userRole,
       });
+    } else {
+      console.warn("⚠️ [SESSION STORE] No se actualiza el store - sessionData inválido sin userId");
+
+      // Si no hay datos válidos y el store tiene datos, limpiar
+      if (currentUserId) {
+        console.log("🧹 [SESSION STORE] Limpiando store porque no hay sessionData válido");
+        clearSession();
+      }
     }
-  }, [sessionData, setSession]);
+  }, [sessionData, setSession, clearSession, currentUserId]);
 
   return <>{children}</>;
 }

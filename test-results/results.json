@@ -10,7 +10,9 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {},
+    "metadata": {
+      "actualWorkers": 1
+    },
     "preserveOutput": "always",
     "reporter": [
       [
@@ -34,7 +36,9 @@
         "outputDir": "C:/proyectos2025/better/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "chromium",
         "name": "chromium",
         "testDir": "C:/proyectos2025/better/e2e",
@@ -42,76 +46,562 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 30000
-      },
-      {
-        "outputDir": "C:/proyectos2025/better/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "firefox",
-        "name": "firefox",
-        "testDir": "C:/proyectos2025/better/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
-        ],
-        "timeout": 30000
-      },
-      {
-        "outputDir": "C:/proyectos2025/better/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "webkit",
-        "name": "webkit",
-        "testDir": "C:/proyectos2025/better/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
-        ],
-        "timeout": 30000
-      },
-      {
-        "outputDir": "C:/proyectos2025/better/test-results",
-        "repeatEach": 1,
-        "retries": 0,
-        "metadata": {},
-        "id": "Mobile Chrome",
-        "name": "Mobile Chrome",
-        "testDir": "C:/proyectos2025/better/e2e",
-        "testIgnore": [],
-        "testMatch": [
-          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
-        ],
-        "timeout": 30000
+        "timeout": 120000
       }
     ],
     "shard": null,
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.52.0",
-    "workers": 12,
+    "workers": 1,
     "webServer": {
-      "command": "pnpm dev",
-      "url": "http://localhost:3001",
+      "command": "pnpm run start",
+      "url": "http://localhost:3000",
       "reuseExistingServer": true,
-      "timeout": 120000
+      "timeout": 60000,
+      "stdout": "pipe",
+      "stderr": "pipe"
     }
   },
-  "suites": [],
-  "errors": [
+  "suites": [
     {
-      "message": "Error: Timed out waiting 120000ms from config.webServer.",
-      "stack": "Error: Timed out waiting 120000ms from config.webServer."
+      "title": "sales-performance.spec.ts",
+      "file": "sales-performance.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Sales Page Performance",
+          "file": "sales-performance.spec.ts",
+          "line": 59,
+          "column": 6,
+          "specs": [
+            {
+              "title": "🚀 Tiempo de carga inicial debe ser < 8 segundos",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7974,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🚀 Setup rápido de autenticación...\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de email\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de password\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 botones de submit\n"
+                        },
+                        {
+                          "text": "📧 Email visible: true\n"
+                        },
+                        {
+                          "text": "🔒 Password visible: true\n"
+                        },
+                        {
+                          "text": "🚀 Submit visible: true\n"
+                        },
+                        {
+                          "text": "📝 Llenando formulario...\n"
+                        },
+                        {
+                          "text": "✅ Autenticación rápida completada\n"
+                        },
+                        {
+                          "text": "⏱️  Tiempo de carga: 1790ms\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-02T15:18:40.259Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a8d0fd6dd449c4c7772-c8f2ca4789e4dc5577a5",
+              "file": "sales-performance.spec.ts",
+              "line": 65,
+              "column": 3
+            },
+            {
+              "title": "📊 Core Web Vitals deben estar dentro de límites",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10101,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🚀 Setup rápido de autenticación...\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de email\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de password\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 botones de submit\n"
+                        },
+                        {
+                          "text": "📧 Email visible: true\n"
+                        },
+                        {
+                          "text": "🔒 Password visible: true\n"
+                        },
+                        {
+                          "text": "🚀 Submit visible: true\n"
+                        },
+                        {
+                          "text": "📝 Llenando formulario...\n"
+                        },
+                        {
+                          "text": "✅ Autenticación rápida completada\n"
+                        },
+                        {
+                          "text": "📊 Core Web Vitals: { fcp: \u001b[33m0\u001b[39m, lcp: \u001b[33m0\u001b[39m, cls: \u001b[33m0\u001b[39m }\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-02T15:18:48.310Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a8d0fd6dd449c4c7772-6dccc642ccdeaef57421",
+              "file": "sales-performance.spec.ts",
+              "line": 81,
+              "column": 3
+            },
+            {
+              "title": "🔍 Filtros deben responder rápidamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7804,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🚀 Setup rápido de autenticación...\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de email\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de password\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 botones de submit\n"
+                        },
+                        {
+                          "text": "📧 Email visible: true\n"
+                        },
+                        {
+                          "text": "🔒 Password visible: true\n"
+                        },
+                        {
+                          "text": "🚀 Submit visible: true\n"
+                        },
+                        {
+                          "text": "📝 Llenando formulario...\n"
+                        },
+                        {
+                          "text": "✅ Autenticación rápida completada\n"
+                        },
+                        {
+                          "text": "🔍 Tiempo de respuesta del filtro: 1031ms\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-02T15:18:58.416Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a8d0fd6dd449c4c7772-af6f4a34a3ece0520777",
+              "file": "sales-performance.spec.ts",
+              "line": 109,
+              "column": 3
+            },
+            {
+              "title": "📄 Paginación debe ser eficiente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6739,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🚀 Setup rápido de autenticación...\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de email\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de password\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 botones de submit\n"
+                        },
+                        {
+                          "text": "📧 Email visible: true\n"
+                        },
+                        {
+                          "text": "🔒 Password visible: true\n"
+                        },
+                        {
+                          "text": "🚀 Submit visible: true\n"
+                        },
+                        {
+                          "text": "📝 Llenando formulario...\n"
+                        },
+                        {
+                          "text": "✅ Autenticación rápida completada\n"
+                        },
+                        {
+                          "text": "⚠️  Botón de paginación no encontrado, saltando test\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-02T15:19:06.225Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a8d0fd6dd449c4c7772-4515a31b65c347868921",
+              "file": "sales-performance.spec.ts",
+              "line": 136,
+              "column": 3
+            },
+            {
+              "title": "🌐 Número de requests debe ser optimizado",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6976,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🚀 Setup rápido de autenticación...\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de email\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de password\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 botones de submit\n"
+                        },
+                        {
+                          "text": "📧 Email visible: true\n"
+                        },
+                        {
+                          "text": "🔒 Password visible: true\n"
+                        },
+                        {
+                          "text": "🚀 Submit visible: true\n"
+                        },
+                        {
+                          "text": "📝 Llenando formulario...\n"
+                        },
+                        {
+                          "text": "✅ Autenticación rápida completada\n"
+                        },
+                        {
+                          "text": "🌐 Total requests: 39\n"
+                        },
+                        {
+                          "text": "📋 Requests realizadas: [\n  \u001b[32m'http://localhost:3000/sales'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/css/3ed6d6c6ab6fa384.css'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/css/862d5aa2fae59489.css'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/chunks/webpack-2b7aee0c44532622.js'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/chunks/b403adb8-4ed6f67a2c37303a.js'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/chunks/4045-6b7d3b21c66586af.js'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/chunks/main-app-0e294cacdbb65e66.js'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/chunks/7624-cb561d6882da67dc.js'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/chunks/5505-1b3819e6dddc4c16.js'\u001b[39m,\n  \u001b[32m'http://localhost:3000/_next/static/chunks/app/layout-9c5d8d08238296c4.js'\u001b[39m\n]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-02T15:19:12.968Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a8d0fd6dd449c4c7772-0ba146857325974b26c4",
+              "file": "sales-performance.spec.ts",
+              "line": 161,
+              "column": 3
+            },
+            {
+              "title": "⚡ API calls deben ser rápidas",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 14400,
+                      "error": {
+                        "message": "TimeoutError: page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================",
+                        "stack": "TimeoutError: page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================\n    at setupQuickAuth (C:\\proyectos2025\\better\\e2e\\helpers\\auth-helper.ts:448:12)\n    at C:\\proyectos2025\\better\\e2e\\sales-performance.spec.ts:62:5",
+                        "location": {
+                          "file": "C:\\proyectos2025\\better\\e2e\\helpers\\auth-helper.ts",
+                          "column": 12,
+                          "line": 448
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mhelpers\\auth-helper.ts:448\n\n\u001b[0m \u001b[90m 446 |\u001b[39m     \u001b[90m// 7. Submit y esperar redirección\u001b[39m\n \u001b[90m 447 |\u001b[39m     \u001b[36mawait\u001b[39m \u001b[33mPromise\u001b[39m\u001b[33m.\u001b[39mall([\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 448 |\u001b[39m       page\u001b[33m.\u001b[39mwaitForURL(url \u001b[33m=>\u001b[39m \u001b[33m!\u001b[39murl\u001b[33m.\u001b[39mtoString()\u001b[33m.\u001b[39mincludes(\u001b[32m'/sign-in'\u001b[39m)\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m,\u001b[39m\n \u001b[90m     |\u001b[39m            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 449 |\u001b[39m       submitButton\u001b[33m.\u001b[39mclick()\n \u001b[90m 450 |\u001b[39m     ])\u001b[33m;\u001b[39m\n \u001b[90m 451 |\u001b[39m     \u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\proyectos2025\\better\\e2e\\helpers\\auth-helper.ts",
+                            "column": 12,
+                            "line": 448
+                          },
+                          "message": "TimeoutError: page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================\n\n\u001b[90m   at \u001b[39mhelpers\\auth-helper.ts:448\n\n\u001b[0m \u001b[90m 446 |\u001b[39m     \u001b[90m// 7. Submit y esperar redirección\u001b[39m\n \u001b[90m 447 |\u001b[39m     \u001b[36mawait\u001b[39m \u001b[33mPromise\u001b[39m\u001b[33m.\u001b[39mall([\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 448 |\u001b[39m       page\u001b[33m.\u001b[39mwaitForURL(url \u001b[33m=>\u001b[39m \u001b[33m!\u001b[39murl\u001b[33m.\u001b[39mtoString()\u001b[33m.\u001b[39mincludes(\u001b[32m'/sign-in'\u001b[39m)\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m,\u001b[39m\n \u001b[90m     |\u001b[39m            \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 449 |\u001b[39m       submitButton\u001b[33m.\u001b[39mclick()\n \u001b[90m 450 |\u001b[39m     ])\u001b[33m;\u001b[39m\n \u001b[90m 451 |\u001b[39m     \u001b[0m\n\u001b[2m    at setupQuickAuth (C:\\proyectos2025\\better\\e2e\\helpers\\auth-helper.ts:448:12)\u001b[22m\n\u001b[2m    at C:\\proyectos2025\\better\\e2e\\sales-performance.spec.ts:62:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "🚀 Setup rápido de autenticación...\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de email\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de password\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 botones de submit\n"
+                        },
+                        {
+                          "text": "📧 Email visible: true\n"
+                        },
+                        {
+                          "text": "🔒 Password visible: true\n"
+                        },
+                        {
+                          "text": "🚀 Submit visible: true\n"
+                        },
+                        {
+                          "text": "📝 Llenando formulario...\n"
+                        }
+                      ],
+                      "stderr": [
+                        {
+                          "text": "❌ Error en setup rápido: page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-06-02T15:19:19.948Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\proyectos2025\\better\\test-results\\sales-performance-Sales-Pa-39fd9-API-calls-deben-ser-rápidas-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\proyectos2025\\better\\test-results\\sales-performance-Sales-Pa-39fd9-API-calls-deben-ser-rápidas-chromium\\video.webm"
+                        },
+                        {
+                          "name": "_error-context-0",
+                          "contentType": "text/markdown",
+                          "path": "C:\\proyectos2025\\better\\test-results\\sales-performance-Sales-Pa-39fd9-API-calls-deben-ser-rápidas-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\proyectos2025\\better\\e2e\\helpers\\auth-helper.ts",
+                        "column": 12,
+                        "line": 448
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "5a8d0fd6dd449c4c7772-18b19457c84bca1abcb8",
+              "file": "sales-performance.spec.ts",
+              "line": 178,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Sales Page Load Testing",
+          "file": "sales-performance.spec.ts",
+          "line": 209,
+          "column": 6,
+          "specs": [
+            {
+              "title": "🔄 Múltiples cargas consecutivas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 9770,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🚀 Setup rápido de autenticación...\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de email\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 inputs de password\n"
+                        },
+                        {
+                          "text": "🔍 Encontrados 2 botones de submit\n"
+                        },
+                        {
+                          "text": "📧 Email visible: true\n"
+                        },
+                        {
+                          "text": "🔒 Password visible: true\n"
+                        },
+                        {
+                          "text": "🚀 Submit visible: true\n"
+                        },
+                        {
+                          "text": "📝 Llenando formulario...\n"
+                        },
+                        {
+                          "text": "✅ Autenticación rápida completada\n"
+                        },
+                        {
+                          "text": "🔄 Carga 1: 1490ms\n"
+                        },
+                        {
+                          "text": "🔄 Carga 2: 1234ms\n"
+                        },
+                        {
+                          "text": "🔄 Carga 3: 1201ms\n"
+                        },
+                        {
+                          "text": "📊 Tiempo promedio: 1308.3333333333333ms\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-06-02T15:19:35.213Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a8d0fd6dd449c4c7772-a7438b3c9e31b8ea8897",
+              "file": "sales-performance.spec.ts",
+              "line": 215,
+              "column": 3
+            }
+          ]
+        }
+      ]
     }
   ],
+  "errors": [],
   "stats": {
-    "startTime": "2025-05-26T12:02:27.166Z",
-    "duration": 120572.688,
-    "expected": 0,
+    "startTime": "2025-06-02T15:18:39.114Z",
+    "duration": 66009.768,
+    "expected": 6,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }

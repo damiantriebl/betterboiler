@@ -3,9 +3,9 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
 // Estados disponibles por defecto (motos que se pueden vender/gestionar)
+// RESERVADO no se considera disponible para venta
 export const estadosDisponibles: MotorcycleState[] = [
   MotorcycleState.STOCK,
-  MotorcycleState.RESERVADO,
   MotorcycleState.PAUSADO,
 ];
 
