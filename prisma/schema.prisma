@@ -87,6 +87,7 @@ model Organization {
   organizationPaymentCards   OrganizationPaymentCard[]
   organizationPaymentMethods OrganizationPaymentMethod[]
   payments                   Payment[]
+  paymentNotifications       PaymentNotification[]
   pettyCashDeposits          PettyCashDeposit[]
   pettyCashSpends            PettyCashSpend[]
   pettyCashWithdrawals       PettyCashWithdrawal[]
@@ -802,4 +803,21 @@ enum MotorcycleTransferStatus {
   IN_TRANSIT
   DELIVERED
   CANCELLED
+}
+
+model PaymentNotification {
+  id             String       @id @default(cuid())
+  organizationId String
+  paymentId      String
+  mercadopagoId  String
+  message        String
+  amount         Float
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime     // Las notificaciones expiran después de un tiempo
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isRead])
+  @@index([expiresAt])
+  @@map("payment_notification")
 }

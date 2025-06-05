@@ -9,7 +9,7 @@ import prisma from "./lib/prisma";
 // Helper para determinar la URL base
 function getBaseUrl() {
   // En producción, usar variables de entorno específicas
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     return process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL;
   }
   // En desarrollo, usar localhost
@@ -18,16 +18,13 @@ function getBaseUrl() {
 
 // Configurar orígenes confiables de manera más robusta
 function getTrustedOrigins() {
-  const origins = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-  ];
+  const origins = ["http://localhost:3000", "http://localhost:3001"];
 
   // Agregar URLs de producción
   if (process.env.BETTER_AUTH_URL) {
     origins.push(process.env.BETTER_AUTH_URL);
   }
-  
+
   if (process.env.NEXT_PUBLIC_APP_URL) {
     origins.push(process.env.NEXT_PUBLIC_APP_URL);
   }
@@ -36,7 +33,7 @@ function getTrustedOrigins() {
   if (process.env.VERCEL_URL) {
     origins.push(`https://${process.env.VERCEL_URL}`);
   }
-  
+
   // Wildcards para todos los dominios de Vercel
   origins.push("https://*.vercel.app");
 
@@ -50,9 +47,9 @@ export const auth = betterAuth({
   }),
 
   baseURL: getBaseUrl(),
-  
+
   trustedOrigins: getTrustedOrigins(),
-  
+
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 días
     updateAge: 60 * 60 * 24, // 1 día
@@ -97,7 +94,7 @@ export const auth = betterAuth({
       },
     }),
   ],
-  
+
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false, // TEMPORALMENTE DESHABILITADO para debugging
@@ -109,7 +106,7 @@ export const auth = betterAuth({
       });
     },
   },
-  
+
   emailVerification: {
     sendOnSignUp: false, // TEMPORALMENTE DESHABILITADO
     autoSignInAfterVerification: true,
@@ -126,23 +123,22 @@ export const auth = betterAuth({
 
   // Configuración adicional para debugging en producción
   logger: {
-    level: process.env.NODE_ENV === 'production' ? 'error' : 'debug',
+    level: process.env.NODE_ENV === "production" ? "error" : "debug",
     disabled: false,
   },
 
   // Rate limiting más estricto en producción
   rateLimit: {
     window: 60, // 1 minuto
-    max: process.env.NODE_ENV === 'production' ? 10 : 100, // Más estricto en producción
+    max: process.env.NODE_ENV === "production" ? 10 : 100, // Más estricto en producción
   },
-
 } satisfies BetterAuthOptions);
 
 export type Session = typeof auth.$Infer.Session;
 
 // Log de configuración para debugging
-if (process.env.NODE_ENV === 'development' || process.env.DEBUG_AUTH === 'true') {
-  console.log('🔐 [AUTH CONFIG] Configuración de autenticación:', {
+if (process.env.NODE_ENV === "development" || process.env.DEBUG_AUTH === "true") {
+  console.log("🔐 [AUTH CONFIG] Configuración de autenticación:", {
     baseURL: getBaseUrl(),
     trustedOrigins: getTrustedOrigins(),
     nodeEnv: process.env.NODE_ENV,

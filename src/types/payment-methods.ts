@@ -3,7 +3,17 @@
 export interface PaymentMethod {
   id: number;
   name: string;
-  type: "cash" | "credit" | "debit" | "transfer" | "check" | "deposit" | "qr" | "payway" | "mercadopago" | string;
+  type:
+    | "cash"
+    | "credit"
+    | "debit"
+    | "transfer"
+    | "check"
+    | "deposit"
+    | "qr"
+    | "payway"
+    | "mercadopago"
+    | string;
   description: string;
   iconUrl?: string | null;
 }
@@ -41,7 +51,7 @@ export interface PayWayConfiguration {
   merchant_id: string;
   api_key: string;
   secret_key: string;
-  environment: 'sandbox' | 'production';
+  environment: "sandbox" | "production";
   success_url: string;
   cancel_url: string;
   webhook_url: string;
@@ -69,7 +79,7 @@ export interface PayWayPaymentRequest {
 export interface MercadoPagoConfiguration {
   access_token: string;
   public_key: string;
-  environment: 'sandbox' | 'production';
+  environment: "sandbox" | "production";
   success_url: string;
   failure_url: string;
   pending_url: string;

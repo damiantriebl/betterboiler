@@ -16,7 +16,7 @@ import type { CreateCurrentAccountInput, RecordPaymentInput } from "@/zod/curren
 import type { Client } from "@prisma/client";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { use } from "react";
 
 // NEW IMPORTS
@@ -121,41 +121,44 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
   // Hook useTransition
   const [isTransitionPending, startTransition] = useTransition();
 
-  const steps = ["Confirmar Moto", "Método de Pago", "Seleccionar Cliente", "Confirmación"];
+  const steps = ["Confirmar Moto", "Seleccionar Cliente", "Método de Pago", "Confirmación"];
 
   // 🔧 FIXED: Arreglar problemas de hidratación
   const [isMounted, setIsMounted] = useState(false);
 
   const localStorageKey = `saleProcess-${id}`;
 
-  const initialSaleState: SaleProcessState = {
-    currentStep: 0,
-    selectedClientId: isReserved ? initialClientIdFromReservation : null,
-    buyerData: {
-      nombre: "",
-      apellido: "",
-      dni: "",
-      telefono: "",
-      email: "",
-      direccion: "",
-    },
-    paymentData: {
-      metodoPago: "",
-      cuotas: 1,
-      banco: "",
-      isMayorista: false,
-      discountType: "none",
-      discountValue: 0,
-      selectedPromotions: [],
-      downPayment: 0,
-      currentAccountInstallments: 12,
-      currentAccountFrequency: "MONTHLY",
-      annualInterestRate: 0,
-      currentAccountStartDate: new Date().toISOString().split("T")[0],
-      currentAccountNotes: "",
-    },
-    showClientTable: false,
-  };
+  const initialSaleState: SaleProcessState = useMemo(
+    () => ({
+      currentStep: 0,
+      selectedClientId: isReserved ? initialClientIdFromReservation : null,
+      buyerData: {
+        nombre: "",
+        apellido: "",
+        dni: "",
+        telefono: "",
+        email: "",
+        direccion: "",
+      },
+      paymentData: {
+        metodoPago: "",
+        cuotas: 1,
+        banco: "",
+        isMayorista: false,
+        discountType: "none",
+        discountValue: 0,
+        selectedPromotions: [],
+        downPayment: 0,
+        currentAccountInstallments: 12,
+        currentAccountFrequency: "MONTHLY",
+        annualInterestRate: 0,
+        currentAccountStartDate: new Date().toISOString().split("T")[0],
+        currentAccountNotes: "",
+      },
+      showClientTable: false,
+    }),
+    [isReserved, initialClientIdFromReservation],
+  );
 
   // 🔧 FIXED: Estado inicial sin usar localStorage directamente
   const [saleState, setSaleState] = useState<SaleProcessState>(initialSaleState);
@@ -187,7 +190,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         console.error("Error reading from localStorage:", error);
       }
     }
-  }, []);
+  }, [localStorageKey, initialSaleState]);
 
   // 🔧 FIXED: Guardar en localStorage solo cuando está montado
   useEffect(() => {
@@ -347,7 +350,6 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
     saleState.selectedClientId,
     saleState.buyerData.nombre,
     saleState.buyerData.email,
-    setSaleState,
   ]);
 
   // Load banking promotions when organizationId is available
@@ -622,7 +624,19 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
       // Step 0: Confirm motorcycle - nothing to validate
       setSaleState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }));
     } else if (saleState.currentStep === 1) {
-      // Step 1: Payment Method
+      // Step 1: Select Client
+      if (!saleState.selectedClientId) {
+        toast({
+          title: "Cliente Requerido",
+          description: "Por favor, seleccione un cliente para continuar.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSaleState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }));
+    } else if (saleState.currentStep === 2) {
+      // Step 2: Payment Method
       if (!saleState.paymentData.metodoPago) {
         toast({
           title: "Método de Pago Requerido",
@@ -632,7 +646,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         return;
       }
 
-      // Basic validation for payment data
+      // Basic validation for payment data based on method
       if (saleState.paymentData.metodoPago === "tarjeta") {
         // Validate card details
         if (!saleState.paymentData.tarjetaNumero) {
@@ -711,6 +725,29 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           });
           return;
         }
+      } else if (saleState.paymentData.metodoPago === "payway") {
+        // Validate PayWay details
+        if (!saleState.paymentData.paywayCodigoPagador) {
+          toast({
+            title: "Datos de PayWay Incompletos",
+            description: "Por favor, ingrese el código de pagador.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!saleState.paymentData.paywayDocumento) {
+          toast({
+            title: "Datos de PayWay Incompletos",
+            description: "Por favor, ingrese el documento (DNI/CUIT).",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (saleState.paymentData.metodoPago === "mercadopago") {
+        // SIMPLIFICADO: MercadoPago no requiere validación adicional ya que el Payment Brick maneja todo
+        console.log(
+          "✅ Método de pago MercadoPago seleccionado - Payment Brick maneja la validación",
+        );
       } else if (saleState.paymentData.metodoPago === "cuenta_corriente") {
         // Validate current account data
         if (
@@ -756,20 +793,17 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           return;
         }
       }
-
-      // All validations passed
-      setSaleState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }));
-    } else if (saleState.currentStep === 2) {
-      // Step 2: Select Client
-      if (!saleState.selectedClientId) {
-        toast({
-          title: "Cliente Requerido",
-          description: "Por favor, seleccione un cliente para continuar.",
-          variant: "destructive",
-        });
-        return;
+      // NUEVO: Para métodos simples (efectivo, deposito, qr, todopago, rapipago) no se requiere validación adicional
+      else if (
+        ["efectivo", "deposito", "qr", "todopago", "rapipago"].includes(
+          saleState.paymentData.metodoPago,
+        )
+      ) {
+        // Estos métodos no requieren campos adicionales, solo continuar
+        console.log(`✅ Método de pago simple seleccionado: ${saleState.paymentData.metodoPago}`);
       }
 
+      // All validations passed
       setSaleState((prev) => ({ ...prev, currentStep: prev.currentStep + 1 }));
     } else if (saleState.currentStep === 3) {
       // Step 3: Confirmation - Complete sale
@@ -988,7 +1022,19 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           />
         );
 
-      case 1: // Payment Method
+      case 1: // Select Client
+        return (
+          <SelectClientStep
+            clients={clients}
+            selectedClient={selectedClient}
+            loadingClients={loadingClients}
+            isReserved={isReserved}
+            onSelectClient={handleSelectClient}
+            onCancelClientSelection={handleCancelClientSelection}
+          />
+        );
+
+      case 2: // Payment Method
         return (
           <PaymentMethodStep
             moto={moto}
@@ -1005,18 +1051,6 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
             onPromotionSelection={handlePromotionSelection}
             onCheckboxChange={handleCheckboxChange}
             onDateChange={handleDateChange}
-          />
-        );
-
-      case 2: // Select Client
-        return (
-          <SelectClientStep
-            clients={clients}
-            selectedClient={selectedClient}
-            loadingClients={loadingClients}
-            isReserved={isReserved}
-            onSelectClient={handleSelectClient}
-            onCancelClientSelection={handleCancelClientSelection}
           />
         );
 

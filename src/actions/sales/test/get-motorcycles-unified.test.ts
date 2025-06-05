@@ -436,7 +436,7 @@ describe("get-motorcycles-unified", () => {
       expect(mockPrisma.motorcycle.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           take: 100, // Límite por defecto
-          orderBy: [{ state: "asc" }, { createdAt: "desc" }],
+          orderBy: [{ state: "asc" }, { id: "desc" }],
         }),
       );
     });

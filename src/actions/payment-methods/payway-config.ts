@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 // Obtener la configuración de PayWay para una organización
 export async function getPayWayConfiguration(
-  organizationId: string
+  organizationId: string,
 ): Promise<PayWayConfiguration | null> {
   try {
     // Buscar el método de pago PayWay
@@ -52,7 +52,7 @@ export async function getPayWayConfiguration(
 // Actualizar la configuración de PayWay
 export async function updatePayWayConfiguration(
   organizationId: string,
-  configuration: Partial<PayWayConfiguration>
+  configuration: Partial<PayWayConfiguration>,
 ): Promise<ActionState> {
   try {
     // Buscar el método de pago PayWay
@@ -80,17 +80,18 @@ export async function updatePayWayConfiguration(
     if (!orgPaymentMethod) {
       return {
         success: false,
-        error: "PayWay no está asociado a esta organización. Ejecuta el script de configuración primero.",
+        error:
+          "PayWay no está asociado a esta organización. Ejecuta el script de configuración primero.",
       };
     }
 
     // Configuraciones que deben estar encriptadas
-    const encryptedKeys = new Set(['api_key', 'secret_key']);
+    const encryptedKeys = new Set(["api_key", "secret_key"]);
 
     // Actualizar cada configuración
     const updatePromises = Object.entries(configuration).map(([key, value]) => {
       if (value === undefined || value === null) return Promise.resolve();
-      
+
       return prisma.paymentMethodConfiguration.upsert({
         where: {
           organizationPaymentMethodId_configKey: {
@@ -122,18 +123,17 @@ export async function updatePayWayConfiguration(
     console.error("Error actualizando configuración de PayWay:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al actualizar la configuración de PayWay.",
+      error:
+        error instanceof Error ? error.message : "Error al actualizar la configuración de PayWay.",
     };
   }
 }
 
 // Validar la configuración de PayWay
-export async function validatePayWayConfiguration(
-  organizationId: string
-): Promise<ActionState> {
+export async function validatePayWayConfiguration(organizationId: string): Promise<ActionState> {
   try {
     const config = await getPayWayConfiguration(organizationId);
-    
+
     if (!config) {
       return {
         success: false,
@@ -142,13 +142,17 @@ export async function validatePayWayConfiguration(
     }
 
     // Validar campos requeridos
-    const requiredFields = ['merchant_id', 'api_key', 'secret_key', 'environment'];
-    const missingFields = requiredFields.filter(field => !config[field as keyof PayWayConfiguration] || config[field as keyof PayWayConfiguration]?.startsWith('YOUR_'));
+    const requiredFields = ["merchant_id", "api_key", "secret_key", "environment"];
+    const missingFields = requiredFields.filter(
+      (field) =>
+        !config[field as keyof PayWayConfiguration] ||
+        config[field as keyof PayWayConfiguration]?.startsWith("YOUR_"),
+    );
 
     if (missingFields.length > 0) {
       return {
         success: false,
-        error: `Faltan configurar los siguientes campos: ${missingFields.join(', ')}`,
+        error: `Faltan configurar los siguientes campos: ${missingFields.join(", ")}`,
       };
     }
 
@@ -163,7 +167,8 @@ export async function validatePayWayConfiguration(
     console.error("Error validando configuración de PayWay:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error al validar la configuración de PayWay.",
+      error:
+        error instanceof Error ? error.message : "Error al validar la configuración de PayWay.",
     };
   }
 }
@@ -174,13 +179,14 @@ export async function isPayWayAvailable(organizationId: string): Promise<boolean
     const config = await getPayWayConfiguration(organizationId);
     if (!config) return false;
 
-    const requiredFields = ['merchant_id', 'api_key', 'secret_key'];
-    return requiredFields.every(field => 
-      config[field as keyof PayWayConfiguration] && 
-      !config[field as keyof PayWayConfiguration]?.startsWith('YOUR_')
+    const requiredFields = ["merchant_id", "api_key", "secret_key"];
+    return requiredFields.every(
+      (field) =>
+        config[field as keyof PayWayConfiguration] &&
+        !config[field as keyof PayWayConfiguration]?.startsWith("YOUR_"),
     );
   } catch (error) {
     console.error("Error verificando disponibilidad de PayWay:", error);
     return false;
   }
-} 
+}

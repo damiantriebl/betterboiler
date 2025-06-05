@@ -32,11 +32,11 @@ import ManageBankCards from "./ManageBankCards";
 import ManageBankingPromotions from "./ManageBankingPromotions";
 import ManageBranches from "./ManageBranches";
 import ManageColors from "./ManageColors";
-import ManagePaymentMethods from "./ManagePaymentMethods";
 import ManageMercadoPago from "./ManageMercadoPago";
-import TestMercadoPago from "./TestMercadoPago";
-import SecuritySettings from "./SecuritySettings";
+import ManagePaymentMethods from "./ManagePaymentMethods";
 import OAuthCallback from "./OAuthCallback";
+import SecuritySettings from "./SecuritySettings";
+import TestMercadoPago from "./TestMercadoPago";
 
 // We'll use these default payment methods if the schema doesn't exist yet
 const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [

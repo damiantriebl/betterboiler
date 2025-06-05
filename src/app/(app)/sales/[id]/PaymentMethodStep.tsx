@@ -1,5 +1,6 @@
 "use client";
 
+import MercadoPagoEnhancedBrick from "@/components/custom/MercadoPagoEnhancedBrick";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +19,6 @@ import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { OrganizationPaymentMethodDisplay } from "@/types/payment-methods";
 import { Check, Loader2 } from "lucide-react";
 import CurrentAccountPaymentFields from "./CurrentAccountPaymentFields";
-import MercadoPagoBrick from "@/components/custom/MercadoPagoBrick";
 import type { MotorcycleWithRelations, PaymentFormData } from "./types";
 import {
   calculateFinalPrice,
@@ -265,13 +265,42 @@ export default function PaymentMethodStep({
                   </Select>
                 </div>
 
-                {/* Campos específicos según el método de pago */}
-
-                {/* DEBUG temporal */}
-                {paymentData?.metodoPago && (
-                  <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-                    DEBUG: Método seleccionado = "{paymentData.metodoPago}"
-                  </div>
+                {(paymentData?.metodoPago === "mercadopago" ||
+                  paymentData?.metodoPago?.toLowerCase().includes("mercado")) && (
+                  <MercadoPagoEnhancedBrick
+                    amount={remainingAmount}
+                    description={`${moto?.brand?.name || ""} ${moto?.model?.name || ""} ${moto?.year || ""}`}
+                    motorcycleId={moto?.id}
+                    saleId={`sale-${Date.now()}`}
+                    additionalInfo={{
+                      brand: moto?.brand?.name,
+                      model: moto?.model?.name,
+                      year: moto?.year,
+                    }}
+                    buyerData={{
+                      email: "cliente@mejor-motos.com", // Email más realista
+                      firstName: "Cliente",
+                      lastName: "Moto",
+                      dni: "20123456789",
+                    }}
+                    allowedPaymentMethods={{
+                      creditCard: true,
+                      debitCard: true,
+                      mercadoPago: false,
+                      ticket: false,
+                      bankTransfer: false,
+                    }}
+                    showPaymentMethodSelector={false}
+                    maxInstallments={12}
+                    onPaymentSuccess={(paymentData: any) => {
+                      console.log("✅ [PaymentMethodStep] Pago exitoso:", paymentData);
+                      // Aquí puedes manejar el éxito del pago
+                    }}
+                    onPaymentError={(error: any) => {
+                      console.error("❌ [PaymentMethodStep] Error en pago:", error);
+                      // Aquí puedes manejar errores
+                    }}
+                  />
                 )}
 
                 {paymentData?.metodoPago === "tarjeta" && (
@@ -456,100 +485,6 @@ export default function PaymentMethodStep({
                   </div>
                 )}
 
-                {paymentData?.metodoPago === "mercadopago" && (
-                  <div className="space-y-4 p-4 border rounded-md mt-4">
-                    <h3 className="text-sm font-medium">Mercado Pago - Checkout API</h3>
-                    <div className="text-xs text-muted-foreground mb-3">
-                      El pago se procesará con Mercado Pago sin salir de tu sitio
-                    </div>
-
-                    {/* Información del comprador para Mercado Pago */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        name="mercadopagoPayerEmail"
-                        placeholder="Email del comprador"
-                        type="email"
-                        onChange={onPaymentDataChange}
-                        value={paymentData?.mercadopagoPayerEmail || ""}
-                      />
-                      <Input
-                        name="mercadopagoPayerDocument"
-                        placeholder="DNI/CUIT"
-                        onChange={onPaymentDataChange}
-                        value={paymentData?.mercadopagoPayerDocument || ""}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        name="mercadopagoPayerFirstName"
-                        placeholder="Nombre"
-                        onChange={onPaymentDataChange}
-                        value={paymentData?.mercadopagoPayerFirstName || ""}
-                      />
-                      <Input
-                        name="mercadopagoPayerLastName"
-                        placeholder="Apellido"
-                        onChange={onPaymentDataChange}
-                        value={paymentData?.mercadopagoPayerLastName || ""}
-                      />
-                    </div>
-
-                    <Input
-                      name="mercadopagoDescription"
-                      placeholder="Descripción del pago (opcional)"
-                      onChange={onPaymentDataChange}
-                      value={paymentData?.mercadopagoDescription || ""}
-                    />
-
-                    <div className="bg-blue-50 p-3 rounded-md">
-                      <div className="text-xs font-medium text-blue-800 mb-1">
-                        ℹ️ Información
-                      </div>
-                      <div className="text-xs text-blue-700">
-                        • El cliente completará el pago directamente en tu sitio
-                        • Mercado Pago procesará el pago de forma segura
-                        • Recibirás notificaciones del estado del pago
-                      </div>
-                    </div>
-
-                    {/* Componente de checkout de Mercado Pago */}
-                    {paymentData?.mercadopagoPayerEmail &&
-                      paymentData?.mercadopagoPayerFirstName &&
-                      paymentData?.mercadopagoPayerLastName &&
-                      paymentData?.mercadopagoPayerDocument && (
-                        <div className="mt-4">
-                          <MercadoPagoBrick
-                            amount={remainingAmount}
-                            description={paymentData?.mercadopagoDescription || `Motocicleta ${moto?.brand?.name || ''} ${moto?.model?.name || ''}`}
-                            motorcycleId={moto?.id}
-                            saleId={`sale-${Date.now()}`}
-                            additionalInfo={{
-                              brand: moto?.brand?.name,
-                              model: moto?.model?.name,
-                              year: moto?.year
-                            }}
-                            buyerData={{
-                              email: paymentData.mercadopagoPayerEmail,
-                              firstName: paymentData.mercadopagoPayerFirstName,
-                              lastName: paymentData.mercadopagoPayerLastName,
-                              dni: paymentData.mercadopagoPayerDocument
-                            }}
-                            onPaymentSuccess={(paymentData: any) => {
-                              console.log('✅ [PaymentMethodStep] Pago exitoso:', paymentData);
-                              // Aquí puedes manejar el éxito del pago
-                              // Por ejemplo, avanzar al siguiente paso
-                            }}
-                            onPaymentError={(error: any) => {
-                              console.error('❌ [PaymentMethodStep] Error en pago:', error);
-                              // Aquí puedes manejar errores
-                            }}
-                          />
-                        </div>
-                      )}
-                  </div>
-                )}
-
                 {paymentData?.metodoPago === "cuenta_corriente" && (
                   <CurrentAccountPaymentFields
                     paymentData={paymentData}
@@ -571,28 +506,33 @@ export default function PaymentMethodStep({
                         <span>Precio Sugerido:</span>
                         <span>{formatPrice(getBasePrice(), moto?.currency)}</span>
                       </div>
-
                       {paymentData?.discountPercentage && paymentData.discountPercentage > 0 && (
                         <div className="flex justify-between text-green-600">
                           <span>Descuento Personal ({paymentData.discountPercentage}%):</span>
-                          <span>-{formatPrice(getBasePrice() * (paymentData.discountPercentage / 100), moto?.currency)}</span>
+                          <span>
+                            -
+                            {formatPrice(
+                              getBasePrice() * (paymentData.discountPercentage / 100),
+                              moto?.currency,
+                            )}
+                          </span>
                         </div>
                       )}
-
-                      {paymentData?.discountValue && paymentData.discountValue > 0 && (!paymentData?.discountPercentage || paymentData.discountPercentage === 0) && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Descuento Personal:</span>
-                          <span>-{formatPrice(paymentData.discountValue, moto?.currency)}</span>
-                        </div>
-                      )}
-
+                      {paymentData?.discountValue &&
+                        paymentData.discountValue > 0 &&
+                        (!paymentData?.discountPercentage ||
+                          paymentData.discountPercentage === 0) && (
+                          <div className="flex justify-between text-green-600">
+                            <span>Descuento Personal:</span>
+                            <span>-{formatPrice(paymentData.discountValue, moto?.currency)}</span>
+                          </div>
+                        )}
                       {isReserved && (
                         <div className="flex justify-between text-green-600">
                           <span>Reserva Pagada:</span>
                           <span>- {formatPrice(reservationAmount, reservationCurrency)}</span>
                         </div>
                       )}
-
                       {paymentData?.downPayment &&
                         paymentData.downPayment > 0 &&
                         paymentData?.metodoPago === "cuenta_corriente" && (
@@ -601,14 +541,15 @@ export default function PaymentMethodStep({
                             <span>- {formatPrice(paymentData.downPayment, moto?.currency)}</span>
                           </div>
                         )}
-
                       {selectedPromotions &&
                         selectedPromotions.length > 0 &&
                         selectedPromotions
                           .filter((promo) => {
                             // Solo incluir promociones que realmente tienen descuentos o recargos válidos
-                            return (promo?.discountRate && promo.discountRate > 0) ||
-                              (promo?.surchargeRate && promo.surchargeRate > 0);
+                            return (
+                              (promo?.discountRate && promo.discountRate > 0) ||
+                              (promo?.surchargeRate && promo.surchargeRate > 0)
+                            );
                           })
                           .map((promo) => {
                             if (promo?.discountRate && promo.discountRate > 0) {
@@ -619,7 +560,11 @@ export default function PaymentMethodStep({
                                 >
                                   <span>Descuento ({promo.name}):</span>
                                   <span>
-                                    -{formatPrice(getBasePrice() * (promo.discountRate / 100), moto?.currency)}
+                                    -
+                                    {formatPrice(
+                                      getBasePrice() * (promo.discountRate / 100),
+                                      moto?.currency,
+                                    )}
                                   </span>
                                 </div>
                               );
@@ -632,7 +577,11 @@ export default function PaymentMethodStep({
                                 >
                                   <span>Recargo ({promo.name}):</span>
                                   <span>
-                                    +{formatPrice(getBasePrice() * (promo.surchargeRate / 100), moto?.currency)}
+                                    +
+                                    {formatPrice(
+                                      getBasePrice() * (promo.surchargeRate / 100),
+                                      moto?.currency,
+                                    )}
                                   </span>
                                 </div>
                               );
@@ -640,8 +589,8 @@ export default function PaymentMethodStep({
                             // No debería llegar aquí debido al filter, pero por seguridad
                             return null;
                           })
-                          .filter(Boolean)} {/* Eliminar cualquier null que pueda quedar */}
-
+                          .filter(Boolean)}{" "}
+                      {/* Eliminar cualquier null que pueda quedar */}
                     </div>
 
                     {/* Controles de ajuste de precio */}
@@ -649,7 +598,9 @@ export default function PaymentMethodStep({
                       <h4 className="text-sm font-medium text-blue-800">Ajustar Precio</h4>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label htmlFor="descuentoPorcentaje" className="text-xs">Descuento (%)</Label>
+                          <Label htmlFor="descuentoPorcentaje" className="text-xs">
+                            Descuento (%)
+                          </Label>
                           <Input
                             id="descuentoPorcentaje"
                             name="discountPercentage"
@@ -658,13 +609,21 @@ export default function PaymentMethodStep({
                             max="100"
                             step="1"
                             placeholder="0"
-                            value={paymentData?.discountPercentage && paymentData.discountPercentage > 0 ? paymentData.discountPercentage.toString() : ""}
+                            value={
+                              paymentData?.discountPercentage && paymentData.discountPercentage > 0
+                                ? paymentData.discountPercentage.toString()
+                                : ""
+                            }
                             onChange={(e) => {
                               const value = e.target.value;
-                              const discountPercentage = value === "" ? 0 : Number.parseInt(value) || 0;
+                              const discountPercentage =
+                                value === "" ? 0 : Number.parseInt(value) || 0;
 
                               onPaymentDataChange({
-                                target: { name: "discountPercentage", value: value === "" ? "" : discountPercentage.toString() },
+                                target: {
+                                  name: "discountPercentage",
+                                  value: value === "" ? "" : discountPercentage.toString(),
+                                },
                               } as React.ChangeEvent<HTMLInputElement>);
 
                               if (discountPercentage > 0) {
@@ -677,7 +636,9 @@ export default function PaymentMethodStep({
                           />
                         </div>
                         <div>
-                          <Label htmlFor="descuentoPersonalizado" className="text-xs">Descuento en Monto Fijo ({moto?.currency})</Label>
+                          <Label htmlFor="descuentoPersonalizado" className="text-xs">
+                            Descuento en Monto Fijo ({moto?.currency})
+                          </Label>
                           <Input
                             id="descuentoPersonalizado"
                             name="discountValue"
@@ -686,13 +647,20 @@ export default function PaymentMethodStep({
                             max={getBasePrice()}
                             step="100"
                             placeholder="0"
-                            value={paymentData?.discountValue && paymentData.discountValue > 0 ? paymentData.discountValue.toString() : ""}
+                            value={
+                              paymentData?.discountValue && paymentData.discountValue > 0
+                                ? paymentData.discountValue.toString()
+                                : ""
+                            }
                             onChange={(e) => {
                               const value = e.target.value;
                               const discountAmount = value === "" ? 0 : Number.parseInt(value) || 0;
 
                               onPaymentDataChange({
-                                target: { name: "discountValue", value: value === "" ? "" : discountAmount.toString() },
+                                target: {
+                                  name: "discountValue",
+                                  value: value === "" ? "" : discountAmount.toString(),
+                                },
                               } as React.ChangeEvent<HTMLInputElement>);
 
                               if (discountAmount > 0) {
@@ -706,7 +674,9 @@ export default function PaymentMethodStep({
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="precioFinalManual" className="text-xs">Precio Final ({moto?.currency})</Label>
+                        <Label htmlFor="precioFinalManual" className="text-xs">
+                          Precio Final ({moto?.currency})
+                        </Label>
                         <Input
                           id="precioFinalManual"
                           name="precioFinalManual"
@@ -724,14 +694,21 @@ export default function PaymentMethodStep({
                             if (precioBase > 0 && nuevoPrecioFinal > 0) {
                               // Calcular el descuento en monto fijo basado en el nuevo precio final
                               const descuentoCalculado = precioBase - nuevoPrecioFinal;
-                              const descuentoRedondeado = Math.max(0, Math.min(precioBase, descuentoCalculado));
+                              const descuentoRedondeado = Math.max(
+                                0,
+                                Math.min(precioBase, descuentoCalculado),
+                              );
 
                               // Limpiar porcentaje y usar monto fijo
                               onPaymentDataChange({
                                 target: { name: "discountPercentage", value: "" },
                               } as React.ChangeEvent<HTMLInputElement>);
                               onPaymentDataChange({
-                                target: { name: "discountValue", value: descuentoRedondeado > 0 ? descuentoRedondeado.toString() : "" },
+                                target: {
+                                  name: "discountValue",
+                                  value:
+                                    descuentoRedondeado > 0 ? descuentoRedondeado.toString() : "",
+                                },
                               } as React.ChangeEvent<HTMLInputElement>);
                             }
                           }}

@@ -30,18 +30,18 @@ export function TableSkeleton({ rows = 5, columns = 8 }: TableSkeletonProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            {Array.from({ length: columns }).map((_, i) => (
-              <TableHead key={i}>
+            {Array.from({ length: columns }, (_, i) => (
+              <TableHead key={`skeleton-header-${Math.random()}-${i}`}>
                 <Skeleton className="h-4 w-full" />
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array.from({ length: rows }).map((_, rowIndex) => (
-            <TableRow key={rowIndex}>
-              {Array.from({ length: columns }).map((_, colIndex) => (
-                <TableCell key={colIndex}>
+          {Array.from({ length: rows }, (_, rowIndex) => (
+            <TableRow key={`skeleton-row-${Math.random()}-${rowIndex}`}>
+              {Array.from({ length: columns }, (_, colIndex) => (
+                <TableCell key={`skeleton-cell-${Math.random()}-${colIndex}`}>
                   {colIndex === 0 ? (
                     // Columna de marca/modelo (más grande)
                     <div className="flex flex-col gap-1">

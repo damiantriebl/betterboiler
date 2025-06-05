@@ -87,7 +87,7 @@ export default function SalesClientComponent({
     if (promotions.length > 0) {
       setFilteredPromotions(promotions);
     }
-  }, []); // 🔧 SOLO AL MONTAR
+  }, [promotions]); // 🔧 INCLUIR PROMOTIONS EN DEPENDENCIAS
 
   // 🔧 SIMPLIFICADO: Sincronizar el estado local de motorcycles con initialData
   useEffect(() => {
@@ -206,7 +206,9 @@ export default function SalesClientComponent({
       if (filterType === "state" && Array.isArray(value)) {
         // Manejar filtro de estados
         params.delete("state"); // Limpiar estados anteriores
-        value.forEach((state) => params.append("state", state.toString()));
+        for (const state of value) {
+          params.append("state", state.toString());
+        }
       } else if (filterType === "search") {
         // 🔍 FUZZY SEARCH: Manejar término de búsqueda
         if (value && typeof value === "string" && value.trim()) {

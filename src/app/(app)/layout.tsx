@@ -1,5 +1,6 @@
 import { getOrganizationSessionData } from "@/actions/util/organization-session-unified";
 import AuthGuard from "@/components/custom/AuthGuard";
+import PaymentNotificationManager from "@/components/custom/PaymentNotificationManager";
 import { PerformanceMonitor } from "@/components/custom/PerformanceMonitor";
 import ScrollableMain from "@/components/custom/ScrollableMain";
 import SessionStoreProvider from "@/components/custom/SessionStoreProvider";
@@ -12,13 +13,13 @@ export default async function Layout({ children }: { children: React.ReactNode }
   // Obtener toda la información de sesión y organización en el servidor
   const sessionData = await getOrganizationSessionData();
 
-  console.log(`📊 [LAYOUT] Datos de sesión obtenidos:`, {
+  console.log("📊 [LAYOUT] Datos de sesión obtenidos:", {
     hasUserId: !!sessionData.userId,
     hasOrganizationId: !!sessionData.organizationId,
     userEmail: sessionData.userEmail,
     userRole: sessionData.userRole,
     hasError: !!sessionData.error,
-    error: sessionData.error
+    error: sessionData.error,
   });
 
   if (sessionData.error) {
@@ -32,6 +33,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
           <AppSidebar />
           <ScrollableMain>{children}</ScrollableMain>
         </SidebarProvider>
+        <PaymentNotificationManager />
       </AuthGuard>
     </SessionStoreProvider>
   );

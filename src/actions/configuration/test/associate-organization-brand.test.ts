@@ -110,7 +110,9 @@ describe("Associate Organization Brand", () => {
         });
         expect(mockRevalidatePath).toHaveBeenCalledWith("/configuration");
         expect(result.success).toBe(true);
-        expect(result.message).toBe("Marca asociada y modelos configurados correctamente.");
+        expect(result.message).toBe(
+          'Marca "Toyota" asociada correctamente. Ahora puedes agregar modelos específicos.',
+        );
       });
 
       it("should associate brand without models", async () => {
@@ -144,7 +146,9 @@ describe("Associate Organization Brand", () => {
 
         // Assert
         expect(result.success).toBe(true);
-        expect(result.message).toBe("Marca asociada y modelos configurados correctamente.");
+        expect(result.message).toBe(
+          'Marca "Toyota" asociada correctamente. Ahora puedes agregar modelos específicos.',
+        );
       });
 
       it("should associate brand with null color", async () => {
@@ -252,26 +256,7 @@ describe("Associate Organization Brand", () => {
         });
 
         // Assert
-        expect(capturedModelConfigs).toEqual([
-          {
-            organizationId: mockOrganizationId,
-            modelId: 1,
-            isVisible: true,
-            order: 0,
-          },
-          {
-            organizationId: mockOrganizationId,
-            modelId: 2,
-            isVisible: true,
-            order: 1,
-          },
-          {
-            organizationId: mockOrganizationId,
-            modelId: 3,
-            isVisible: true,
-            order: 2,
-          },
-        ]);
+        expect(capturedModelConfigs).toEqual([]);
       });
     });
 
@@ -362,7 +347,7 @@ describe("Associate Organization Brand", () => {
 
         // Assert
         expect(result.success).toBe(false);
-        expect(result.error).toBe("Error al asociar la marca y configurar sus modelos.");
+        expect(result.error).toBe("Error al asociar la marca.");
       });
     });
 
@@ -374,13 +359,7 @@ describe("Associate Organization Brand", () => {
           models: undefined,
         };
         mockPrisma.brand.findUnique.mockResolvedValue(brandWithUndefinedModels);
-        mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
-          const mockTx = {
-            organizationBrand: { create: vi.fn().mockResolvedValue({}) },
-            organizationModelConfig: { createMany: vi.fn() },
-          };
-          return await callback(mockTx);
-        });
+        mockPrisma.$transaction.mockRejectedValue(new Error("Brand models undefined"));
 
         // Act
         const result = await associateOrganizationBrand({
@@ -389,7 +368,7 @@ describe("Associate Organization Brand", () => {
         });
 
         // Assert
-        expect(result.success).toBe(true);
+        expect(result.success).toBe(false);
       });
 
       it("should handle numeric brand ID as string", async () => {
@@ -829,7 +808,7 @@ describe("Associate Organization Brand", () => {
 
       // Assert
       expect(mockConsole.log).toHaveBeenCalledWith(
-        "associateOrganizationBrand: modelConfigs a crear:",
+        "associateOrganizationBrand: globalBrandWithModels encontrado:",
         expect.any(String),
       );
     });

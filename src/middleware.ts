@@ -4,26 +4,20 @@ export function middleware(request: NextRequest) {
   const timestamp = new Date().toISOString();
   const pathname = request.nextUrl.pathname;
   const method = request.method;
-  const isProduction = process.env.NODE_ENV === 'production';
-  
+  const isProduction = process.env.NODE_ENV === "production";
+
   // Solo log extensivo en desarrollo o si hay una variable de debug
-  const shouldLog = !isProduction || process.env.DEBUG_MIDDLEWARE === 'true';
-  
+  const shouldLog = !isProduction || process.env.DEBUG_MIDDLEWARE === "true";
+
   if (shouldLog) {
     console.log(`🔍 [MIDDLEWARE] ${timestamp} - ${method} ${pathname}`);
   }
 
   // Rutas que no necesitan middleware
-  const skipRoutes = [
-    '/api/auth/',
-    '/_next/',
-    '/favicon.ico',
-    '/api/debug/',
-    '/api/health'
-  ];
+  const skipRoutes = ["/api/auth/", "/_next/", "/favicon.ico", "/api/debug/", "/api/health"];
 
-  if (skipRoutes.some(route => pathname.startsWith(route))) {
-    if (shouldLog && pathname.startsWith('/api/auth/')) {
+  if (skipRoutes.some((route) => pathname.startsWith(route))) {
+    if (shouldLog && pathname.startsWith("/api/auth/")) {
       console.log(`🔐 [MIDDLEWARE] Ruta de auth, permitiendo paso: ${pathname}`);
     }
     return NextResponse.next();
@@ -31,67 +25,67 @@ export function middleware(request: NextRequest) {
 
   // Rutas protegidas que requieren autenticación
   const protectedRoutes = [
-    '/dashboard',
-    '/admin',
-    '/profile',
-    '/settings',
-    '/clients',
-    '/sales',
-    '/stock',
-    '/suppliers',
-    '/current-accounts',
-    '/petty-cash',
-    '/logistic',
-    '/reports',
-    '/configuration'
+    "/dashboard",
+    "/admin",
+    "/profile",
+    "/settings",
+    "/clients",
+    "/sales",
+    "/stock",
+    "/suppliers",
+    "/current-accounts",
+    "/petty-cash",
+    "/logistic",
+    "/reports",
+    "/configuration",
   ];
 
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
   if (isProtectedRoute) {
     // En producción, ser más estricto con las cookies de autenticación
     const cookieHeader = request.headers.get("cookie") || "";
-    const hasAuthCookies = cookieHeader.includes('better-auth') || cookieHeader.includes('session');
+    const hasAuthCookies = cookieHeader.includes("better-auth") || cookieHeader.includes("session");
 
     if (shouldLog) {
       console.log(`🔒 [MIDDLEWARE] Ruta protegida: ${pathname}`);
-      console.log(`🍪 [MIDDLEWARE] Cookies de auth presentes: ${hasAuthCookies ? 'Sí' : 'No'}`);
+      console.log(`🍪 [MIDDLEWARE] Cookies de auth presentes: ${hasAuthCookies ? "Sí" : "No"}`);
     }
 
     // Si no hay cookies de auth en una ruta protegida, redirigir al sign-in
     if (!hasAuthCookies) {
-      const signInUrl = new URL('/sign-in', request.url);
-      signInUrl.searchParams.set('callbackUrl', pathname);
-      
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("callbackUrl", pathname);
+
       if (shouldLog) {
         console.log(`❌ [MIDDLEWARE] Sin cookies de auth, redirigiendo a: ${signInUrl.toString()}`);
       }
-      
+
       return NextResponse.redirect(signInUrl);
     }
   }
 
   // Headers de seguridad adicionales para producción
   const response = NextResponse.next();
-  
+
   if (isProduction) {
     // Headers de seguridad para producción
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-XSS-Protection", "1; mode=block");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   }
 
   // Información del entorno para debugging
   if (shouldLog) {
     const debugInfo = {
-      host: request.headers.get('host'),
+      host: request.headers.get("host"),
       origin: request.nextUrl.origin,
-      userAgent: request.headers.get('user-agent') ? 'presente' : 'ausente',
-      forwardedHost: request.headers.get('x-forwarded-host'),
-      forwardedProto: request.headers.get('x-forwarded-proto'),
+      userAgent: request.headers.get("user-agent") ? "presente" : "ausente",
+      forwardedHost: request.headers.get("x-forwarded-host"),
+      forwardedProto: request.headers.get("x-forwarded-proto"),
     };
-    console.log(`📋 [MIDDLEWARE] Debug info:`, debugInfo);
+    console.log("📋 [MIDDLEWARE] Debug info:", debugInfo);
   }
 
   if (shouldLog) {
@@ -111,10 +105,12 @@ export const config = {
      * - favicon.ico
      * - Archivos públicos con extensión
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.[^/]*$).*)',
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.[^/]*$).*)",
   ],
 };
 
-if (process.env.NODE_ENV === 'development' || process.env.DEBUG_MIDDLEWARE === 'true') {
-  console.log(`🚀 [MIDDLEWARE] Middleware cargado - Env: ${process.env.NODE_ENV} - Config: ${JSON.stringify(config.matcher)}`);
+if (process.env.NODE_ENV === "development" || process.env.DEBUG_MIDDLEWARE === "true") {
+  console.log(
+    `🚀 [MIDDLEWARE] Middleware cargado - Env: ${process.env.NODE_ENV} - Config: ${JSON.stringify(config.matcher)}`,
+  );
 }

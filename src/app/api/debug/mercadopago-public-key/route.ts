@@ -1,21 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
-import prisma from '@/lib/prisma';
+import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
-      headers: request.headers
+      headers: request.headers,
     });
 
     if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'No session' }, { status: 401 });
+      return NextResponse.json({ error: "No session" }, { status: 401 });
     }
 
     const oauthConfig = await prisma.mercadoPagoOAuth.findUnique({
       where: {
-        organizationId: session.user.organizationId
-      }
+        organizationId: session.user.organizationId,
+      },
     });
 
     return NextResponse.json({
@@ -27,14 +27,10 @@ export async function GET(request: NextRequest) {
       email: oauthConfig?.email,
       hasAccessToken: !!oauthConfig?.accessToken,
       createdAt: oauthConfig?.createdAt,
-      updatedAt: oauthConfig?.updatedAt
+      updatedAt: oauthConfig?.updatedAt,
     });
-
   } catch (error) {
-    console.error('Error en debug público key:', error);
-    return NextResponse.json(
-      { error: 'Error interno' },
-      { status: 500 }
-    );
+    console.error("Error en debug público key:", error);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
-} 
+}

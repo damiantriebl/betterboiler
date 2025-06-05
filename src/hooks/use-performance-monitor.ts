@@ -58,40 +58,38 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
   }, [enabled, threshold, logToConsole]);
 
   // Función para medir tiempo de interacciones
-  const measureInteraction = <T>(
+  const measureInteraction = async <T>(
     operation: () => Promise<T> | T,
     operationName = "operation",
   ): Promise<T> => {
-    return new Promise(async (resolve, reject) => {
-      const startTime = performance.now();
+    const startTime = performance.now();
 
-      try {
-        const result = await operation();
-        const interactionTime = Math.round(performance.now() - startTime);
+    try {
+      const result = await operation();
+      const interactionTime = Math.round(performance.now() - startTime);
 
-        setMetrics((prev) => ({
-          ...prev,
-          interactionTime,
-          lastUpdate: new Date(),
-        }));
+      setMetrics((prev) => ({
+        ...prev,
+        interactionTime,
+        lastUpdate: new Date(),
+      }));
 
-        const isSlow = interactionTime > threshold;
+      const isSlow = interactionTime > threshold;
 
-        if (logToConsole) {
-          console.log(`[PERF] ${operationName}: ${interactionTime}ms ${isSlow ? "⚠️ SLOW" : "✅"}`);
-        }
-
-        resolve(result);
-      } catch (error) {
-        const errorTime = Math.round(performance.now() - startTime);
-
-        if (logToConsole) {
-          console.error(`[PERF] ${operationName} failed after ${errorTime}ms:`, error);
-        }
-
-        reject(error);
+      if (logToConsole) {
+        console.log(`[PERF] ${operationName}: ${interactionTime}ms ${isSlow ? "⚠️ SLOW" : "✅"}`);
       }
-    });
+
+      return result;
+    } catch (error) {
+      const errorTime = Math.round(performance.now() - startTime);
+
+      if (logToConsole) {
+        console.error(`[PERF] ${operationName} failed after ${errorTime}ms:`, error);
+      }
+
+      throw error;
+    }
   };
 
   // Función para marcar inicio de render
@@ -126,14 +124,14 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
       try {
         const observer = new PerformanceObserver((list) => {
           const entries = list.getEntries();
-          entries.forEach((entry) => {
+          for (const entry of entries) {
             if (entry.entryType === "largest-contentful-paint") {
               const lcp = Math.round(entry.startTime);
               if (logToConsole) {
                 console.log(`[PERF] LCP: ${lcp}ms ${lcp > 2500 ? "⚠️ SLOW" : "✅"}`);
               }
             }
-          });
+          }
         });
 
         observer.observe({ entryTypes: ["largest-contentful-paint"] });

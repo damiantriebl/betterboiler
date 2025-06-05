@@ -7,27 +7,27 @@
  * Genera un code_verifier aleatorio de longitud entre 43-128 caracteres
  * usando caracteres URL-safe: A-Z, a-z, 0-9, -, ., _, ~
  */
-export function generateCodeVerifier(length: number = 128): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let result = '';
-  
+export function generateCodeVerifier(length = 128): string {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  let result = "";
+
   // En Node.js/Edge, usar crypto si está disponible
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
     // Generar bytes aleatorios y convertir a base64url
     const array = new Uint8Array(length);
     crypto.getRandomValues(array);
-    
+
     for (let i = 0; i < length; i++) {
       result += charset[array[i] % charset.length];
     }
     return result;
   }
-  
+
   // Fallback para otros entornos
   for (let i = 0; i < length; i++) {
     result += charset[Math.floor(Math.random() * charset.length)];
   }
-  
+
   return result;
 }
 
@@ -39,16 +39,16 @@ export async function generateCodeChallenge(codeVerifier: string): Promise<strin
   // Codificar el verifier como bytes UTF-8
   const encoder = new TextEncoder();
   const data = encoder.encode(codeVerifier);
-  
+
   // Calcular SHA256 hash
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  
+  const digest = await crypto.subtle.digest("SHA-256", data);
+
   // Convertir a base64url (sin padding)
   const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-  
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+
   return base64;
 }
 
@@ -58,11 +58,11 @@ export async function generateCodeChallenge(codeVerifier: string): Promise<strin
 export async function generatePKCEPair() {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
-  
+
   return {
     codeVerifier,
     codeChallenge,
-    codeChallengeMethod: 'S256' as const
+    codeChallengeMethod: "S256" as const,
   };
 }
 
@@ -74,7 +74,7 @@ export function validateCodeVerifier(codeVerifier: string): boolean {
   if (codeVerifier.length < 43 || codeVerifier.length > 128) {
     return false;
   }
-  
+
   // Solo debe contener caracteres URL-safe
   const validChars = /^[A-Za-z0-9\-._~]+$/;
   return validChars.test(codeVerifier);
@@ -91,23 +91,23 @@ export function buildAuthorizationUrl(params: {
   state?: string;
   scope?: string;
 }) {
-  const baseUrl = 'https://auth.mercadopago.com.ar/authorization';
+  const baseUrl = "https://auth.mercadopago.com.ar/authorization";
   const urlParams = new URLSearchParams({
-    response_type: 'code',
+    response_type: "code",
     client_id: params.clientId,
     redirect_uri: params.redirectUri,
     code_challenge: params.codeChallenge,
     code_challenge_method: params.codeChallengeMethod,
   });
-  
+
   if (params.state) {
-    urlParams.set('state', params.state);
+    urlParams.set("state", params.state);
   }
-  
+
   if (params.scope) {
-    urlParams.set('scope', params.scope);
+    urlParams.set("scope", params.scope);
   }
-  
+
   return `${baseUrl}?${urlParams.toString()}`;
 }
 
@@ -121,21 +121,21 @@ export async function exchangeCodeForTokenWithPKCE(params: {
   redirectUri: string;
   codeVerifier: string;
 }) {
-  const response = await fetch('https://api.mercadopago.com/oauth/token', {
-    method: 'POST',
+  const response = await fetch("https://api.mercadopago.com/oauth/token", {
+    method: "POST",
     headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded'
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
       client_id: params.clientId,
       client_secret: params.clientSecret,
       code: params.code,
-      grant_type: 'authorization_code',
+      grant_type: "authorization_code",
       redirect_uri: params.redirectUri,
-      code_verifier: params.codeVerifier  // ← Este es el parámetro que faltaba!
-    })
+      code_verifier: params.codeVerifier, // ← Este es el parámetro que faltaba!
+    }),
   });
-  
+
   return response;
-} 
+}

@@ -29,29 +29,28 @@ export function UserButton() {
 
   const handleLogout = async () => {
     try {
-      console.log(`🚪 [USER BUTTON] Iniciando logout completo...`);
+      console.log("🚪 [USER BUTTON] Iniciando logout completo...");
 
       // 1. Limpiar el store de Zustand
       clearSession();
 
       // 2. Limpiar localStorage completo para evitar estados inconsistentes
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('session-store');
-        console.log(`🧹 [USER BUTTON] localStorage limpiado`);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("session-store");
+        console.log("🧹 [USER BUTTON] localStorage limpiado");
       }
 
       // 3. Hacer logout en Better Auth
       await authClient.signOut();
-      console.log(`✅ [USER BUTTON] Logout de Better Auth completado`);
+      console.log("✅ [USER BUTTON] Logout de Better Auth completado");
 
       // 4. Redirigir con recarga completa para limpiar cualquier estado residual
-      window.location.href = '/sign-in';
-
+      window.location.href = "/sign-in";
     } catch (error) {
-      console.error(`❌ [USER BUTTON] Error durante logout:`, error);
+      console.error("❌ [USER BUTTON] Error durante logout:", error);
 
       // Fallback: redirigir con recarga forzada
-      window.location.href = '/sign-in';
+      window.location.href = "/sign-in";
     }
   };
 

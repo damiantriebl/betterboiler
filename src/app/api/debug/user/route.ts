@@ -1,15 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma from "@/lib/prisma";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
 
     if (!email) {
-      return NextResponse.json(
-        { error: 'Email es requerido' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email es requerido" }, { status: 400 });
     }
 
     // Buscar usuario con información relacionada
@@ -20,42 +17,39 @@ export async function POST(request: NextRequest) {
           select: {
             providerId: true,
             accountId: true,
-            createdAt: true
-          }
+            createdAt: true,
+          },
         },
         sessions: {
           select: {
             id: true,
             expiresAt: true,
-            createdAt: true
+            createdAt: true,
           },
           orderBy: {
-            createdAt: 'desc'
+            createdAt: "desc",
           },
-          take: 5
+          take: 5,
         },
         organization: {
           select: {
             id: true,
             name: true,
-            slug: true
-          }
-        }
-      }
+            slug: true,
+          },
+        },
+      },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Usuario no encontrado' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
     // Información adicional de diagnóstico
     const debugInfo = {
       hasAccounts: user.accounts.length > 0,
-      activeSessions: user.sessions.filter(s => s.expiresAt > new Date()).length,
-      totalSessions: user.sessions.length
+      activeSessions: user.sessions.filter((s) => s.expiresAt > new Date()).length,
+      totalSessions: user.sessions.length,
     };
 
     return NextResponse.json({
@@ -67,19 +61,15 @@ export async function POST(request: NextRequest) {
         role: user.role,
         organizationId: user.organizationId,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        updatedAt: user.updatedAt,
       },
       accounts: user.accounts,
       sessions: user.sessions,
       organization: user.organization,
-      debug: debugInfo
+      debug: debugInfo,
     });
-
   } catch (error) {
-    console.error('Error en debug de usuario:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    console.error("Error en debug de usuario:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
-} 
+}

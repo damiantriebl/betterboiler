@@ -21,14 +21,18 @@ export const GET = (request: Request) => {
 
   if (pathname.includes("get-session")) {
     console.log(`🔄 [GET-SESSION] ${timestamp} Called from:`, request.headers.get("referer"));
-    console.log(`🍪 [GET-SESSION] Cookies:`, request.headers.get("cookie") ? "present" : "absent");
-    
+    console.log("🍪 [GET-SESSION] Cookies:", request.headers.get("cookie") ? "present" : "absent");
+
     const cookieHeader = request.headers.get("cookie") || "";
     if (cookieHeader) {
-      const relevantCookies = cookieHeader.split(';')
-        .filter(cookie => cookie.includes('auth') || cookie.includes('session') || cookie.includes('better'))
-        .map(cookie => cookie.trim().split('=')[0]);
-      console.log(`🍪 [GET-SESSION] Cookies relevantes: ${relevantCookies.join(', ')}`);
+      const relevantCookies = cookieHeader
+        .split(";")
+        .filter(
+          (cookie) =>
+            cookie.includes("auth") || cookie.includes("session") || cookie.includes("better"),
+        )
+        .map((cookie) => cookie.trim().split("=")[0]);
+      console.log(`🍪 [GET-SESSION] Cookies relevantes: ${relevantCookies.join(", ")}`);
     }
   }
 

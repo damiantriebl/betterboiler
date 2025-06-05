@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireOrganizationId } from '@/actions/util';
-import { 
-  getMercadoPagoConfiguration, 
-  updateMercadoPagoConfiguration, 
-  validateMercadoPagoConfiguration 
-} from '@/actions/payment-methods/mercadopago-config';
+import {
+  getMercadoPagoConfiguration,
+  updateMercadoPagoConfiguration,
+  validateMercadoPagoConfiguration,
+} from "@/actions/payment-methods/mercadopago-config";
+import { requireOrganizationId } from "@/actions/util";
+import { type NextRequest, NextResponse } from "next/server";
 
 // GET - Obtener configuración actual
 export async function GET() {
@@ -17,7 +17,7 @@ export async function GET() {
         success: false,
         config: {},
         isValid: false,
-        error: 'Mercado Pago no configurado en el servidor'
+        error: "Mercado Pago no configurado en el servidor",
       });
     }
 
@@ -25,21 +25,17 @@ export async function GET() {
     const config = {
       public_key: process.env.MERCADOPAGO_PUBLIC_KEY,
       access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
-      environment: process.env.MERCADOPAGO_ENVIRONMENT || 'sandbox'
+      environment: process.env.MERCADOPAGO_ENVIRONMENT || "sandbox",
     };
 
     return NextResponse.json({
       success: true,
       config,
-      isValid: true
+      isValid: true,
     });
-
   } catch (error) {
-    console.error('Error obteniendo configuración de MP:', error);
-    return NextResponse.json(
-      { error: 'Error al obtener la configuración' },
-      { status: 500 }
-    );
+    console.error("Error obteniendo configuración de MP:", error);
+    return NextResponse.json({ error: "Error al obtener la configuración" }, { status: 500 });
   }
 }
 
@@ -50,14 +46,14 @@ export async function POST(request: NextRequest) {
     const configData = await request.json();
 
     // Configurar URLs automáticas si no están definidas
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const finalConfig = {
       ...configData,
       webhook_url: configData.webhook_url || `${baseUrl}/api/webhooks/mercadopago`,
       notification_url: configData.notification_url || `${baseUrl}/api/notifications/mercadopago`,
       success_url: configData.success_url || `${baseUrl}/payments/success`,
       failure_url: configData.failure_url || `${baseUrl}/payments/failure`,
-      pending_url: configData.pending_url || `${baseUrl}/payments/pending`
+      pending_url: configData.pending_url || `${baseUrl}/payments/pending`,
     };
 
     const success = await updateMercadoPagoConfiguration(organizationId, finalConfig);
@@ -65,20 +61,12 @@ export async function POST(request: NextRequest) {
     if (success) {
       return NextResponse.json({
         success: true,
-        message: 'Configuración guardada exitosamente'
+        message: "Configuración guardada exitosamente",
       });
-    } else {
-      return NextResponse.json(
-        { error: 'Error al guardar la configuración' },
-        { status: 500 }
-      );
     }
-
+    return NextResponse.json({ error: "Error al guardar la configuración" }, { status: 500 });
   } catch (error) {
-    console.error('Error guardando configuración de MP:', error);
-    return NextResponse.json(
-      { error: 'Error al guardar la configuración' },
-      { status: 500 }
-    );
+    console.error("Error guardando configuración de MP:", error);
+    return NextResponse.json({ error: "Error al guardar la configuración" }, { status: 500 });
   }
-} 
+}

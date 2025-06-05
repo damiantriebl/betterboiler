@@ -1,34 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma from "@/lib/prisma";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
 
     if (!email) {
-      return NextResponse.json(
-        { error: 'Email es requerido' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email es requerido" }, { status: 400 });
     }
 
     // Buscar usuario
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Usuario no encontrado' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
     // Limpiar todas las sesiones del usuario
     const deletedSessions = await prisma.session.deleteMany({
       where: {
-        userId: user.id
-      }
+        userId: user.id,
+      },
     });
 
     // Asegurar que el email esté verificado para evitar problemas
@@ -36,8 +30,8 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: {
         emailVerified: true,
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     });
 
     console.log(`🧹 Limpiadas ${deletedSessions.count} sesiones para usuario: ${email}`);
@@ -47,14 +41,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `Limpiadas ${deletedSessions.count} sesiones y email verificado`,
       deletedSessions: deletedSessions.count,
-      emailVerified: true
+      emailVerified: true,
     });
-
   } catch (error) {
-    console.error('Error limpiando sesiones:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    console.error("Error limpiando sesiones:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
-} 
+}

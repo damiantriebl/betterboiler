@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 // El import de auth puede no ser necesario si solo borramos la cookie.
 // import { auth } from "@/auth";
 
-export async function signOutAction() {
+export default async function signOutAction() {
   try {
     // Intentar hacer sign out con better-auth
     const response = await authClient.signOut();
