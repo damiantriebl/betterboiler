@@ -112,7 +112,8 @@ export default function PointSmartIntegration({
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setPaymentIntentId(data.payment_intent_id);
+        // ✅ Actualizado para Orders API - usar order_id en lugar de payment_intent_id
+        setPaymentIntentId(data.order_id);
         setPaymentStatus("waiting");
 
         toast({
@@ -121,10 +122,17 @@ export default function PointSmartIntegration({
           variant: "default",
         });
 
-        // Comenzar a monitorear el estado del pago
-        monitorPaymentStatus(data.payment_intent_id);
+        console.log("✅ [PointSmart] Order creada exitosamente:", {
+          order_id: data.order_id,
+          payment_id: data.payment_id,
+          terminal_id: data.terminal_id,
+          amount: data.amount,
+        });
+
+        // Comenzar a monitorear el estado de la order
+        monitorPaymentStatus(data.order_id);
       } else {
-        throw new Error(data.error || "Error creando intención de pago");
+        throw new Error(data.error || "Error creando order");
       }
     } catch (error) {
       console.error("❌ [PointSmart] Error:", error);
@@ -149,7 +157,13 @@ export default function PointSmartIntegration({
         const response = await fetch(`/api/mercadopago/point/payment-status/${intentId}`);
         const data = await response.json();
 
-        console.log(`🔍 [PointSmart] Estado del pago (intento ${attempts + 1}):`, data);
+        console.log(`🔍 [PointSmart] Estado de la order (intento ${attempts + 1}):`, {
+          order_id: data.order_id,
+          order_status: data.order_status,
+          payment_id: data.payment_id,
+          payment_status: data.payment_status,
+          status: data.status,
+        });
 
         if (data.status === "FINISHED") {
           setPaymentStatus("completed");
@@ -160,7 +174,15 @@ export default function PointSmartIntegration({
             variant: "default",
           });
 
-          onPaymentSuccess?.(data.payment);
+          // Pasar toda la información de la order y el payment al callback
+          onPaymentSuccess?.({
+            order_id: data.order_id,
+            payment_id: data.payment_id,
+            total_amount: data.total_amount,
+            paid_amount: data.paid_amount,
+            order_status: data.order_status,
+            payment_status: data.payment_status,
+          });
           return;
         }
         if (data.status === "CANCELED" || data.status === "ERROR") {
@@ -207,11 +229,12 @@ export default function PointSmartIntegration({
     checkStatus();
   };
 
-  // Cancelar pago
+  // Cancelar order/pago
   const cancelPayment = async () => {
     if (!paymentIntentId) return;
 
     try {
+      // ✅ Actualizado para Orders API - usar order_id para cancelar
       await fetch(`/api/mercadopago/point/cancel-payment/${paymentIntentId}`, {
         method: "POST",
       });
@@ -221,12 +244,12 @@ export default function PointSmartIntegration({
       setError(null);
 
       toast({
-        title: "Pago Cancelado",
+        title: "Order Cancelada",
         description: "La transacción ha sido cancelada",
         variant: "default",
       });
     } catch (error) {
-      console.error("Error cancelando pago:", error);
+      console.error("Error cancelando order:", error);
     }
   };
 
@@ -285,11 +308,10 @@ export default function PointSmartIntegration({
               {devices.map((device) => (
                 <div
                   key={device.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedDevice?.id === device.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedDevice?.id === device.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                    }`}
                   onClick={() => setSelectedDevice(device)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {

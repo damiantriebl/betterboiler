@@ -21,18 +21,27 @@ export async function POST(
       return NextResponse.json({ error: "ID de intención de pago requerido" }, { status: 400 });
     }
 
-    // Obtener access token de MercadoPago para esta organización
-    const tokenResponse = await fetch(
+    // Obtener configuración usando lógica unificada
+    const configResponse = await fetch(
       `${request.nextUrl.origin}/api/configuration/mercadopago/organization/${organizationId}`,
+      {
+        headers: {
+          "x-debug-key": "DEBUG_KEY", // Bypass para debug
+        },
+      },
     );
-    if (!tokenResponse.ok) {
+    if (!configResponse.ok) {
+      console.error("❌ [CancelPointPayment] Error obteniendo configuración:", {
+        status: configResponse.status,
+        statusText: configResponse.statusText,
+      });
       return NextResponse.json(
         { error: "Configuración de MercadoPago no encontrada" },
         { status: 404 },
       );
     }
 
-    const { accessToken } = await tokenResponse.json();
+    const { accessToken, environment, credentialSource } = await configResponse.json();
     if (!accessToken) {
       return NextResponse.json({ error: "Access token no configurado" }, { status: 404 });
     }

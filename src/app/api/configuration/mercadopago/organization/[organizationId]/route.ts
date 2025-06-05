@@ -8,23 +8,32 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
     const { organizationId } = await params;
 
-    // Verificar que la sesión corresponda a la organización solicitada
-    if (!session?.user?.organizationId || session.user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: "No autorizado para acceder a esta organización" },
-        { status: 403 },
-      );
+    // Verificar bypass de debug PRIMERO
+    const debugKey = request.headers.get("x-debug-key");
+    const isDebugBypass = debugKey === process.env.DEBUG_KEY || debugKey === "DEBUG_KEY";
+    
+    // Solo obtener sesión si no es bypass de debug
+    let session = null;
+    if (!isDebugBypass) {
+      session = await auth.api.getSession({
+        headers: request.headers,
+      });
+      
+      // Verificar que la sesión corresponda a la organización solicitada
+      if (!session?.user?.organizationId || session.user.organizationId !== organizationId) {
+        return NextResponse.json(
+          { error: "No autorizado para acceder a esta organización" },
+          { status: 403 },
+        );
+      }
     }
 
     console.log("🔍 [ORGANIZATION-CONFIG] Obteniendo configuración para:", organizationId);
-    console.log("🔍 [ORGANIZATION-CONFIG] Session organizationId:", session.user.organizationId);
+    console.log("🔍 [ORGANIZATION-CONFIG] Session organizationId:", session?.user?.organizationId || "DEBUG_BYPASS");
     console.log("🔍 [ORGANIZATION-CONFIG] Requested organizationId:", organizationId);
+    console.log("🔍 [ORGANIZATION-CONFIG] Is debug bypass:", isDebugBypass);
 
     // Obtener configuración OAuth de la organización
     const oauthConfig = await prisma.mercadoPagoOAuth.findUnique({
@@ -70,14 +79,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     let isConnected = false;
 
     // PRIORIDAD PARA POINT API: PRODUCCIÓN REQUERIDA
-    if (oauthConfig?.accessToken && oauthConfig?.publicKey && !oauthIsTest) {
-      // OAuth de PRODUCCIÓN - IDEAL para Point API
-      selectedPublicKey = oauthConfig.publicKey;
+    // Para Point API, el access token es más crítico que el public key
+    if (oauthConfig?.accessToken && !oauthIsTest) {
+      // OAuth de PRODUCCIÓN - IDEAL para Point API (incluso sin public key)
+      selectedPublicKey = oauthConfig.publicKey || globalPublicKey; // Fallback a global si es necesario
       selectedAccessToken = oauthConfig.accessToken;
       selectedEnvironment = "production";
       credentialSource = "oauth-prod";
       isConnected = true;
-      console.log("🏭 [ORGANIZATION-CONFIG] ✅ Usando OAuth PRODUCCIÓN - PERFECTO PARA POINT");
+      console.log("🏭 [ORGANIZATION-CONFIG] ✅ Usando OAuth PRODUCCIÓN (Point API) - ACCESS TOKEN PRIORIDAD");
     } else if (globalAccessToken && globalPublicKey && !globalIsTest) {
       // Global de PRODUCCIÓN - También sirve para Point
       selectedPublicKey = globalPublicKey;

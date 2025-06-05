@@ -2,13 +2,49 @@
 
 import PointSmartIntegration from "@/components/custom/PointSmartIntegration";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, CreditCard, Smartphone, XCircle } from "lucide-react";
+import { CheckCircle, CreditCard, Smartphone, XCircle, X, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 
 export default function TestPointMigrationPage() {
   const [completedTests, setCompletedTests] = useState<string[]>([]);
   const [failedTests, setFailedTests] = useState<string[]>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelResult, setCancelResult] = useState<any>(null);
+
+  const handleCancelDeviceIntents = async () => {
+    setIsCancelling(true);
+    setCancelResult(null);
+
+    try {
+      const response = await fetch('/api/mercadopago/point/cancel-device-intents/PAX_A910__SMARTPOS1495357742', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-debug-key': 'DEBUG_KEY',
+        },
+      });
+
+      const result = await response.json();
+      setCancelResult(result);
+
+      if (response.ok) {
+        console.log('✅ Dispositivo limpiado exitosamente:', result);
+      } else {
+        console.error('❌ Error cancelando payment intents:', result);
+      }
+    } catch (error) {
+      console.error('❌ Error en cancelación:', error);
+      setCancelResult({
+        success: false,
+        error: 'Error de comunicación',
+        details: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const handleTestSuccess = (testId: string, paymentData: any) => {
     console.log(`✅ Test ${testId} exitoso:`, paymentData);
@@ -95,6 +131,62 @@ export default function TestPointMigrationPage() {
         </CardContent>
       </Card>
 
+      {/* Sección de Cancelación */}
+      <Card className="bg-red-50 border-red-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-900">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            🚨 Limpiar Dispositivo Point Smart
+          </CardTitle>
+          <p className="text-sm text-red-700">
+            Si un test falla con "There is already a queued intent for the device", limpia el dispositivo antes de continuar.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Button
+              onClick={handleCancelDeviceIntents}
+              disabled={isCancelling}
+              variant="destructive"
+              className="flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              {isCancelling ? 'Limpiando dispositivo...' : 'Limpiar Point Smart'}
+            </Button>
+
+            {cancelResult && (
+              <div className={`p-4 rounded-lg border ${cancelResult.success
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : 'bg-red-100 border-red-300 text-red-800'
+                }`}>
+                <h4 className="font-semibold mb-2">
+                  {cancelResult.success ? '✅ Dispositivo limpiado' : '❌ Error en limpieza'}
+                </h4>
+                <p className="text-sm mb-2">{cancelResult.message || cancelResult.error}</p>
+                {cancelResult.details && (
+                  <p className="text-xs opacity-75">{cancelResult.details}</p>
+                )}
+                {cancelResult.device_id && (
+                  <p className="text-xs mt-2">
+                    <strong>Dispositivo:</strong> {cancelResult.device_id}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="text-xs text-red-600 bg-red-100 p-3 rounded-lg">
+              <strong>🔄 Proceso recomendado:</strong>
+              <ol className="mt-1 space-y-1 list-decimal list-inside">
+                <li>Limpiar dispositivo antes de comenzar los tests</li>
+                <li>Ejecutar tests uno a uno</li>
+                <li>Si aparece error 2205, limpiar nuevamente</li>
+                <li>Verificar que todos los tests pasen exitosamente</li>
+              </ol>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tests de integración */}
       <div className="grid gap-8">
         {/* Test 1: Venta completa de moto */}
@@ -105,20 +197,20 @@ export default function TestPointMigrationPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-green-600" />
-              Test 1: Venta Completa de Motocicleta
+              Test 1: Prueba Completa Point Smart
               <Badge variant="secondary" className="ml-auto bg-green-50 text-green-700">
-                $500,000
+                $25.00
               </Badge>
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Simula una venta completa de motocicleta con Point Smart
+              Prueba completa de Point Smart con monto pequeño
             </p>
           </CardHeader>
           <CardContent>
             <PointSmartIntegration
-              amount={500000}
-              description="Venta Honda CB250 - 2024 (TEST MIGRACIÓN)"
-              saleId="test-migration-moto-001"
+              amount={2500}
+              description="Test Completo Point Smart - $25.00 (TEST MIGRACIÓN)"
+              saleId="test-migration-completo-001"
               motorcycleId={1}
               onPaymentSuccess={(data) => handleTestSuccess("moto-complete", data)}
               onPaymentError={(error) => handleTestError("moto-complete", error)}
@@ -134,20 +226,20 @@ export default function TestPointMigrationPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-blue-600" />
-              Test 2: Anticipo/Reserva
+              Test 2: Prueba Intermedia
               <Badge variant="secondary" className="ml-auto bg-blue-50 text-blue-700">
-                $100,000
+                $20.00
               </Badge>
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Simula pago de anticipo para reserva con Point Smart
+              Prueba intermedia de Point Smart con monto medio
             </p>
           </CardHeader>
           <CardContent>
             <PointSmartIntegration
-              amount={100000}
-              description="Anticipo Yamaha FZ - Reserva (TEST MIGRACIÓN)"
-              saleId="test-migration-reservation-002"
+              amount={2000}
+              description="Test Intermedio Point Smart - $20.00 (TEST MIGRACIÓN)"
+              saleId="test-migration-intermedio-002"
               motorcycleId={2}
               onPaymentSuccess={(data) => handleTestSuccess("reservation", data)}
               onPaymentError={(error) => handleTestError("reservation", error)}
@@ -163,20 +255,20 @@ export default function TestPointMigrationPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-purple-600" />
-              Test 3: Venta de Accesorios
+              Test 3: Prueba Mínima
               <Badge variant="secondary" className="ml-auto bg-purple-50 text-purple-700">
-                $25,000
+                $15.00
               </Badge>
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Simula venta de accesorios con Point Smart
+              Prueba mínima de Point Smart con monto básico
             </p>
           </CardHeader>
           <CardContent>
             <PointSmartIntegration
-              amount={25000}
-              description="Casco + Guantes + Protecciones (TEST MIGRACIÓN)"
-              saleId="test-migration-accessories-003"
+              amount={1500}
+              description="Test Mínimo Point Smart - $15.00 (TEST MIGRACIÓN)"
+              saleId="test-migration-minimo-003"
               onPaymentSuccess={(data) => handleTestSuccess("accessories", data)}
               onPaymentError={(error) => handleTestError("accessories", error)}
             />

@@ -6,62 +6,83 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("🔔 [WEBHOOK-GENERIC] Webhook de MercadoPago recibido:", body);
 
-    // Validar que es una notificación de pago
-    if (body.type !== "payment") {
-      console.log("ℹ️ [WEBHOOK-GENERIC] Notificación ignorada - no es de tipo payment");
+    // 🆕 EXTRACCIÓN DE ORGANIZATION_ID: Desde URL params (Point Smart) o metadata (pagos online)
+    const urlParams = new URL(request.url).searchParams;
+    const organizationIdFromUrl = urlParams.get("organization_id");
+    console.log("🔍 [WEBHOOK-GENERIC] Organization ID desde URL:", organizationIdFromUrl);
+
+    // Validar que es una notificación de pago o order (Point Smart)
+    if (body.type !== "payment" && body.type !== "order") {
+      console.log(`ℹ️ [WEBHOOK-GENERIC] Notificación ignorada - tipo: ${body.type}`);
       return NextResponse.json({ status: "ignored" });
     }
 
-    const paymentId = body.data?.id;
-    if (!paymentId) {
-      console.error("❌ [WEBHOOK-GENERIC] No se encontró ID de pago en la notificación");
-      return NextResponse.json({ error: "Payment ID missing" }, { status: 400 });
+    const resourceId = body.data?.id;
+    if (!resourceId) {
+      console.error("❌ [WEBHOOK-GENERIC] No se encontró ID en la notificación");
+      return NextResponse.json({ error: "Resource ID missing" }, { status: 400 });
     }
 
-    console.log(
-      "🔍 [WEBHOOK-GENERIC] Consultando detalles del pago para obtener organizationId...",
-    );
+    console.log("🔍 [WEBHOOK-GENERIC] Consultando detalles del recurso:", {
+      type: body.type,
+      resourceId: resourceId,
+    });
 
-    // PASO 1: Obtener detalles del pago usando credenciales globales para consulta inicial
+    // PASO 1: Obtener detalles usando credenciales globales para consulta inicial
     const globalAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!globalAccessToken) {
       console.error("❌ [WEBHOOK-GENERIC] No se encontraron credenciales globales");
       return NextResponse.json({ error: "No credentials found" }, { status: 500 });
     }
 
-    const initialPaymentResponse = await fetch(
-      `https://api.mercadopago.com/v1/payments/${paymentId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${globalAccessToken}`,
-        },
+    // Determinar endpoint según el tipo de notificación
+    const apiEndpoint = body.type === "order" 
+      ? `https://api.mercadopago.com/v1/orders/${resourceId}`
+      : `https://api.mercadopago.com/v1/payments/${resourceId}`;
+
+    console.log("🌐 [WEBHOOK-GENERIC] Consultando endpoint:", apiEndpoint);
+
+    const initialResponse = await fetch(apiEndpoint, {
+      headers: {
+        Authorization: `Bearer ${globalAccessToken}`,
       },
-    );
-
-    if (!initialPaymentResponse.ok) {
-      console.error(
-        "❌ [WEBHOOK-GENERIC] Error en consulta inicial del pago:",
-        initialPaymentResponse.status,
-      );
-      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-    }
-
-    const initialPaymentData = await initialPaymentResponse.json();
-    console.log("💳 [WEBHOOK-GENERIC] Datos iniciales del pago:", {
-      id: initialPaymentData.id,
-      status: initialPaymentData.status,
-      metadata: initialPaymentData.metadata,
     });
 
-    // PASO 2: Extraer organizationId del metadata
-    const organizationId = initialPaymentData.metadata?.organization_id;
+    if (!initialResponse.ok) {
+      console.error(
+        "❌ [WEBHOOK-GENERIC] Error en consulta inicial:",
+        initialResponse.status,
+      );
+      return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+    }
+
+    const initialData = await initialResponse.json();
+    console.log("💳 [WEBHOOK-GENERIC] Datos iniciales del recurso:", {
+      id: initialData.id,
+      status: initialData.status,
+      metadata: initialData.metadata,
+      type: body.type,
+    });
+
+    // PASO 2: Extraer organizationId - PRIORIDAD: URL params (Point Smart) > metadata (pagos online)
+    const organizationIdFromMetadata = initialData.metadata?.organization_id;
+    const organizationId = organizationIdFromUrl || organizationIdFromMetadata;
+
+    console.log("🏢 [WEBHOOK-GENERIC] Organization IDs encontrados:", {
+      fromUrl: organizationIdFromUrl,
+      fromMetadata: organizationIdFromMetadata,
+      selected: organizationId,
+    });
 
     if (!organizationId) {
       console.error(
-        "❌ [WEBHOOK-GENERIC] No se encontró organization_id en metadata:",
-        initialPaymentData.metadata,
+        "❌ [WEBHOOK-GENERIC] No se encontró organization_id en URL ni metadata:",
+        {
+          urlParams: Object.fromEntries(urlParams),
+          metadata: initialData.metadata,
+        },
       );
-      return NextResponse.json({ error: "Organization ID not found in metadata" }, { status: 400 });
+      return NextResponse.json({ error: "Organization ID not found" }, { status: 400 });
     }
 
     console.log("🏢 [WEBHOOK-GENERIC] Organización identificada:", organizationId);
@@ -112,59 +133,54 @@ export async function POST(request: NextRequest) {
       organizationId,
     });
 
-    // PASO 5: Consultar detalles completos del pago con las credenciales correctas
-    const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+    // PASO 5: Consultar detalles completos con las credenciales correctas
+    const finalResponse = await fetch(apiEndpoint, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
 
-    if (!paymentResponse.ok) {
+    if (!finalResponse.ok) {
       console.error(
-        "❌ [WEBHOOK-GENERIC] Error al consultar pago con credenciales correctas:",
-        paymentResponse.status,
+        "❌ [WEBHOOK-GENERIC] Error al consultar recurso con credenciales correctas:",
+        finalResponse.status,
       );
       return NextResponse.json(
-        { error: "Payment not found with correct credentials" },
+        { error: "Resource not found with correct credentials" },
         { status: 404 },
       );
     }
 
-    const paymentData = await paymentResponse.json();
-    console.log("💳 [WEBHOOK-GENERIC] Datos completos del pago obtenidos:", {
-      id: paymentData.id,
-      status: paymentData.status,
-      amount: paymentData.transaction_amount,
-      external_reference: paymentData.external_reference,
+    const finalData = await finalResponse.json();
+    console.log("💳 [WEBHOOK-GENERIC] Datos completos obtenidos:", {
+      id: finalData.id,
+      status: finalData.status,
+      type: body.type,
       organizationId,
     });
 
-    // PASO 6: Procesar según el estado del pago
-    switch (paymentData.status) {
-      case "approved":
-        console.log("✅ [WEBHOOK-GENERIC] Pago aprobado:", paymentId);
-        await handleApprovedPayment(paymentData, organizationId);
-        break;
-
-      case "pending":
-        console.log("⏳ [WEBHOOK-GENERIC] Pago pendiente:", paymentId);
-        await handlePendingPayment(paymentData, organizationId);
-        break;
-
-      case "rejected":
-      case "cancelled":
-        console.log("❌ [WEBHOOK-GENERIC] Pago rechazado/cancelado:", paymentId);
-        await handleRejectedPayment(paymentData, organizationId);
-        break;
-
-      default:
-        console.log("ℹ️ [WEBHOOK-GENERIC] Estado de pago no manejado:", paymentData.status);
+    // PASO 6: Procesar según el tipo y estado
+    if (body.type === "order") {
+      // Manejar webhooks de Point Smart (orders)
+      console.log("🏪 [WEBHOOK-GENERIC] Procesando order de Point Smart:", finalData.id);
+      
+      // Extraer el payment de la order para manejar con la lógica existente
+      const payment = finalData.transactions?.payments?.[0];
+      if (payment) {
+        await handlePaymentFromOrder(payment, finalData, organizationId);
+      } else {
+        console.warn("⚠️ [WEBHOOK-GENERIC] No se encontró payment en la order");
+      }
+    } else if (body.type === "payment") {
+      // Manejar webhooks de pagos online con la lógica existente
+      await handleDirectPayment(finalData, organizationId);
     }
 
     return NextResponse.json({
       status: "processed",
       organizationId,
-      paymentId,
+      resourceId,
+      resourceType: body.type,
       credentialSource,
     });
   } catch (error) {
@@ -272,6 +288,93 @@ async function handleRejectedPayment(paymentData: any, organizationId: string) {
     // TODO: Implementar lógica para pagos rechazados de ESTA organización
   } catch (error) {
     console.error("❌ [WEBHOOK-GENERIC] Error procesando pago rechazado:", error);
+  }
+}
+
+// 🆕 FUNCIONES PARA MANEJAR WEBHOOKS DE POINT SMART Y PAGOS DIRECTOS
+
+async function handlePaymentFromOrder(payment: any, order: any, organizationId: string) {
+  try {
+    console.log("🏪 [WEBHOOK-POINT] Procesando payment desde order de Point Smart:", {
+      orderId: order.id,
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      orderStatus: order.status,
+      amount: payment.amount,
+    });
+
+    // Convertir payment de order a formato compatible con la lógica existente
+    const paymentData = {
+      id: payment.id,
+      status: payment.status,
+      status_detail: payment.status_detail,
+      transaction_amount: Number.parseFloat(payment.amount),
+      date_approved: payment.date_approved || order.date_created,
+      date_created: payment.date_created || order.date_created,
+      payment_method_id: payment.payment_method?.id || "point_smart",
+      payer: {
+        email: order.payer?.email || "point@smartdevice.com",
+      },
+      external_reference: order.external_reference,
+      live_mode: order.live_mode,
+      // Información específica de Point Smart
+      point_smart_order_id: order.id,
+      point_smart_terminal: order.config?.point?.terminal_id,
+    };
+
+    // Usar la lógica existente según el estado
+    switch (payment.status) {
+      case "processed":
+      case "approved":
+        console.log("✅ [WEBHOOK-POINT] Payment aprobado en Point Smart");
+        await handleApprovedPayment(paymentData, organizationId);
+        break;
+      case "pending":
+        console.log("⏳ [WEBHOOK-POINT] Payment pendiente en Point Smart");
+        await handlePendingPayment(paymentData, organizationId);
+        break;
+      case "failed":
+      case "rejected":
+      case "cancelled":
+        console.log("❌ [WEBHOOK-POINT] Payment fallido en Point Smart");
+        await handleRejectedPayment(paymentData, organizationId);
+        break;
+      default:
+        console.log(`ℹ️ [WEBHOOK-POINT] Estado no manejado: ${payment.status}`);
+    }
+  } catch (error) {
+    console.error("❌ [WEBHOOK-POINT] Error procesando payment desde order:", error);
+  }
+}
+
+async function handleDirectPayment(paymentData: any, organizationId: string) {
+  try {
+    console.log("💳 [WEBHOOK-PAYMENT] Procesando payment directo:", {
+      paymentId: paymentData.id,
+      status: paymentData.status,
+      amount: paymentData.transaction_amount,
+    });
+
+    // Usar la lógica existente según el estado
+    switch (paymentData.status) {
+      case "approved":
+        console.log("✅ [WEBHOOK-PAYMENT] Payment directo aprobado");
+        await handleApprovedPayment(paymentData, organizationId);
+        break;
+      case "pending":
+        console.log("⏳ [WEBHOOK-PAYMENT] Payment directo pendiente");
+        await handlePendingPayment(paymentData, organizationId);
+        break;
+      case "rejected":
+      case "cancelled":
+        console.log("❌ [WEBHOOK-PAYMENT] Payment directo rechazado");
+        await handleRejectedPayment(paymentData, organizationId);
+        break;
+      default:
+        console.log(`ℹ️ [WEBHOOK-PAYMENT] Estado no manejado: ${paymentData.status}`);
+    }
+  } catch (error) {
+    console.error("❌ [WEBHOOK-PAYMENT] Error procesando payment directo:", error);
   }
 }
 

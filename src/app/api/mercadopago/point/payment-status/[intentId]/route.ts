@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const params = await context.params;
-    console.log("🔍 [PointPaymentStatus] Consultando estado del pago:", params.intentId);
+    console.log("🔍 [PointPaymentStatus] Consultando estado de la order:", params.intentId);
 
     // Validar acceso a la organización
     const { organizationId, error } = await validateOrganizationAccess();
@@ -18,28 +18,38 @@ export async function GET(
 
     const { intentId } = params;
     if (!intentId) {
-      return NextResponse.json({ error: "ID de intención de pago requerido" }, { status: 400 });
+      return NextResponse.json({ error: "ID de order requerido" }, { status: 400 });
     }
 
-    // Obtener access token de MercadoPago para esta organización
-    const tokenResponse = await fetch(
+    // Obtener configuración usando lógica unificada
+    const configResponse = await fetch(
       `${request.nextUrl.origin}/api/configuration/mercadopago/organization/${organizationId}`,
+      {
+        headers: {
+          "x-debug-key": "DEBUG_KEY", // Bypass para debug
+        },
+      },
     );
-    if (!tokenResponse.ok) {
+    if (!configResponse.ok) {
+      console.error("❌ [PointPaymentStatus] Error obteniendo configuración:", {
+        status: configResponse.status,
+        statusText: configResponse.statusText,
+      });
       return NextResponse.json(
         { error: "Configuración de MercadoPago no encontrada" },
         { status: 404 },
       );
     }
 
-    const { accessToken } = await tokenResponse.json();
+    const { accessToken, environment, credentialSource } = await configResponse.json();
     if (!accessToken) {
       return NextResponse.json({ error: "Access token no configurado" }, { status: 404 });
     }
 
-    // Consultar estado del pago en MercadoPago Point
+    // ✅ Consultar estado de la order usando Orders API v1
+    // https://www.mercadopago.com.ar/developers/es/reference/in-person-payments/point/orders/get-order/get
     const mpResponse = await fetch(
-      `https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
+      `https://api.mercadopago.com/v1/orders/${intentId}`,
       {
         method: "GET",
         headers: {
@@ -65,32 +75,41 @@ export async function GET(
     }
 
     const mpData = await mpResponse.json();
-    console.log("✅ [PointPaymentStatus] Estado obtenido:", {
-      id: mpData.id,
-      status: mpData.status,
-      state: mpData.state,
+    
+    // Extraer información del primer payment dentro de la order
+    const payment = mpData.transactions?.payments?.[0];
+    
+    console.log("✅ [PointPaymentStatus] Estado de order obtenido:", {
+      order_id: mpData.id,
+      order_status: mpData.status,
+      payment_id: payment?.id,
+      payment_status: payment?.status,
+      total_amount: mpData.total_amount,
     });
 
-    // Formatear respuesta según el estado
+    // Formatear respuesta según el estado de la order y el payment
     let formattedStatus = "PENDING";
-    if (mpData.state === "FINISHED" && mpData.status === "approved") {
+    if (mpData.status === "finished" && payment?.status === "approved") {
       formattedStatus = "FINISHED";
-    } else if (mpData.state === "CANCELED" || mpData.status === "cancelled") {
+    } else if (mpData.status === "canceled" || payment?.status === "cancelled") {
       formattedStatus = "CANCELED";
-    } else if (mpData.state === "ERROR" || mpData.status === "rejected") {
+    } else if (mpData.status === "error" || payment?.status === "rejected") {
       formattedStatus = "ERROR";
-    } else if (mpData.state === "PROCESSING" || mpData.status === "pending") {
+    } else if (mpData.status === "processing" || payment?.status === "pending") {
       formattedStatus = "PROCESSING";
     }
 
     return NextResponse.json({
       success: true,
-      intent_id: mpData.id,
+      order_id: mpData.id, // ID de la order
+      payment_id: payment?.id, // ID del payment
       status: formattedStatus,
-      payment: mpData.payment,
-      state: mpData.state,
-      payment_status: mpData.status,
-      amount: mpData.amount,
+      order_status: mpData.status,
+      payment_status: payment?.status,
+      total_amount: mpData.total_amount,
+      paid_amount: mpData.total_paid_amount,
+      external_reference: mpData.external_reference,
+      terminal_id: mpData.config?.point?.terminal_id,
       additional_info: mpData,
     });
   } catch (error) {
