@@ -23,6 +23,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     console.log("🔍 [ORGANIZATION-CONFIG] Obteniendo configuración para:", organizationId);
+    console.log("🔍 [ORGANIZATION-CONFIG] Session organizationId:", session.user.organizationId);
+    console.log("🔍 [ORGANIZATION-CONFIG] Requested organizationId:", organizationId);
 
     // Obtener configuración OAuth de la organización
     const oauthConfig = await prisma.mercadoPagoOAuth.findUnique({
@@ -31,43 +33,77 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
     });
 
+    console.log("🔍 [ORGANIZATION-CONFIG] OAuth config encontrada:", !!oauthConfig);
+    if (oauthConfig) {
+      console.log("🔍 [ORGANIZATION-CONFIG] OAuth config details:", {
+        email: oauthConfig.email,
+        hasAccessToken: !!oauthConfig.accessToken,
+        hasPublicKey: !!oauthConfig.publicKey,
+        accessTokenStart: oauthConfig.accessToken?.substring(0, 15),
+        publicKeyStart: oauthConfig.publicKey?.substring(0, 15),
+      });
+    }
+
     // NUEVO: Lógica inteligente de selección de credenciales
     const globalAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     const globalPublicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
 
+    console.log("🔍 [ORGANIZATION-CONFIG] Variables de entorno:", {
+      hasGlobalAccessToken: !!globalAccessToken,
+      hasGlobalPublicKey: !!globalPublicKey,
+      globalAccessTokenStart: globalAccessToken?.substring(0, 15),
+      globalPublicKeyStart: globalPublicKey?.substring(0, 15),
+    });
+
     const globalIsTest = globalAccessToken?.startsWith("TEST-");
     const oauthIsTest = oauthConfig?.accessToken?.startsWith("TEST-");
 
+    console.log("🔍 [ORGANIZATION-CONFIG] Tipos de credenciales:", {
+      globalIsTest,
+      oauthIsTest,
+    });
+
     let selectedPublicKey = null;
+    let selectedAccessToken = null;
     let selectedEnvironment = "unknown";
     let credentialSource = "none";
     let isConnected = false;
 
-    // PRIORIDAD: TEST > PRODUCCIÓN para desarrollo
-    if (globalIsTest && globalPublicKey) {
-      selectedPublicKey = globalPublicKey;
-      selectedEnvironment = "test";
-      credentialSource = "global-test";
-      isConnected = true;
-      console.log("🧪 [ORGANIZATION-CONFIG] Usando credenciales globales TEST");
-    } else if (oauthIsTest && oauthConfig?.publicKey) {
+    // PRIORIDAD PARA POINT API: PRODUCCIÓN REQUERIDA
+    if (oauthConfig?.accessToken && oauthConfig?.publicKey && !oauthIsTest) {
+      // OAuth de PRODUCCIÓN - IDEAL para Point API
       selectedPublicKey = oauthConfig.publicKey;
-      selectedEnvironment = "test";
-      credentialSource = "oauth-test";
-      isConnected = true;
-      console.log("🧪 [ORGANIZATION-CONFIG] Usando credenciales OAuth TEST");
-    } else if (oauthConfig?.accessToken && oauthConfig?.publicKey) {
-      selectedPublicKey = oauthConfig.publicKey;
+      selectedAccessToken = oauthConfig.accessToken;
       selectedEnvironment = "production";
       credentialSource = "oauth-prod";
       isConnected = true;
-      console.log("🏭 [ORGANIZATION-CONFIG] Usando credenciales OAuth PRODUCCIÓN");
-    } else if (globalAccessToken && globalPublicKey) {
+      console.log("🏭 [ORGANIZATION-CONFIG] ✅ Usando OAuth PRODUCCIÓN - PERFECTO PARA POINT");
+    } else if (globalAccessToken && globalPublicKey && !globalIsTest) {
+      // Global de PRODUCCIÓN - También sirve para Point
       selectedPublicKey = globalPublicKey;
+      selectedAccessToken = globalAccessToken;
       selectedEnvironment = "production";
       credentialSource = "global-prod";
       isConnected = true;
-      console.log("🏭 [ORGANIZATION-CONFIG] Usando credenciales globales PRODUCCIÓN");
+      console.log("🏭 [ORGANIZATION-CONFIG] ✅ Usando Global PRODUCCIÓN - FUNCIONA PARA POINT");
+    } else if (oauthConfig?.accessToken && oauthConfig?.publicKey) {
+      // OAuth TEST - Para otros usos pero NO Point
+      selectedPublicKey = oauthConfig.publicKey;
+      selectedAccessToken = oauthConfig.accessToken;
+      selectedEnvironment = "test";
+      credentialSource = "oauth-test";
+      isConnected = true;
+      console.log("🧪 [ORGANIZATION-CONFIG] ⚠️ Usando OAuth TEST - NO FUNCIONA CON POINT");
+    } else if (globalAccessToken && globalPublicKey) {
+      // Global TEST - Para otros usos pero NO Point
+      selectedPublicKey = globalPublicKey;
+      selectedAccessToken = globalAccessToken;
+      selectedEnvironment = "test";
+      credentialSource = "global-test";
+      isConnected = true;
+      console.log("🧪 [ORGANIZATION-CONFIG] ⚠️ Usando Global TEST - NO FUNCIONA CON POINT");
+    } else {
+      console.log("❌ [ORGANIZATION-CONFIG] No se encontraron credenciales válidas");
     }
 
     console.log("🔍 [ORGANIZATION-CONFIG] Resultado final:", {
@@ -76,13 +112,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       credentialSource,
       environment: selectedEnvironment,
       hasPublicKey: !!selectedPublicKey,
+      hasAccessToken: !!selectedAccessToken,
       publicKeyStart: selectedPublicKey?.substring(0, 15) || "NO_KEY",
+      accessTokenStart: selectedAccessToken?.substring(0, 15) || "NO_TOKEN",
     });
 
-    if (!isConnected || !selectedPublicKey) {
+    if (!isConnected || !selectedPublicKey || !selectedAccessToken) {
       return NextResponse.json({
         isConnected: false,
         publicKey: null,
+        accessToken: null,
         error: "MercadoPago no está configurado correctamente",
       });
     }
@@ -91,6 +130,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       isConnected: true,
       publicKey: selectedPublicKey,
+      accessToken: selectedAccessToken,
       environment: selectedEnvironment,
       credentialSource,
       organizationId: organizationId,
@@ -101,6 +141,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       {
         isConnected: false,
         publicKey: null,
+        accessToken: null,
         error: "Error interno del servidor",
         details: error instanceof Error ? error.message : "Error desconocido",
       },

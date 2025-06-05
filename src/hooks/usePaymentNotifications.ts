@@ -27,58 +27,19 @@ export const usePaymentNotifications = () => {
     }
   };
 
-  const checkForNotifications = async () => {
-    try {
-      const response = await fetch("/api/notifications/payment");
-      if (!response.ok) return;
-
-      const data = await response.json();
-      if (data.success && data.notifications?.length > 0) {
-        // Mostrar toast para cada nueva notificación
-        for (const notification of data.notifications) {
-          toast.success(notification.message, {
-            duration: 8000,
-            action: {
-              label: "Cerrar",
-              onClick: () => markAsRead(notification.id),
-            },
-          });
-        }
-
-        // Marcar todas como leídas automáticamente después de mostrarlas
-        for (const notification of data.notifications) {
-          markAsRead(notification.id);
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error verificando notificaciones:", error);
-    }
-  };
+  // Función eliminada - la lógica está dentro del useEffect
 
   const startPolling = () => {
-    if (isPolling) return;
-    setIsPolling(true);
-
-    // Verificar inmediatamente
-    checkForNotifications();
-
-    // Luego verificar cada 5 segundos
-    const interval = setInterval(checkForNotifications, 5000);
-
-    return () => {
-      clearInterval(interval);
-      setIsPolling(false);
-    };
+    // No hacer nada - el polling ya se inicia automáticamente en useEffect
+    console.log("⚠️ startPolling llamado - pero el polling ya está activo automáticamente");
   };
 
   const stopPolling = () => {
-    setIsPolling(false);
+    // El polling solo se puede detener desmontando el componente
+    console.log("⚠️ stopPolling llamado - el polling se detiene al desmontar el componente");
   };
 
   useEffect(() => {
-    // Solo iniciar si no está ya corriendo
-    if (isPolling) return;
-
     setIsPolling(true);
 
     // Función local para verificar notificaciones
@@ -134,13 +95,12 @@ export const usePaymentNotifications = () => {
       clearInterval(interval);
       setIsPolling(false);
     };
-  }, [isPolling]);
+  }, []); // ← REMOVÍ isPolling de las dependencias
 
   return {
     notifications,
     isPolling,
     startPolling,
     stopPolling,
-    checkForNotifications,
   };
 };

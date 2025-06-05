@@ -74,6 +74,9 @@ describe("signOutAction", () => {
       expect(mockCookieStore.delete).toHaveBeenCalledWith("better-auth-session-token");
       expect(mockCookieStore.delete).toHaveBeenCalledWith("better-auth.session-token");
       expect(mockCookieStore.delete).toHaveBeenCalledWith("session-token");
+
+      // Cleanup
+      process.env.AUTH_SESSION_COOKIE_NAME = originalValue;
     });
   });
 
