@@ -3,17 +3,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AlertCircle,
   Check,
-  Copy,
   ExternalLink,
   Loader2,
-  Play,
   RefreshCw,
-  Search,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -237,12 +232,7 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
         // Sugerir acción específica basada en el resultado
         if (data.action === "manual_config") {
           setTimeout(() => {
-            toast.info("💡 Intenta configurar manualmente", {
-              action: {
-                label: "Ir a Debug",
-                onClick: () => window.open("/debug/mercadopago-fix", "_blank"),
-              },
-            });
+            toast.info("💡 Intenta configurar manualmente");
           }, 2000);
         } else if (data.action === "connect_oauth" || data.action === "reconnect_oauth") {
           setTimeout(() => {
@@ -263,101 +253,7 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
     }
   };
 
-  // NUEVO: Función para probar pago en producción
-  const testProductionPayment = async () => {
-    try {
-      setConnecting(true);
 
-      // Mostrar advertencia antes de proceder
-      const confirmResult = window.confirm(
-        "⚠️ ADVERTENCIA: Esto creará un pago REAL con dinero real.\n\n" +
-          "• Se usará tu tarjeta real\n" +
-          "• Se cobrará $10 ARS\n" +
-          "• El dinero se descontará realmente\n\n" +
-          "¿Estás seguro de que quieres continuar?",
-      );
-
-      if (!confirmResult) {
-        toast.info("Test de producción cancelado");
-        return;
-      }
-
-      console.log("🏭 Iniciando test de pago en PRODUCCIÓN...");
-
-      // Simular datos de una tarjeta real para el test
-      const testData = {
-        transaction_amount: 10, // Monto pequeño para test
-        description: "Test de pago en PRODUCCIÓN - Better Motos",
-        payment_method_id: "visa",
-        payer: {
-          email: "test@bettermotos.com",
-          first_name: "Cliente",
-          last_name: "Test",
-          identification: {
-            type: "DNI",
-            number: "20123456789",
-          },
-        },
-        installments: 1,
-        // NOTA: En un test real necesitarías un token válido de tarjeta
-        token: "fake_token_for_testing", // Esto fallará intencionalmente para mostrar el flujo
-      };
-
-      const response = await fetch("/api/payments/mercadopago/test-production", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(testData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        toast.success(`✅ ${data.message}`);
-
-        // Mostrar información detallada del pago real
-        setTimeout(() => {
-          toast.info(`💰 Pago ID: ${data.payment.id} - Estado: ${data.payment.status}`, {
-            duration: 10000,
-            action: {
-              label: "Ver Detalles",
-              onClick: () => window.open(`/debug/payment-details?id=${data.payment.id}`, "_blank"),
-            },
-          });
-        }, 2000);
-      } else {
-        // Mostrar error específico para producción
-        if (data.error?.includes("credenciales de PRODUCCIÓN")) {
-          toast.error("❌ Necesitas credenciales de PRODUCCIÓN (APP_USR-)", {
-            action: {
-              label: "Configurar",
-              onClick: () => window.open("/debug/production-only", "_blank"),
-            },
-          });
-        } else {
-          toast.error(`❌ ${data.error || "Error en test de producción"}`);
-
-          // Mostrar recomendaciones si están disponibles
-          if (data.recommendations) {
-            setTimeout(() => {
-              toast.info(
-                "💡 Para un test completo, necesitas usar MercadoPago Brick con tarjeta real",
-                {
-                  duration: 8000,
-                },
-              );
-            }, 2000);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error en test de producción:", error);
-      toast.error("Error al probar pago de producción");
-    } finally {
-      setConnecting(false);
-    }
-  };
 
   const disconnectMercadoPago = async () => {
     try {
@@ -393,10 +289,7 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
     }
   };
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copiado al portapapeles`);
-  };
+
 
   if (loading) {
     return (
@@ -552,93 +445,55 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
             </div>
           ) : (
             <div className="space-y-4">
-              <div>
-                <Label>Cuenta conectada</Label>
-                <p className="text-sm text-muted-foreground">{account.email}</p>
-                <p className="text-xs text-muted-foreground">ID: {account.id}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Cuenta conectada</p>
+                  <p className="text-sm text-muted-foreground">{account.email}</p>
+                </div>
+                <Badge variant="default" className="bg-green-500">
+                  <Check className="h-3 w-3 mr-1" />
+                  Activo
+                </Badge>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-blue-900">Auto-Detectar Public Key</h4>
-                    <p className="text-sm text-blue-700 mt-1">
-                      {hasValidPublicKey
-                        ? "Public key ya configurada correctamente"
-                        : "Si el checkout no funciona, intenta detectar automáticamente la public key"}
-                    </p>
-                  </div>
-                  {!hasValidPublicKey && (
+              {!hasValidPublicKey && (
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-900">
+                        Configuración incompleta
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Detectamos que falta configurar algunos detalles
+                      </p>
+                    </div>
                     <Button
                       onClick={autoDetectPublicKey}
                       disabled={autoDetecting}
-                      variant="outline"
-                      className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
                     >
                       {autoDetecting ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Detectando...
+                          Configurando...
                         </>
                       ) : (
-                        <>
-                          <Search className="h-4 w-4 mr-2" />
-                          Auto-Detectar
-                        </>
+                        "Completar configuración"
                       )}
                     </Button>
-                  )}
-                  {hasValidPublicKey && (
-                    <Badge variant="default" className="bg-green-500 text-white">
-                      <Check className="h-3 w-3 mr-1" />
-                      Configurado
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                <div>
-                  <Label>Webhook URL</Label>
-                  <div className="flex items-center gap-2">
-                    <Input value={account.webhookUrl} readOnly className="font-mono text-xs" />
-                    <Button
-                      onClick={() => copyToClipboard(account.webhookUrl, "Webhook URL")}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Configura esta URL en tu aplicación de Mercado Pago
-                  </p>
-                </div>
-
-                <div>
-                  <Label>Notification URL</Label>
-                  <div className="flex items-center gap-2">
-                    <Input value={account.notificationUrl} readOnly className="font-mono text-xs" />
-                    <Button
-                      onClick={() => copyToClipboard(account.notificationUrl, "Notification URL")}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="pt-4 border-t">
-                <Button onClick={testProductionPayment} variant="outline" size="sm">
-                  Probar Pago en Producción
-                </Button>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Button onClick={disconnectMercadoPago} variant="destructive" size="sm">
-                  Desconectar Mercado Pago
+              <div className="flex justify-end">
+                <Button
+                  onClick={disconnectMercadoPago}
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Desconectar
                 </Button>
               </div>
             </div>
@@ -646,32 +501,6 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
         </CardContent>
       </Card>
 
-      {account?.connected && !configError && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-6">
-            <h3 className="font-semibold text-blue-900 mb-2">ℹ️ Configuración en Mercado Pago</h3>
-            <div className="space-y-2 text-sm text-blue-800">
-              <p>1. Ve a tu panel de desarrolladores de Mercado Pago</p>
-              <p>2. Selecciona tu aplicación</p>
-              <p>3. Configura las URLs de webhook en la sección de notificaciones</p>
-              <p>4. Los pagos se procesarán automáticamente</p>
-            </div>
-            <div className="mt-3">
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href="https://www.mercadopago.com.ar/developers/panel/applications"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600"
-                >
-                  Ir al Panel de Desarrolladores
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
