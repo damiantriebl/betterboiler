@@ -13,7 +13,7 @@ interface PaymentNotification {
 export const usePaymentNotifications = () => {
   const [isPolling, setIsPolling] = useState(false);
   const [notifications, setNotifications] = useState<PaymentNotification[]>([]);
-  
+
   // Obtener datos de sesión para verificar si tiene organización
   const organizationId = useSessionStore((state) => state.organizationId);
   const userId = useSessionStore((state) => state.userId);

@@ -13,14 +13,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Verificar bypass de debug PRIMERO
     const debugKey = request.headers.get("x-debug-key");
     const isDebugBypass = debugKey === process.env.DEBUG_KEY || debugKey === "DEBUG_KEY";
-    
+
     // Solo obtener sesión si no es bypass de debug
     let session = null;
     if (!isDebugBypass) {
       session = await auth.api.getSession({
         headers: request.headers,
       });
-      
+
       // Verificar que la sesión corresponda a la organización solicitada
       if (!session?.user?.organizationId || session.user.organizationId !== organizationId) {
         return NextResponse.json(
@@ -31,7 +31,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     console.log("🔍 [ORGANIZATION-CONFIG] Obteniendo configuración para:", organizationId);
-    console.log("🔍 [ORGANIZATION-CONFIG] Session organizationId:", session?.user?.organizationId || "DEBUG_BYPASS");
+    console.log(
+      "🔍 [ORGANIZATION-CONFIG] Session organizationId:",
+      session?.user?.organizationId || "DEBUG_BYPASS",
+    );
     console.log("🔍 [ORGANIZATION-CONFIG] Requested organizationId:", organizationId);
     console.log("🔍 [ORGANIZATION-CONFIG] Is debug bypass:", isDebugBypass);
 
@@ -87,7 +90,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       selectedEnvironment = "production";
       credentialSource = "oauth-prod";
       isConnected = true;
-      console.log("🏭 [ORGANIZATION-CONFIG] ✅ Usando OAuth PRODUCCIÓN (Point API) - ACCESS TOKEN PRIORIDAD");
+      console.log(
+        "🏭 [ORGANIZATION-CONFIG] ✅ Usando OAuth PRODUCCIÓN (Point API) - ACCESS TOKEN PRIORIDAD",
+      );
     } else if (globalAccessToken && globalPublicKey && !globalIsTest) {
       // Global de PRODUCCIÓN - También sirve para Point
       selectedPublicKey = globalPublicKey;

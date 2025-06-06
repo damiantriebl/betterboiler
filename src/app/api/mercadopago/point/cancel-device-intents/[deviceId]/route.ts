@@ -7,7 +7,10 @@ export async function POST(
 ) {
   try {
     const params = await context.params;
-    console.log("🧹 [CancelDeviceIntents] Cancelando todos los intents del dispositivo:", params.deviceId);
+    console.log(
+      "🧹 [CancelDeviceIntents] Cancelando todos los intents del dispositivo:",
+      params.deviceId,
+    );
 
     // Validar acceso a la organización
     const { organizationId, error } = await validateOrganizationAccess();
@@ -59,8 +62,8 @@ export async function POST(
     // Primero: Buscar orders activas del dispositivo usando la API de búsqueda
     // Buscar múltiples estados porque no sabemos el estado exacto de la order en cola
     const statusesToSearch = ["created", "processing", "pending", "opened"];
-    let activeOrders = [];
-    
+    const activeOrders = [];
+
     for (const status of statusesToSearch) {
       try {
         console.log(`🔍 [CancelDeviceIntents] Buscando orders con status: ${status}`);
@@ -78,7 +81,9 @@ export async function POST(
         if (searchResponse.ok) {
           const searchData = await searchResponse.json();
           const orders = searchData.results || [];
-          console.log(`📋 [CancelDeviceIntents] Encontradas ${orders.length} orders con status ${status}`);
+          console.log(
+            `📋 [CancelDeviceIntents] Encontradas ${orders.length} orders con status ${status}`,
+          );
           activeOrders.push(...orders);
         }
       } catch (statusError) {
@@ -87,8 +92,8 @@ export async function POST(
     }
 
     // Eliminar duplicados por ID
-    const uniqueOrders = activeOrders.filter((order, index, self) => 
-      index === self.findIndex(o => o.id === order.id)
+    const uniqueOrders = activeOrders.filter(
+      (order, index, self) => index === self.findIndex((o) => o.id === order.id),
     );
 
     console.log(`📋 [CancelDeviceIntents] Total unique orders encontradas: ${uniqueOrders.length}`);
@@ -104,11 +109,11 @@ export async function POST(
 
     // Segundo: Cancelar cada order activa usando la API v1/orders/{order_id}/cancel
     const cancelResults = [];
-    
+
     for (const order of uniqueOrders) {
       try {
         console.log(`🗑️ [CancelDeviceIntents] Cancelando order: ${order.id}`);
-        
+
         const cancelResponse = await fetch(
           `https://api.mercadopago.com/v1/orders/${order.id}/cancel`,
           {
@@ -122,7 +127,7 @@ export async function POST(
         );
 
         const cancelData = await cancelResponse.json();
-        
+
         if (cancelResponse.ok) {
           console.log(`✅ [CancelDeviceIntents] Order ${order.id} cancelada exitosamente`);
           cancelResults.push({
@@ -140,7 +145,10 @@ export async function POST(
           });
         }
       } catch (orderError) {
-        console.error(`💥 [CancelDeviceIntents] Error crítico cancelando order ${order.id}:`, orderError);
+        console.error(
+          `💥 [CancelDeviceIntents] Error crítico cancelando order ${order.id}:`,
+          orderError,
+        );
         cancelResults.push({
           order_id: order.id,
           status: "error",
@@ -150,10 +158,12 @@ export async function POST(
       }
     }
 
-    const successCount = cancelResults.filter(r => r.success).length;
+    const successCount = cancelResults.filter((r) => r.success).length;
     const totalCount = cancelResults.length;
 
-    console.log(`📊 [CancelDeviceIntents] Resultado: ${successCount}/${totalCount} orders canceladas`);
+    console.log(
+      `📊 [CancelDeviceIntents] Resultado: ${successCount}/${totalCount} orders canceladas`,
+    );
 
     return NextResponse.json({
       success: successCount > 0,
@@ -173,4 +183,4 @@ export async function POST(
       { status: 500 },
     );
   }
-} 
+}

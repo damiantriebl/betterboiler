@@ -1,9 +1,9 @@
 "use client";
 
+import { isDevelopment } from "@/lib/env";
 import { useSessionStore } from "@/stores/SessionStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { isDevelopment } from "@/lib/env";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -83,7 +83,9 @@ export default function AuthGuard({
     // Si está en página de auth pero ya está logueado, redirigir
     if (isAuthPage && userId) {
       if (isDevelopment()) {
-        console.log("🔄 [AUTH GUARD] Usuario logueado en página de auth, redirigiendo a /dashboard");
+        console.log(
+          "🔄 [AUTH GUARD] Usuario logueado en página de auth, redirigiendo a /dashboard",
+        );
       }
       router.replace("/dashboard");
       setShouldRender(false);
@@ -114,7 +116,9 @@ export default function AuthGuard({
     // Si se requiere un rol específico
     if (requiredRole && userRole !== requiredRole && userRole !== "root") {
       if (isDevelopment()) {
-        console.log(`🚫 [AUTH GUARD] Se requiere rol ${requiredRole} pero usuario tiene ${userRole}`);
+        console.log(
+          `🚫 [AUTH GUARD] Se requiere rol ${requiredRole} pero usuario tiene ${userRole}`,
+        );
       }
       const errorParam =
         requiredRole === "admin" ? "not-admin-privilegies" : "not-root-privilegies";

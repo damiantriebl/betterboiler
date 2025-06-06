@@ -4,7 +4,7 @@ import PointSmartIntegration from "@/components/custom/PointSmartIntegration";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, CreditCard, Smartphone, XCircle, X, AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle, CreditCard, Smartphone, X, XCircle } from "lucide-react";
 import { useState } from "react";
 
 export default function TestPointMigrationPage() {
@@ -18,28 +18,31 @@ export default function TestPointMigrationPage() {
     setCancelResult(null);
 
     try {
-      const response = await fetch('/api/mercadopago/point/cancel-device-intents/PAX_A910__SMARTPOS1495357742', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-debug-key': 'DEBUG_KEY',
+      const response = await fetch(
+        "/api/mercadopago/point/cancel-device-intents/PAX_A910__SMARTPOS1495357742",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-debug-key": "DEBUG_KEY",
+          },
         },
-      });
+      );
 
       const result = await response.json();
       setCancelResult(result);
 
       if (response.ok) {
-        console.log('✅ Dispositivo limpiado exitosamente:', result);
+        console.log("✅ Dispositivo limpiado exitosamente:", result);
       } else {
-        console.error('❌ Error cancelando payment intents:', result);
+        console.error("❌ Error cancelando payment intents:", result);
       }
     } catch (error) {
-      console.error('❌ Error en cancelación:', error);
+      console.error("❌ Error en cancelación:", error);
       setCancelResult({
         success: false,
-        error: 'Error de comunicación',
-        details: error instanceof Error ? error.message : 'Error desconocido'
+        error: "Error de comunicación",
+        details: error instanceof Error ? error.message : "Error desconocido",
       });
     } finally {
       setIsCancelling(false);
@@ -135,11 +138,11 @@ export default function TestPointMigrationPage() {
       <Card className="bg-red-50 border-red-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-900">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            🚨 Limpiar Dispositivo Point Smart
+            <AlertTriangle className="w-5 h-5 text-red-600" />🚨 Limpiar Dispositivo Point Smart
           </CardTitle>
           <p className="text-sm text-red-700">
-            Si un test falla con "There is already a queued intent for the device", limpia el dispositivo antes de continuar.
+            Si un test falla con "There is already a queued intent for the device", limpia el
+            dispositivo antes de continuar.
           </p>
         </CardHeader>
         <CardContent>
@@ -151,16 +154,19 @@ export default function TestPointMigrationPage() {
               className="flex items-center gap-2"
             >
               <X className="w-4 h-4" />
-              {isCancelling ? 'Limpiando dispositivo...' : 'Limpiar Point Smart'}
+              {isCancelling ? "Limpiando dispositivo..." : "Limpiar Point Smart"}
             </Button>
 
             {cancelResult && (
-              <div className={`p-4 rounded-lg border ${cancelResult.success
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-100 border-red-300 text-red-800'
-                }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  cancelResult.success
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-red-100 border-red-300 text-red-800"
+                }`}
+              >
                 <h4 className="font-semibold mb-2">
-                  {cancelResult.success ? '✅ Dispositivo limpiado' : '❌ Error en limpieza'}
+                  {cancelResult.success ? "✅ Dispositivo limpiado" : "❌ Error en limpieza"}
                 </h4>
                 <p className="text-sm mb-2">{cancelResult.message || cancelResult.error}</p>
                 {cancelResult.details && (

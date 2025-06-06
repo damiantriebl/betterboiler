@@ -12,46 +12,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-      // Parsear body de la request
-  const body = await request.json();
-  const { amount, description, device_id, external_reference, metadata } = body;
+    // Parsear body de la request
+    const body = await request.json();
+    const { amount, description, device_id, external_reference, metadata } = body;
 
-  if (!amount || !description || !device_id) {
-    return NextResponse.json(
-      {
-        error: "Faltan parámetros requeridos: amount, description, device_id",
-      },
-      { status: 400 },
-    );
-  }
+    if (!amount || !description || !device_id) {
+      return NextResponse.json(
+        {
+          error: "Faltan parámetros requeridos: amount, description, device_id",
+        },
+        { status: 400 },
+      );
+    }
 
-  // ✅ VALIDACIÓN DE MONTO MÍNIMO
-  // amount viene en pesos, Point Smart requiere mínimo $15.00
-  const amountInPesos = amount;
-  const minimumAmount = 15.0;
-  
-  if (amountInPesos < minimumAmount) {
-    console.error("❌ [CreatePointPayment] Monto insuficiente:", {
+    // ✅ VALIDACIÓN DE MONTO MÍNIMO
+    // amount viene en pesos, Point Smart requiere mínimo $15.00
+    const amountInPesos = amount;
+    const minimumAmount = 15.0;
+
+    if (amountInPesos < minimumAmount) {
+      console.error("❌ [CreatePointPayment] Monto insuficiente:", {
+        amountInPesos: amountInPesos,
+        minimoRequerido: minimumAmount,
+      });
+
+      return NextResponse.json(
+        {
+          error: "Monto insuficiente",
+          details: `El monto mínimo para Point Smart es $${minimumAmount}. Monto recibido: $${amountInPesos}`,
+          minimum_amount: minimumAmount,
+          received_amount: amountInPesos,
+          hint: `Envía al menos $${minimumAmount}.00`,
+        },
+        { status: 400 },
+      );
+    }
+
+    console.log("✅ [CreatePointPayment] Monto validado:", {
       amountInPesos: amountInPesos,
-      minimoRequerido: minimumAmount,
+      cumpleMinimo: amountInPesos >= minimumAmount,
     });
-    
-    return NextResponse.json(
-      {
-        error: "Monto insuficiente",
-        details: `El monto mínimo para Point Smart es $${minimumAmount}. Monto recibido: $${amountInPesos}`,
-        minimum_amount: minimumAmount,
-        received_amount: amountInPesos,
-        hint: `Envía al menos $${minimumAmount}.00`,
-      },
-      { status: 400 },
-    );
-  }
-
-  console.log("✅ [CreatePointPayment] Monto validado:", {
-    amountInPesos: amountInPesos,
-    cumpleMinimo: amountInPesos >= minimumAmount,
-  });
 
     // Obtener configuración usando lógica unificada (igual que devices endpoint)
     const configResponse = await fetch(
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     const orderData = {
       type: "point", // REQUERIDO: Tipo de order para Point Smart
       external_reference: external_reference || `point-${Date.now()}`,
-      
+
       // Configuración específica de Point Smart
       config: {
         point: {
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
           },
         ],
       },
-      
+
       // ❌ NOTA: Point Smart NO acepta notification_url - Solo funciona con polling
     };
 
@@ -147,21 +147,24 @@ export async function POST(request: NextRequest) {
     let actionId = null;
     try {
       console.log("🎯 [CreatePointPayment] Creando acción asociada...");
-      
-      const actionResponse = await fetch(`${request.nextUrl.origin}/api/mercadopago/point/create-action`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-debug-key": "DEBUG_KEY",
+
+      const actionResponse = await fetch(
+        `${request.nextUrl.origin}/api/mercadopago/point/create-action`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-debug-key": "DEBUG_KEY",
+          },
+          body: JSON.stringify({
+            type: "print",
+            terminal_id: device_id,
+            external_reference: `order-${mpData.id}-action`,
+            subtype: "text",
+            content: `Pago: $${amount.toFixed(2)}\nOrder: ${mpData.id}`,
+          }),
         },
-        body: JSON.stringify({
-          type: "print",
-          terminal_id: device_id,
-          external_reference: `order-${mpData.id}-action`,
-          subtype: "text",
-          content: `Pago: $${amount.toFixed(2)}\nOrder: ${mpData.id}`,
-        }),
-      });
+      );
 
       if (actionResponse.ok) {
         const actionData = await actionResponse.json();

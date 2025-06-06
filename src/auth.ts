@@ -43,7 +43,7 @@ function getTrustedOrigins() {
 
   // Wildcards para todos los dominios de Vercel
   origins.push("https://*.vercel.app");
-  
+
   // Agregar dominio específico conocido de producción
   origins.push("https://apex-one-lemon.vercel.app");
 

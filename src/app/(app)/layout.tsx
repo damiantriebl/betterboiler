@@ -1,6 +1,6 @@
 import { getOrganizationSessionData } from "@/actions/util/organization-session-unified";
-import SessionStoreProvider from "@/components/custom/SessionStoreProvider";
 import AuthGuard from "@/components/custom/AuthGuard";
+import SessionStoreProvider from "@/components/custom/SessionStoreProvider";
 import AppSidebar from "@/components/ui/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 

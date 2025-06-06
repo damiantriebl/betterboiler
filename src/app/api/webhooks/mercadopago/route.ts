@@ -36,9 +36,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Determinar endpoint según el tipo de notificación
-    const apiEndpoint = body.type === "order" 
-      ? `https://api.mercadopago.com/v1/orders/${resourceId}`
-      : `https://api.mercadopago.com/v1/payments/${resourceId}`;
+    const apiEndpoint =
+      body.type === "order"
+        ? `https://api.mercadopago.com/v1/orders/${resourceId}`
+        : `https://api.mercadopago.com/v1/payments/${resourceId}`;
 
     console.log("🌐 [WEBHOOK-GENERIC] Consultando endpoint:", apiEndpoint);
 
@@ -49,10 +50,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!initialResponse.ok) {
-      console.error(
-        "❌ [WEBHOOK-GENERIC] Error en consulta inicial:",
-        initialResponse.status,
-      );
+      console.error("❌ [WEBHOOK-GENERIC] Error en consulta inicial:", initialResponse.status);
       return NextResponse.json({ error: "Resource not found" }, { status: 404 });
     }
 
@@ -75,13 +73,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (!organizationId) {
-      console.error(
-        "❌ [WEBHOOK-GENERIC] No se encontró organization_id en URL ni metadata:",
-        {
-          urlParams: Object.fromEntries(urlParams),
-          metadata: initialData.metadata,
-        },
-      );
+      console.error("❌ [WEBHOOK-GENERIC] No se encontró organization_id en URL ni metadata:", {
+        urlParams: Object.fromEntries(urlParams),
+        metadata: initialData.metadata,
+      });
       return NextResponse.json({ error: "Organization ID not found" }, { status: 400 });
     }
 
@@ -163,7 +158,7 @@ export async function POST(request: NextRequest) {
     if (body.type === "order") {
       // Manejar webhooks de Point Smart (orders)
       console.log("🏪 [WEBHOOK-GENERIC] Procesando order de Point Smart:", finalData.id);
-      
+
       // Extraer el payment de la order para manejar con la lógica existente
       const payment = finalData.transactions?.payments?.[0];
       if (payment) {

@@ -1,9 +1,9 @@
 "use client";
 
 import type { OrganizationSessionData } from "@/actions/util/organization-session-unified";
+import { isDevelopment } from "@/lib/env";
 import { useSessionStore } from "@/stores/SessionStore";
 import { useEffect } from "react";
-import { isDevelopment } from "@/lib/env";
 
 interface SessionStoreProviderProps {
   sessionData: OrganizationSessionData;
@@ -45,7 +45,9 @@ export default function SessionStoreProvider({ sessionData, children }: SessionS
 
     if (hasInconsistentState) {
       if (isDevelopment()) {
-        console.warn("🧹 [SESSION STORE] Estado inconsistente detectado - limpiando store corrupto");
+        console.warn(
+          "🧹 [SESSION STORE] Estado inconsistente detectado - limpiando store corrupto",
+        );
         console.warn(`   Store tenía userId: ${currentUserId}`);
         console.warn(`   SessionData userId: ${sessionData?.userId || "null"}`);
       }
@@ -75,7 +77,9 @@ export default function SessionStoreProvider({ sessionData, children }: SessionS
       });
     } else {
       if (isDevelopment()) {
-        console.warn("⚠️ [SESSION STORE] No se actualiza el store - sessionData inválido sin userId");
+        console.warn(
+          "⚠️ [SESSION STORE] No se actualiza el store - sessionData inválido sin userId",
+        );
       }
 
       // Si no hay datos válidos y el store tiene datos, limpiar

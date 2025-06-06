@@ -34,7 +34,8 @@ import type { ColorConfig } from "@/types/ColorType";
 import type { MotorcycleBatchFormData, motorcycleBatchSchema } from "@/zod/NewBikeZod";
 import type { Supplier } from "@prisma/client";
 import { AlertCircle, Info, Loader2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { type UseFormReturn, useFieldArray } from "react-hook-form";
 import type { z } from "zod";
 import type { BrandForCombobox, ModelInfo } from "./types";
@@ -56,9 +57,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-      value === undefined ||
-      (Array.isArray(value) && value.length === 0) ||
-      value === "" ? (
+    value === undefined ||
+    (Array.isArray(value) && value.length === 0) ||
+    value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -147,18 +148,18 @@ export function NewMotoFormRefactored({
         displacement: initialData.displacement,
         units: initialData.id
           ? [
-            {
-              idTemporal: initialData.id,
-              chassisNumber: initialData.chassisNumber,
-              engineNumber: initialData.engineNumber ?? "",
-              colorId: initialData.colorId,
-              mileage: initialData.mileage,
-              branchId: initialData.branchId,
-              state: initialData.state,
-              licensePlate: initialData.licensePlate ?? "",
-              observations: initialData.observations ?? "",
-            },
-          ]
+              {
+                idTemporal: initialData.id,
+                chassisNumber: initialData.chassisNumber,
+                engineNumber: initialData.engineNumber ?? "",
+                colorId: initialData.colorId,
+                mileage: initialData.mileage,
+                branchId: initialData.branchId,
+                state: initialData.state,
+                licensePlate: initialData.licensePlate ?? "",
+                observations: initialData.observations ?? "",
+              },
+            ]
           : [],
         currency: initialData.currency,
         costPrice: initialData.costPrice,

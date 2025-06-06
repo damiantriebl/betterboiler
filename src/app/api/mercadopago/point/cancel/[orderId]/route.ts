@@ -24,14 +24,14 @@ export async function POST(request: NextRequest, { params }: CancelOrderParams) 
       `${request.nextUrl.origin}/api/configuration/mercadopago/organization/cmbggeh3l0000lhqsxwreokun`,
       {
         headers: { "x-debug-key": "DEBUG_KEY" },
-      }
+      },
     );
 
     if (!configResponse.ok) {
       console.error("❌ [POINT-CANCEL] Error obteniendo configuración");
       return NextResponse.json(
         { error: "Configuración de MercadoPago no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: CancelOrderParams) 
       console.error("❌ [POINT-CANCEL] No se encontró access token");
       return NextResponse.json(
         { error: "Access token de MercadoPago no encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest, { params }: CancelOrderParams) 
           details: cancelResult.message || "Error de comunicación con MercadoPago",
           mercadopago_error: cancelResult,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest, { params }: CancelOrderParams) 
         error: "Error interno del servidor",
         details: error instanceof Error ? error.message : "Error desconocido",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}
