@@ -235,7 +235,7 @@ export async function togglePaymentMethodStatus(
     const orgMethod = await prisma.organizationPaymentMethod.findFirst({
       where: {
         organizationId,
-        methodId: Number(methodId),
+        methodId,
       },
     });
 
