@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import type { OrganizationPaymentMethodDisplay, PaymentMethod } from "@/types/payment-methods";
+import { setupPermutaPaymentMethod } from "@/actions/payment-methods/setup-permuta";
 import {
   DndContext,
   type DragEndEvent,
@@ -233,8 +234,68 @@ export default function ManagePaymentMethods({
     });
   };
 
+  // Handler para configurar método de pago permuta
+  const handleSetupPermuta = async () => {
+    startTransition(async () => {
+      try {
+        const result = await setupPermutaPaymentMethod();
+        if (result.success) {
+          toast({
+            title: "Éxito",
+            description: "Método de pago Permuta configurado correctamente.",
+          });
+          // Recargar la página para mostrar el nuevo método
+          window.location.reload();
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Error al configurar método de pago Permuta.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Error inesperado al configurar Permuta.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
+      {/* Botón especial para configurar Permuta */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">🔄</div>
+              <div>
+                <h3 className="font-semibold text-blue-900">Método de Pago: Permuta</h3>
+                <p className="text-sm text-blue-700">
+                  Habilita el intercambio de bienes como método de pago
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleSetupPermuta}
+              disabled={isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isPending ? (
+                <>
+                  <Spinner className="h-4 w-4 mr-2" />
+                  Configurando...
+                </>
+              ) : (
+                "Configurar Permuta"
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>

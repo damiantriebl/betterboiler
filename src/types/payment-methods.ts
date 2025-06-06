@@ -13,6 +13,7 @@ export interface PaymentMethod {
     | "qr"
     | "payway"
     | "mercadopago"
+    | "permuta"
     | string;
   description: string;
   iconUrl?: string | null;

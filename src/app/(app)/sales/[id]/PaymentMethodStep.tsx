@@ -2,6 +2,7 @@
 
 import PointSmartIntegration from "@/components/custom/PointSmartIntegration";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,10 @@ import {
 import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { OrganizationPaymentMethodDisplay } from "@/types/payment-methods";
 import { Check, Loader2 } from "lucide-react";
+import { useState } from "react";
 import CurrentAccountPaymentFields from "./CurrentAccountPaymentFields";
+import PermutaMotocicletaModal from "./PermutaMotocicletaModal";
+import PermutaOtroBienModal from "./PermutaOtroBienModal";
 import type { MotorcycleWithRelations, PaymentFormData } from "./types";
 import {
   calculateFinalPrice,
@@ -68,6 +72,10 @@ export default function PaymentMethodStep({
   onCheckboxChange,
   onDateChange,
 }: PaymentMethodStepProps) {
+  // Estados para los modales de permuta
+  const [isPermutaMotocicletaModalOpen, setIsPermutaMotocicletaModalOpen] = useState(false);
+  const [isPermutaOtroBienModalOpen, setIsPermutaOtroBienModalOpen] = useState(false);
+
   // Get selected promotions
   const selectedPromotions = (paymentData?.selectedPromotions || [])
     .map((id) => applicablePromotions.find((p) => p.id === id))
@@ -148,6 +156,7 @@ export default function PaymentMethodStep({
       qr: "qr",
       check: "cheque",
       current_account: "cuenta_corriente",
+      permuta: "permuta",
     };
     return typeMap[dbType.toLowerCase()] || dbType.toLowerCase();
   };
@@ -215,6 +224,31 @@ export default function PaymentMethodStep({
     e.target.type = "text";
   };
 
+  // Funciones para manejar la permuta
+  const handlePermutaMotocicletaSelect = (motorcycle: any) => {
+    onPaymentDataChange({
+      target: { name: "permutaType", value: "motocicleta" },
+    } as React.ChangeEvent<HTMLInputElement>);
+    onPaymentDataChange({
+      target: { name: "permutaMotocicletaId", value: motorcycle.id.toString() },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handlePermutaOtroBienSelect = (data: { titulo: string; descripcion: string; monto: number }) => {
+    onPaymentDataChange({
+      target: { name: "permutaType", value: "otro_bien" },
+    } as React.ChangeEvent<HTMLInputElement>);
+    onPaymentDataChange({
+      target: { name: "permutaOtroBienTitulo", value: data.titulo },
+    } as React.ChangeEvent<HTMLInputElement>);
+    onPaymentDataChange({
+      target: { name: "permutaOtroBienDescripcion", value: data.descripcion },
+    } as React.ChangeEvent<HTMLInputElement>);
+    onPaymentDataChange({
+      target: { name: "permutaOtroBienMonto", value: data.monto.toString() },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
+
   return (
     <div className="space-y-6 mt-6">
       {loadingOrgPaymentMethods && (
@@ -267,21 +301,21 @@ export default function PaymentMethodStep({
 
                 {(paymentData?.metodoPago === "mercadopago" ||
                   paymentData?.metodoPago?.toLowerCase().includes("mercado")) && (
-                  <PointSmartIntegration
-                    amount={remainingAmount}
-                    description={`${moto?.brand?.name || ""} ${moto?.model?.name || ""} ${moto?.year || ""}`}
-                    motorcycleId={moto?.id}
-                    saleId={`sale-${Date.now()}`}
-                    onPaymentSuccess={(paymentData: any) => {
-                      console.log("✅ [PaymentMethodStep] Pago presencial exitoso:", paymentData);
-                      // Aquí puedes manejar el éxito del pago presencial
-                    }}
-                    onPaymentError={(error: any) => {
-                      console.error("❌ [PaymentMethodStep] Error en pago presencial:", error);
-                      // Aquí puedes manejar errores del Point
-                    }}
-                  />
-                )}
+                    <PointSmartIntegration
+                      amount={remainingAmount}
+                      description={`${moto?.brand?.name || ""} ${moto?.model?.name || ""} ${moto?.year || ""}`}
+                      motorcycleId={moto?.id}
+                      saleId={`sale-${Date.now()}`}
+                      onPaymentSuccess={(paymentData: any) => {
+                        console.log("✅ [PaymentMethodStep] Pago presencial exitoso:", paymentData);
+                        // Aquí puedes manejar el éxito del pago presencial
+                      }}
+                      onPaymentError={(error: any) => {
+                        console.error("❌ [PaymentMethodStep] Error en pago presencial:", error);
+                        // Aquí puedes manejar errores del Point
+                      }}
+                    />
+                  )}
 
                 {paymentData?.metodoPago === "tarjeta" && (
                   <div className="space-y-4 p-4 border rounded-md mt-4">
@@ -472,6 +506,57 @@ export default function PaymentMethodStep({
                     onPaymentDataChange={onPaymentDataChange}
                     onDateChange={onDateChange}
                   />
+                )}
+
+                {paymentData?.metodoPago === "permuta" && (
+                  <div className="space-y-4 p-4 border rounded-md mt-4">
+                    <h3 className="text-sm font-medium">Detalles de Permuta</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Selecciona el tipo de bien que se intercambiará
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Botón Motocicleta */}
+                      <Button
+                        type="button"
+                        variant={paymentData?.permutaType === "motocicleta" ? "default" : "outline"}
+                        className="h-24 flex flex-col items-center justify-center space-y-2"
+                        onClick={() => setIsPermutaMotocicletaModalOpen(true)}
+                      >
+                        <div className="text-2xl">🏍️</div>
+                        <span>Motocicleta</span>
+                      </Button>
+
+                      {/* Botón Otro Bien */}
+                      <Button
+                        type="button"
+                        variant={paymentData?.permutaType === "otro_bien" ? "default" : "outline"}
+                        className="h-24 flex flex-col items-center justify-center space-y-2"
+                        onClick={() => setIsPermutaOtroBienModalOpen(true)}
+                      >
+                        <div className="text-2xl">📦</div>
+                        <span>Otro Bien</span>
+                      </Button>
+                    </div>
+
+                    {/* Mostrar información del bien seleccionado */}
+                    {paymentData?.permutaType === "motocicleta" && paymentData?.permutaMotocicletaId && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                        <h4 className="font-medium text-blue-900 text-sm">Motocicleta Seleccionada</h4>
+                        <p className="text-sm text-blue-700">ID: {paymentData.permutaMotocicletaId}</p>
+                      </div>
+                    )}
+
+                    {paymentData?.permutaType === "otro_bien" && paymentData?.permutaOtroBienTitulo && (
+                      <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                        <h4 className="font-medium text-green-900 text-sm">{paymentData.permutaOtroBienTitulo}</h4>
+                        <p className="text-sm text-green-700">{paymentData.permutaOtroBienDescripcion}</p>
+                        <p className="text-sm font-medium text-green-800">
+                          Valor: ${paymentData.permutaOtroBienMonto?.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               {/* End Columna Izquierda */}
@@ -801,6 +886,19 @@ export default function PaymentMethodStep({
             {/* End grid */}
           </>
         )}
+
+      {/* Modales de Permuta */}
+      <PermutaMotocicletaModal
+        isOpen={isPermutaMotocicletaModalOpen}
+        onClose={() => setIsPermutaMotocicletaModalOpen(false)}
+        onSelectMotorcycle={handlePermutaMotocicletaSelect}
+      />
+
+      <PermutaOtroBienModal
+        isOpen={isPermutaOtroBienModalOpen}
+        onClose={() => setIsPermutaOtroBienModalOpen(false)}
+        onConfirm={handlePermutaOtroBienSelect}
+      />
     </div>
   );
 }

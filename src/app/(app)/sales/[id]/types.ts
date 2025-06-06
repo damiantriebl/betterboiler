@@ -58,6 +58,12 @@ export interface PaymentFormData {
   annualInterestRate?: number;
   currentAccountStartDate?: string;
   currentAccountNotes?: string;
+  // Permuta fields
+  permutaType?: "motocicleta" | "otro_bien";
+  permutaMotocicletaId?: number;
+  permutaOtroBienTitulo?: string;
+  permutaOtroBienDescripcion?: string;
+  permutaOtroBienMonto?: number;
 }
 
 export interface SaleProcessState {
