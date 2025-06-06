@@ -48,3 +48,19 @@ For watch mode during development:
 ```bash
 pnpm test:watch
 ```
+
+## Mobile App (React Native)
+
+A minimal React Native version is available under the `/mobile` directory. It
+uses Expo and communicates with the same server actions via HTTP so Prisma
+logic can be shared. All top level pages have placeholder screens in the mobile
+app so navigation mirrors the web version.
+
+```bash
+cd mobile
+pnpm install
+pnpm android    # run on Android
+```
+
+Ensure the Next.js backend is running (`pnpm dev`) before starting the mobile
+application.

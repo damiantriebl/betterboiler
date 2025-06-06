@@ -42,3 +42,4 @@ next-env.d.ts
 better.txt
 
 .vercel
+mobile/node_modules
