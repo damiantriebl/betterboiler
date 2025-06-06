@@ -83,8 +83,10 @@ export async function GET(
     console.log("✅ [PointPaymentStatus] Estado de order obtenido:", {
       order_id: mpData.id,
       order_status: mpData.status,
+      order_status_detail: mpData.status_detail, // 🆕 Importante para determinar si está acreditado
       payment_id: payment?.id,
       payment_status: payment?.status,
+      payment_status_detail: payment?.status_detail, // 🆕 Importante para el estado final
       total_amount: mpData.total_amount,
       paid_amount: mpData.total_paid_amount,
       external_reference: mpData.external_reference,
@@ -100,28 +102,38 @@ export async function GET(
     // Según documentación: https://www.mercadopago.com.ar/developers/es/reference/in-person-payments/point/orders/get-order/get
     let formattedStatus = "PENDING";
     
-    // Priorizar el estado del payment sobre el estado de la order
+    // Extraer estados importantes
     const orderStatus = mpData.status;
+    const orderStatusDetail = mpData.status_detail;
     const paymentStatus = payment?.status;
+    const paymentStatusDetail = payment?.status_detail;
     
-    console.log("🔍 [PointPaymentStatus] Evaluando estados:", {
+    console.log("🔍 [PointPaymentStatus] Evaluando estados completos:", {
       orderStatus,
+      orderStatusDetail,
       paymentStatus,
+      paymentStatusDetail,
       hasPayment: !!payment,
     });
     
-    if (orderStatus === "finished" && paymentStatus === "approved") {
-      formattedStatus = "FINISHED";
+    // IMPORTANTE: En MercadoPago Point, "processed" + "accredited" = PAGO APROBADO
+    if ((orderStatus === "processed" && orderStatusDetail === "accredited") || 
+        (paymentStatus === "processed" && paymentStatusDetail === "accredited") ||
+        (orderStatus === "finished" && paymentStatus === "approved")) {
+      formattedStatus = "FINISHED"; // ✅ PAGO EXITOSO
     } else if (orderStatus === "refunded" || paymentStatus === "refunded") {
       formattedStatus = "REFUNDED";
     } else if (orderStatus === "canceled" || paymentStatus === "cancelled") {
       formattedStatus = "CANCELED";
-    } else if (paymentStatus === "rejected" || paymentStatus === "failed") {
+    } else if (paymentStatus === "rejected" || paymentStatus === "failed" || 
+               paymentStatusDetail === "rejected") {
       formattedStatus = "ERROR";
+    } else if (orderStatus === "at_terminal" || paymentStatus === "at_terminal") {
+      formattedStatus = "WAITING"; // Esperando interacción en el Point
     } else if (orderStatus === "processing" || paymentStatus === "pending") {
       formattedStatus = "PROCESSING";
     } else if (orderStatus === "created" || orderStatus === "open") {
-      formattedStatus = "WAITING"; // Order creada, esperando interacción del Point
+      formattedStatus = "WAITING";
     }
 
     return NextResponse.json({
@@ -130,7 +142,9 @@ export async function GET(
       payment_id: payment?.id, // ID del payment
       status: formattedStatus,
       order_status: mpData.status,
+      order_status_detail: mpData.status_detail, // 🆕 Incluir status_detail
       payment_status: payment?.status,
+      payment_status_detail: payment?.status_detail, // 🆕 Incluir status_detail del payment
       total_amount: mpData.total_amount,
       paid_amount: mpData.total_paid_amount,
       external_reference: mpData.external_reference,
@@ -182,32 +196,36 @@ async function createPointSmartNotification(orderData: any, payment: any, organi
       }
     }
 
+    // Considerar tanto status como status_detail
+    const statusDetail = payment?.status_detail || orderData.status_detail;
+    
     // Crear mensaje según el estado
     let message = "";
     let shouldNotify = false;
 
-    switch (currentStatus) {
-      case "processed":
-      case "approved":
-        message = `✅ Pago Point Smart APROBADO - $${payment?.amount || orderData.total_amount || "N/A"}`;
-        shouldNotify = true;
-        break;
-      case "pending":
-        message = `⏳ Pago Point Smart pendiente - Order ${orderId}`;
-        shouldNotify = true;
-        break;
-      case "failed":
-      case "rejected":
-        message = `❌ Pago Point Smart RECHAZADO - Order ${orderId}`;
-        shouldNotify = true;
-        break;
-      case "cancelled":
-        message = `🚫 Pago Point Smart CANCELADO - Order ${orderId}`;
-        shouldNotify = true;
-        break;
-      default:
-        message = `📱 Point Smart: ${currentStatus} - Order ${orderId}`;
-        shouldNotify = false; // No notificar estados intermedios
+    // Verificar primero el status_detail que es más específico
+    if (statusDetail === "accredited" || currentStatus === "approved") {
+      message = `✅ Pago Point Smart APROBADO - $${payment?.paid_amount || payment?.amount || orderData.total_paid_amount || "N/A"}`;
+      shouldNotify = true;
+    } else if (statusDetail === "rejected" || currentStatus === "rejected" || currentStatus === "failed") {
+      message = `❌ Pago Point Smart RECHAZADO - Order ${orderId}`;
+      shouldNotify = true;
+    } else if (currentStatus === "processed" && !statusDetail) {
+      // processed sin status_detail aún no está completo
+      message = `⏳ Procesando pago Point Smart - Order ${orderId}`;
+      shouldNotify = false; // No notificar hasta tener status_detail
+    } else if (currentStatus === "at_terminal") {
+      message = `📱 Esperando pago en Point Smart - Order ${orderId}`;
+      shouldNotify = true;
+    } else if (currentStatus === "pending") {
+      message = `⏳ Pago Point Smart pendiente - Order ${orderId}`;
+      shouldNotify = true;
+    } else if (currentStatus === "cancelled") {
+      message = `🚫 Pago Point Smart CANCELADO - Order ${orderId}`;
+      shouldNotify = true;
+    } else {
+      message = `📱 Point Smart: ${currentStatus} - Order ${orderId}`;
+      shouldNotify = false;
     }
 
     if (!shouldNotify) {

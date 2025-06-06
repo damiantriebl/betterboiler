@@ -172,18 +172,27 @@ export default function PointSmartIntegration({
         console.log(`🔍 [PointSmart] Estado de la order (intento ${attempts + 1}):`, {
           order_id: data.order_id,
           order_status: data.order_status,
+          order_status_detail: data.order_status_detail, // 🆕 Ver status_detail
           payment_id: data.payment_id,
           payment_status: data.payment_status,
+          payment_status_detail: data.payment_status_detail, // 🆕 Ver status_detail
           status: data.status,
+          is_accredited: data.payment_status_detail === "accredited", // 🆕 Indicador claro
         });
 
         // Estados finales que terminan el polling
         if (data.status === "FINISHED") {
+          console.log("✅ [PointSmart] PAGO COMPLETADO EXITOSAMENTE - Status detail:", {
+            payment_status_detail: data.payment_status_detail,
+            order_status_detail: data.order_status_detail,
+            paid_amount: data.paid_amount,
+          });
+
           setPaymentStatus("completed");
 
           toast({
             title: "¡Pago Exitoso!",
-            description: `Pago aprobado por $${amount} - Order: ${data.order_id}`,
+            description: `Pago aprobado por $${data.paid_amount || amount} - Order: ${data.order_id}`,
             variant: "default",
           });
 
@@ -195,6 +204,7 @@ export default function PointSmartIntegration({
             paid_amount: data.paid_amount,
             order_status: data.order_status,
             payment_status: data.payment_status,
+            payment_status_detail: data.payment_status_detail, // 🆕 Incluir el detail
           });
           return;
         }
@@ -526,11 +536,13 @@ export default function PointSmartIntegration({
         </div>
 
         {/* Información adicional */}
-        {paymentStatus === "waiting" && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-sm text-blue-800 space-y-1">
+        {(paymentStatus === "waiting" || paymentStatus === "processing") && (
+          <div className={`p-4 border rounded-lg ${paymentStatus === "processing" ? "bg-yellow-50 border-yellow-200" : "bg-blue-50 border-blue-200"
+            }`}>
+            <div className={`text-sm space-y-1 ${paymentStatus === "processing" ? "text-yellow-800" : "text-blue-800"
+              }`}>
               <p>
-                <strong>💳 Esperando pago de:</strong> ${amount.toLocaleString("es-AR")}
+                <strong>💳 {paymentStatus === "processing" ? "Procesando pago de:" : "Esperando pago de:"}</strong> ${amount.toLocaleString("es-AR")}
               </p>
               <p>
                 <strong>📝 Concepto:</strong> {description}
@@ -559,6 +571,11 @@ export default function PointSmartIntegration({
                     }`}>
                     {actionStatus.toUpperCase()}
                   </span>
+                </p>
+              )}
+              {paymentStatus === "processing" && (
+                <p className="mt-2 font-semibold text-yellow-900">
+                  ⏳ El pago está siendo procesado por MercadoPago...
                 </p>
               )}
             </div>
