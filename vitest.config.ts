@@ -4,7 +4,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react(), tsconfigPaths({ projects: ['./tsconfig.json'] })],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

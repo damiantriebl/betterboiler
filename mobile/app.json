@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "better-mobile",
+    "slug": "better-mobile",
+    "version": "1.0.0",
+    "sdkVersion": "50.0.0",
+    "platforms": ["android", "ios"],
+    "entryPoint": "index.js"
+  }
+}
