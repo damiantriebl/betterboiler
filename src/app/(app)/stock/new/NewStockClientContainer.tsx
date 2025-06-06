@@ -10,7 +10,7 @@ import { motorcycleBatchSchema } from "@/zod/NewBikeZod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Supplier } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import React, { useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { BatchPreview } from "./BatchPreview";
 import { NewMotoFormRefactored } from "./NewMotoForm";

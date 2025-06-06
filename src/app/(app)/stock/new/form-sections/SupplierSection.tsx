@@ -19,7 +19,7 @@ import {
 import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
 import type { Supplier } from "@prisma/client";
 import { Info } from "lucide-react";
-import React from "react";
+import { useState } from "react";
 import type { Control, UseFormSetValue } from "react-hook-form";
 
 // Helper DisplayData para mostrar info en modal
@@ -29,9 +29,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-    value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    value === "" ? (
+      value === undefined ||
+      (Array.isArray(value) && value.length === 0) ||
+      value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -59,8 +59,8 @@ export function SupplierSection({
   suppliers,
   isSubmitting = false,
 }: SupplierSectionProps) {
-  const [isSupplierModalOpen, setIsSupplierModalOpen] = React.useState(false);
-  const [selectedSupplierInfo, setSelectedSupplierInfo] = React.useState<Supplier | null>(null);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [selectedSupplierInfo, setSelectedSupplierInfo] = useState<Supplier | null>(null);
 
   return (
     <FormField

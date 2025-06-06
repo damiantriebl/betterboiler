@@ -19,7 +19,7 @@ import type { ColorConfig } from "@/types/ColorType";
 import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
 import { MotorcycleState } from "@prisma/client";
 import { AlertCircle, Plus, Trash2 } from "lucide-react";
-import React from "react";
+
 import type {
   Control,
   FieldArrayWithId,

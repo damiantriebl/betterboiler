@@ -34,7 +34,7 @@ import type { ColorConfig } from "@/types/ColorType";
 import type { MotorcycleBatchFormData, motorcycleBatchSchema } from "@/zod/NewBikeZod";
 import type { Supplier } from "@prisma/client";
 import { AlertCircle, Info, Loader2 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { type UseFormReturn, useFieldArray } from "react-hook-form";
 import type { z } from "zod";
 import type { BrandForCombobox, ModelInfo } from "./types";
@@ -56,9 +56,9 @@ const DisplayData = ({
 }: { label: string; value: string | number | string[] | null | undefined }) => {
   const displayValue =
     value === null ||
-    value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    value === "" ? (
+      value === undefined ||
+      (Array.isArray(value) && value.length === 0) ||
+      value === "" ? (
       <span className="text-muted-foreground italic">N/A</span>
     ) : Array.isArray(value) ? (
       value.join(", ")
@@ -122,9 +122,9 @@ export function NewMotoFormRefactored({
     watch,
   } = form;
 
-  const [activeTab, setActiveTab] = React.useState<TabValue>(TABS_ORDER[0]);
-  const [isSupplierModalOpen, setIsSupplierModalOpen] = React.useState(false);
-  const [selectedSupplierInfo, setSelectedSupplierInfo] = React.useState<Supplier | null>(null);
+  const [activeTab, setActiveTab] = useState<TabValue>(TABS_ORDER[0]);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [selectedSupplierInfo, setSelectedSupplierInfo] = useState<Supplier | null>(null);
   const currentYear = new Date().getFullYear();
   const maxYear = currentYear + 1;
 
@@ -138,7 +138,7 @@ export function NewMotoFormRefactored({
   });
 
   // Efecto para inicializar datos de edición
-  React.useEffect(() => {
+  useEffect(() => {
     if (isEditing && initialData) {
       form.reset({
         brandId: initialData.brandId,
@@ -147,18 +147,18 @@ export function NewMotoFormRefactored({
         displacement: initialData.displacement,
         units: initialData.id
           ? [
-              {
-                idTemporal: initialData.id,
-                chassisNumber: initialData.chassisNumber,
-                engineNumber: initialData.engineNumber ?? "",
-                colorId: initialData.colorId,
-                mileage: initialData.mileage,
-                branchId: initialData.branchId,
-                state: initialData.state,
-                licensePlate: initialData.licensePlate ?? "",
-                observations: initialData.observations ?? "",
-              },
-            ]
+            {
+              idTemporal: initialData.id,
+              chassisNumber: initialData.chassisNumber,
+              engineNumber: initialData.engineNumber ?? "",
+              colorId: initialData.colorId,
+              mileage: initialData.mileage,
+              branchId: initialData.branchId,
+              state: initialData.state,
+              licensePlate: initialData.licensePlate ?? "",
+              observations: initialData.observations ?? "",
+            },
+          ]
           : [],
         currency: initialData.currency,
         costPrice: initialData.costPrice,
