@@ -10,7 +10,14 @@ import prisma from "./lib/prisma";
 function getBaseUrl() {
   // En producción, usar variables de entorno específicas
   if (process.env.NODE_ENV === "production") {
-    return process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL;
+    const productionUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
+    if (productionUrl) {
+      return productionUrl;
+    }
+    // Fallback para Vercel
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`;
+    }
   }
   // En desarrollo, usar localhost
   return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -36,6 +43,9 @@ function getTrustedOrigins() {
 
   // Wildcards para todos los dominios de Vercel
   origins.push("https://*.vercel.app");
+  
+  // Agregar dominio específico conocido de producción
+  origins.push("https://apex-one-lemon.vercel.app");
 
   // Eliminar duplicados y valores undefined/null
   return [...new Set(origins.filter(Boolean))];

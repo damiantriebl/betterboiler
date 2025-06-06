@@ -1,3 +1,4 @@
+import { useSessionStore } from "@/stores/SessionStore";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -12,6 +13,10 @@ interface PaymentNotification {
 export const usePaymentNotifications = () => {
   const [isPolling, setIsPolling] = useState(false);
   const [notifications, setNotifications] = useState<PaymentNotification[]>([]);
+  
+  // Obtener datos de sesión para verificar si tiene organización
+  const organizationId = useSessionStore((state) => state.organizationId);
+  const userId = useSessionStore((state) => state.userId);
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -40,13 +45,26 @@ export const usePaymentNotifications = () => {
   };
 
   useEffect(() => {
+    // Solo iniciar polling si el usuario tiene organización
+    if (!userId || !organizationId) {
+      console.log("ℹ️ [PAYMENT NOTIFICATIONS] Usuario sin organización, omitiendo polling");
+      return;
+    }
+
     setIsPolling(true);
 
     // Función local para verificar notificaciones
     const checkNotifications = async () => {
       try {
         const response = await fetch("/api/notifications/payment");
-        if (!response.ok) return;
+        if (!response.ok) {
+          // Si falla por falta de organización, no hacer más requests
+          if (response.status === 500) {
+            console.log("ℹ️ [PAYMENT NOTIFICATIONS] Error de organización, deteniendo polling");
+            return;
+          }
+          return;
+        }
 
         const data = await response.json();
         if (data.success && data.notifications?.length > 0) {
@@ -85,7 +103,7 @@ export const usePaymentNotifications = () => {
       }
     };
 
-    // Verificar inmediatamente
+    // Verificar inmediatamente solo si tiene organización
     checkNotifications();
 
     // Luego verificar cada 5 segundos
@@ -95,7 +113,7 @@ export const usePaymentNotifications = () => {
       clearInterval(interval);
       setIsPolling(false);
     };
-  }, []); // ← REMOVÍ isPolling de las dependencias
+  }, [userId, organizationId]); // Agregar dependencias para que reaccione a cambios
 
   return {
     notifications,

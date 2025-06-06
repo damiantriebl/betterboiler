@@ -8,6 +8,11 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
+  // Variables de entorno públicas para el cliente
+  env: {
+    NEXT_PUBLIC_NODE_ENV: process.env.NODE_ENV,
+  },
+
   // Configuración de webpack para manejar Prisma
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -122,6 +127,15 @@ const nextConfig = {
               "https://uknapex.s3.us-east-1.amazonaws.com",
               ";"
             ].join(' ')
+          },
+          // 🚫 BLOQUEAR EXTENSIONES: Headers adicionales para prevenir inyección de extensiones
+          {
+            key: 'X-Chrome-Extension-Block',
+            value: 'deny-script-injection'
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp'
           },
           {
             key: 'X-Extension-Protection',

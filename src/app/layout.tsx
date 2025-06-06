@@ -22,6 +22,42 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body lang="es" className={`${WorkSans.className} antialiased`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Bloquear extensiones Chrome problemáticas
+              if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+                const originalFetch = window.fetch;
+                window.fetch = function(input, init) {
+                  const url = input.toString();
+                  if (url.includes('chrome-extension://')) {
+                    console.warn('🚫 Bloqueando solicitud a extensión Chrome:', url);
+                    return Promise.reject(new TypeError('Chrome extension request blocked'));
+                  }
+                  return originalFetch.call(this, input, init);
+                };
+                
+                window.addEventListener('error', (event) => {
+                  const message = event.message || '';
+                  if (message.includes('chrome-extension://') || message.includes('Failed to fetch dynamically imported module')) {
+                    console.warn('🚫 Error de extensión Chrome manejado:', message);
+                    event.preventDefault();
+                    return false;
+                  }
+                }, true);
+                
+                window.addEventListener('unhandledrejection', (event) => {
+                  const message = event.reason?.message || event.reason?.toString() || '';
+                  if (message.includes('chrome-extension://') || message.includes('Failed to fetch dynamically imported module')) {
+                    console.warn('🚫 Promise rechazada por extensión Chrome:', message);
+                    event.preventDefault();
+                    return false;
+                  }
+                });
+              }
+            `,
+          }}
+        />
         {children}
         <Toaster />
       </body>

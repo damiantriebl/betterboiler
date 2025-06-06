@@ -12,18 +12,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Parsear body de la request
-    const body = await request.json();
-    const { amount, description, device_id, external_reference, metadata } = body;
+      // Parsear body de la request
+  const body = await request.json();
+  const { amount, description, device_id, external_reference, metadata } = body;
 
-    if (!amount || !description || !device_id) {
-      return NextResponse.json(
-        {
-          error: "Faltan parámetros requeridos: amount, description, device_id",
-        },
-        { status: 400 },
-      );
-    }
+  if (!amount || !description || !device_id) {
+    return NextResponse.json(
+      {
+        error: "Faltan parámetros requeridos: amount, description, device_id",
+      },
+      { status: 400 },
+    );
+  }
+
+  // ✅ VALIDACIÓN DE MONTO MÍNIMO
+  // amount viene en centavos, Point Smart requiere mínimo $15.00
+  const amountInPesos = amount / 100;
+  const minimumAmount = 15.0;
+  
+  if (amountInPesos < minimumAmount) {
+    console.error("❌ [CreatePointPayment] Monto insuficiente:", {
+      amountInCentavos: amount,
+      amountInPesos: amountInPesos,
+      minimoRequerido: minimumAmount,
+    });
+    
+    return NextResponse.json(
+      {
+        error: "Monto insuficiente",
+        details: `El monto mínimo para Point Smart es $${minimumAmount}. Monto recibido: $${amountInPesos}`,
+        minimum_amount: minimumAmount,
+        received_amount: amountInPesos,
+        hint: "Envía al menos 1500 centavos (que equivalen a $15.00)",
+      },
+      { status: 400 },
+    );
+  }
+
+  console.log("✅ [CreatePointPayment] Monto validado:", {
+    amountInCentavos: amount,
+    amountInPesos: amountInPesos,
+    cumpleMinimo: amountInPesos >= minimumAmount,
+  });
 
     // Obtener configuración usando lógica unificada (igual que devices endpoint)
     const configResponse = await fetch(
@@ -115,6 +145,37 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ [CreatePointPayment] Order creada exitosamente:", mpData);
 
+    // 🆕 CREAR ACCIÓN DE IMPRESIÓN PARA TRACKING DETALLADO
+    let actionId = null;
+    try {
+      console.log("🎯 [CreatePointPayment] Creando acción asociada...");
+      
+      const actionResponse = await fetch(`${request.nextUrl.origin}/api/mercadopago/point/create-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-debug-key": "DEBUG_KEY",
+        },
+        body: JSON.stringify({
+          type: "print",
+          terminal_id: device_id,
+          external_reference: `order-${mpData.id}-action`,
+          subtype: "text",
+          content: `Pago: $${(amount / 100).toFixed(2)}\nOrder: ${mpData.id}`,
+        }),
+      });
+
+      if (actionResponse.ok) {
+        const actionData = await actionResponse.json();
+        actionId = actionData.action?.id;
+        console.log("✅ [CreatePointPayment] Acción creada:", actionId);
+      } else {
+        console.log("⚠️ [CreatePointPayment] No se pudo crear acción (no crítico)");
+      }
+    } catch (actionError) {
+      console.log("⚠️ [CreatePointPayment] Error creando acción (no crítico):", actionError);
+    }
+
     // Extraer información del primer payment de la order
     const payment = mpData.transactions?.payments?.[0];
 
@@ -122,6 +183,7 @@ export async function POST(request: NextRequest) {
       success: true,
       order_id: mpData.id, // ID de la order (no payment intent)
       payment_id: payment?.id, // ID del payment dentro de la order
+      action_id: actionId, // 🆕 ID de la acción para tracking
       device_id: device_id,
       amount: amount,
       status: mpData.status || "created",

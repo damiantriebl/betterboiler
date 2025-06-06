@@ -34,9 +34,11 @@ export default function PointSmartIntegration({
   const [devices, setDevices] = useState<PointDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<PointDevice | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<
     "idle" | "creating" | "waiting" | "processing" | "completed" | "failed"
   >("idle");
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -116,6 +118,12 @@ export default function PointSmartIntegration({
         setPaymentIntentId(data.order_id);
         setPaymentStatus("waiting");
 
+        // 🆕 Capturar action_id si está disponible
+        if (data.action_id) {
+          setActionId(data.action_id);
+          console.log("🎯 [PointSmart] Action ID capturado:", data.action_id);
+        }
+
         toast({
           title: "¡Listo para cobrar!",
           description: `Pasa la tarjeta en el Point Smart "${selectedDevice.name}"`,
@@ -125,12 +133,16 @@ export default function PointSmartIntegration({
         console.log("✅ [PointSmart] Order creada exitosamente:", {
           order_id: data.order_id,
           payment_id: data.payment_id,
+          action_id: data.action_id,
           terminal_id: data.terminal_id,
           amount: data.amount,
         });
 
-        // Comenzar a monitorear el estado de la order
+        // Comenzar a monitorear el estado de la order Y las acciones
         monitorPaymentStatus(data.order_id);
+        if (data.action_id) {
+          monitorActionStatus(data.action_id);
+        }
       } else {
         throw new Error(data.error || "Error creando order");
       }
@@ -229,27 +241,101 @@ export default function PointSmartIntegration({
     checkStatus();
   };
 
+  // 🆕 Monitorear estado de las acciones
+  const monitorActionStatus = async (actionId: string) => {
+    const maxAttempts = 60; // 5 minutos máximo
+    let attempts = 0;
+
+    const checkActionStatus = async () => {
+      try {
+        const response = await fetch(`/api/mercadopago/point/action-status/${actionId}`, {
+          headers: {
+            "x-debug-key": "DEBUG_KEY",
+          },
+        });
+        const data = await response.json();
+
+        console.log(`🎯 [PointSmart] Estado de la acción (intento ${attempts + 1}):`, {
+          action_id: data.action_id,
+          action_type: data.action_type,
+          action_status: data.action_status,
+          terminal_id: data.terminal_id,
+        });
+
+        // Actualizar estado de la acción en la UI
+        setActionStatus(data.action_status);
+
+        // Estados finales de acción
+        if (data.action_status === "finished") {
+          console.log("✅ [PointSmart] Acción completada exitosamente");
+          return;
+        }
+        if (data.action_status === "canceled" || data.action_status === "error") {
+          console.log("❌ [PointSmart] Acción cancelada o con error");
+          return;
+        }
+
+        // Continuar monitoreando
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkActionStatus, 3000); // Verificar cada 3 segundos (más rápido que el pago)
+        } else {
+          console.log("⏰ [PointSmart] Timeout monitoreando acción");
+        }
+      } catch (error) {
+        console.error("Error monitoreando acción:", error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkActionStatus, 3000);
+        }
+      }
+    };
+
+    checkActionStatus();
+  };
+
   // Cancelar order/pago
   const cancelPayment = async () => {
     if (!paymentIntentId) return;
 
     try {
-      // ✅ Actualizado para Orders API - usar order_id para cancelar
-      await fetch(`/api/mercadopago/point/cancel-payment/${paymentIntentId}`, {
+      // ✅ Actualizado para Orders API - usar endpoint correcto de cancelación
+      const response = await fetch(`/api/mercadopago/point/cancel/${paymentIntentId}`, {
         method: "POST",
+        headers: {
+          "x-debug-key": "DEBUG_KEY",
+        },
       });
 
-      setPaymentStatus("idle");
-      setPaymentIntentId(null);
-      setError(null);
+      const data = await response.json();
 
-      toast({
-        title: "Order Cancelada",
-        description: "La transacción ha sido cancelada",
-        variant: "default",
-      });
+      if (response.ok && data.success) {
+        setPaymentStatus("idle");
+        setPaymentIntentId(null);
+        setActionId(null);
+        setActionStatus(null);
+        setError(null);
+
+        toast({
+          title: "Order Cancelada",
+          description: "La transacción ha sido cancelada exitosamente",
+          variant: "default",
+        });
+      } else {
+        console.error("Error cancelando order:", data);
+        toast({
+          title: "Error",
+          description: "No se pudo cancelar la order",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error cancelando order:", error);
+      toast({
+        title: "Error",
+        description: "Error de comunicación al cancelar",
+        variant: "destructive",
+      });
     }
   };
 
@@ -398,6 +484,8 @@ export default function PointSmartIntegration({
                   setPaymentStatus("idle");
                   setError(null);
                   setPaymentIntentId(null);
+                  setActionId(null);
+                  setActionStatus(null);
                 }}
                 variant="outline"
               >
@@ -420,6 +508,29 @@ export default function PointSmartIntegration({
               <p>
                 <strong>📱 Dispositivo:</strong> {selectedDevice?.name}
               </p>
+              {paymentIntentId && (
+                <p>
+                  <strong>🆔 Order ID:</strong> {paymentIntentId}
+                </p>
+              )}
+              {actionId && (
+                <p>
+                  <strong>🎯 Action ID:</strong> {actionId}
+                </p>
+              )}
+              {actionStatus && (
+                <p>
+                  <strong>📡 Estado Acción:</strong>
+                  <span className={`ml-1 font-semibold ${actionStatus === "finished" ? "text-green-700" :
+                    actionStatus === "processing" ? "text-blue-700" :
+                      actionStatus === "on_terminal" ? "text-yellow-700" :
+                        actionStatus === "created" ? "text-purple-700" :
+                          "text-red-700"
+                    }`}>
+                    {actionStatus.toUpperCase()}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         )}
