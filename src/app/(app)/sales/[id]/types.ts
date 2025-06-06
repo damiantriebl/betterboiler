@@ -60,11 +60,18 @@ export interface PaymentFormData {
   currentAccountNotes?: string;
 }
 
+// Nuevo tipo para manejar pagos múltiples
+export interface PaymentSegment {
+  metodoPago: string;
+  monto: number;
+}
+
 export interface SaleProcessState {
   currentStep: number;
   selectedClientId: string | null;
   buyerData: BuyerFormData;
   paymentData: PaymentFormData;
+  paymentSegments: PaymentSegment[];
   showClientTable: boolean;
 }
 
