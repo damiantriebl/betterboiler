@@ -3,14 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertCircle,
-  Check,
-  ExternalLink,
-  Loader2,
-  RefreshCw,
-  X,
-} from "lucide-react";
+import { AlertCircle, Check, ExternalLink, Loader2, RefreshCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -253,8 +246,6 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
     }
   };
 
-
-
   const disconnectMercadoPago = async () => {
     try {
       const response = await fetch("/api/configuration/mercadopago/disconnect", {
@@ -288,8 +279,6 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
       setRefreshing(false);
     }
   };
-
-
 
   if (loading) {
     return (
@@ -460,9 +449,7 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-amber-900">
-                        Configuración incompleta
-                      </p>
+                      <p className="text-sm font-medium text-amber-900">Configuración incompleta</p>
                       <p className="text-xs text-amber-700 mt-1">
                         Detectamos que falta configurar algunos detalles
                       </p>
@@ -500,7 +487,6 @@ export default function ManageMercadoPago({ organizationId }: ManageMercadoPagoP
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }

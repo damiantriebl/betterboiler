@@ -434,10 +434,11 @@ export default function PointSmartIntegration({
               {devices.map((device) => (
                 <div
                   key={device.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedDevice?.id === device.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                    }`}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    selectedDevice?.id === device.id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
                   onClick={() => setSelectedDevice(device)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -537,12 +538,23 @@ export default function PointSmartIntegration({
 
         {/* Información adicional */}
         {(paymentStatus === "waiting" || paymentStatus === "processing") && (
-          <div className={`p-4 border rounded-lg ${paymentStatus === "processing" ? "bg-yellow-50 border-yellow-200" : "bg-blue-50 border-blue-200"
-            }`}>
-            <div className={`text-sm space-y-1 ${paymentStatus === "processing" ? "text-yellow-800" : "text-blue-800"
-              }`}>
+          <div
+            className={`p-4 border rounded-lg ${
+              paymentStatus === "processing"
+                ? "bg-yellow-50 border-yellow-200"
+                : "bg-blue-50 border-blue-200"
+            }`}
+          >
+            <div
+              className={`text-sm space-y-1 ${
+                paymentStatus === "processing" ? "text-yellow-800" : "text-blue-800"
+              }`}
+            >
               <p>
-                <strong>💳 {paymentStatus === "processing" ? "Procesando pago de:" : "Esperando pago de:"}</strong> ${amount.toLocaleString("es-AR")}
+                <strong>
+                  💳 {paymentStatus === "processing" ? "Procesando pago de:" : "Esperando pago de:"}
+                </strong>{" "}
+                ${amount.toLocaleString("es-AR")}
               </p>
               <p>
                 <strong>📝 Concepto:</strong> {description}
@@ -563,12 +575,19 @@ export default function PointSmartIntegration({
               {actionStatus && (
                 <p>
                   <strong>📡 Estado Acción:</strong>
-                  <span className={`ml-1 font-semibold ${actionStatus === "finished" ? "text-green-700" :
-                    actionStatus === "processing" ? "text-blue-700" :
-                      actionStatus === "on_terminal" ? "text-yellow-700" :
-                        actionStatus === "created" ? "text-purple-700" :
-                          "text-red-700"
-                    }`}>
+                  <span
+                    className={`ml-1 font-semibold ${
+                      actionStatus === "finished"
+                        ? "text-green-700"
+                        : actionStatus === "processing"
+                          ? "text-blue-700"
+                          : actionStatus === "on_terminal"
+                            ? "text-yellow-700"
+                            : actionStatus === "created"
+                              ? "text-purple-700"
+                              : "text-red-700"
+                    }`}
+                  >
                     {actionStatus.toUpperCase()}
                   </span>
                 </p>

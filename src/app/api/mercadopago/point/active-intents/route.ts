@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // Para cada dispositivo, intentar obtener payment intents activos
     const activeIntents = [];
-    
+
     for (const device of devices) {
       try {
         // Usar la API de payment intents para obtener los activos del dispositivo
@@ -126,4 +126,4 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-} 
+}

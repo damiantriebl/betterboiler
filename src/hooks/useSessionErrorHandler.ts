@@ -1,9 +1,8 @@
 "use client";
 
-import { useSessionStore } from "@/stores/SessionStore";
+import { isDevelopment } from "@/lib/env";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { isDevelopment } from "@/lib/env";
 
 interface SessionErrorHandlerOptions {
   error?: string | null;
@@ -27,16 +26,14 @@ export function useSessionErrorHandler({
   const lastErrorRef = useRef<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  
-  const userId = useSessionStore((state) => state.userId);
-  
+
   // Detectar cuando el componente está montado
   useEffect(() => {
     setIsMounted(true);
     const timer = setTimeout(() => {
       setIsInitialized(true);
     }, 200);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -51,14 +48,14 @@ export function useSessionErrorHandler({
       if (lastErrorRef.current === externalError) {
         return;
       }
-      
+
       lastErrorRef.current = externalError;
-      
+
       // Solo log en desarrollo
       if (isDevelopment()) {
         console.log(`🚨 [SESSION ERROR HANDLER] Error detectado: ${externalError}`);
       }
-      
+
       // Llamar al callback personalizado si existe
       if (onSessionError) {
         onSessionError(externalError);
@@ -69,7 +66,7 @@ export function useSessionErrorHandler({
         if (isDevelopment()) {
           console.error("💥 [SESSION ERROR HANDLER] Error interno del sistema");
         }
-        
+
         if (redirectOnError && retriesRef.current < maxRetries) {
           retriesRef.current++;
           setTimeout(() => {
@@ -82,7 +79,17 @@ export function useSessionErrorHandler({
       lastErrorRef.current = null;
       retriesRef.current = 0;
     }
-  }, [externalError, userId, isMounted, isInitialized, onSessionError, redirectOnError, redirectUrl, maxRetries, retryDelay, router]);
+  }, [
+    externalError,
+    isMounted,
+    isInitialized,
+    onSessionError,
+    redirectOnError,
+    redirectUrl,
+    maxRetries,
+    retryDelay,
+    router,
+  ]);
 
   return {
     error: externalError,
@@ -93,4 +100,4 @@ export function useSessionErrorHandler({
     retries: retriesRef.current,
     maxRetries,
   };
-} 
+}

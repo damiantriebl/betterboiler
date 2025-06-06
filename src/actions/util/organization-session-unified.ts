@@ -72,26 +72,26 @@ async function getUserImageWithLogic(
   sessionImage: string | null,
 ): Promise<string | null> {
   try {
-      // 🚀 VERIFICAR CACHE PRIMERO
-  const cachedUser = userImageCache.get(userId);
-  if (cachedUser && Date.now() - cachedUser.timestamp < CACHE_TTL) {
-    // Aplicar la misma lógica de prioridad pero con datos en cache
-    if (cachedUser.profileCrop) {
-      return cachedUser.profileCrop;
+    // 🚀 VERIFICAR CACHE PRIMERO
+    const cachedUser = userImageCache.get(userId);
+    if (cachedUser && Date.now() - cachedUser.timestamp < CACHE_TTL) {
+      // Aplicar la misma lógica de prioridad pero con datos en cache
+      if (cachedUser.profileCrop) {
+        return cachedUser.profileCrop;
+      }
+
+      if (cachedUser.profileOriginal) {
+        return cachedUser.profileOriginal;
+      }
+
+      if (sessionImage) {
+        return sessionImage;
+      }
+
+      return null;
     }
 
-    if (cachedUser.profileOriginal) {
-      return cachedUser.profileOriginal;
-    }
-
-    if (sessionImage) {
-      return sessionImage;
-    }
-
-    return null;
-  }
-
-  // 🐌 CONSULTA A BD solo si no está en cache
+    // 🐌 CONSULTA A BD solo si no está en cache
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -249,22 +249,25 @@ export async function getOrganizationSessionData(): Promise<OrganizationSessionD
     if (process.env.NODE_ENV === "development") {
       console.error("💥 [SESSION] Error al obtener datos de organización y sesión:", error);
     }
-    
+
     // Manejar diferentes tipos de errores de manera más específica
     let errorMessage = "Error interno desconocido";
-    
+
     if (error instanceof Error) {
       if (error.message.includes("ENOTFOUND") || error.message.includes("ECONNREFUSED")) {
         errorMessage = "Error de conexión con la base de datos";
       } else if (error.message.includes("timeout")) {
         errorMessage = "Timeout en la conexión";
-      } else if (error.message.includes("unauthorized") || error.message.includes("authentication")) {
+      } else if (
+        error.message.includes("unauthorized") ||
+        error.message.includes("authentication")
+      ) {
         errorMessage = "Error de autenticación";
       } else {
         errorMessage = error.message;
       }
     }
-    
+
     return {
       organizationId: null,
       organizationName: null,

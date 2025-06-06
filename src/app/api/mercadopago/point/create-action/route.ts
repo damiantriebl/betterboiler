@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     if (!terminal_id) {
       return NextResponse.json(
         { error: "Faltan parámetros requeridos: terminal_id" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -36,14 +36,14 @@ export async function POST(request: NextRequest) {
       `${request.nextUrl.origin}/api/configuration/mercadopago/organization/cmbggeh3l0000lhqsxwreokun`,
       {
         headers: { "x-debug-key": "DEBUG_KEY" },
-      }
+      },
     );
 
     if (!configResponse.ok) {
       console.error("❌ [CreateAction] Error obteniendo configuración");
       return NextResponse.json(
         { error: "Configuración de MercadoPago no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       console.error("❌ [CreateAction] No se encontró access token");
       return NextResponse.json(
         { error: "Access token de MercadoPago no encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
           details: actionResult.message || "Error de comunicación con MercadoPago",
           mercadopago_error: actionResult,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         error: "Error interno del servidor",
         details: error instanceof Error ? error.message : "Error desconocido",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

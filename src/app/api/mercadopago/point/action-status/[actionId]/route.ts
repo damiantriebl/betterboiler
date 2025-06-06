@@ -49,16 +49,13 @@ export async function GET(
 
     // ✅ Consultar estado de la acción usando Terminals API v1
     // https://www.mercadopago.com.ar/developers/es/reference/in-person-payments/point/impressions/get-action/get
-    const mpResponse = await fetch(
-      `https://api.mercadopago.com/terminals/v1/actions/${actionId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+    const mpResponse = await fetch(`https://api.mercadopago.com/terminals/v1/actions/${actionId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-    );
+    });
 
     if (!mpResponse.ok) {
       console.error(
@@ -76,7 +73,7 @@ export async function GET(
     }
 
     const mpData = await mpResponse.json();
-    
+
     console.log("✅ [ActionStatus] Estado de acción obtenido:", {
       action_id: mpData.id,
       type: mpData.type,
@@ -115,28 +112,28 @@ async function createActionNotification(actionData: any, organizationId: string)
   try {
     const actionId = actionData.id;
     const currentStatus = actionData.status;
-    
+
     // Verificar si ya existe una notificación para esta acción con el mismo estado
     const existingNotification = await (prisma as any).paymentNotification.findFirst({
       where: {
         organization: {
-          id: organizationId
+          id: organizationId,
         },
         mercadopagoId: actionId,
         isRead: false,
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     if (existingNotification) {
-      const existingData = JSON.parse(existingNotification.notes || '{}');
+      const existingData = JSON.parse(existingNotification.notes || "{}");
       if (existingData.action_status === currentStatus) {
         console.log("📢 [ActionNotification] Notificación ya existe para:", {
           actionId,
           status: currentStatus,
-          notificationId: existingNotification.id
+          notificationId: existingNotification.id,
         });
         return;
       }
@@ -204,9 +201,9 @@ async function createActionNotification(actionData: any, organizationId: string)
         }),
         organization: {
           connect: {
-            id: organizationId
-          }
-        }
+            id: organizationId,
+          },
+        },
       },
     });
 
@@ -217,8 +214,7 @@ async function createActionNotification(actionData: any, organizationId: string)
       message: message,
       organizationId: organizationId,
     });
-
   } catch (error) {
     console.error("❌ [ActionNotification] Error creando notificación:", error);
   }
-} 
+}

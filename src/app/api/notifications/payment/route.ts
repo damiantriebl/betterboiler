@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const notifications = await (prisma as any).paymentNotification.findMany({
       where: {
         organization: {
-          id: organizationId
+          id: organizationId,
         },
         isRead: false,
         expiresAt: {
@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
         id: notificationId,
         AND: {
           organization: {
-            id: organizationId
-          }
-        }
+            id: organizationId,
+          },
+        },
       },
       data: {
         isRead: true,

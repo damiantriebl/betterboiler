@@ -49,16 +49,13 @@ export async function GET(
 
     // ✅ Consultar estado de la order usando Orders API v1
     // https://www.mercadopago.com.ar/developers/es/reference/in-person-payments/point/orders/get-order/get
-    const mpResponse = await fetch(
-      `https://api.mercadopago.com/v1/orders/${intentId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+    const mpResponse = await fetch(`https://api.mercadopago.com/v1/orders/${intentId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-    );
+    });
 
     if (!mpResponse.ok) {
       console.error(
@@ -76,10 +73,10 @@ export async function GET(
     }
 
     const mpData = await mpResponse.json();
-    
+
     // Extraer información del primer payment dentro de la order
     const payment = mpData.transactions?.payments?.[0];
-    
+
     console.log("✅ [PointPaymentStatus] Estado de order obtenido:", {
       order_id: mpData.id,
       order_status: mpData.status,
@@ -101,13 +98,13 @@ export async function GET(
     // Formatear respuesta según el estado de la order y el payment
     // Según documentación: https://www.mercadopago.com.ar/developers/es/reference/in-person-payments/point/orders/get-order/get
     let formattedStatus = "PENDING";
-    
+
     // Extraer estados importantes
     const orderStatus = mpData.status;
     const orderStatusDetail = mpData.status_detail;
     const paymentStatus = payment?.status;
     const paymentStatusDetail = payment?.status_detail;
-    
+
     console.log("🔍 [PointPaymentStatus] Evaluando estados completos:", {
       orderStatus,
       orderStatusDetail,
@@ -115,18 +112,23 @@ export async function GET(
       paymentStatusDetail,
       hasPayment: !!payment,
     });
-    
+
     // IMPORTANTE: En MercadoPago Point, "processed" + "accredited" = PAGO APROBADO
-    if ((orderStatus === "processed" && orderStatusDetail === "accredited") || 
-        (paymentStatus === "processed" && paymentStatusDetail === "accredited") ||
-        (orderStatus === "finished" && paymentStatus === "approved")) {
+    if (
+      (orderStatus === "processed" && orderStatusDetail === "accredited") ||
+      (paymentStatus === "processed" && paymentStatusDetail === "accredited") ||
+      (orderStatus === "finished" && paymentStatus === "approved")
+    ) {
       formattedStatus = "FINISHED"; // ✅ PAGO EXITOSO
     } else if (orderStatus === "refunded" || paymentStatus === "refunded") {
       formattedStatus = "REFUNDED";
     } else if (orderStatus === "canceled" || paymentStatus === "cancelled") {
       formattedStatus = "CANCELED";
-    } else if (paymentStatus === "rejected" || paymentStatus === "failed" || 
-               paymentStatusDetail === "rejected") {
+    } else if (
+      paymentStatus === "rejected" ||
+      paymentStatus === "failed" ||
+      paymentStatusDetail === "rejected"
+    ) {
       formattedStatus = "ERROR";
     } else if (orderStatus === "at_terminal" || paymentStatus === "at_terminal") {
       formattedStatus = "WAITING"; // Esperando interacción en el Point
@@ -168,29 +170,29 @@ async function createPointSmartNotification(orderData: any, payment: any, organi
   try {
     const orderId = orderData.id;
     const currentStatus = payment?.status || orderData.status;
-    
+
     // Verificar si ya existe una notificación para esta order con el mismo estado
     const existingNotification = await (prisma as any).paymentNotification.findFirst({
       where: {
         organization: {
-          id: organizationId
+          id: organizationId,
         },
         mercadopagoId: orderId,
         isRead: false, // Solo buscar notificaciones no leídas
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     // Si ya existe una notificación para esta order y el estado es el mismo, no crear otra
     if (existingNotification) {
-      const existingData = JSON.parse(existingNotification.notes || '{}');
+      const existingData = JSON.parse(existingNotification.notes || "{}");
       if (existingData.payment_status === currentStatus) {
         console.log("📢 [PointSmartNotification] Notificación ya existe para:", {
           orderId,
           status: currentStatus,
-          notificationId: existingNotification.id
+          notificationId: existingNotification.id,
         });
         return; // No crear duplicado
       }
@@ -198,7 +200,7 @@ async function createPointSmartNotification(orderData: any, payment: any, organi
 
     // Considerar tanto status como status_detail
     const statusDetail = payment?.status_detail || orderData.status_detail;
-    
+
     // Crear mensaje según el estado
     let message = "";
     let shouldNotify = false;
@@ -207,7 +209,11 @@ async function createPointSmartNotification(orderData: any, payment: any, organi
     if (statusDetail === "accredited" || currentStatus === "approved") {
       message = `✅ Pago Point Smart APROBADO - $${payment?.paid_amount || payment?.amount || orderData.total_paid_amount || "N/A"}`;
       shouldNotify = true;
-    } else if (statusDetail === "rejected" || currentStatus === "rejected" || currentStatus === "failed") {
+    } else if (
+      statusDetail === "rejected" ||
+      currentStatus === "rejected" ||
+      currentStatus === "failed"
+    ) {
       message = `❌ Pago Point Smart RECHAZADO - Order ${orderId}`;
       shouldNotify = true;
     } else if (currentStatus === "processed" && !statusDetail) {
@@ -255,9 +261,9 @@ async function createPointSmartNotification(orderData: any, payment: any, organi
         // Conectar con la organización existente
         organization: {
           connect: {
-            id: organizationId
-          }
-        }
+            id: organizationId,
+          },
+        },
       },
     });
 
@@ -270,7 +276,6 @@ async function createPointSmartNotification(orderData: any, payment: any, organi
       amount: notification.amount,
       organizationId: organizationId,
     });
-
   } catch (error) {
     console.error("❌ [PointSmartNotification] Error creando notificación:", error);
   }

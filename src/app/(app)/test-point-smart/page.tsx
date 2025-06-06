@@ -4,7 +4,7 @@ import PointSmartIntegration from "@/components/custom/PointSmartIntegration";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, Smartphone, Wifi, X, AlertTriangle } from "lucide-react";
+import { AlertTriangle, CreditCard, Smartphone, Wifi, X } from "lucide-react";
 import { useState } from "react";
 
 export default function TestPointSmartPage() {
@@ -16,28 +16,31 @@ export default function TestPointSmartPage() {
     setCancelResult(null);
 
     try {
-      const response = await fetch('/api/mercadopago/point/cancel-device-intents/PAX_A910__SMARTPOS1495357742', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-debug-key': 'DEBUG_KEY',
+      const response = await fetch(
+        "/api/mercadopago/point/cancel-device-intents/PAX_A910__SMARTPOS1495357742",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-debug-key": "DEBUG_KEY",
+          },
         },
-      });
+      );
 
       const result = await response.json();
       setCancelResult(result);
 
       if (response.ok) {
-        console.log('✅ Dispositivo limpiado exitosamente:', result);
+        console.log("✅ Dispositivo limpiado exitosamente:", result);
       } else {
-        console.error('❌ Error cancelando payment intents:', result);
+        console.error("❌ Error cancelando payment intents:", result);
       }
     } catch (error) {
-      console.error('❌ Error en cancelación:', error);
+      console.error("❌ Error en cancelación:", error);
       setCancelResult({
         success: false,
-        error: 'Error de comunicación',
-        details: error instanceof Error ? error.message : 'Error desconocido'
+        error: "Error de comunicación",
+        details: error instanceof Error ? error.message : "Error desconocido",
       });
     } finally {
       setIsCancelling(false);
@@ -91,11 +94,11 @@ export default function TestPointSmartPage() {
       <Card className="bg-red-50 border-red-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-900">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            🚨 Cancelar Pagos Activos
+            <AlertTriangle className="w-5 h-5 text-red-600" />🚨 Cancelar Pagos Activos
           </CardTitle>
           <p className="text-sm text-red-700">
-            Si aparece el error "There is already a queued intent for the device", usa este botón para limpiar el dispositivo.
+            Si aparece el error "There is already a queued intent for the device", usa este botón
+            para limpiar el dispositivo.
           </p>
         </CardHeader>
         <CardContent>
@@ -107,16 +110,19 @@ export default function TestPointSmartPage() {
               className="flex items-center gap-2"
             >
               <X className="w-4 h-4" />
-              {isCancelling ? 'Cancelando...' : 'Cancelar Todos los Payment Intents'}
+              {isCancelling ? "Cancelando..." : "Cancelar Todos los Payment Intents"}
             </Button>
 
             {cancelResult && (
-              <div className={`p-4 rounded-lg border ${cancelResult.success
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-100 border-red-300 text-red-800'
-                }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  cancelResult.success
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-red-100 border-red-300 text-red-800"
+                }`}
+              >
                 <h4 className="font-semibold mb-2">
-                  {cancelResult.success ? '✅ Éxito' : '❌ Error'}
+                  {cancelResult.success ? "✅ Éxito" : "❌ Error"}
                 </h4>
                 <p className="text-sm mb-2">{cancelResult.message || cancelResult.error}</p>
                 {cancelResult.details && (
@@ -155,9 +161,7 @@ export default function TestPointSmartPage() {
                 Monto Prueba
               </Badge>
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Prueba con monto pequeño para testing
-            </p>
+            <p className="text-sm text-muted-foreground">Prueba con monto pequeño para testing</p>
           </CardHeader>
           <CardContent>
             <PointSmartIntegration

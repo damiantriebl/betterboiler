@@ -7,10 +7,10 @@ export async function GET(request: NextRequest) {
 
     // Intentar validar acceso normal primero
     const { organizationId: validatedOrgId, error } = await validateOrganizationAccess();
-    
+
     // Si falla la validación, usar organización por defecto (para pruebas)
     const organizationId = validatedOrgId || "cmbggeh3l0000lhqsxwreokun";
-    
+
     if (error && !validatedOrgId) {
       console.log("⚠️ [PointDevices] No hay sesión válida, usando organización por defecto");
     }
@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
       {
         headers: {
           "x-debug-key": "DEBUG_KEY", // Bypass auth para pruebas
-        }
-      }
+        },
+      },
     );
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     // Consultar dispositivos Point desde la nueva API v1 de MercadoPago
     const mpResponse = await fetch("https://api.mercadopago.com/terminals/v1/list", {
-      method: "GET", 
+      method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
@@ -72,12 +72,14 @@ export async function GET(request: NextRequest) {
     const devices =
       mpData.data?.terminals?.map((terminal: any) => ({
         id: terminal.id,
-        name: terminal.external_pos_id || `Point ${terminal.id.split('__')[1] || terminal.id.slice(-4)}`,
+        name:
+          terminal.external_pos_id ||
+          `Point ${terminal.id.split("__")[1] || terminal.id.slice(-4)}`,
         status: terminal.operating_mode === "PDV" ? "ONLINE" : "OFFLINE", // Mapear operating_mode a status
         pos_id: terminal.pos_id,
         store_id: terminal.store_id,
         operating_mode: terminal.operating_mode,
-        model: terminal.id.split('__')[0] || "UNKNOWN", // Extraer modelo del ID
+        model: terminal.id.split("__")[0] || "UNKNOWN", // Extraer modelo del ID
       })) || [];
 
     return NextResponse.json({
