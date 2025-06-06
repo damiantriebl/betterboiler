@@ -177,12 +177,13 @@ export default function PointSmartIntegration({
           status: data.status,
         });
 
+        // Estados finales que terminan el polling
         if (data.status === "FINISHED") {
           setPaymentStatus("completed");
 
           toast({
             title: "¡Pago Exitoso!",
-            description: `Pago aprobado por $${amount}`,
+            description: `Pago aprobado por $${amount} - Order: ${data.order_id}`,
             variant: "default",
           });
 
@@ -197,19 +198,48 @@ export default function PointSmartIntegration({
           });
           return;
         }
-        if (data.status === "CANCELED" || data.status === "ERROR") {
+
+        if (data.status === "REFUNDED") {
+          setPaymentStatus("completed");
+          setError("Pago reembolsado");
+
+          toast({
+            title: "Pago Reembolsado",
+            description: `El pago por $${amount} fue reembolsado`,
+            variant: "default",
+          });
+          return;
+        }
+
+        if (data.status === "CANCELED") {
           setPaymentStatus("failed");
-          setError("Pago cancelado o error en el dispositivo");
+          setError("Pago cancelado en el dispositivo");
 
           toast({
             title: "Pago Cancelado",
-            description: "El pago fue cancelado en el dispositivo",
+            description: "El pago fue cancelado en el Point Smart",
             variant: "destructive",
           });
           return;
         }
+
+        if (data.status === "ERROR") {
+          setPaymentStatus("failed");
+          setError("Error en el dispositivo o pago rechazado");
+
+          toast({
+            title: "Pago Rechazado",
+            description: "El pago fue rechazado o hubo un error",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Estados intermedios que continúan el polling
         if (data.status === "PROCESSING") {
           setPaymentStatus("processing");
+        } else if (data.status === "WAITING") {
+          setPaymentStatus("waiting");
         }
 
         // Continuar monitoreando si está pendiente
@@ -357,17 +387,17 @@ export default function PointSmartIntegration({
   const getStatusMessage = () => {
     switch (paymentStatus) {
       case "creating":
-        return "Preparando el dispositivo...";
+        return "Preparando el dispositivo Point Smart...";
       case "waiting":
-        return "Esperando que pases la tarjeta...";
+        return "🕒 Esperando interacción en el Point";
       case "processing":
-        return "Procesando el pago...";
+        return "💳 Procesando pago en MercadoPago...";
       case "completed":
-        return "¡Pago exitoso!";
+        return "✅ ¡Pago procesado exitosamente!";
       case "failed":
-        return error || "Error en el pago";
+        return `❌ ${error || "Error en el pago"}`;
       default:
-        return "Listo para procesar el pago";
+        return "📱 Listo para iniciar pago con Point Smart";
     }
   };
 

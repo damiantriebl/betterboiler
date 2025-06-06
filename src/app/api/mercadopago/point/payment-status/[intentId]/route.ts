@@ -86,21 +86,42 @@ export async function GET(
       payment_id: payment?.id,
       payment_status: payment?.status,
       total_amount: mpData.total_amount,
+      paid_amount: mpData.total_paid_amount,
+      external_reference: mpData.external_reference,
+      terminal_id: mpData.config?.point?.terminal_id,
+      created_date: mpData.created_date,
+      last_updated_date: mpData.last_updated_date,
     });
 
     // 🆕 CREAR NOTIFICACIONES BASADAS EN CAMBIOS DE ESTADO
     await createPointSmartNotification(mpData, payment, organizationId);
 
     // Formatear respuesta según el estado de la order y el payment
+    // Según documentación: https://www.mercadopago.com.ar/developers/es/reference/in-person-payments/point/orders/get-order/get
     let formattedStatus = "PENDING";
-    if (mpData.status === "finished" && payment?.status === "approved") {
+    
+    // Priorizar el estado del payment sobre el estado de la order
+    const orderStatus = mpData.status;
+    const paymentStatus = payment?.status;
+    
+    console.log("🔍 [PointPaymentStatus] Evaluando estados:", {
+      orderStatus,
+      paymentStatus,
+      hasPayment: !!payment,
+    });
+    
+    if (orderStatus === "finished" && paymentStatus === "approved") {
       formattedStatus = "FINISHED";
-    } else if (mpData.status === "canceled" || payment?.status === "cancelled") {
+    } else if (orderStatus === "refunded" || paymentStatus === "refunded") {
+      formattedStatus = "REFUNDED";
+    } else if (orderStatus === "canceled" || paymentStatus === "cancelled") {
       formattedStatus = "CANCELED";
-    } else if (mpData.status === "error" || payment?.status === "rejected") {
+    } else if (paymentStatus === "rejected" || paymentStatus === "failed") {
       formattedStatus = "ERROR";
-    } else if (mpData.status === "processing" || payment?.status === "pending") {
+    } else if (orderStatus === "processing" || paymentStatus === "pending") {
       formattedStatus = "PROCESSING";
+    } else if (orderStatus === "created" || orderStatus === "open") {
+      formattedStatus = "WAITING"; // Order creada, esperando interacción del Point
     }
 
     return NextResponse.json({
