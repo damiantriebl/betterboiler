@@ -19,7 +19,11 @@ import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { OrganizationPaymentMethodDisplay } from "@/types/payment-methods";
 import { Check, Loader2 } from "lucide-react";
 import CurrentAccountPaymentFields from "./CurrentAccountPaymentFields";
-import type { MotorcycleWithRelations, PaymentFormData } from "./types";
+import type {
+  MotorcycleWithRelations,
+  PaymentFormData,
+  PaymentSegment,
+} from "./types";
 import {
   calculateFinalPrice,
   calculateRemainingAmount,
@@ -39,6 +43,14 @@ interface PaymentMethodStepProps {
   reservationAmount: number;
   reservationCurrency: string;
   paymentData: PaymentFormData;
+  paymentSegments: PaymentSegment[];
+  onSegmentChange: (
+    index: number,
+    field: "metodoPago" | "monto",
+    value: string | number,
+  ) => void;
+  onAddSegment: () => void;
+  onRemoveSegment: (index: number) => void;
   organizationPaymentMethods: OrganizationPaymentMethodDisplay[];
   loadingOrgPaymentMethods: boolean;
   applicablePromotions: BankingPromotionDisplay[];
@@ -58,6 +70,10 @@ export default function PaymentMethodStep({
   reservationAmount,
   reservationCurrency,
   paymentData,
+  paymentSegments,
+  onSegmentChange,
+  onAddSegment,
+  onRemoveSegment,
   organizationPaymentMethods,
   loadingOrgPaymentMethods,
   applicablePromotions,
@@ -204,7 +220,9 @@ export default function PaymentMethodStep({
   if (paymentData?.downPayment && paymentData.downPayment > 0) {
     amountAfterReservation -= paymentData.downPayment;
   }
-  const remainingAmount = Math.max(0, amountAfterReservation); // Asegurar que no sea negativo
+  const remainingAmount = Math.max(0, amountAfterReservation);
+  const segmentsPaid = paymentSegments.reduce((acc, s) => acc + (s.monto || 0), 0);
+  const outstandingAmount = Math.max(0, remainingAmount - segmentsPaid); // Asegurar que no sea negativo
 
   // Reemplazar los onFocus y onBlur con funciones separadas
   const handleDateFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -713,6 +731,30 @@ export default function PaymentMethodStep({
                       )}
                     </div>
                   </div>
+                </Card>
+                <Card className="p-4 mt-4">
+                  <h3 className="text-lg font-semibold mb-3">Medios de Pago</h3>
+                  {paymentSegments.map((seg, idx) => (
+                    <div key={idx} className="flex gap-2 mb-2">
+                      <Select value={seg.metodoPago} onValueChange={(val) => onSegmentChange(idx, "metodoPago", val)}>
+                        <SelectTrigger className="w-32"><SelectValue placeholder="Método" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="efectivo">Efectivo</SelectItem>
+                          <SelectItem value="mercadopago">MercadoPago</SelectItem>
+                          <SelectItem value="transferencia">Transferencia</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input type="number" className="w-24" value={seg.monto} onChange={(e) => onSegmentChange(idx, "monto", Number(e.target.value))} />
+                      <Button variant="destructive" onClick={() => onRemoveSegment(idx)}>X</Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" onClick={onAddSegment}>Agregar medio de pago</Button>
+                  {outstandingAmount > 0 && (
+                    <p className="text-sm mt-2">Falta pagar: {formatPrice(outstandingAmount, moto?.currency)}</p>
+                  )}
+                  {outstandingAmount <= 0 && (
+                    <p className="text-sm mt-2 text-green-600">Pago completo.</p>
+                  )}
                 </Card>
 
                 <Card className="p-4">

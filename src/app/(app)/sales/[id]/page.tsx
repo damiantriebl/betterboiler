@@ -155,6 +155,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         currentAccountStartDate: new Date().toISOString().split("T")[0],
         currentAccountNotes: "",
       },
+      paymentSegments: [],
       showClientTable: false,
     }),
     [isReserved, initialClientIdFromReservation],
@@ -182,6 +183,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
               ...(parsedState.paymentData || {}),
               selectedPromotions: parsedState.paymentData?.selectedPromotions || [],
             },
+            paymentSegments: parsedState.paymentSegments || [],
           };
 
           setSaleState(mergedState);
@@ -547,6 +549,22 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         [name]: date ? date.toISOString() : null, // Store as ISO string or null
       },
     }));
+  };
+
+  const handleSegmentChange = (index: number, field: "metodoPago" | "monto", value: string | number) => {
+    setSaleState(prev => {
+      const segments = [...prev.paymentSegments];
+      segments[index] = { ...segments[index], [field]: value };
+      return { ...prev, paymentSegments: segments };
+    });
+  };
+
+  const addPaymentSegment = () => {
+    setSaleState(prev => ({ ...prev, paymentSegments: [...prev.paymentSegments, { metodoPago: "", monto: 0 }] }));
+  };
+
+  const removePaymentSegment = (index: number) => {
+    setSaleState(prev => ({ ...prev, paymentSegments: prev.paymentSegments.filter((_, i) => i !== index) }));
   };
 
   const handlePromotionSelection = (promotionId: number) => {
@@ -1038,6 +1056,10 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
         return (
           <PaymentMethodStep
             moto={moto}
+            paymentSegments={saleState.paymentSegments}
+            onSegmentChange={handleSegmentChange}
+            onAddSegment={addPaymentSegment}
+            onRemoveSegment={removePaymentSegment}
             isReserved={isReserved}
             reservationAmount={reservationAmount}
             reservationCurrency={reservationCurrency}
