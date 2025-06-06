@@ -55,6 +55,13 @@ const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     description: "Pago mediante escaneo de código QR",
     iconUrl: "/icons/payment-methods/qr-code.svg",
   },
+  {
+    id: 8,
+    name: "Permuta",
+    type: "tradein",
+    description: "Pago mediante permuta de un bien",
+    iconUrl: null,
+  },
 ];
 
 // Get all global payment methods (for admin selection)

@@ -51,6 +51,10 @@ export interface PaymentFormData {
   mercadopagoPayerFirstName?: string;
   mercadopagoPayerLastName?: string;
   mercadopagoDescription?: string;
+  // Permuta other item fields
+  tradeInOtherName?: string;
+  tradeInOtherDescription?: string;
+  tradeInOtherPrice?: number;
   // Current Account (Cuenta Corriente) fields
   downPayment?: number;
   currentAccountInstallments?: number;

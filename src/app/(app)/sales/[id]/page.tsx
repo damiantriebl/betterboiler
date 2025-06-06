@@ -411,6 +411,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
           cheque: "check",
           rapipago: "rapipago",
           mercadopago: "mercadopago", // ✅ AGREGADO: Soporte para MercadoPago
+          permuta: "tradein",
         };
 
         const paymentMethodType = methodMap[saleState.paymentData.metodoPago];
@@ -795,7 +796,7 @@ export default function SalesPage({ params }: { params: Promise<PageParams> }) {
       }
       // NUEVO: Para métodos simples (efectivo, deposito, qr, todopago, rapipago) no se requiere validación adicional
       else if (
-        ["efectivo", "deposito", "qr", "todopago", "rapipago"].includes(
+        ["efectivo", "deposito", "qr", "todopago", "rapipago", "permuta"].includes(
           saleState.paymentData.metodoPago,
         )
       ) {

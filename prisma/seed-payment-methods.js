@@ -59,6 +59,12 @@ const DEFAULT_PAYMENT_METHODS = [
     description: "Pago con cuenta corriente financiada",
     iconUrl: "/icons/payment-methods/current-account.svg",
   },
+  {
+    name: "Permuta",
+    type: "tradein",
+    description: "Pago mediante permuta de un bien",
+    iconUrl: null,
+  },
 ];
 
 async function main() {

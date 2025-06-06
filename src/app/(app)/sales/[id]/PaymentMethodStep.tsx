@@ -19,6 +19,7 @@ import type { BankingPromotionDisplay } from "@/types/banking-promotions";
 import type { OrganizationPaymentMethodDisplay } from "@/types/payment-methods";
 import { Check, Loader2 } from "lucide-react";
 import CurrentAccountPaymentFields from "./CurrentAccountPaymentFields";
+import TradeInFields from "./TradeInFields";
 import type { MotorcycleWithRelations, PaymentFormData } from "./types";
 import {
   calculateFinalPrice,
@@ -148,6 +149,7 @@ export default function PaymentMethodStep({
       qr: "qr",
       check: "cheque",
       current_account: "cuenta_corriente",
+      tradein: "permuta",
     };
     return typeMap[dbType.toLowerCase()] || dbType.toLowerCase();
   };
@@ -463,6 +465,13 @@ export default function PaymentMethodStep({
                       value={paymentData?.paywayReferencia || ""}
                     />
                   </div>
+                )}
+
+                {paymentData?.metodoPago === "permuta" && (
+                  <TradeInFields
+                    paymentData={paymentData}
+                    onPaymentDataChange={onPaymentDataChange}
+                  />
                 )}
 
                 {paymentData?.metodoPago === "cuenta_corriente" && (
