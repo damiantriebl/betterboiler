@@ -808,11 +808,12 @@ enum MotorcycleTransferStatus {
 model PaymentNotification {
   id             String       @id @default(cuid())
   organizationId String
-  paymentId      String
+  paymentId      String?      // Opcional para Point Smart (no tienen Payment en nuestra BD)
   mercadopagoId  String
   message        String
   amount         Float
   isRead         Boolean      @default(false)
+  notes          String?      // Campo para metadata adicional (JSON)
   createdAt      DateTime     @default(now())
   expiresAt      DateTime     // Las notificaciones expiran después de un tiempo
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

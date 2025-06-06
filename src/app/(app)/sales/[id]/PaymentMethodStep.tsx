@@ -1,6 +1,6 @@
 "use client";
 
-import MercadoPagoEnhancedBrick from "@/components/custom/MercadoPagoEnhancedBrick";
+import PointSmartIntegration from "@/components/custom/PointSmartIntegration";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -267,38 +267,18 @@ export default function PaymentMethodStep({
 
                 {(paymentData?.metodoPago === "mercadopago" ||
                   paymentData?.metodoPago?.toLowerCase().includes("mercado")) && (
-                  <MercadoPagoEnhancedBrick
+                  <PointSmartIntegration
                     amount={remainingAmount}
                     description={`${moto?.brand?.name || ""} ${moto?.model?.name || ""} ${moto?.year || ""}`}
                     motorcycleId={moto?.id}
                     saleId={`sale-${Date.now()}`}
-                    additionalInfo={{
-                      brand: moto?.brand?.name,
-                      model: moto?.model?.name,
-                      year: moto?.year,
-                    }}
-                    buyerData={{
-                      email: "cliente@mejor-motos.com", // Email más realista
-                      firstName: "Cliente",
-                      lastName: "Moto",
-                      dni: "20123456789",
-                    }}
-                    allowedPaymentMethods={{
-                      creditCard: true,
-                      debitCard: true,
-                      mercadoPago: false,
-                      ticket: false,
-                      bankTransfer: false,
-                    }}
-                    showPaymentMethodSelector={false}
-                    maxInstallments={12}
                     onPaymentSuccess={(paymentData: any) => {
-                      console.log("✅ [PaymentMethodStep] Pago exitoso:", paymentData);
-                      // Aquí puedes manejar el éxito del pago
+                      console.log("✅ [PaymentMethodStep] Pago presencial exitoso:", paymentData);
+                      // Aquí puedes manejar el éxito del pago presencial
                     }}
                     onPaymentError={(error: any) => {
-                      console.error("❌ [PaymentMethodStep] Error en pago:", error);
-                      // Aquí puedes manejar errores
+                      console.error("❌ [PaymentMethodStep] Error en pago presencial:", error);
+                      // Aquí puedes manejar errores del Point
                     }}
                   />
                 )}

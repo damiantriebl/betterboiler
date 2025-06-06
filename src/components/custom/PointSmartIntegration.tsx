@@ -34,9 +34,11 @@ export default function PointSmartIntegration({
   const [devices, setDevices] = useState<PointDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<PointDevice | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<
     "idle" | "creating" | "waiting" | "processing" | "completed" | "failed"
   >("idle");
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -112,8 +114,15 @@ export default function PointSmartIntegration({
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setPaymentIntentId(data.payment_intent_id);
+        // ✅ Actualizado para Orders API - usar order_id en lugar de payment_intent_id
+        setPaymentIntentId(data.order_id);
         setPaymentStatus("waiting");
+
+        // 🆕 Capturar action_id si está disponible
+        if (data.action_id) {
+          setActionId(data.action_id);
+          console.log("🎯 [PointSmart] Action ID capturado:", data.action_id);
+        }
 
         toast({
           title: "¡Listo para cobrar!",
@@ -121,10 +130,21 @@ export default function PointSmartIntegration({
           variant: "default",
         });
 
-        // Comenzar a monitorear el estado del pago
-        monitorPaymentStatus(data.payment_intent_id);
+        console.log("✅ [PointSmart] Order creada exitosamente:", {
+          order_id: data.order_id,
+          payment_id: data.payment_id,
+          action_id: data.action_id,
+          terminal_id: data.terminal_id,
+          amount: data.amount,
+        });
+
+        // Comenzar a monitorear el estado de la order Y las acciones
+        monitorPaymentStatus(data.order_id);
+        if (data.action_id) {
+          monitorActionStatus(data.action_id);
+        }
       } else {
-        throw new Error(data.error || "Error creando intención de pago");
+        throw new Error(data.error || "Error creando order");
       }
     } catch (error) {
       console.error("❌ [PointSmart] Error:", error);
@@ -149,33 +169,87 @@ export default function PointSmartIntegration({
         const response = await fetch(`/api/mercadopago/point/payment-status/${intentId}`);
         const data = await response.json();
 
-        console.log(`🔍 [PointSmart] Estado del pago (intento ${attempts + 1}):`, data);
+        console.log(`🔍 [PointSmart] Estado de la order (intento ${attempts + 1}):`, {
+          order_id: data.order_id,
+          order_status: data.order_status,
+          order_status_detail: data.order_status_detail, // 🆕 Ver status_detail
+          payment_id: data.payment_id,
+          payment_status: data.payment_status,
+          payment_status_detail: data.payment_status_detail, // 🆕 Ver status_detail
+          status: data.status,
+          is_accredited: data.payment_status_detail === "accredited", // 🆕 Indicador claro
+        });
 
+        // Estados finales que terminan el polling
         if (data.status === "FINISHED") {
+          console.log("✅ [PointSmart] PAGO COMPLETADO EXITOSAMENTE - Status detail:", {
+            payment_status_detail: data.payment_status_detail,
+            order_status_detail: data.order_status_detail,
+            paid_amount: data.paid_amount,
+          });
+
           setPaymentStatus("completed");
 
           toast({
             title: "¡Pago Exitoso!",
-            description: `Pago aprobado por $${amount}`,
+            description: `Pago aprobado por $${data.paid_amount || amount} - Order: ${data.order_id}`,
             variant: "default",
           });
 
-          onPaymentSuccess?.(data.payment);
+          // Pasar toda la información de la order y el payment al callback
+          onPaymentSuccess?.({
+            order_id: data.order_id,
+            payment_id: data.payment_id,
+            total_amount: data.total_amount,
+            paid_amount: data.paid_amount,
+            order_status: data.order_status,
+            payment_status: data.payment_status,
+            payment_status_detail: data.payment_status_detail, // 🆕 Incluir el detail
+          });
           return;
         }
-        if (data.status === "CANCELED" || data.status === "ERROR") {
+
+        if (data.status === "REFUNDED") {
+          setPaymentStatus("completed");
+          setError("Pago reembolsado");
+
+          toast({
+            title: "Pago Reembolsado",
+            description: `El pago por $${amount} fue reembolsado`,
+            variant: "default",
+          });
+          return;
+        }
+
+        if (data.status === "CANCELED") {
           setPaymentStatus("failed");
-          setError("Pago cancelado o error en el dispositivo");
+          setError("Pago cancelado en el dispositivo");
 
           toast({
             title: "Pago Cancelado",
-            description: "El pago fue cancelado en el dispositivo",
+            description: "El pago fue cancelado en el Point Smart",
             variant: "destructive",
           });
           return;
         }
+
+        if (data.status === "ERROR") {
+          setPaymentStatus("failed");
+          setError("Error en el dispositivo o pago rechazado");
+
+          toast({
+            title: "Pago Rechazado",
+            description: "El pago fue rechazado o hubo un error",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Estados intermedios que continúan el polling
         if (data.status === "PROCESSING") {
           setPaymentStatus("processing");
+        } else if (data.status === "WAITING") {
+          setPaymentStatus("waiting");
         }
 
         // Continuar monitoreando si está pendiente
@@ -207,26 +281,101 @@ export default function PointSmartIntegration({
     checkStatus();
   };
 
-  // Cancelar pago
+  // 🆕 Monitorear estado de las acciones
+  const monitorActionStatus = async (actionId: string) => {
+    const maxAttempts = 60; // 5 minutos máximo
+    let attempts = 0;
+
+    const checkActionStatus = async () => {
+      try {
+        const response = await fetch(`/api/mercadopago/point/action-status/${actionId}`, {
+          headers: {
+            "x-debug-key": "DEBUG_KEY",
+          },
+        });
+        const data = await response.json();
+
+        console.log(`🎯 [PointSmart] Estado de la acción (intento ${attempts + 1}):`, {
+          action_id: data.action_id,
+          action_type: data.action_type,
+          action_status: data.action_status,
+          terminal_id: data.terminal_id,
+        });
+
+        // Actualizar estado de la acción en la UI
+        setActionStatus(data.action_status);
+
+        // Estados finales de acción
+        if (data.action_status === "finished") {
+          console.log("✅ [PointSmart] Acción completada exitosamente");
+          return;
+        }
+        if (data.action_status === "canceled" || data.action_status === "error") {
+          console.log("❌ [PointSmart] Acción cancelada o con error");
+          return;
+        }
+
+        // Continuar monitoreando
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkActionStatus, 3000); // Verificar cada 3 segundos (más rápido que el pago)
+        } else {
+          console.log("⏰ [PointSmart] Timeout monitoreando acción");
+        }
+      } catch (error) {
+        console.error("Error monitoreando acción:", error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkActionStatus, 3000);
+        }
+      }
+    };
+
+    checkActionStatus();
+  };
+
+  // Cancelar order/pago
   const cancelPayment = async () => {
     if (!paymentIntentId) return;
 
     try {
-      await fetch(`/api/mercadopago/point/cancel-payment/${paymentIntentId}`, {
+      // ✅ Actualizado para Orders API - usar endpoint correcto de cancelación
+      const response = await fetch(`/api/mercadopago/point/cancel/${paymentIntentId}`, {
         method: "POST",
+        headers: {
+          "x-debug-key": "DEBUG_KEY",
+        },
       });
 
-      setPaymentStatus("idle");
-      setPaymentIntentId(null);
-      setError(null);
+      const data = await response.json();
 
-      toast({
-        title: "Pago Cancelado",
-        description: "La transacción ha sido cancelada",
-        variant: "default",
-      });
+      if (response.ok && data.success) {
+        setPaymentStatus("idle");
+        setPaymentIntentId(null);
+        setActionId(null);
+        setActionStatus(null);
+        setError(null);
+
+        toast({
+          title: "Order Cancelada",
+          description: "La transacción ha sido cancelada exitosamente",
+          variant: "default",
+        });
+      } else {
+        console.error("Error cancelando order:", data);
+        toast({
+          title: "Error",
+          description: "No se pudo cancelar la order",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error("Error cancelando pago:", error);
+      console.error("Error cancelando order:", error);
+      toast({
+        title: "Error",
+        description: "Error de comunicación al cancelar",
+        variant: "destructive",
+      });
     }
   };
 
@@ -248,17 +397,17 @@ export default function PointSmartIntegration({
   const getStatusMessage = () => {
     switch (paymentStatus) {
       case "creating":
-        return "Preparando el dispositivo...";
+        return "Preparando el dispositivo Point Smart...";
       case "waiting":
-        return "Esperando que pases la tarjeta...";
+        return "🕒 Esperando interacción en el Point";
       case "processing":
-        return "Procesando el pago...";
+        return "💳 Procesando pago en MercadoPago...";
       case "completed":
-        return "¡Pago exitoso!";
+        return "✅ ¡Pago procesado exitosamente!";
       case "failed":
-        return error || "Error en el pago";
+        return `❌ ${error || "Error en el pago"}`;
       default:
-        return "Listo para procesar el pago";
+        return "📱 Listo para iniciar pago con Point Smart";
     }
   };
 
@@ -285,11 +434,10 @@ export default function PointSmartIntegration({
               {devices.map((device) => (
                 <div
                   key={device.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedDevice?.id === device.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedDevice?.id === device.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                    }`}
                   onClick={() => setSelectedDevice(device)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -376,6 +524,8 @@ export default function PointSmartIntegration({
                   setPaymentStatus("idle");
                   setError(null);
                   setPaymentIntentId(null);
+                  setActionId(null);
+                  setActionStatus(null);
                 }}
                 variant="outline"
               >
@@ -386,11 +536,13 @@ export default function PointSmartIntegration({
         </div>
 
         {/* Información adicional */}
-        {paymentStatus === "waiting" && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-sm text-blue-800 space-y-1">
+        {(paymentStatus === "waiting" || paymentStatus === "processing") && (
+          <div className={`p-4 border rounded-lg ${paymentStatus === "processing" ? "bg-yellow-50 border-yellow-200" : "bg-blue-50 border-blue-200"
+            }`}>
+            <div className={`text-sm space-y-1 ${paymentStatus === "processing" ? "text-yellow-800" : "text-blue-800"
+              }`}>
               <p>
-                <strong>💳 Esperando pago de:</strong> ${amount.toLocaleString("es-AR")}
+                <strong>💳 {paymentStatus === "processing" ? "Procesando pago de:" : "Esperando pago de:"}</strong> ${amount.toLocaleString("es-AR")}
               </p>
               <p>
                 <strong>📝 Concepto:</strong> {description}
@@ -398,6 +550,34 @@ export default function PointSmartIntegration({
               <p>
                 <strong>📱 Dispositivo:</strong> {selectedDevice?.name}
               </p>
+              {paymentIntentId && (
+                <p>
+                  <strong>🆔 Order ID:</strong> {paymentIntentId}
+                </p>
+              )}
+              {actionId && (
+                <p>
+                  <strong>🎯 Action ID:</strong> {actionId}
+                </p>
+              )}
+              {actionStatus && (
+                <p>
+                  <strong>📡 Estado Acción:</strong>
+                  <span className={`ml-1 font-semibold ${actionStatus === "finished" ? "text-green-700" :
+                    actionStatus === "processing" ? "text-blue-700" :
+                      actionStatus === "on_terminal" ? "text-yellow-700" :
+                        actionStatus === "created" ? "text-purple-700" :
+                          "text-red-700"
+                    }`}>
+                    {actionStatus.toUpperCase()}
+                  </span>
+                </p>
+              )}
+              {paymentStatus === "processing" && (
+                <p className="mt-2 font-semibold text-yellow-900">
+                  ⏳ El pago está siendo procesado por MercadoPago...
+                </p>
+              )}
             </div>
           </div>
         )}

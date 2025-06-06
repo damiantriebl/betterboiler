@@ -3,7 +3,7 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import type { MotorcycleBatchFormData } from "@/zod/NewBikeZod";
-import React from "react";
+
 import type { Control } from "react-hook-form";
 
 interface LegalSectionProps {

@@ -36,7 +36,6 @@ import ManageMercadoPago from "./ManageMercadoPago";
 import ManagePaymentMethods from "./ManagePaymentMethods";
 import OAuthCallback from "./OAuthCallback";
 import SecuritySettings from "./SecuritySettings";
-import TestMercadoPago from "./TestMercadoPago";
 
 // We'll use these default payment methods if the schema doesn't exist yet
 const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
@@ -435,15 +434,9 @@ export default async function ConfigurationPage() {
         </TabsContent>
 
         <TabsContent value="mercadoPago">
-          <div className="space-y-6">
-            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-              <TestMercadoPago organizationId={organizationId} />
-            </Suspense>
-
-            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-              <ManageMercadoPago organizationId={organizationId} />
-            </Suspense>
-          </div>
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+            <ManageMercadoPago organizationId={organizationId} />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

@@ -74,6 +74,37 @@ export function middleware(request: NextRequest) {
     response.headers.set("X-Frame-Options", "DENY");
     response.headers.set("X-XSS-Protection", "1; mode=block");
     response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    
+    // CSP más estricto para bloquear extensiones
+    response.headers.set("Content-Security-Policy", 
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' data:; " +
+      "connect-src 'self' https:; " +
+      "frame-src 'none'; " +
+      "object-src 'none'; " +
+      "base-uri 'self';"
+    );
+    
+    // Headers adicionales para bloquear inyección de extensiones
+    response.headers.set("X-Chrome-Extension-Block", "deny-script-injection");
+    response.headers.set("Cross-Origin-Embedder-Policy", "require-corp");
+  }
+
+  // Headers para bloquear extensiones también en desarrollo
+  if (!isProduction) {
+    response.headers.set("X-Chrome-Extension-Block", "deny-script-injection");
+    response.headers.set("X-Extension-Protection", "block-script-injection");
+    
+    // CSP más permisivo en desarrollo pero bloqueando extensiones
+    response.headers.set("Content-Security-Policy", 
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:* 127.0.0.1:*; " +
+      "connect-src 'self' localhost:* 127.0.0.1:* ws: wss:; " +
+      "frame-src 'none';"
+    );
   }
 
   // Información del entorno para debugging

@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
     // Usar casting temporal hasta que se regenere Prisma
     const notifications = await (prisma as any).paymentNotification.findMany({
       where: {
-        organizationId: organizationId,
+        organization: {
+          id: organizationId
+        },
         isRead: false,
         expiresAt: {
           gt: new Date(), // Solo notificaciones que no hayan expirado
@@ -53,7 +55,11 @@ export async function POST(request: NextRequest) {
     await (prisma as any).paymentNotification.update({
       where: {
         id: notificationId,
-        organizationId: organizationId, // Verificar que pertenece a la organización
+        AND: {
+          organization: {
+            id: organizationId
+          }
+        }
       },
       data: {
         isRead: true,

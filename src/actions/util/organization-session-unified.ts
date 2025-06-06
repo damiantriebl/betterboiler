@@ -59,7 +59,8 @@ function cleanExpiredCache() {
     }
   }
 
-  if (expiredUsers > 0 || expiredOrgs > 0) {
+  // Solo log en desarrollo
+  if ((expiredUsers > 0 || expiredOrgs > 0) && process.env.NODE_ENV === "development") {
     console.log(
       `🧹 [CACHE CLEANUP] Removed ${expiredUsers} expired users, ${expiredOrgs} expired orgs`,
     );
@@ -71,33 +72,26 @@ async function getUserImageWithLogic(
   sessionImage: string | null,
 ): Promise<string | null> {
   try {
-    // 🚀 VERIFICAR CACHE PRIMERO
-    const cachedUser = userImageCache.get(userId);
-    if (cachedUser && Date.now() - cachedUser.timestamp < CACHE_TTL) {
-      console.log("⚡ [USER IMAGE CACHE] Using cached user image data");
-
-      // Aplicar la misma lógica de prioridad pero con datos en cache
-      if (cachedUser.profileCrop) {
-        console.log("🎭 [USER IMAGE] Using cached custom crop image");
-        return cachedUser.profileCrop;
-      }
-
-      if (cachedUser.profileOriginal) {
-        console.log("🎭 [USER IMAGE] Using cached custom original image");
-        return cachedUser.profileOriginal;
-      }
-
-      if (sessionImage) {
-        console.log("📸 [USER IMAGE] Using Google OAuth image (user cached)");
-        return sessionImage;
-      }
-
-      console.log("👤 [USER IMAGE] No image available (user cached)");
-      return null;
+      // 🚀 VERIFICAR CACHE PRIMERO
+  const cachedUser = userImageCache.get(userId);
+  if (cachedUser && Date.now() - cachedUser.timestamp < CACHE_TTL) {
+    // Aplicar la misma lógica de prioridad pero con datos en cache
+    if (cachedUser.profileCrop) {
+      return cachedUser.profileCrop;
     }
 
-    // 🐌 CONSULTA A BD solo si no está en cache
-    console.log("🔄 [USER IMAGE] Cache miss, querying database");
+    if (cachedUser.profileOriginal) {
+      return cachedUser.profileOriginal;
+    }
+
+    if (sessionImage) {
+      return sessionImage;
+    }
+
+    return null;
+  }
+
+  // 🐌 CONSULTA A BD solo si no está en cache
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -123,25 +117,24 @@ async function getUserImageWithLogic(
     // 3. session.user.image   // Imagen de Google OAuth
     // 4. null                 // Sin imagen
     if (user.profileCrop) {
-      console.log("🎭 [USER IMAGE] Using custom crop image");
       return user.profileCrop;
     }
 
     if (user.profileOriginal) {
-      console.log("🎭 [USER IMAGE] Using custom original image");
       return user.profileOriginal;
     }
 
     // Si no tiene imagen personalizada, usar la de Google OAuth (si la hay)
     if (sessionImage) {
-      console.log("📸 [USER IMAGE] Using Google OAuth image");
       return sessionImage;
     }
 
-    console.log("👤 [USER IMAGE] No image available");
     return null;
   } catch (error) {
-    console.error("💥 [USER IMAGE] Error determining user image:", error);
+    // Solo log críticos en desarrollo
+    if (process.env.NODE_ENV === "development") {
+      console.error("💥 [USER IMAGE] Error determining user image:", error);
+    }
     return sessionImage; // Fallback a imagen de sesión
   }
 }
@@ -192,7 +185,6 @@ export async function getOrganizationSessionData(): Promise<OrganizationSessionD
     // 🚀 VERIFICAR CACHE DE ORGANIZACIÓN PRIMERO
     const cachedOrg = organizationCache.get(user.organizationId);
     if (cachedOrg && Date.now() - cachedOrg.timestamp < CACHE_TTL) {
-      console.log("⚡ [ORG CACHE] Using cached organization data");
       return {
         organizationId: cachedOrg.id,
         organizationName: cachedOrg.name,
@@ -207,7 +199,6 @@ export async function getOrganizationSessionData(): Promise<OrganizationSessionD
     }
 
     // 🐌 CONSULTA A BD solo si no está en cache
-    console.log("🔄 [ORG] Cache miss, querying database for organization");
     const organization = await prisma.organization.findUnique({
       where: { id: user.organizationId },
       select: {
@@ -254,7 +245,26 @@ export async function getOrganizationSessionData(): Promise<OrganizationSessionD
       userRole: user.role || null,
     };
   } catch (error) {
-    console.error("Error al obtener datos de organización y sesión:", error);
+    // Solo log críticos en desarrollo
+    if (process.env.NODE_ENV === "development") {
+      console.error("💥 [SESSION] Error al obtener datos de organización y sesión:", error);
+    }
+    
+    // Manejar diferentes tipos de errores de manera más específica
+    let errorMessage = "Error interno desconocido";
+    
+    if (error instanceof Error) {
+      if (error.message.includes("ENOTFOUND") || error.message.includes("ECONNREFUSED")) {
+        errorMessage = "Error de conexión con la base de datos";
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "Timeout en la conexión";
+      } else if (error.message.includes("unauthorized") || error.message.includes("authentication")) {
+        errorMessage = "Error de autenticación";
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
     return {
       organizationId: null,
       organizationName: null,
@@ -265,7 +275,7 @@ export async function getOrganizationSessionData(): Promise<OrganizationSessionD
       userEmail: null,
       userImage: null,
       userRole: null,
-      error: `Error interno: ${error instanceof Error ? error.message : String(error)}`,
+      error: `Error interno: ${errorMessage}`,
     };
   }
 }
