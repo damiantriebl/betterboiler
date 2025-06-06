@@ -26,13 +26,12 @@ export async function POST(request: NextRequest) {
   }
 
   // ✅ VALIDACIÓN DE MONTO MÍNIMO
-  // amount viene en centavos, Point Smart requiere mínimo $15.00
-  const amountInPesos = amount / 100;
+  // amount viene en pesos, Point Smart requiere mínimo $15.00
+  const amountInPesos = amount;
   const minimumAmount = 15.0;
   
   if (amountInPesos < minimumAmount) {
     console.error("❌ [CreatePointPayment] Monto insuficiente:", {
-      amountInCentavos: amount,
       amountInPesos: amountInPesos,
       minimoRequerido: minimumAmount,
     });
@@ -43,14 +42,13 @@ export async function POST(request: NextRequest) {
         details: `El monto mínimo para Point Smart es $${minimumAmount}. Monto recibido: $${amountInPesos}`,
         minimum_amount: minimumAmount,
         received_amount: amountInPesos,
-        hint: "Envía al menos 1500 centavos (que equivalen a $15.00)",
+        hint: `Envía al menos $${minimumAmount}.00`,
       },
       { status: 400 },
     );
   }
 
   console.log("✅ [CreatePointPayment] Monto validado:", {
-    amountInCentavos: amount,
     amountInPesos: amountInPesos,
     cumpleMinimo: amountInPesos >= minimumAmount,
   });
@@ -99,7 +97,7 @@ export async function POST(request: NextRequest) {
       transactions: {
         payments: [
           {
-            amount: (amount / 100).toFixed(2), // Solo monto, sin currency_id, description, payment_method
+            amount: amount.toFixed(2), // Monto en pesos con 2 decimales
           },
         ],
       },
@@ -161,7 +159,7 @@ export async function POST(request: NextRequest) {
           terminal_id: device_id,
           external_reference: `order-${mpData.id}-action`,
           subtype: "text",
-          content: `Pago: $${(amount / 100).toFixed(2)}\nOrder: ${mpData.id}`,
+          content: `Pago: $${amount.toFixed(2)}\nOrder: ${mpData.id}`,
         }),
       });
 
